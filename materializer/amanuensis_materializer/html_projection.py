@@ -2502,7 +2502,7 @@ class MarkdownRenderer:
         )
         drawn = "; ".join(part for part in (seam_count, xref_count) if part)
         account = (
-            "Each line is listed in the dependency graph above and the seam topology below"
+            "Each arrow is listed in the dependency graph above, and each seam line in the seam topology below"
             if xrefs
             else "Each line is listed in the seam topology below"
         )
