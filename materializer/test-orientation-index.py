@@ -11,7 +11,8 @@ Turns red when:
     empty or is not the Appendix D sentence, or a kept hint was replaced;
   - a page's HTML head prints a different hint or `use_when` than its Markdown
     prints, prints no `use_when` at all, or prints the Markdown's italic
-    paragraph a second time inside the article body;
+    paragraph a second time inside the article body, including when the xref pass
+    has bolded or linked an ID inside it (a subsystem named after its own ID);
   - the reader's guide has no "Pages on this site" section, still has "What to
     look at first", or its tables are not headed Page / What it shows /
     Use it when;
@@ -29,7 +30,7 @@ Turns red when:
     dropped is red even while the Markdown is whole);
   - the gate does not run in CI.
 
-False green it cannot exclude: the fixture is small (three subsystems, one
+False green it cannot exclude: the fixture is small (four subsystems, one
 matrix), so a collapse that only starts to matter at 35 rows is exercised by
 count, not by reading. The HTML checks read bytes; they do not drive a browser.
 
@@ -150,6 +151,9 @@ SUBSYSTEMS = (
     ("B-01", "Read path", "mapped", "backend", "src/reader.ts", None, None),
     ("B-02", "Write path", "mapped", "backend", "src/writer.ts", None, None),
     ("F-01", "Console", "scoping", "frontend", "ui/console.ts", None, None),
+    # A name that carries its own ID: the xref pass bolds the self-reference
+    # inside the page-head paragraph, which must still be found and printed once.
+    ("B-03", "B-03 reader", "mapped", "backend", "src/cache.ts", None, None),
 )
 MATRIX_ID = 7
 MATRIX_SYMPTOM = "rows appear twice after a restart"
@@ -304,6 +308,13 @@ def table_rows(lines: list[str]) -> tuple[list[str], list[list[str]]]:
 LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
 
+def md_visible(text: str) -> str:
+    """What a reader sees of inline Markdown: link text, without bold or code marks."""
+
+    text = LINK.sub(r"\1", text)
+    return re.sub(r"\*\*(.+?)\*\*|`([^`]*)`", lambda m: m.group(1) or m.group(2) or "", text)
+
+
 def html_text(fragment: str) -> str:
     return " ".join(htmllib.unescape(re.sub(r"<[^>]+>", "", fragment)).split())
 
@@ -456,12 +467,13 @@ def main() -> int:
                     if page_html is None:
                         return f"{rel.with_suffix('.html')} is not published"
                     hint, use = html_head(page_html)
-                    if hint != split[0]:
-                        return f"{rel}: HTML hint {hint!r} differs from Markdown hint {split[0]!r}"
-                    if use != split[1]:
-                        return f"{rel}: HTML use_when {use!r} differs from Markdown {split[1]!r}"
+                    md_hint, md_use = (md_visible(part) for part in split)
+                    if hint != md_hint:
+                        return f"{rel}: HTML hint {hint!r} differs from Markdown hint {md_hint!r}"
+                    if use != md_use:
+                        return f"{rel}: HTML use_when {use!r} differs from Markdown {md_use!r}"
                     body = article_of(page_html)
-                    if f"{split[0]} {split[1]}" in htmllib.unescape(re.sub(r"<[^>]+>", "", body)):
+                    if f"{md_hint} {md_use}" in htmllib.unescape(re.sub(r"<[^>]+>", "", body)):
                         return f"{rel}: the italic hint paragraph is printed again inside the article body"
             return None
 
