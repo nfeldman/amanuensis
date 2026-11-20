@@ -135,6 +135,7 @@ NEW_HINTS: dict[str, str] = {
 }
 SUBSYSTEM_ROW = ("Subsystem pages", "you have picked a subsystem.")
 MATRIX_ROW = ("Evidence tables", "you followed a DM- link.")
+SUBGROUP_LABELS = (SUBSYSTEM_ROW[0], MATRIX_ROW[0])
 GROUP_ORDER = ("Overview", "Codebase", "Unresolved", "History", "Method")
 LENS_OF_GROUP = {"Codebase": "codebase", "Unresolved": "unresolved", "History": "history", "Method": "method"}
 INDEX_HEADING = "Pages on this site"
@@ -218,7 +219,7 @@ def md_head(text: str) -> tuple[str, str] | None:
     index = next((i for i, line in enumerate(lines) if line.strip()), None)
     if index is None or not lines[index].startswith("# "):
         return None
-    rest = [line for line in lines[index + 1 :]]
+    rest = list(lines[index + 1 :])
     start = next((i for i, line in enumerate(rest) if line.strip()), None)
     if start is None:
         return lines[index][2:].strip(), ""
@@ -476,6 +477,8 @@ def main() -> int:
                 match = LINK.search(cells[0])
                 if not match:
                     return f"a row in {group} does not link its page: {cells[0]!r}"
+                if match.group(1) in (SUBGROUP_LABELS):
+                    continue  # a subgroup row routes to a page that has a row of its own
                 seen[match.group(2)] = (group, cells[1], cells[2])
             for path, (label, group, fragment) in STATIC_PAGES.items():
                 if path not in seen:

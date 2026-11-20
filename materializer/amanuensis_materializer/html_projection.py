@@ -81,6 +81,8 @@ class SitePage:
     hint: str
     group: str
     kind: str = "reference"
+    # The clause after "Use it when" (PLAN Appendix D); empty prints nothing.
+    use_when: str = ""
     record_id: str | None = None
     status: str | None = None
     # A named division inside `group`, rendered under its own `<h3>` after the
@@ -91,6 +93,54 @@ class SitePage:
     @property
     def html_path(self) -> str:
         return str(Path(self.markdown_path).with_suffix(".html")).replace("\\", "/")
+
+
+def page_head_line(hint: str, use_when: str) -> str:
+    """The italic paragraph the Markdown view prints under a page's H1.
+
+    The HTML head prints the same two sentences as separate paragraphs, so the
+    two views say one thing; `strip_page_head` removes this line before the
+    HTML body is built, so it is not printed twice.
+    """
+
+    sentence = f"Use it when {use_when}" if use_when else ""
+    text = " ".join(part for part in (hint.strip(), sentence) if part)
+    return f"*{text}*" if text else ""
+
+
+def _first_two_content_lines(lines: list[str]) -> tuple[int, int] | None:
+    first = next((i for i, line in enumerate(lines) if line.strip()), None)
+    if first is None or not lines[first].startswith("# "):
+        return None
+    second = next((i for i in range(first + 1, len(lines)) if lines[i].strip()), len(lines))
+    return first, second
+
+
+def insert_page_head(markdown: str, hint: str, use_when: str) -> str:
+    """Put the page-head paragraph directly under the page's H1, when it has one."""
+
+    line = page_head_line(hint, use_when)
+    lines = markdown.split("\n")
+    found = _first_two_content_lines(lines) if line else None
+    if found is None:
+        return markdown
+    first, _second = found
+    return "\n".join(lines[: first + 1] + ["", line] + lines[first + 1 :])
+
+
+def strip_page_head(markdown: str, hint: str, use_when: str) -> str:
+    """The inverse of `insert_page_head`, for the HTML projection's body."""
+
+    line = page_head_line(hint, use_when)
+    lines = markdown.split("\n")
+    found = _first_two_content_lines(lines) if line else None
+    if found is None or found[1] >= len(lines):
+        return markdown
+    # The xref pass may have linked an ID inside the paragraph since it was
+    # written; compare what the reader sees, not the link markup.
+    if re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", lines[found[1]]) != line:
+        return markdown
+    return "\n".join(lines[: found[1]] + lines[found[1] + 1 :])
 
 
 @dataclass
@@ -348,6 +398,7 @@ h1 {
   letter-spacing: -.042em; text-wrap: balance;
   font-variant-ligatures: common-ligatures discretionary-ligatures;
 }
+.page-use-when { max-width: none; margin: .4rem 0 0; color: var(--text-muted); font: clamp(.95rem, .3vw + .88rem, 1.1rem)/1.5 var(--body); text-wrap: pretty; }
 .page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
 .snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
 .snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
@@ -3014,6 +3065,11 @@ def _shell(
         freshness_class = "freshness stale" if stale_entries else "freshness"
     display_title = page.title or source_title
     hint_para = f'<p class="page-hint">{html.escape(page.hint)}</p>' if page.hint else ""
+    use_when_para = (
+        f'<p class="page-use-when">{html.escape("Use it when " + page.use_when)}</p>'
+        if page.use_when
+        else ""
+    )
     md_link = _rel_link(page.html_path, page.markdown_path)
     home_link = _rel_link(page.html_path, "index.html")
     record_status = _status_html(page.status) if page.status else ""
@@ -3079,6 +3135,7 @@ def _shell(
         <p class="eyebrow">{eyebrow}</p>
         <h1>{html.escape(display_title)}</h1>
         {hint_para}
+        {use_when_para}
         <div class="snapshot-strip">
           <span class="snapshot-item"><b>Branch</b>&nbsp; {html.escape(canonical)}</span>
           <span class="snapshot-item"><b>Checked</b>&nbsp; {html.escape(checked[:12] or 'not recorded')}</span>
@@ -3165,7 +3222,9 @@ def render_html_projection(
             page.html_path,
             repository_url=str(context.get("repository_url") or "") or None,
         )
-        source_title, body = parser.render(source.read_text())
+        source_title, body = parser.render(
+            strip_page_head(source.read_text(), page.hint, page.use_when)
+        )
         document = _shell(
             page,
             pages,

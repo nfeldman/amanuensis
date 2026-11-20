@@ -3299,35 +3299,64 @@ def _vocabulary_tables() -> list[str]:
     return out
 
 
-def _route_tables(routes: Sequence[tuple[str, str, str, str, str]]) -> list[str]:
-    """The "what to look at first" table, generated from the page plan (§7.8).
+# A subgroup is a family with one page per record, so the index gives it one
+# row. The row routes to the page that lists the family's members: the
+# subsystem map and the competing-explanations index.
+_SUBGROUP_ROWS: dict[str, tuple[str, str, str]] = {
+    "Subsystems": ("Subsystem pages", "master-plan.md", "one page per subsystem"),
+    "Evidence matrices": ("Evidence tables", "diagnosticity.md", "one page per evidence matrix"),
+}
+
+
+def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list[str]:
+    """The index of pages, generated from the page plan (§7.8, PLAN §2.4).
 
     Written from the plan rather than by hand so a page cannot be published and
     left unroutable: the guide is the one page a stranger is told to read, and a
-    site index that silently omits a lens is worse than none.
+    site index that silently omits a lens is worse than none. Families with one
+    page per record take one row each, so the table stays the length of the
+    site's structure, not of the surveyed codebase.
     """
 
+    lens_meanings = meanings("lens")
     out: list[str] = [
-        "## What to look at first",
+        "## Pages on this site",
         "",
-        "Every page this conspectus publishes, in the order the record presents"
-        " them. The lens a page sits under says what kind of claim it carries.",
+        "Every kind of page this survey publishes, grouped by lens. The lens says"
+        " what kind of claim a page carries. Subsystem pages and evidence tables"
+        " take one row each; the pages they stand for are listed on the pages"
+        " the rows link to.",
         "",
     ]
-    groups: dict[str, list[tuple[str, str, str, str, str]]] = {}
+    groups: dict[str, list[tuple[str, str, str, str, str, str]]] = {}
     for route in routes:
         groups.setdefault(route[3], []).append(route)
     for group, members in groups.items():
+        out += [f"### {group}", ""]
+        meaning = lens_meanings.get(group.lower())
+        if meaning:
+            out += [meaning, ""]
         out += [
-            f"### {group}",
-            "",
-            "| Page | What it carries |",
-            "|---|---|",
+            "| Page | What it shows | Use it when |",
+            "|---|---|---|",
         ]
-        for path, label, hint, _group, subgroup in members:
-            prefix = f"{subgroup} · " if subgroup else ""
+        done: set[str] = set()
+        for path, label, hint, _group, subgroup, use_when in members:
+            if subgroup:
+                if subgroup in done:
+                    continue
+                done.add(subgroup)
+                family = [m for m in members if m[4] == subgroup]
+                name, target, scope = _SUBGROUP_ROWS.get(
+                    subgroup, (subgroup, path, "one page per record")
+                )
+                out.append(
+                    f"| [{name}]({target}) | {_table_cell(f'{len(family)} pages, {scope}.')}"
+                    f" | {_table_cell(use_when)} |"
+                )
+                continue
             out.append(
-                f"| {prefix}[{label}]({path}) | {_table_cell(hint)} |"
+                f"| [{label}]({path}) | {_table_cell(hint)} | {_table_cell(use_when)} |"
             )
         out.append("")
     return out
@@ -3336,7 +3365,7 @@ def _route_tables(routes: Sequence[tuple[str, str, str, str, str]]) -> list[str]
 def render_how_to_read(
     conn: sqlite3.Connection,
     storage: Path,
-    routes: Sequence[tuple[str, str, str, str, str]] | None = None,
+    routes: Sequence[tuple[str, str, str, str, str, str]] | None = None,
 ) -> RenderResult:
     """The reader's guide, generated from the enum source and the page plan.
 

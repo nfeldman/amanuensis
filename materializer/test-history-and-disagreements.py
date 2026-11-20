@@ -1364,14 +1364,26 @@ def main() -> int:
         def guide_routes_every_published_page() -> str | None:
             if not guide:
                 return f"{HOW_TO_READ} is absent or empty"
-            body = section(guide, "What to look at first")
+            body = section(guide, "Pages on this site")
             if not body.strip():
-                return "the reader's guide carries no 'What to look at first' section"
+                return "the reader's guide carries no 'Pages on this site' section"
             published = sorted(
                 str(path.relative_to(docs)) for path in docs.rglob("*.md") if path.is_file()
             )
+            # One row per subgroup (PLAN §2.4): a subsystem page or an evidence
+            # matrix is routed through the page its subgroup row links to, which
+            # must list it.
+            listing = {"subsystems/": "master-plan.md", "diagnosticity/": "diagnosticity.md"}
             for rel in published:
-                if f"]({rel})" not in body:
+                family = next((d for d in listing if rel.startswith(d)), None)
+                if family:
+                    routed = (docs / listing[family]).read_text()
+                    if f"]({listing[family]})" not in body or f"]({rel})" not in routed:
+                        return (
+                            f"{rel} is published and neither the guide's subgroup row nor"
+                            f" {listing[family]} routes to it"
+                        )
+                elif f"]({rel})" not in body:
                     return (
                         f"{rel} is published and is not routed from the reader's guide;"
                         " §7.8 generates that table from the page plan"
