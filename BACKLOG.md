@@ -30,18 +30,22 @@ real run; "read" means found by reading code and not reproduced.
   claim wrong when recorded to the recording commit. The `mapped` check still accepts any outcome
   on a current claim; a claim disproved after recording `survived` now has a way to be closed,
   but the server cannot make the pass do it.
-- **Resume the self-rebuild?** Paused 2026-11-06. The plan has three stages: real exclusion (an
+- ~~**Resume the self-rebuild?**~~ Wait, decided 2026-11-20: not until the orientation plan
+  (`design/orientation/`) and the backlog's other improvements have landed. Paused 2026-11-06. The plan has three stages: real exclusion (an
   `.amanuensisignore` file: excluded paths get no ledger row, count or label anywhere), a model
   pilot (Haiku, Sonnet, Opus, Luna, Terra and Sol, two runs each, judged blind; judge not settled
   between one shared judge and cross-lab judging), then a from-scratch rebuild of the
   self-conspectus. Until exclusion lands, the published self-conspectus still maps research and
   design directories. Re-measure the gate baseline on `main` before resuming.
-- **Release-time host evidence.** The A25/A26 activation checks left CI on 2026-11-06. Nothing
+- ~~**Release-time host evidence.**~~ Not required, decided 2026-11-20: the release-commit CI,
+  the publish workflow's packed-artifact check and the published-package smoke test are enough.
+  B07-R1 stays out of CI. The A25/A26 activation checks left CI on 2026-11-06. Nothing
   compares the recorded host runs with the code between releases. A release that wants them needs
   a live Codex capture first, and the capture harness needs repair before it passes on current
   code. `dev/test-activation-evidence.mjs` (B07-R1) is red for the same reason: a recorded source
   digest for `mcp-server/src/project.ts` has drifted.
-- **Reconcile the self-conspectus, or wait for the rebuild?** P11
+- ~~**Reconcile the self-conspectus, or wait for the rebuild?**~~ Wait, decided 2026-11-20:
+  P11, EX8 and EX14 stay red until the rebuild replaces the self-conspectus. P11
   (`dev/test-survey-depth-acceptance.mjs`) is red only on its binding: the acceptance receipt's
   ledger accounts for 690 paths; at 7d7e153 the tree has 711, of which 23 are unledgered, and two ledgered paths were deleted with P20. The gap grows with each commit that adds a file.
   EX8 and EX14 run P11, so they are red with it. Repairing it means running `detect_changes` on
