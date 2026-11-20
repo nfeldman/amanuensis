@@ -7,6 +7,9 @@ Turns red when:
 
   - the SVG has a node count other than the subsystem count (the fixture has a
     `deferred` subsystem, a subsystem with no layer and two with no relation);
+  - a node's `data-subsystem`, ID line or name line is not its subsystem's
+    recorded ID and name, including the lowercase `auth` (name `Sign-in`),
+    which is also an arrow's endpoint;
   - the SVG has a line count other than seams plus `xrefs`;
   - any line joins two subsystems no seam or xref names, read from geometry:
     each line's two ends must sit on the edges of the two boxes the record
@@ -127,6 +130,8 @@ SUBSYSTEMS: tuple[Subsystem, ...] = (
     ("F-02", "Charts", "deferred", "frontend"),
     ("T-01", "Release tooling", "mapped", "tooling"),
     ("U-01", "Loose scripts", "unmapped", None),
+    # An ID outside the letters-dash-number shape, as an endpoint (F8/codex).
+    ("auth", "Sign-in", "mapped", "frontend"),
 )
 # The Subsystem map lists layers ORDER BY layer: a missing layer sorts first
 # and is headed "unlayered".
@@ -139,6 +144,7 @@ SEAMS: tuple[tuple[str, str, str, str], ...] = (
 XREFS: tuple[tuple[str, str, str], ...] = (
     ("F-02", "B-01", "data-flow"),
     ("B-01", "B-03", "dependency"),
+    ("auth", "F-01", "data-flow"),
 )
 QUIET: tuple[Subsystem, ...] = (
     ("A-01", "Alpha", "mapped", "core"),
