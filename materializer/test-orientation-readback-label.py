@@ -12,6 +12,9 @@ failed; newer: every axis passed), in either the Markdown or the HTML overview:
   - the block still labels the time row "Verified at", or lacks a "Read back at"
     row carrying the newer run's date;
   - the block reports the older run (its date, or a failed axis);
+  - on a third store whose newer run has mixed axes (state passed, coverage failed,
+    content passed; the older run the reverse), any axis row prints a value other
+    than its own run's;
   - a store with no recorded read-back prints the lag sentence, or loses its
     "No publication read-back is recorded" sentence;
   - the gate does not run in CI.
@@ -99,7 +102,15 @@ OLDER_DATE = "2026-09-09"
 SHA = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"
 
 
-def seed(storage: Path, runs: bool) -> None:
+# (state_ok, coverage_ok, content_ok) for the older and the newer run of each store.
+RUNS = {
+    "runs": ((0, 1, 1), (1, 1, 1)),
+    "mixed": ((0, 1, 0), (1, 0, 1)),
+    "none": None,
+}
+
+
+def seed(storage: Path, runs: tuple[tuple[int, int, int], tuple[int, int, int]] | None) -> None:
     db = sqlite3.connect(storage / "memory.db")
     db.executescript(SCHEMA.read_text())
     db.execute(
@@ -109,13 +120,14 @@ def seed(storage: Path, runs: bool) -> None:
         (SHA, SHA),
     )
     if runs:
+        older, newer = runs
         db.executemany(
             "INSERT INTO projection_verification_runs (run_id, output_dir, mode, source_sha,"
             " state_ok, coverage_ok, content_ok, ok, summary_json, verified_at)"
             " VALUES (?, 'docs', 'clean-publish', ?, ?, ?, ?, ?, '{}', ?)",
             [
-                ("run-older", SHA, 0, 1, 1, 0, f"{OLDER_DATE}T09:00:00Z"),
-                ("run-newer", SHA, 1, 1, 1, 1, f"{NEWER_DATE}T18:30:00Z"),
+                ("run-older", SHA, *older, int(all(older)), f"{OLDER_DATE}T09:00:00Z"),
+                ("run-newer", SHA, *newer, int(all(newer)), f"{NEWER_DATE}T18:30:00Z"),
             ],
         )
     db.commit()
@@ -219,7 +231,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="o12-gate-") as tmp:
         base = Path(tmp)
         stores: dict[str, tuple[Path, str | None]] = {}
-        for name, runs in (("runs", True), ("none", False)):
+        for name, runs in RUNS.items():
             storage = base / name
             storage.mkdir()
             try:
@@ -233,6 +245,7 @@ def main() -> int:
 
         check("the store with two read-backs publishes", fixture("runs"))
         check("the store with no read-back publishes", fixture("none"))
+        check("the store whose newer read-back has mixed axes publishes", fixture("mixed"))
 
         docs = stores["runs"][0] / "docs"
         index_md = read(docs / "index.md")
@@ -246,6 +259,24 @@ def main() -> int:
             "HTML: the sentence leads the block, the row is 'Read back at' with the newer run",
             lambda: block_problem(flat_html(html_block(index_html)), "State axis"),
         )
+
+        def mixed_axes() -> str | None:
+            docs_mixed = stores["mixed"][0] / "docs"
+            newer = RUNS["mixed"][1]
+            for name, flat in (
+                ("index.md", squash(flat_md(md_block(read(docs_mixed / "index.md"))).replace("|", " "))),
+                ("index.html", flat_html(html_block(read(docs_mixed / "index.html")))),
+            ):
+                for axis, ok in zip(("State", "Coverage", "Content"), newer, strict=True):
+                    want = "green" if ok else "red"
+                    match = re.search(rf"\b{axis} axis (\w+)", flat)
+                    if not match:
+                        return f"{name}: the block has no {axis} axis row"
+                    if match.group(1).lower() != want:
+                        return f"{name}: the {axis} axis reads {match.group(1)}; the newer run's is {want}"
+            return None
+
+        check("each axis row reports its own value from the newer run", mixed_axes)
 
         def sentence_is_plain() -> str | None:
             if re.search(r"\d", LAG_SENTENCE) or re.search(r"(?i)\b(red|green)\b", LAG_SENTENCE):
