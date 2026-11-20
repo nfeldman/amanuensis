@@ -51,6 +51,19 @@ real run; "read" means found by reading code and not reproduced.
   EX8 and EX14 run P11, so they are red with it. Repairing it means running `detect_changes` on
   the self-conspectus store and assigning or exempting each new path, which is Amanuensis use and
   needs the owner's go-ahead; the self-rebuild would replace it anyway.
+- **The database holds everything; HTML is the only published projection.** Decided
+  2026-11-20; planning starts after the orientation lane lands (its renderer changes would
+  collide). Two gaps today:
+  - The HTML is built from the published Markdown, and the read-back compares the two, so the
+    Markdown is an intermediate no reader needs.
+  - The skill has the agent hand-write files whose content the store never holds. These are
+    `<id>-<slug>.md` survey narratives, `master-plan.md`, `entry-point.md` (whose thesis
+    `record_explanation` treats as the project's purpose) and the onboarding report.
+    `artifacts` keeps only their path and hash.
+
+  The plan moves that content into records written through tools, renders HTML from the store
+  alone, and stops the skill writing files. It also settles what a downstream copy carries
+  (D7 decided HTML).
 
 ## Explanation quality
 
