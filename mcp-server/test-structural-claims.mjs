@@ -747,14 +747,15 @@ from pathlib import Path
 
 sys.path.insert(0, sys.argv[1])
 from amanuensis_materializer.db import rows
-from amanuensis_materializer.renderers import render_subsystem
+from amanuensis_materializer.renderers import page_text, render_subsystem
 
 conn = sqlite3.connect(f"file:{sys.argv[2]}?mode=ro", uri=True)
 storage = Path(sys.argv[3])
 out = {}
 for s in rows(conn, "SELECT id, name, status, layer, scope, jump_in_reading, notes FROM subsystems ORDER BY id"):
-    text, sources = render_subsystem(conn, storage, s)
-    out[s["id"]] = {"text": text, "sources": sorted(sources)}
+    page, sources = render_subsystem(conn, storage, s)
+    # The page is a model (store-only SO15); its words, a line to a heading, item or table row, are what these checks read.
+    out[s["id"]] = {"text": page_text(page), "sources": sorted(sources)}
 sys.stdout.write(json.dumps(out))
 `;
 

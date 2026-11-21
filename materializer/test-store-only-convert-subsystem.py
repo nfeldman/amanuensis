@@ -637,6 +637,21 @@ def main() -> int:
 
     check("legacy_prose.render_body reads an imported body as the parser does", legacy_reads)
 
+    def stored_headings_nest() -> str | None:
+        prose, error = load("prose")
+        if prose is None:
+            return error
+        body = "Intro.\n\n## Sneaked\r# Carriage\u2028### Deep\n\nTail."
+        kinds = [type(b).__name__ for b in prose.render_prose(body, under=2)]
+        got = [b.level for b in prose.render_prose(body, under=2) if type(b).__name__ == "Heading"]
+        if got != [4, 3, 5] or kinds[0] != "Paragraph" or kinds[-1] != "Paragraph":
+            return f"headings in a stored body sit at levels {got} ({kinds}), not 4, 3, 5 between its paragraphs"
+        if any(type(b).__name__ == "Heading" for b in prose.render_prose(body)):
+            return "a heading was read without `under`, so the §3.4 grammar changed"
+        return None
+
+    check("a heading in a stored body nests beneath its section, and is text when no section is named", stored_headings_nest)
+
     def nest_prose_gone() -> str | None:
         source = (ROOT / "amanuensis_materializer" / "renderers.py").read_text()
         if re.search(r"\b_nest_prose\b", source):

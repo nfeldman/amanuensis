@@ -26,6 +26,7 @@ from .page import (
     Code,
     CodeSpan,
     Emph,
+    Heading,
     Inline,
     InlineAnchor,
     InlineMarker,
@@ -299,12 +300,20 @@ def inlines(text: str) -> Inlines:
     return parse_inlines(text)
 
 
-def render_prose(text: str) -> tuple[Block, ...]:
+_HEADING_LINE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+
+
+def render_prose(text: str, *, under: int | None = None) -> tuple[Block, ...]:
     """A stored body in the §3.4 grammar as blocks: paragraphs, lists, fences, quotes.
 
     Headings, tables, raw HTML and images are not part of the grammar. A line
     that holds one is a line of its paragraph, printed as text; the writers
     refuse such lines before a body is stored (`isProseAndLists`).
+
+    A row stored before the writers refused headings may still hold one. A page
+    that prints such a body passes `under`, the level of the section it sits in:
+    each heading line then prints as a heading that many levels deeper (at most
+    six), so a body can never open a section of its own.
     """
 
     lines = text.splitlines()
@@ -325,6 +334,12 @@ def render_prose(text: str) -> tuple[Block, ...]:
             i += 1 if i < len(lines) else 0
             blocks.append(Code(fence.group(1).lower(), "\n".join(code_lines)))
             continue
+        heading = _HEADING_LINE.match(line) if under is not None else None
+        if heading:
+            level = min(6, len(heading.group(1)) + (under or 0))
+            blocks.append(Heading(level, parse_inlines(heading.group(2))))
+            i += 1
+            continue
         if _LIST_ITEM.match(line):
             parsed, i = _parse_list(lines, i)
             blocks.append(parsed)
@@ -341,6 +356,8 @@ def render_prose(text: str) -> tuple[Block, ...]:
         while i < len(lines) and lines[i].strip():
             candidate = lines[i]
             if candidate.startswith(("```", ">")) or re.match(r"^\s*([-*+] |\d+\. )", candidate):
+                break
+            if under is not None and _HEADING_LINE.match(candidate):
                 break
             paragraph.append(candidate.strip())
             i += 1

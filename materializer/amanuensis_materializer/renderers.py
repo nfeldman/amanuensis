@@ -258,6 +258,12 @@ def page_text(page: Page) -> str:
     def table(headers: Sequence[Inlines | str], body: Sequence[Sequence[Inlines | str]]) -> None:
         lines.extend([row(*headers), "|" + "---|" * len(headers), *(row(*cells) for cells in body)])
 
+    def items(block: List, indent: str) -> None:
+        for number, item in enumerate(block.items, start=1):
+            lines.append(f"{indent}{f'{number}.' if block.ordered else '-'} {_words(item.text)}")
+            for child in item.children:
+                items(child, indent + "    ")
+
     def walk(blocks: Sequence[Block]) -> None:
         for block in blocks:
             if isinstance(block, Section | Details):
@@ -267,7 +273,7 @@ def page_text(page: Page) -> str:
             elif isinstance(block, Paragraph):
                 lines.extend([_words(block.text), ""])
             elif isinstance(block, List):
-                lines.extend(f"- {_words(item.text)}" for item in block.items)
+                items(block, "")
                 lines.append("")
             elif isinstance(block, SummaryList):
                 table(["Metric", "Value"], [(item.key, item.value) for item in block.items])
@@ -1160,7 +1166,7 @@ def _narrative_blocks(
                 NARRATIVE_DECLINED.format(declined=_DECLINED, sha=sha, date=date, reason=text.strip())
             )
             continue
-        out += render_prose(text.strip())
+        out += render_prose(text.strip(), under=level)
         if not is_body:
             continue
         files = record.get("cited_files") or []
@@ -2137,7 +2143,7 @@ def render_subsystem(
         )
         held: list[Block] = []
         if purpose.state == "recorded":
-            held += render_prose(text.strip())
+            held += render_prose(text.strip(), under=2)
             if is_body:
                 held.append(_paragraph(_provenance_line(workspace, bound, purpose.row, checked_head)))
         else:
@@ -2177,7 +2183,7 @@ def render_subsystem(
         scope += [
             _heading(3, SURVEY_NOTE_HEADING),
             _paragraph(f"*{SURVEY_NOTE_LABEL}*"),
-            *render_prose(survey_note),
+            *render_prose(survey_note, under=3),
         ]
     blocks.append(_section("Scope", *scope))
 
@@ -2191,7 +2197,7 @@ def render_subsystem(
         text, is_body = _published_explanation(
             str(sid), "account", str(account.row["body"]), warn
         )
-        held = list(render_prose(text.strip()))
+        held = list(render_prose(text.strip(), under=2))
         if is_body:
             held.append(_paragraph(_provenance_line(workspace, bound, account.row, checked_head)))
         blocks.append(_section("How it works", *held))
