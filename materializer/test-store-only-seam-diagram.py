@@ -25,7 +25,8 @@ Turns red when:
     arrows and assumptions that have no recorded value ("n of 4");
   - an SVG lacks `role="img"`, a `<title>` or a `<desc>` that counts its boxes and arrows,
     states a font size under 11, uses a literal colour, runs a script, is not 960 wide, or a
-    mark has no `data-node` or `data-edge`; a figure has no readable account beside it, no
+    mark has no `data-node` or `data-edge`; a party's box is not headed with its own ID, or the
+    shared object's box with its recorded name; a figure has no readable account beside it, no
     statement of what it was read from, or a link that reaches no anchor;
   - two publications of one store print different figures;
   - a sabotage that edits seams.html and reseals `.projection-contract.json` is not reported
@@ -405,6 +406,18 @@ def main() -> int:
                     return f"{sid} draws arrows {sorted(edges)}; its recorded halves hold {w['edges']}"
                 if (fault := svg_faults(figure, len(nodes), len(edges))) is not None:
                     return f"{sid}: {fault}"
+                # Each box shows who it is: a party its own ID, the shared object the start of its recorded name.
+                seam = w["seam"]
+                for record, inner in re.findall(r'<g\b[^>]*\bdata-node="([^"]*)"[^>]*>(.*?)</g>', figure, re.S):
+                    heads = re.findall(r'<text\b[^>]*font-weight="600"[^>]*>(.*?)</text>', inner, re.S)
+                    head = " ".join(plain(heads[0]).split()) if heads else ""
+                    if not re.search(r"<rect\b", inner) or not head:
+                        return f"{sid}'s box {record} draws no box or no heading"
+                    if record.startswith("subsystem:"):
+                        if head != record.split(":", 1)[1]:
+                            return f"{sid}'s box {record} is headed {head!r}"
+                    elif not " ".join(str(seam["shared_object"]).split()).startswith(head):
+                        return f"{sid}'s shared object box is headed {head!r}; the seam records {seam['shared_object']!r}"
             return None
 
         check("nodes are party A, the shared object and party B; arrows are the recorded halves' fields", marks)
