@@ -1382,7 +1382,7 @@ def _flow_marks(conn: sqlite3.Connection, flow_key: str) -> list[dict[str, Any]]
     )
     found = rows(
         conn,
-        "SELECT m.id, m.claim_id, m.kind, m.label, m.target, c.claim_key FROM claim_marks m"
+        "SELECT m.id, m.claim_id, m.kind, m.label, m.target, m.ref_sha, c.claim_key FROM claim_marks m"
         " JOIN claims c ON c.claim_id = m.claim_id"
         f" WHERE c.valid_until_sha IS NULL AND c.claim_key LIKE ? ESCAPE '\\'{withdrawn} ORDER BY m.id",
         (f"{_like_escaped(flow_key)}/%",),
@@ -1477,6 +1477,10 @@ def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
         else f"Its steps were asserted at revisions {', '.join(sha[:8] for sha in shas)}." if shas
         else "No revision is recorded for these steps, so none is printed."
     )
+    # A mark recorded at a revision no step was asserted at is read at that revision too (Appendix B rule 3).
+    later = sorted({str(m["ref_sha"]) for m in marks if m.get("ref_sha")} - set(shas))
+    if later:
+        read_at += f" {'A mark was' if len(later) == 1 else 'Marks were'} recorded at {'revision' if len(later) == 1 else 'revisions'} {', '.join(sha[:8] for sha in later)}."
     n = len(steps)
     if n == 0:
         return Diagram(KIND_FLOW, flow_key, title, caption, below=f"No current step is recorded for {flow_key}, so no strip is drawn.", read_at=read_at)
