@@ -412,6 +412,30 @@ def main() -> int:
 
     check("render_prose reads the stored-prose grammar and nothing more", prose_blocks)
 
+    # A link label keeps the code spans and emphasis inside it, as the start tree's
+    # `_inline` printed them (slice-S3 review F1); a stashed placeholder must never
+    # reach the page. Expected strings were printed by `_inline` at 528199f.
+    def link_label_inlines() -> str | None:
+        if hp is None:
+            return hp_error
+        wanted = {
+            "see [`Reader`](architecture.md) now": 'see <a href="architecture.html"><code>Reader</code></a> now',
+            "[**bold** `x` y](a.md#q)": '<a href="a.html#q">bold <code>x</code> y</a>',
+            "[`A` and `B`](https://e.com)": '<a href="https://e.com" rel="noreferrer"><code>A</code> and <code>B</code></a>',
+        }
+        for text, expected in wanted.items():
+            got = hp._inline(text)
+            if got != expected:
+                return f"{text!r} prints {got!r}, not {expected!r}"
+        if prose is not None and page_mod is not None:
+            (block,) = prose.render_prose("A [`Reader`](architecture.md) link.")
+            labels = [node.label for node in block.text.nodes if isinstance(node, page_mod.Link)]
+            if labels != ["Reader"]:
+                return f"a link's label reads {labels!r}, not ['Reader']"
+        return None
+
+    check("a link label prints the code spans inside it", link_label_inlines)
+
     # ------------------------------------------------------------- xref.py
     def model_xref() -> str | None:
         if xref is None or hp is None or page_mod is None:
