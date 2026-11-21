@@ -84,9 +84,6 @@ IMPORTED_PAGES: tuple[tuple[str, str], ...] = (
     ("entry-point.md", "entry-point"),
 )
 
-#: The section every imported page opens its imported text under (D1).
-AS_WRITTEN_HEADING = "As written at onboarding"
-
 EDITED_SENTENCE = "It was edited after it was registered."
 NOT_RECORDED = "not recorded"
 
@@ -185,19 +182,32 @@ def imports_source(name: str, bodies: list[ImportedBody]) -> dict[str, str]:
     }
 
 
+_H1 = re.compile(r"#[ \t]")
+
+
 def imported_page(
     conn: sqlite3.Connection, kind: str, title: str
 ) -> tuple[str, dict[str, str]] | None:
     """A page of the three imported ones, or None when no body of its kind is printed.
 
-    The page is its title and the imports under "As written at onboarding", each
-    behind its label, its headings moved beneath the page's own (D1, §5.4).
+    The page is the body as written, its headings where its author put them, with
+    its label as the first thing under the page's heading (D1, §5.4). A body that
+    does not open with a heading of its own is given the page's title. A second
+    body of the same kind follows the first behind its own label, its headings
+    moved beneath the page's.
     """
 
     bodies = imported_bodies(conn, kind=kind)
     if not bodies:
         return None
-    out = [f"# {title}", "", f"## {AS_WRITTEN_HEADING}", ""]
-    for body in bodies:
-        out += [body.label(), "", nest_headings(body.body.strip(), 2), ""]
+    out: list[str] = []
+    for index, body in enumerate(bodies):
+        text = body.body.strip()
+        if index:
+            out += [body.label(), "", nest_headings(text, 1), ""]
+        elif _H1.match(text):
+            heading, _, rest = text.partition("\n")
+            out += [heading, "", body.label(), "", rest.strip(), ""]
+        else:
+            out += [f"# {title}", "", body.label(), "", text, ""]
     return "\n".join(out), imports_source(f"imports:{kind}", bodies)

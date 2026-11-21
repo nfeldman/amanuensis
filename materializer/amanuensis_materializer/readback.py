@@ -27,7 +27,13 @@ from pathlib import Path
 from typing import Any
 
 from .db import open_ro, row, rows, table_exists
-from .lint import composite_index_violations, explanation_refusal, orientation_violations
+from .lint import (
+    THESIS_REFUSED,
+    THESIS_REFUSED_COMPOSITE,
+    composite_index_violations,
+    explanation_refusal,
+    orientation_violations,
+)
 from .manifest import sha256_bytes
 from .slugs import subsystem_page
 from .vocabulary import (
@@ -345,9 +351,10 @@ def project_purpose_text(reading: ExplanationReading) -> tuple[str, tuple[str, .
     body = str(reading.row["body"])
     if reading.state == "declined":
         return body, ()
-    violations = tuple(orientation_violations(body)) + tuple(composite_index_violations(body))
-    if violations:
-        return explanation_refusal("purpose"), violations
+    status = tuple(orientation_violations(body))
+    composite = tuple(composite_index_violations(body))
+    if status or composite:
+        return (THESIS_REFUSED if status else THESIS_REFUSED_COMPOSITE), status + composite
     if str(reading.row["disposition"]) == "imported":
         return f"{body}\n\n{IMPORTED_PURPOSE_LABEL}", ()
     return body, ()

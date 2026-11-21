@@ -53,6 +53,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -132,9 +133,13 @@ def seed(storage: Path) -> None:
         "INSERT INTO subsystems (id, name, status, layer, scope)"
         " VALUES ('B-01', 'Parser', 'structural', 'backend', 'src/parser')"
     )
+    db.execute("INSERT INTO sessions (session_id, intent) VALUES ('o14', 'fixture')")
+    # The page the tests below tamper with is the import's, not a file's.
+    import_onboarding(
+        db, session_id="o14", entry_point="# Where to begin\n\nStart at the reader.\n"
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text("# Where to begin\n\nStart at the reader.\n")
 
 
 def run(storage: Path, *args: str) -> tuple[int, dict]:

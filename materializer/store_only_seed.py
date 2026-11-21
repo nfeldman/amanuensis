@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from amanuensis_materializer.legacy_extract import extract_texts
+from amanuensis_materializer.renderers import _thesis_body
 
 DEFAULT_WRITTEN = "2026-10-02 09:30:00"
 DEFAULT_HASH = "0123456789abcdef0123456789abcdef"
@@ -81,6 +82,7 @@ def import_onboarding(
     concern_checklist: str | None = None,
     ref_sha: str | None = None,
     written_at: str = DEFAULT_WRITTEN,
+    keep_refused_thesis: bool = False,
 ) -> dict[str, Any]:
     """Import the three project files and extract from them what the import does.
 
@@ -88,6 +90,11 @@ def import_onboarding(
     its profile, and the runtime table `imported` runtime boundaries, each by the
     materializer's own rule and only where the store holds none yet. Returns the
     extraction, so a test can read what the rule decided.
+
+    The import skips a thesis the orientation lint or the composite rule refuses.
+    `keep_refused_thesis` stores such a section's body as the imported purpose
+    anyway, which is the state of a store whose purpose was written before the
+    writers linted it: the page and the census must still withhold it.
     """
 
     sha = ref_sha if ref_sha is not None else _checked_sha(db)
@@ -102,11 +109,16 @@ def import_onboarding(
             )
     reading = extract_texts(entry_point, onboarding_report)
     thesis = reading["thesis"]
+    body: str | None = None
     if thesis["state"] == "filled" and thesis["text"]:
+        body = thesis["text"]
+    elif thesis["state"] == "refused" and keep_refused_thesis:
+        body = _thesis_body(entry_point or "")
+    if body:
         db.execute(
             "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
             " ref_sha, session_id) VALUES ('project', 'project', 'purpose', 'imported', ?, ?, ?)",
-            (thesis["text"], sha, session_id),
+            (body, sha, session_id),
         )
     if reading["project_name"]:
         db.execute(

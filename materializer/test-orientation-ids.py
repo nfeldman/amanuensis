@@ -77,6 +77,7 @@ from pathlib import Path
 from typing import Any
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -209,7 +210,12 @@ def seed(storage: Path, subsystems: tuple[tuple[str, str, str, str], ...], prose
             "INSERT INTO field_notes (category, observation, session_id) VALUES ('pattern', ?, 'o5')",
             (LEAD,),
         )
-        (storage / "entry-point.md").write_text(f"# Where to begin\n\n{ENTRY}\n")
+        # The page reads the import the store holds, never a file in storage.
+        import_onboarding(
+            db,
+            session_id="o5",
+            entry_point=f"# Where to begin\n\n{ENTRY}\n",
+        )
     db.commit()
     db.close()
 

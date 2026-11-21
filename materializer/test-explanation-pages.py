@@ -78,6 +78,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
+from store_only_seed import import_body
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 SCHEMA = REPO / "mcp-server" / "src" / "schema.sql"
@@ -328,11 +330,16 @@ def seed(storage: Path, shas: dict[str, str], head: str) -> None:
                     ),
                 )
         if has_artifact:
-            (storage / artifact_path(sid)).write_text(artifact_text(sid))
-            cur.execute(
-                "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha,"
-                " session_id) VALUES (?, 'subsystem-survey', ?, ?, ?, 'ex11')",
-                (artifact_path(sid), sid, HASH, shas["c1"]),
+            # The page reads the body the import stored, never a file in storage.
+            import_body(
+                db,
+                artifact_path(sid),
+                "subsystem-survey",
+                artifact_text(sid),
+                session_id="ex11",
+                subsystem_id=sid,
+                ref_sha=shas["c1"],
+                registered_hash=HASH,
             )
     evidence: dict[str, int] = {}
     for rel in (READER, REGISTRY, WRITER):

@@ -27,7 +27,8 @@ Turns red when, in the Markdown or the HTML of the subsystem pages:
     lacks either artifact's "written on" date;
   - the narrative's provenance on B-01 to B-04 lacks "written on <artifact date>"
     (the first ten characters of the artifact's stored timestamp);
-  - an artifact file's bytes change in the publish;
+  - an imported survey body's stored bytes change in the publish, or the publish
+    writes a file into storage outside its own `docs`;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -56,6 +57,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_body
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -203,18 +205,30 @@ def seed(storage: Path) -> None:
                 " VALUES ('subsystem', ?, 'account', 'recorded', ?, ?, 'o13', ?)",
                 (sid, ACCOUNT_BODY, ACCOUNT_SHA, ACCOUNT_RECORDED),
             )
-        (storage / artifact_path(sid)).write_text(artifact_text(sid))
-        cur.execute(
-            "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha,"
-            " session_id, written_at) VALUES (?, 'subsystem-survey', ?, ?, ?, 'o13', ?)",
-            (artifact_path(sid), sid, HASH, NOTES_SHA, NOTES_WRITTEN),
+        # The page reads the bodies the import stored, never a file in storage
+        # (store-only PLAN §3.3).
+        import_body(
+            db,
+            artifact_path(sid),
+            "subsystem-survey",
+            artifact_text(sid),
+            session_id="o13",
+            subsystem_id=sid,
+            ref_sha=NOTES_SHA,
+            written_at=NOTES_WRITTEN,
+            registered_hash=HASH,
         )
         for path, text, sha, written in EXTRA_ARTIFACTS.get(sid, ()):
-            (storage / path).write_text(text)
-            cur.execute(
-                "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha,"
-                " session_id, written_at) VALUES (?, 'subsystem-survey', ?, ?, ?, 'o13', ?)",
-                (path, sid, HASH, sha, written),
+            import_body(
+                db,
+                path,
+                "subsystem-survey",
+                text,
+                session_id="o13",
+                subsystem_id=sid,
+                ref_sha=sha,
+                written_at=written,
+                registered_hash=HASH,
             )
     db.commit()
     db.close()
@@ -270,6 +284,17 @@ def section(text: str, heading: str, level: int = 2) -> str:
     return "\n".join(body)
 
 
+def stored_bodies(storage: Path) -> dict[str, str]:
+    db = sqlite3.connect(storage / "memory.db")
+    try:
+        return {
+            str(path): str(body)
+            for path, body in db.execute("SELECT path, body FROM imported_artifacts ORDER BY path")
+        }
+    finally:
+        db.close()
+
+
 def main() -> int:
     emit("GATE O13 — date the survey notes under the account")
     emit("")
@@ -278,10 +303,10 @@ def main() -> int:
         storage = root / "store"
         storage.mkdir()
         seed_error: str | None = None
-        before: dict[str, bytes] = {}
+        before: dict[str, str] = {}
         try:
             seed(storage)
-            before = {p.name: p.read_bytes() for p in storage.glob("*-survey.md")}
+            before = stored_bodies(storage)
         except Exception as exc:
             seed_error = f"the fixture could not be seeded — {scrub(exc)}"
         outcome = publish(storage) if seed_error is None else {}
@@ -415,15 +440,21 @@ def main() -> int:
         def files_unchanged() -> str | None:
             if (why := published()):
                 return why
+            after = stored_bodies(storage)
             for name, data in before.items():
-                after = (storage / name).read_bytes() if (storage / name).is_file() else None
-                if after != data:
+                if after.get(name) != data:
                     return f"{name} was modified by the publish"
             if not before:
-                return "no artifact file was seeded"
+                return "no survey body was seeded"
+            written = sorted(
+                p.name for p in storage.iterdir() if p.name not in {"docs", "memory.db"}
+                and not p.name.startswith("memory.db-")
+            )
+            if written:
+                return f"the publish left files in storage: {written}"
             return None
 
-        check("no artifact file is modified", files_unchanged)
+        check("no survey body is modified and no file is written to storage", files_unchanged)
         check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
     finally:
         shutil.rmtree(root, ignore_errors=True)

@@ -13,6 +13,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from store_only_seed import import_body, import_onboarding, withdraw_import
+
 ROOT = Path(__file__).resolve().parent
 SCHEMA = ROOT.parent / "mcp-server" / "src" / "schema.sql"
 
@@ -167,8 +169,9 @@ def run_materializer(storage: Path) -> dict:
 def main() -> None:
     with tempfile.TemporaryDirectory() as td:
         storage = Path(td)
-        # Write prose artifacts to prove passthrough and typed HTML projections work.
-        (storage / "entry-point.md").write_text(
+        # Prose the store holds as imports, to prove the imported pages and typed
+        # HTML projections work. The pages read the import, never a file.
+        entry_point = (
             "# Entry point\n\nThis is a fictional test codebase with three subsystems: "
             "B-01 (scheduler), B-02 (auth), and F-01 (web UI). The seam SM-01 connects them.\n\n"
             "## File ledger\n\n"
@@ -184,7 +187,7 @@ def main() -> None:
             "|---|---|\n"
             "| Native memory | The runtime owns allocation for this service. |\n"
         )
-        (storage / "onboarding-report.md").write_text(
+        onboarding_report = (
             "# Onboarding report\n\n**Codebase**: FictionalProject — materializer fixture\n\n"
             "## Directory clusters\n\n- scheduler/ — B-01\n- auth/ — B-02\n- web/ — F-01\n\n"
             "## Runtime boundary map\n\n"
@@ -194,7 +197,7 @@ def main() -> None:
             "| Scheduler service | Python | auth service | HTTPS request | Dispatches authenticated jobs. |\n"
             "| Auth service | TypeScript | policy database | SQL transaction | Owns authorization decisions. |\n"
         )
-        (storage / "concern-checklist.md").write_text(
+        concern_checklist = (
             "# Concern checklist (calibrated)\n\n"
             "## Active concerns (3)\n\n"
             "| Code | Category | Territory | Codebase-specific probe (abbreviated) | Primary subsystems |\n"
@@ -206,6 +209,15 @@ def main() -> None:
         (storage / "workspace_path").write_text("/example/FictionalProject\n")
         db = sqlite3.connect(storage / "memory.db")
         seed(db)
+        import_onboarding(
+            db,
+            session_id="s1",
+            entry_point=entry_point,
+            onboarding_report=onboarding_report,
+            concern_checklist=concern_checklist,
+            ref_sha="deadbeef",
+        )
+        db.commit()
         db.close()
 
         # First run — should render everything.
@@ -494,24 +506,34 @@ def main() -> None:
         assert summary2["html_pages_rendered"] == 0, summary2
         assert summary2["html_pages_unchanged"] == summary1["html_pages_total"], summary2
 
-        # Third run — touch the entry-point prose; only pages that source
-        # from it should re-render (index + entry-point passthrough, plus
-        # any page whose cross-reference resolution changed).
+        # Third run — replace the entry-point import (withdraw it, import the
+        # updated text); only the page that prints it should re-render, plus
+        # any page whose cross-reference resolution changed.
         #
-        # Ceiling (PAGES_RENDERED_FOR_SINGLE_PROSE_CHANGE): touching one
-        # prose file should re-render a small constant number of pages,
-        # not a fraction of the whole site. The actual affected set is
-        # index.md + entry-point.md; we allow a generous slop of 4 to
-        # cover legitimate cases (e.g. a page whose xref table changed
-        # because the entry-point added a new ID). A ceiling above 4
-        # would indicate the diff check is broken and everything is
+        # Ceiling (PAGES_RENDERED_FOR_SINGLE_PROSE_CHANGE): replacing one
+        # import should re-render a small constant number of pages, not a
+        # fraction of the whole site. The actual affected set is
+        # entry-point.md alone: the overview prints the project's purpose, a
+        # record of its own, and no longer sources the entry point's file. We
+        # allow a generous slop of 4 to cover legitimate cases (e.g. a page
+        # whose xref table changed because the text added a new ID). A ceiling
+        # above 4 would indicate the diff check is broken and everything is
         # being re-rendered on every run.
-        (storage / "entry-point.md").write_text(
-            "# Entry point\n\nUpdated text. This is a fictional test codebase.\n"
+        db = sqlite3.connect(storage / "memory.db")
+        withdraw_import(db, "entry-point.md", session_id="s1")
+        import_body(
+            db,
+            "entry-point-updated.md",
+            "entry-point",
+            "# Entry point\n\nUpdated text. This is a fictional test codebase.\n",
+            session_id="s1",
+            ref_sha="deadbeef",
         )
+        db.commit()
+        db.close()
         summary3 = run_materializer(storage)
         print("run 3:", json.dumps(summary3, indent=2))
-        assert summary3["pages_rendered"] >= 2, summary3  # index + entry-point
+        assert summary3["pages_rendered"] >= 1, summary3  # entry-point
         assert summary3["pages_rendered"] <= 4, (
             f"diff-aware regression: touching one prose file re-rendered "
             f"{summary3['pages_rendered']} pages; expected ≤4. Check the "

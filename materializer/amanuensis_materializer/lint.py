@@ -202,6 +202,19 @@ EXPLANATION_REFUSED = (
 )
 
 
+# What the overview prints for a project purpose the lint or C32's composite rule
+# refuses. They are the sentences the reader-prose measure counts, so they keep
+# the word "thesis" the measure was set with.
+THESIS_REFUSED = (
+    "The recorded thesis carries status vocabulary and was not published; "
+    "record a corrected purpose."
+)
+THESIS_REFUSED_COMPOSITE = (
+    "The recorded thesis presents a composite index of the record and was not "
+    "published; record a corrected purpose."
+)
+
+
 def explanation_refusal(slot: str) -> str:
     """The sentence a page prints where a refused `purpose` or `account` would be."""
 

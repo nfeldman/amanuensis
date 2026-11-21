@@ -63,6 +63,7 @@ from pathlib import Path
 from typing import Any
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -198,13 +199,18 @@ def seed(storage: Path) -> None:
         " VALUES (?, 'B-01', ?, 'open', 'o2')",
         (MATRIX_ID, MATRIX_SYMPTOM),
     )
+    # The pages read the imports the store holds, never a file in storage.
+    # An imported body that opens with an H2, not an H1: the published page must
+    # still open with an H1 carrying the page head.
+    import_onboarding(
+        db,
+        session_id="o2",
+        entry_point="# Where to begin\n\nStart at the reader.\n",
+        onboarding_report="## Onboarding\n\nOne repository.\n",
+        concern_checklist="# Checklist\n\n## Active concerns\n\n- none\n",
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text("# Where to begin\n\nStart at the reader.\n")
-    # A prose source that opens with an H2, not an H1: the published page must
-    # still open with an H1 carrying the page head.
-    (storage / "onboarding-report.md").write_text("## Onboarding\n\nOne repository.\n")
-    (storage / "concern-checklist.md").write_text("# Checklist\n\n## Active concerns\n\n- none\n")
 
 
 def publish(storage: Path) -> dict[str, Any]:

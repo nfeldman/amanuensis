@@ -36,7 +36,13 @@ from .diagrams import (
 )
 from .legacy_prose import ImportedBody, imported_bodies, imports_source
 from .legacy_prose import nest_headings as _nest_prose
-from .lint import composite_index_violations, explanation_refusal, orientation_violations
+from .lint import (
+    THESIS_REFUSED,
+    THESIS_REFUSED_COMPOSITE,
+    composite_index_violations,
+    explanation_refusal,
+    orientation_violations,
+)
 from .manifest import sha256_json
 from .readback import (
     CARRIED_HEADING,
@@ -325,14 +331,6 @@ THESIS_ABSENT = (
     "No thesis section is recorded; record the project's purpose with "
     "`record_explanation`."
 )
-THESIS_REFUSED = (
-    "The recorded thesis carries status vocabulary and was not published; "
-    "record a corrected purpose."
-)
-THESIS_REFUSED_COMPOSITE = (
-    "The recorded thesis presents a composite index of the record and was not "
-    "published; record a corrected purpose."
-)
 
 
 @dataclass(frozen=True)
@@ -373,6 +371,19 @@ def _thesis_body(prose: str) -> str:
                 break
         body.append(line)
     return "\n".join(body).strip()
+
+
+def read_thesis(storage: Path) -> Thesis:
+    """The thesis `entry-point.md` carries, read from the file.
+
+    No page calls this: the overview prints the project's purpose, a record, and
+    the materializer opens no prose file (store-only PLAN §3.3). It stays as the
+    reference the import's gate compares what `import_artifact_bodies` copied in
+    against, by the one rule `thesis_from_prose` holds.
+    """
+
+    path = storage / "entry-point.md"
+    return thesis_from_prose(path.read_text() if path.is_file() else "")
 
 
 def thesis_from_prose(prose: str) -> Thesis:

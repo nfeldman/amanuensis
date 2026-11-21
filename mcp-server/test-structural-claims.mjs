@@ -334,23 +334,24 @@ function buildFixture() {
       )
       .run(narrativeBody, head, ctx.sessionId).lastInsertRowid,
   );
-  // The subsystem page is still built from the survey file and its registry row
-  // until the materializer reads the store (design/store-only SO8), so the page
-  // checks below keep the file an earlier server wrote. The tool no longer reads
-  // it: the pointer test below must hold with this row and file present.
+  // The subsystem page is built from the body an import stored, never from the
+  // survey file (design/store-only SO8), so the page checks below read an
+  // `imported_artifacts` row. The file and its registry row stay as an earlier
+  // server wrote them: neither the tool nor the page reads them, and the
+  // pointer test below must hold with both present.
   const narrativePath = "B-02-index.md";
   const fileBody = "# B-02 — Index\n\nThe index keeps one row per key, rebuilt from the ledger.\n";
+  const fileHash = createHash("sha256").update(fileBody).digest("hex");
   writeFileSync(join(project.storagePath, narrativePath), fileBody);
   db.prepare(
     `INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha, session_id, bytes)
      VALUES (?, 'subsystem-survey', 'B-02', ?, ?, ?, ?)`,
-  ).run(
-    narrativePath,
-    createHash("sha256").update(fileBody).digest("hex"),
-    head,
-    ctx.sessionId,
-    Buffer.byteLength(fileBody),
-  );
+  ).run(narrativePath, fileHash, head, ctx.sessionId, Buffer.byteLength(fileBody));
+  db.prepare(
+    `INSERT INTO imported_artifacts (path, kind, subsystem_id, body, body_sha256, registered_hash,
+                                     hash_matches, registered_ref_sha, written_at, session_id)
+     VALUES (?, 'subsystem-survey', 'B-02', ?, ?, ?, 1, ?, '2026-11-12 10:00:00', ?)`,
+  ).run(narrativePath, fileBody, fileHash, fileHash, head, ctx.sessionId);
 
   const evidenceId = (path, kind, symbol, sha) =>
     call(
@@ -857,7 +858,9 @@ check("a subsystem with zero claims renders the literal and the labelled narrati
     return "the page does not render the survey artifact's narrative under the fallback";
   }
   const stored = fixture.db
-    .prepare("SELECT content_hash, ref_sha FROM artifacts WHERE path = 'B-02-index.md'")
+    .prepare(
+      "SELECT registered_hash AS content_hash, registered_ref_sha AS ref_sha FROM imported_artifacts WHERE path = 'B-02-index.md'",
+    )
     .get();
   if (!section.includes(String(stored?.content_hash ?? "").slice(0, 12))) {
     return "the fallback does not carry the artifact's content hash";

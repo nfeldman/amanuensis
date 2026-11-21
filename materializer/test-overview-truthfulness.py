@@ -9,8 +9,9 @@ Turns red when:
   - any member of the negative corpus — *memory-mapped page cache*, *a stale
     cache*, *the mapped region*, *re-anchored the B-tree* — is flagged.  The
     false-alarm arm is part of the gate, not a separate concern (VP7);
-  - the published thesis is taken from anywhere but the `entry-point.md`
-    section headed *What is this codebase?*, or an absent section falls back to
+  - the published thesis is taken from anywhere but the project's purpose,
+    which the import copies from the `entry-point.md` section headed *What is
+    this codebase?* (store-only PLAN §3.3), or an absent section falls back to
     the first paragraph instead of publishing the named instruction;
   - a thesis carrying status vocabulary reaches the published overview, or the
     publish stays green when it does;
@@ -50,6 +51,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -126,12 +129,12 @@ DECOY_SENTENCE = (
     "path and must never become the thesis."
 )
 MISSING_THESIS = (
-    "No thesis section is recorded; add a 'What is this codebase?' section to "
-    "`entry-point.md`."
+    "No thesis section is recorded; record the project's purpose with "
+    "`record_explanation`."
 )
 REFUSED_THESIS = (
     "The recorded thesis carries status vocabulary and was not published; "
-    "correct `entry-point.md`."
+    "record a corrected purpose."
 )
 OFFENDING_THESIS = (
     "The conspectus is 34/34 mapped and every subsystem is fully surveyed."
@@ -432,10 +435,19 @@ def seed(storage: Path, entry_point: str) -> None:
             ("run-latest", 1, 0, 1, 0, "2026-09-11T18:30:00Z"),
         ],
     )
+    # The thesis and the name reach the store the way the import puts them
+    # there; the overview reads the records, never the files. A thesis the lint
+    # refuses is stored anyway: it is the state of a purpose written before the
+    # writers linted, which the page must still withhold.
+    import_onboarding(
+        db,
+        session_id="p3",
+        entry_point=entry_point,
+        onboarding_report=ONBOARDING_REPORT,
+        keep_refused_thesis=True,
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text(entry_point)
-    (storage / "onboarding-report.md").write_text(ONBOARDING_REPORT)
 
 
 def git(workspace: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -1168,9 +1180,9 @@ def main() -> int:
                     "a thesis carrying a composite index published green"
                     f" — ok={result.get('ok')!r}, warnings={warnings[:2]}"
                 )
-            if not any("entry-point.md" in w for w in warnings):
+            if not any("project purpose" in w for w in warnings):
                 return (
-                    "the publish was refused but no warning names entry-point.md,"
+                    "the publish was refused but no warning names the project purpose,"
                     f" so it does not say what to correct — {warnings[:2]}"
                 )
             published = read(storage_dir / "docs" / "index.md")
@@ -1318,9 +1330,9 @@ def main() -> int:
             if refused.get("_returncode") == 0:
                 return "the refused publish exited 0"
             warnings = " ".join(str(w) for w in refused.get("warnings") or [])
-            if "entry-point.md" not in warnings:
+            if "project purpose" not in warnings:
                 return (
-                    "no warning names the file to correct;"
+                    "no warning names the record to correct;"
                     f" warnings were {[scrub(w)[:80] for w in refused.get('warnings') or []][:2]}"
                 )
             if (refused_storage / "docs").exists():

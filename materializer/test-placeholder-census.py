@@ -21,7 +21,7 @@ Turns red when:
   - a rendered placeholder has no census row, or a row's sentence is not on its
     page, or the rows are not exactly the slots whose sentence is printed;
   - a row lacks one of the five fields, names a slot other than the three
-    in scope, or carries a discharge that names neither the file nor the tool;
+    in scope, or carries a discharge that names neither the tool nor the record it writes;
   - the census holds a row for an empty-state sentence that is not a slot;
   - `PLACEHOLDER_SENTENCES` is not exported, or one of the six strings in
     `dev/measure-reader-prose.mjs` occurs in none of its sentences;
@@ -71,6 +71,8 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -155,6 +157,7 @@ THESIS_SENTENCES = {
     "refused-composite": "The recorded thesis presents a composite index of the record and was not published",
 }
 RUNTIME_SENTENCE = "No structured runtime boundary map is recorded yet"
+RUNTIME_COLUMNS = ("Runtime / Process", "Language", "Communicates with", "Mechanism", "Notes")
 VOCABULARY_SENTENCE = "**Domain vocabulary** — not recorded"
 ALL_THESIS = tuple(THESIS_SENTENCES.values())
 SLOTS_IN_SCOPE = {"thesis", "runtime-boundary-map", "subsystem-vocabulary"}
@@ -279,12 +282,18 @@ def seed(
             " ref_sha, session_id) VALUES (?, ?, ?, ?, ?, ?, 'ex6')",
             (subject_type, sid, slot, disposition, body, head),
         )
+    # The thesis, the name and the runtime table reach the store the way the
+    # import puts them there; the pages read the records, never the files.
+    import_onboarding(
+        db,
+        session_id="ex6",
+        entry_point=entry,
+        onboarding_report=onboarding,
+        ref_sha=head,
+        keep_refused_thesis=True,
+    )
     db.commit()
     db.close()
-    if entry is not None:
-        (storage / "entry-point.md").write_text(entry)
-    if onboarding is not None:
-        (storage / "onboarding-report.md").write_text(onboarding)
     (storage / "workspace_path").write_text(f"{workspace}\n")
 
 
@@ -438,15 +447,15 @@ def row_shape(fx: Fixture, want: list[tuple[str, str, str]]) -> str | None:
         discharge = str(r["discharge"])
         slot = r["slot"]
         if slot == "thesis":
-            if r["page"] != "index.md" or "entry-point.md" not in discharge:
+            if r["page"] != "index.md" or "record_explanation" not in discharge:
                 return f"the thesis row's page or discharge is wrong: {r}"
-            if r["state"] == "absent" and "## What is this codebase?" not in discharge:
-                return f"the absent thesis discharge does not name the heading: {discharge}"
+            if "purpose" not in discharge:
+                return f"the thesis discharge does not name the purpose slot: {discharge}"
         elif slot == "runtime-boundary-map":
             if (
                 r["page"] != "architecture.md"
-                or "## Runtime boundary map" not in discharge
-                or "onboarding-report.md" not in discharge
+                or "record_runtime_boundary" not in discharge
+                or any(column not in discharge for column in RUNTIME_COLUMNS)
             ):
                 return f"the runtime row's page or discharge is wrong: {r}"
         elif slot in EXPLANATION_SLOTS:

@@ -6,9 +6,10 @@ thesis, the project name and the runtime boundary table. It extracts them with
 the functions the pages print them with, by running this module, so there is
 one copy of each rule:
 
-- the thesis is what `read_thesis` returns, printed only when its state is
-  `filled` (a refused or absent thesis is not one the overview prints);
-- the project name is the `**Codebase**:` line, as `recorded_project_name`
+- the thesis is what `thesis_from_prose` returns (the rule `read_thesis` applies
+  to the file), kept only when its state is `filled`: a refused or absent thesis
+  is not one the overview prints;
+- the project name is the `**Codebase**:` line, as `project_name_from_report`
   reads it;
 - the runtime rows are the table `_runtime_boundary_table` finds, split into
   cells as the page splits them.

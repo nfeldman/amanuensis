@@ -50,6 +50,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
+from store_only_seed import import_body
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 SCHEMA = REPO / "mcp-server" / "src" / "schema.sql"
@@ -341,16 +343,19 @@ def seed(storage: Path) -> None:
         " ref_sha, session_id) VALUES ('subsystem', 'B-01', 'account', 'recorded', ?, ?, 'ex2')",
         (sentinel("explanations.body"), SHA),
     )
-    cur.execute(
-        "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha, session_id)"
-        " VALUES (?, 'subsystem-survey', 'B-01', 'abc123abc123', ?, 'ex2')",
-        (ARTIFACT_NAME, SHA),
+    # The survey body reaches the page from the store's import, not from a file.
+    import_body(
+        db,
+        ARTIFACT_NAME,
+        "subsystem-survey",
+        f"# Read path\n\n{sentinel('survey artifact')}\n",
+        session_id="ex2",
+        subsystem_id="B-01",
+        ref_sha=SHA,
+        registered_hash="abc123abc123",
     )
     db.commit()
     db.close()
-    (storage / ARTIFACT_NAME).write_text(
-        f"# Read path\n\n{sentinel('survey artifact')}\n"
-    )
 
 
 def publish(storage: Path) -> dict[str, object]:
