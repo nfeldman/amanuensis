@@ -25,7 +25,8 @@ Turns red when:
   - a commit point is not a vertical line just after its step, a crash point, a trigger or a
     seam crossing is not above its step, an exit is not below its step, a seam crossing does
     not link the seam on System boundaries, or a step with more than two exits draws any of
-    them or does not list them all in the account;
+    them or does not list them all in the account, or an exit's box or account line names a
+    target other than its stored one (a step it unwinds to, or `leaves-flow`);
   - a flow with no marks and no declination does not say "marks not recorded", one with a
     declination does not print its reason or still says so, a flow with marks says so, or the
     account does not count the steps that have no recorded mark ("n of m");
@@ -616,6 +617,39 @@ def main() -> int:
             return None
 
         check("a step with more than two exits lists them and draws none", crowded_exits)
+
+        def exit_targets() -> str | None:
+            # Where each exit goes is the stored target: a step of the flow, or out of it. The drawn box
+            # names it, and so does the account, for drawn and listed exits alike.
+            seen = {"step": 0, "leaves": 0}
+            for flow, w in want.items():
+                if not w["figure"]:
+                    continue
+                figure = figure_of(text_of(w["sid"]), flow) or ""
+                text = " ".join(account_of(figure).split())
+                drawn_ids = {str(m["id"]) for m in w["drawn_marks"]}
+                for m in w["marks"]:
+                    if m["kind"] != "exit":
+                        continue
+                    step = w["step_of"][str(m["claim_id"])]
+                    target = str(m["target"])
+                    leaves = target == "leaves-flow"
+                    seen["leaves" if leaves else "step"] += 1
+                    where = "leaves the flow" if leaves else f"unwinds to step {target}"
+                    if not re.search(rf"Exit at step {step}: {re.escape(str(m['label']))}, {re.escape(where)}\.", text):
+                        return f"{flow}: the account does not say exit {m['id']} ({m['label']!r}) {where}"
+                    if str(m["id"]) in drawn_ids:
+                        body = html.unescape(node_body(figure, f"flow-mark:{m['id']}"))
+                        named = re.search(r'aria-label="([^"]*)"', body)
+                        box = " ".join(plain(body).split())
+                        goes = "leaves flow" if leaves else f"step {target}"
+                        if named is None or goes not in named.group(1):
+                            return f"{flow}: exit {m['id']}'s box does not name where it goes ({goes!r}): {named.group(1) if named else None!r}"
+                        if not leaves and goes not in box and "…" not in box:
+                            return f"{flow}: exit {m['id']}'s box reads {box!r}, not its target {goes!r}"
+            return None if seen["step"] >= 2 and seen["leaves"] >= 2 else f"the fixture's exits are {seen}"
+
+        check("each exit, drawn or listed, names the target the store holds", exit_targets)
 
         def seam_links() -> str | None:
             seams = (output / "seams.html").read_text()
