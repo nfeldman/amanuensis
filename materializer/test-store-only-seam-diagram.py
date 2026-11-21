@@ -33,6 +33,8 @@ Turns red when:
     with the right axis and object type: an arrow removed, an arrow added that no field
     joins, a box removed or re-pointed, a figure removed, a figure for a seam that records no
     field;
+  - a seam's account does not quote what each party's depth authorizes and cannot justify
+    (Appendix B rule 2);
   - a seam naming one subsystem as both parties draws fewer boxes than its model holds, or an
     arrow of one half joins the other half's box;
   - the read-back of the publication is not green on every axis;
@@ -554,6 +556,24 @@ def main() -> int:
             return None
 
         check("a half is drawn from Structural up, and said not to be below", status_rule)
+
+        def qualified() -> str | None:
+            # Appendix B rule 2: a seam quotes what each party's depth authorizes and cannot justify.
+            vocab = json.loads((REPO / "mcp-server" / "contracts" / "conspectus-vocabulary.json").read_text())
+            depth = {v["value"]: v for v in vocab["enums"]["subsystem_status"]["values"]}
+            for sid, w in want.items():
+                if not w["figure"]:
+                    continue
+                text = " ".join(plain(account_of(figure_of(page, sid) or "")).split())
+                for party in (str(w["seam"]["party_a"]), str(w["seam"]["party_b"])):
+                    status = w["depth"].get(party, "unmapped")
+                    for field in ("authorizes", "cannot_justify"):
+                        quoted = " ".join(str(depth[status][field]).split())
+                        if not re.search(rf"{re.escape(party)}[^.]*{re.escape(quoted)}", text):
+                            return f"{sid}'s account does not quote what {party}'s depth ({status}) {field.replace('_', ' ')}: {quoted!r}"
+            return None
+
+        check("a seam quotes what each party's depth authorizes and cannot justify", qualified)
 
         def self_seam() -> str | None:
             # A seam may name one subsystem as both parties (the server allows it): both boxes are drawn,

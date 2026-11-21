@@ -30,6 +30,8 @@ Turns red when:
   - an SVG lacks `role="img"`, a `<title>` or a `<desc>` that counts its segments, states a font
     size under 11, uses a literal colour, runs a script, or is not 960 wide, or a mark has no
     `data-node`;
+  - a coverage account does not quote, for each subsystem it draws, what its depth authorizes and
+    cannot justify (Appendix B rule 2);
   - the badge note or a coverage sentence names a depth other than by its contract label
     ("Concerns" for "Reviewing concerns", "Scoping" for "Scoped");
   - two publications of one store print different figures or badges;
@@ -724,6 +726,24 @@ def main() -> int:
             return None
 
         check("badge and coverage prose names depths by their contract labels", contract_labels)
+
+        def qualified() -> str | None:
+            # Appendix B rule 2: a subject's coverage quotes what its depth authorizes and cannot justify.
+            vocab = json.loads((REPO / "mcp-server" / "contracts" / "conspectus-vocabulary.json").read_text())
+            depth = {v["value"]: v for v in vocab["enums"]["subsystem_status"]["values"]}
+            status = statuses(store_a)
+            files = " ".join(account_of(figures((out_a / FILES).read_text())[0]).split())
+            for sid in ("B-01", "B-02"):
+                text = " ".join(account_of(figures((out_a / PAGES[sid]).read_text())[0]).split())
+                for field in ("authorizes", "cannot_justify"):
+                    quoted = " ".join(str(depth[status[sid]][field]).split())
+                    if quoted not in plain(text):
+                        return f"{sid}'s coverage does not quote what {status[sid]} {field.replace('_', ' ')}: {quoted!r}"
+                    if quoted not in plain(files):
+                        return f"the Files page's coverage does not quote what {sid}'s depth {field.replace('_', ' ')}"
+            return None
+
+        check("coverage quotes what each drawn subject's depth authorizes and cannot justify", qualified)
 
         def files_page() -> str | None:
             found = figures((out_a / FILES).read_text())
