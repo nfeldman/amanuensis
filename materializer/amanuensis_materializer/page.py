@@ -133,6 +133,8 @@ class Paragraph:
 class ListItem:
     text: Inlines
     children: tuple[List, ...] = ()
+    # The record an item prints, when it prints one (a claim), as `<type>:<id>` (§3.5).
+    record: str = ""
 
 
 @dataclass(frozen=True)
@@ -204,6 +206,9 @@ class Row:
     cells: tuple[Inlines, ...]
     markers: tuple[str, ...] = ()
     filter: RowFilter | None = None
+    # The record a row prints, and its state (§3.5).
+    record: str = ""
+    state: str = ""
 
 
 @dataclass(frozen=True)

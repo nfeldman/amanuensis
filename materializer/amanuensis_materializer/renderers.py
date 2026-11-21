@@ -228,6 +228,15 @@ def _table(caption: str, headers: Sequence[str], body: Sequence[Sequence[str | I
     )
 
 
+def _marked_rows(table: Table, marks: Sequence[tuple[str, str]]) -> Table:
+    """A table whose rows each print one record: each row carries its record and state (§3.5)."""
+
+    return replace(
+        table,
+        rows=tuple(replace(row, record=record, state=state) for row, (record, state) in zip(table.rows, marks, strict=True)),
+    )
+
+
 def _status_cell(status: str) -> Inlines:
     """A survey depth as its chip, the word beside the colour the badge once printed."""
 
@@ -1010,6 +1019,8 @@ def _concern_review(dispositions: Sequence[Mapping[str, Any]], caption: str) -> 
                 facts=tuple(facts),
                 fields=(Fact("rationale", inlines(rationale)),) if _plain(rationale) else (),
                 path=_plain(f"**{code}**"),
+                record=f"disposition:{d['subsystem_id']}:{code}",
+                state=str(d["classification"]),
             )
         )
     return RecordList("concern-disposition", caption, tuple(records))
@@ -1253,17 +1264,20 @@ def _checklist_blocks(
                     "Whether each kind of territory applies to this project. A territory that"
                     " does not apply names the condition that rules it out."
                 ),
-                _table(
-                    _caption("Territories"),
-                    ("Territory", "Disposition", "Condition"),
-                    [
+                _marked_rows(
+                    _table(
+                        _caption("Territories"),
+                        ("Territory", "Disposition", "Condition"),
                         [
-                            _flat_cell(territory_label(t["territory"])),
-                            str(t["disposition"]),
-                            _flat_cell(t["condition"] or "—"),
-                        ]
-                        for t in territories
-                    ],
+                            [
+                                _flat_cell(territory_label(t["territory"])),
+                                str(t["disposition"]),
+                                _flat_cell(t["condition"] or "—"),
+                            ]
+                            for t in territories
+                        ],
+                    ),
+                    [(f"territory:{t['territory']}", str(t["disposition"])) for t in territories],
                 ),
             )
         )
@@ -1343,6 +1357,42 @@ def _survey_notes_line(artifact: Mapping[str, Any], account: Mapping[str, Any]) 
         f" {str(account['ref_sha'] or '')[:8] or 'not recorded'}; where the two disagree,"
         " the later one is the current reading.*"
     )
+
+
+def explanation_body(
+    subject_type: str,
+    subject_id: str,
+    slot: str,
+    reading: ExplanationReading,
+    warn: Callable[[str], None] | None = None,
+) -> tuple[Marked, bool] | None:
+    """An effective explanation's printed body, marked with its row, and whether it is the body.
+
+    A subsystem's purpose (recorded or declined) and account (recorded), and the
+    project's account (recorded or declined), print here; anything else is not a
+    body a page prints and is None. The page and the read-back both build it here
+    (§3.5).
+    """
+
+    row = reading.row
+    project = subject_type == "project"
+    if row is None or reading.state not in ("recorded", "declined"):
+        return None
+    if project and slot != "account":
+        return None  # the project's purpose is the overview's thesis, read on its own
+    if not project and slot == "account" and reading.state == "declined":
+        return None  # a declined account prints one sentence under the survey record
+    text, is_body = _published_explanation(
+        subject_id if not project else "project", slot, str(row["body"]), warn
+    )
+    sha = str(row["ref_sha"])[:8]
+    if reading.state == "recorded":
+        blocks = render_prose(text.strip()) if project else render_prose(text.strip(), under=2)
+    elif project:
+        blocks = (_paragraph(PROJECT_ACCOUNT_DECLINED.format(sha=sha, reason=text.strip())),)
+    else:
+        blocks = render_prose(PURPOSE_DECLINED.format(sha=sha, reason=text.strip()))
+    return Marked(f"explanation:{row['id']}", reading.state, tuple(blocks)), is_body
 
 
 def _published_explanation(
@@ -1847,22 +1897,12 @@ def render_architecture(
     workspace = resolve_workspace(storage)
     bound = workspace_is_bound(workspace)
     fit: list[Block] = []
-    if account.state == "recorded" and account.row is not None:
-        text, is_body = _published_explanation(
-            "project", "account", str(account.row["body"]), warn
-        )
-        fit += render_prose(text.strip())
-        if is_body:
+    printed = explanation_body("project", "project", "account", account, warn)
+    if printed is not None and account.row is not None:
+        body, is_body = printed
+        fit.append(body)
+        if is_body and account.state == "recorded":
             fit.append(_paragraph(_provenance_line(workspace, bound, account.row, head)))
-    elif account.state == "declined" and account.row is not None:
-        text, _is_body = _published_explanation(
-            "project", "account", str(account.row["body"]), warn
-        )
-        fit.append(
-            _paragraph(
-                PROJECT_ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=text.strip())
-            )
-        )
     else:
         fit.append(_paragraph(PROJECT_ACCOUNT_ABSENT))
     lines = []
@@ -2010,6 +2050,33 @@ def render_master_plan(
     )
 
 
+def subsystem_claims(conn: sqlite3.Connection, sid: str) -> list[dict[str, Any]]:
+    """The current claims a subsystem's page prints: about it, keyed under it, or citing its files.
+
+    The page and the read-back's census both ask this function (§3.5).
+    """
+
+    return rows(
+        conn,
+        """
+        SELECT c.claim_id, c.claim_key, c.subject_type, c.subject_id, c.statement,
+               c.epistemic_kind, c.asserted_at_sha
+          FROM claims c
+         WHERE c.valid_until_sha IS NULL
+           AND (c.subject_id = ?
+                OR c.claim_key LIKE ? ESCAPE '\\'
+                OR EXISTS (SELECT 1
+                             FROM claim_evidence ce
+                             JOIN evidence e ON e.id = ce.evidence_id
+                            WHERE ce.claim_id = c.claim_id
+                              AND e.file_path IN (SELECT file_path FROM file_ledger
+                                                   WHERE subsystem_id = ?)))
+         ORDER BY c.claim_key
+        """,
+        (sid, _like_prefix(sid), sid),
+    )
+
+
 def render_subsystem(
     conn: sqlite3.Connection,
     storage: Path,
@@ -2095,25 +2162,7 @@ def render_subsystem(
     # other, which is the divergence §13 calls a false green.  `valid_until_sha
     # IS NULL` is ADR-0001's current: a claim closed by `apply_change_impact`
     # is history, and history is not rendered here.
-    claims = rows(
-        conn,
-        """
-        SELECT c.claim_id, c.claim_key, c.subject_type, c.subject_id, c.statement,
-               c.epistemic_kind, c.asserted_at_sha
-          FROM claims c
-         WHERE c.valid_until_sha IS NULL
-           AND (c.subject_id = ?
-                OR c.claim_key LIKE ? ESCAPE '\\'
-                OR EXISTS (SELECT 1
-                             FROM claim_evidence ce
-                             JOIN evidence e ON e.id = ce.evidence_id
-                            WHERE ce.claim_id = c.claim_id
-                              AND e.file_path IN (SELECT file_path FROM file_ledger
-                                                   WHERE subsystem_id = ?)))
-         ORDER BY c.claim_key
-        """,
-        (sid, _like_prefix(str(sid)), sid),
-    )
+    claims = subsystem_claims(conn, str(sid))
 
     # The per-subsystem survey bodies: the imports of an earlier version's
     # hand-written survey files, which the store holds as written. A body a
@@ -2153,19 +2202,12 @@ def render_subsystem(
 
     # 0. Purpose — only from an effective record, recorded or declined. A page
     #    with neither keeps today's opening: Scope and the no-purpose sentence.
-    if purpose.state in ("recorded", "declined") and purpose.row is not None:
-        text, is_body = _published_explanation(
-            str(sid), "purpose", str(purpose.row["body"]), warn
-        )
-        held: list[Block] = []
-        if purpose.state == "recorded":
-            held += render_prose(text.strip(), under=2)
-            if is_body:
-                held.append(_paragraph(_provenance_line(workspace, bound, purpose.row, checked_head)))
-        else:
-            held += render_prose(
-                PURPOSE_DECLINED.format(sha=str(purpose.row["ref_sha"])[:8], reason=text.strip())
-            )
+    printed = explanation_body("subsystem", str(sid), "purpose", purpose, warn)
+    if printed is not None and purpose.row is not None:
+        body, is_body = printed
+        held: list[Block] = [body]
+        if purpose.state == "recorded" and is_body:
+            held.append(_paragraph(_provenance_line(workspace, bound, purpose.row, checked_head)))
         blocks.append(_section("Purpose", *held))
 
     # 1. Scope — verbatim, under that heading, never as a purpose sentence.
@@ -2209,11 +2251,10 @@ def render_subsystem(
 
     # 2b. How it works — the recorded account. A declined account prints one
     #     sentence under the survey record instead.
-    if account.state == "recorded" and account.row is not None:
-        text, is_body = _published_explanation(
-            str(sid), "account", str(account.row["body"]), warn
-        )
-        held = list(render_prose(text.strip(), under=2))
+    printed = explanation_body("subsystem", str(sid), "account", account, warn)
+    if account.state == "recorded" and printed is not None and account.row is not None:
+        body, is_body = printed
+        held = [body]
         if is_body:
             held.append(_paragraph(_provenance_line(workspace, bound, account.row, checked_head)))
         blocks.append(_section("How it works", *held))
@@ -2271,6 +2312,7 @@ def render_subsystem(
                     ListItem(
                         inlines(" ".join(str(c["statement"] or "—").split())),
                         (List(False, (ListItem(inlines(coordinates)),)),),
+                        record=f"claim:{c['claim_id']}",
                     )
                 )
             structure.append(List(False, tuple(items)))

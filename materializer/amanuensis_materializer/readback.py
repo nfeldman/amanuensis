@@ -2287,7 +2287,12 @@ class ProjectionVerifier:
         from .html_projection import DISPLAY_STATUS, _HtmlWriter  # noqa: PLC0415 — it imports this module
         from .legacy_prose import body_blocks, imported_bodies  # noqa: PLC0415
         from .page import Marked, Page  # noqa: PLC0415
-        from .renderers import AS_WRITTEN_HEADING, narrative_body  # noqa: PLC0415
+        from .renderers import (  # noqa: PLC0415
+            AS_WRITTEN_HEADING,
+            explanation_body,
+            narrative_body,
+            subsystem_claims,
+        )
 
         names, named, concerns = _resolver_names(conn)
         owed: dict[str, tuple[dict[str, int], str | None, Any]] = {}
@@ -2313,6 +2318,28 @@ class ProjectionVerifier:
                 owed[f"seam:{r['id']}"] = ({SEAM_PAGE: 1}, None, None)
         for edge in runtime_boundary_rows(conn):
             owed[runtime_edge_record(edge)] = ({ARCHITECTURE_PAGE: 1}, None, None)
+        for sid, name in names.items():
+            page = subsystem_page(sid, name)
+            for claim in subsystem_claims(conn, sid):
+                pages = owed.get(f"claim:{claim['claim_id']}", ({}, None, None))[0]
+                owed[f"claim:{claim['claim_id']}"] = ({**pages, page: 1}, None, None)
+            for d in rows(
+                conn,
+                "SELECT d.concern_code, d.classification FROM dispositions d"
+                " JOIN concerns c ON c.code = d.concern_code WHERE d.subsystem_id = ?",
+                (sid,),
+            ):
+                owed[f"disposition:{sid}:{d['concern_code']}"] = ({page: 1}, str(d["classification"]), None)
+        for territory in effective_territory_dispositions(conn):
+            owed[f"territory:{territory['territory']}"] = ({CHECKLIST_PAGE: 1}, str(territory["disposition"]), None)
+        for (subject_type, subject_id, slot), reading in sorted(effective_explanations(conn, self.storage).items()):
+            if subject_type == "subsystem" and subject_id not in names:
+                continue
+            printed = explanation_body(subject_type, subject_id, slot, reading)
+            if printed is None or reading.row is None:
+                continue
+            page = ARCHITECTURE_PAGE if subject_type == "project" else subsystem_page(subject_id, names[subject_id])
+            owed[f"explanation:{reading.row['id']}"] = ({page: 1}, reading.state, (printed[0], page))
         for record in effective_narratives(conn, self.storage):
             page = narrative_page(record, names)
             if page is not None:

@@ -2430,6 +2430,7 @@ class _HtmlWriter:
                     f' data-filter-subsystem="{html.escape(row.filter.subsystem, quote=True)}"'
                     f' data-filter-severity="{html.escape(row.filter.severity, quote=True)}"'
                 )
+            row_attrs += _mark_attrs(row.record, row.state)
             table_rows.append("".join(row.markers) + f'<tr{row_attrs}>{"".join(cells)}</tr>')
         kind = " lifecycle-table" if lifecycle else ""
         return (
@@ -2453,7 +2454,7 @@ class _HtmlWriter:
     def _list(block: List) -> str:
         tag = "ol" if block.ordered else "ul"
         items = "".join(
-            f"<li>{_inlines_html(item.text)}{''.join(_HtmlWriter._list(child) for child in item.children)}</li>"
+            f"<li{_mark_attrs(item.record)}>{_inlines_html(item.text)}{''.join(_HtmlWriter._list(child) for child in item.children)}</li>"
             for item in block.items
         )
         return f"<{tag}>{items}</{tag}>"

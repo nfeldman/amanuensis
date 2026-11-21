@@ -371,7 +371,7 @@ class _Walk:
         for item in items:
             text = self.inlines(item.text)
             children = tuple(replace(child, items=self.items(child.items)) for child in item.children)
-            out.append(ListItem(text, children))
+            out.append(replace(item, text=text, children=children))
         return tuple(out)
 
     def table(self, block: Table | EnumTable | LifecycleTable) -> Table | EnumTable | LifecycleTable:

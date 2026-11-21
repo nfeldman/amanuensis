@@ -14,15 +14,15 @@ Turns red when:
   - `readback.py` or the materializer cannot be loaded, or the fixture cannot be
     published;
   - an unsabotaged publication does not read back green on all three axes;
-  - a rendered finding, subsystem, seam, narrative, imported body or runtime
-    boundary does not carry its `data-record` mark, or its `data-state` is not the
-    store's value;
+  - a rendered finding, subsystem, seam, narrative, imported body, runtime
+    boundary, claim, concern disposition, explanation or territory disposition does
+    not carry its `data-record` mark, or its `data-state` is not the store's value;
   - a drawn edge of the runtime SVG, or a node or edge of the boundary SVG, does
     not carry `data-edge` / `data-node` naming its record;
   - any sabotage is not reported on its axis with its `object_type` and id, or is
     reported only as a hash drift:
-      * a finding's printed state changed (its chip and its mark together, and its
-        chip alone): state axis, `finding`;
+      * a finding's printed state changed (its chip and its mark together, its
+        chip alone, and the chip's words alone): state axis, `finding`;
       * a subsystem depth label changed: state axis, `subsystem`;
       * a narrative body altered: content axis, `narrative`;
       * an imported body truncated: content axis, `imported-body`;
@@ -31,6 +31,11 @@ Turns red when:
       * an edge added to the runtime SVG (one naming a real boundary, one naming
         none): content axis, `runtime-diagram-edge`;
       * a node removed from the boundary SVG: content axis, `boundary-diagram-node`;
+      * beyond the plan's table, one per record type it adds: a disposition's
+        verdict re-marked (state, `disposition`), a claim removed (coverage,
+        `claim`), an explanation altered (content, `explanation`), a territory row
+        re-marked (state, `territory`), and a mark naming a record the store does
+        not hold (coverage);
   - the golden corpus's `VERSION` is not SO20, or a golden page differs from the
     corpus this packet started from by anything but `data-record`, `data-state`,
     `data-node` and `data-edge` attributes, or no golden page gained one;
@@ -67,6 +72,10 @@ NARRATIVE_BODY = (
     "The scheduler takes a job from the queue, checks the caller with the auth"
     " service and then starts it.\n\nA job that fails its check is put back on the"
     " queue with its attempt count raised."
+)
+EXPLANATION_BODY = (
+    "The auth service decides whether a caller may run a job, and keeps the policy it"
+    " decides by."
 )
 SURVEY_PATH = "subsystems/B-01-structural.md"
 SURVEY_BODY = (
@@ -158,8 +167,31 @@ def build_store(root: Path) -> tuple[Path, dict[str, Any]]:
                 hashlib.sha256(SURVEY_BODY.encode()).hexdigest(),
             ),
         )
+        cur.execute(
+            "INSERT INTO claims (claim_id, claim_key, subject_type, subject_id, statement,"
+            " epistemic_kind, asserted_at_sha, valid_from_sha, session_id)"
+            " VALUES ('B-02-token-check', 'B-02/flow/token-check', 'subsystem', 'B-02',"
+            " 'The gateway checks every token before it reaches the policy store.', 'observation',"
+            " 'deadbeef', 'deadbeef', 's1')"
+        )
+        cur.execute(
+            "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
+            " ref_sha, session_id, recorded_at) VALUES ('subsystem', 'B-02', 'purpose', 'recorded', ?,"
+            " 'deadbeef', 's1', '2026-11-20 10:00:00')",
+            (EXPLANATION_BODY,),
+        )
+        explanation_id = cur.lastrowid
+        cur.execute(
+            "INSERT INTO territory_dispositions (territory, disposition, condition, ref_sha, session_id)"
+            " VALUES ('T2', 'disqualified', 'The service holds no cache between requests.', 'deadbeef', 's1')"
+        )
         db.commit()
         facts = {
+            "explanation_id": explanation_id,
+            "dispositions": {
+                f"{r[0]}:{r[1]}": str(r[2])
+                for r in db.execute("SELECT subsystem_id, concern_code, classification FROM dispositions")
+            },
             "narrative_id": narrative_id,
             "findings": {
                 str(r[0]): str(r[1])
@@ -248,6 +280,20 @@ def _finding_state(page: str, fid: str, *, mark_too: bool) -> Callable[[str], st
     return edit
 
 
+def _chip_words(fid: str) -> Callable[[str], str]:
+    """Only the chip's visible words, its class and the record's mark left as they were."""
+
+    def edit(text: str) -> str:
+        found = element(text, "article", f'data-record="finding:{fid}"')
+        if found is None:
+            return text
+        chunk = found.group(0)
+        changed = re.sub(r'(<span class="status[^"]*"[^>]*>)[^<]*(</span>)', r"\1Verified fixed\2", chunk, count=1)
+        return text.replace(chunk, changed)
+
+    return edit
+
+
 def _depth_label(sid: str) -> Callable[[str], str]:
     def edit(text: str) -> str:
         found = element(text, "li", f'data-record="subsystem:{sid}"')
@@ -315,17 +361,47 @@ def _boundary_node_removed(sid: str) -> Callable[[str], str]:
     return edit
 
 
+def _remark(tag: str, record: str, state: str) -> Callable[[str], str]:
+    def edit(text: str) -> str:
+        found = re.search(rf'<{tag}\b[^>]*data-record="{re.escape(record)}"[^>]*>', text)
+        if found is None:
+            return text
+        return text.replace(found.group(0), re.sub(r'data-state="[^"]*"', f'data-state="{state}"', found.group(0)), 1)
+
+    return edit
+
+
+def _claim_removed(text: str) -> str:
+    found = re.search(r'<li data-record="claim:B-02-token-check">.*?</ul></li>', text, re.S)
+    return text if found is None else text.replace(found.group(0), "")
+
+
+def _explanation_altered(explanation_id: int) -> Callable[[str], str]:
+    def edit(text: str) -> str:
+        found = element(text, "p", f'data-record="explanation:{explanation_id}"')
+        return text if found is None else text.replace(found.group(0), found.group(0).replace("may run a job", "may run any job"))
+
+    return edit
+
+
+def _unheld_mark(text: str) -> str:
+    return text.replace('data-record="seam:SM-01"', 'data-record="seam:SM-99"', 1)
+
+
 def sabotages(facts: dict[str, Any]) -> list[tuple[str, str, Callable[[str], str], str, str, str]]:
     """(label, page, edit, axis, object_type, object_id)."""
 
     open_finding = next(fid for fid, state in sorted(facts["findings"].items()) if state == "open")
     shallow = next(sid for sid, status in sorted(facts["subsystems"].items()) if status != "mapped")
     first_runtime = facts["runtime"][0][0]
+    disposition = sorted(facts["dispositions"])[0]
+    disposition_page = {"B-01": "b01-job-scheduler.html", "B-02": "b02-auth-service.html", "F-01": "f01-web-ui.html"}[disposition.split(":")[0]]
     return [
         ("a finding's printed state changed with its mark", "findings.html",
          _finding_state("findings.html", open_finding, mark_too=True), "state", "finding", open_finding),
         ("a finding's printed state changed under its mark", "findings.html",
          _finding_state("findings.html", open_finding, mark_too=False), "state", "finding", open_finding),
+        ("a finding's chip words changed alone", "findings.html", _chip_words(open_finding), "state", "finding", open_finding),
         ("a subsystem depth label changed", "master-plan.html", _depth_label(shallow), "state", "subsystem", shallow),
         ("a narrative body altered", "subsystems/b01-job-scheduler.html",
          _narrative_altered(facts["narrative_id"]), "content", "narrative", str(facts["narrative_id"])),
@@ -340,6 +416,14 @@ def sabotages(facts: dict[str, Any]) -> list[tuple[str, str, Callable[[str], str
          _runtime_edge_added(None), "content", "runtime-diagram-edge", ""),
         ("a node removed from the boundary SVG", "architecture.html", _boundary_node_removed("F-01"),
          "content", "boundary-diagram-node", "subsystem:F-01"),
+        ("a disposition's verdict re-marked", f"subsystems/{disposition_page}",
+         _remark("article", f"disposition:{disposition}", "ruled-out" if facts["dispositions"][disposition] != "ruled-out" else "out-of-scope"),
+         "state", "disposition", disposition),
+        ("a claim removed from its page", "subsystems/b02-auth-service.html", _claim_removed, "coverage", "claim", "B-02-token-check"),
+        ("an explanation altered", "subsystems/b02-auth-service.html", _explanation_altered(facts["explanation_id"]),
+         "content", "explanation", str(facts["explanation_id"])),
+        ("a territory row re-marked", "concern-checklist.html", _remark("tr", "territory:T2", "applies"), "state", "territory", "T2"),
+        ("a mark naming a record the store does not hold", "seams.html", _unheld_mark, "coverage", "seam", "SM-99"),
     ]
 
 
@@ -449,6 +533,27 @@ def main() -> int:
             return None
 
         check("seams, narratives and imported bodies carry their marks", seam_and_prose_marks)
+
+        def other_marks() -> str | None:
+            page = (output / "subsystems" / "b02-auth-service.html").read_text()
+            if len(start_tags(page, 'data-record="claim:B-02-token-check"')) != 1:
+                return "the claim on B-02 is not marked once on its page"
+            explanation = start_tags(page, f'data-record="explanation:{facts["explanation_id"]}"')
+            if not explanation or any('data-state="recorded"' not in tag for tag in explanation):
+                return "B-02's purpose is not marked with its row and its state"
+            for key, verdict in facts["dispositions"].items():
+                sid = key.split(":")[0]
+                name = {"B-01": "b01-job-scheduler", "B-02": "b02-auth-service", "F-01": "f01-web-ui"}[sid]
+                tags = start_tags((output / "subsystems" / f"{name}.html").read_text(), f'data-record="disposition:{key}"')
+                if len(tags) != 1 or f'data-state="{verdict}"' not in tags[0]:
+                    return f"disposition {key} is not marked once with its verdict {verdict!r}"
+            checklist = (output / "concern-checklist.html").read_text()
+            tags = start_tags(checklist, 'data-record="territory:T2"')
+            if len(tags) != 1 or 'data-state="disqualified"' not in tags[0]:
+                return "territory T2 is not marked once with its disposition"
+            return None
+
+        check("claims, dispositions, explanations and territories carry their marks", other_marks)
 
         def diagram_marks() -> str | None:
             text = (output / "architecture.html").read_text()
