@@ -508,7 +508,7 @@ class _Walk:
 
 
 def resolve_model(page: Page, rel_path: str, index: XrefIndex) -> Page:
-    """Link every known ID in one page's model, as `resolve_text` does the page's Markdown.
+    """Link every known ID in one page's model.
 
     `rel_path` is the page's plan path, which the index's targets are relative
     to. Run over a renderer's fresh model, never over a model already resolved.

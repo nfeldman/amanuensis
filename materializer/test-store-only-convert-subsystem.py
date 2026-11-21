@@ -15,7 +15,7 @@ Turns red when:
   - a subsystem page of a rebuilt fixture differs by one byte from the golden HTML;
   - any file the rich store publishes (every page, not only the subsystem pages)
     differs by one byte from what the packet's start tree publishes for the same store;
-  - `parse_markdown` is called, or the Markdown parser is reached by anything but
+  - the Markdown parser is reached by anything but
     `legacy_prose.py`, while a subsystem page is built; `legacy_prose.py` reads a
     page's imported bodies and nothing else, so the parser must run exactly once for
     each imported body a page prints and never for a page that prints none; or the
