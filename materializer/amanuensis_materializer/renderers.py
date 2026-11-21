@@ -28,13 +28,16 @@ from .diagrams import (
     boundary_view,
     concern_coverage_heatmap,
     runtime_boundary_map,
+    runtime_boundary_rows,
     runtime_boundary_state,
     seam_graph,
     staleness_map,
     subsystem_dependency_view,
 )
+from .legacy_prose import ImportedBody, imported_bodies, imports_source
+from .legacy_prose import nest_headings as _nest_prose
 from .lint import composite_index_violations, explanation_refusal, orientation_violations
-from .manifest import sha256_bytes, sha256_json
+from .manifest import sha256_json
 from .readback import (
     CARRIED_HEADING,
     CARRIED_UNDECIDED,
@@ -228,13 +231,6 @@ def _like_prefix(sid: str) -> str:
     return f"{escaped}/%"
 
 
-# CommonMark fences: three or more backticks or tildes, indented at most three
-# spaces.  Tracking only the backtick form let a `~~~` block's contents through
-# as prose, and a `#` inside one was demoted as if it were a document heading
-# (slice-S3, F10/codex).
-_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
-
-
 def narrative_placement(*, has_account: bool, has_claims: bool, has_artifact: bool) -> str:
     """Where a subsystem's survey narrative renders (spec §2.3).
 
@@ -249,44 +245,6 @@ def narrative_placement(*, has_account: bool, has_claims: bool, has_artifact: bo
     if has_account:
         return "survey-record"
     return "structure-narrative" if has_claims else "inventory-fallback"
-
-
-_LINE_BREAK = re.compile(r"\r\n|[\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029]")
-
-
-def _nest_prose(text: str, under: int) -> str:
-    """Shift a recorded document's ATX headings beneath a page heading.
-
-    An artifact was written as a document of its own and opens at `#`.  Rendered
-    verbatim inside a page section, its first heading would close the section it
-    was placed in and the reader would be told the narrative sits somewhere it
-    does not.  Only the heading *level* moves; the heading text, the order, and
-    every other line are the recorded bytes.  Levels saturate at six rather than
-    wrapping, so a deeply nested source flattens instead of re-opening the page.
-    A line ends at every break the HTML projection's `splitlines()` recognizes, so
-    a heading cannot wait behind a carriage return; each such break becomes a
-    newline on the page.
-    """
-
-    out: list[str] = []
-    fence: tuple[str, int] | None = None
-    for line in _LINE_BREAK.split(text):
-        opener = _FENCE.match(line)
-        if fence is None:
-            # CommonMark: a fence opens on three or more backticks or tildes.
-            if opener:
-                fence = (opener.group(1)[0], len(opener.group(1)))
-        elif opener and opener.group(1)[0] == fence[0] and len(opener.group(1)) >= fence[1]:
-            # …and closes only on the same character, at least as long. A
-            # shorter run, or the other character, is content.
-            fence = None
-        if fence is None and not opener:
-            match = re.match(r"^(#{1,6})(\s)", line)
-            if match:
-                level = min(6, len(match.group(1)) + under)
-                line = "#" * level + line[len(match.group(1)) :]
-        out.append(line)
-    return "\n".join(out)
 
 
 def _claim_segment(sid: str, claim_key: str) -> str | None:
@@ -358,21 +316,22 @@ def _evidence_text(rows: list[dict[str, Any]]) -> str:
         files.append(text if role == "supports" else f"{text} ({role})")
     return "evidence: " + ", ".join(files)
 
-THESIS_SOURCE = "entry-point.md"
+#: What a refusal of the thesis names as its source when no row is cited.
+THESIS_SOURCE = "the project purpose"
 THESIS_SECTION_PATTERN = re.compile(
     r"^#{1,6}\s*what is this (?:codebase|project)\??\s*$", re.IGNORECASE
 )
 THESIS_ABSENT = (
-    "No thesis section is recorded; add a 'What is this codebase?' section to "
-    "`entry-point.md`."
+    "No thesis section is recorded; record the project's purpose with "
+    "`record_explanation`."
 )
 THESIS_REFUSED = (
     "The recorded thesis carries status vocabulary and was not published; "
-    "correct `entry-point.md`."
+    "record a corrected purpose."
 )
 THESIS_REFUSED_COMPOSITE = (
     "The recorded thesis presents a composite index of the record and was not "
-    "published; correct `entry-point.md`."
+    "published; record a corrected purpose."
 )
 
 
@@ -416,26 +375,18 @@ def _thesis_body(prose: str) -> str:
     return "\n".join(body).strip()
 
 
-def read_thesis(storage: Path) -> Thesis:
-    """The thesis taken by heading, from `entry-point.md` and nowhere else.
+def thesis_from_prose(prose: str) -> Thesis:
+    """The thesis taken by heading from an entry point's text.
 
     The first paragraph is deliberately not a fallback: `entry-point.md` is a
     dated reading path recorded by an earlier session, and its opening paragraph
     carries no contract to describe the project. When the named section is
-    absent the page says which section to add, which is a fact about the record
-    rather than a sentence about the codebase that nobody wrote (§7.2).
-    """
+    absent there is no thesis.
 
-    path = storage / THESIS_SOURCE
-    return thesis_from_prose(path.read_text() if path.is_file() else "")
-
-
-def thesis_from_prose(prose: str) -> Thesis:
-    """`read_thesis` over the entry point's text, wherever that text is held.
-
-    The import (`legacy_extract`) reads the thesis from the bytes it imported,
-    not from the file on disk, which may have changed since (F3/codex,
-    slice-S1); both go through this one rule.
+    Only the import (`legacy_extract`) calls this, over the bytes it copied into
+    the store, not over a file on disk, which may have changed since (F3/codex,
+    slice-S1). No page reads the entry point: the thesis is the project's
+    purpose, a record (store-only PLAN §3.3).
     """
 
     body = _thesis_body(prose)
@@ -463,14 +414,14 @@ PROJECT_PURPOSE_DECLINED = (
 
 
 def project_thesis(conn: sqlite3.Connection, storage: Path) -> Thesis:
-    """The overview's thesis: the effective project purpose, else `entry-point.md`.
+    """The overview's thesis: the effective project purpose.
 
     Store-only PLAN §3.3 sources the thesis from the effective project-purpose
     explanation, recorded or imported, and §2.2 requires a purpose recorded at
     onboarding to render. What the slot holds for a stored purpose is decided by
     `project_purpose_text`, the function the read-back's census owes it by, so
     the page and the census cannot disagree (F1/codex, slice-S1). A store with
-    no effective purpose keeps today's reading of `entry-point.md` until SO8.
+    no effective purpose has no thesis: the slot says so, and no file is read.
     """
 
     for (subject_type, _sid, slot), reading in effective_explanations(conn, storage).items():
@@ -492,7 +443,7 @@ def project_thesis(conn: sqlite3.Connection, storage: Path) -> Thesis:
             state="refused" if violations else "filled",
             source=source,
         )
-    return read_thesis(storage)
+    return Thesis(THESIS_ABSENT, recorded=False, state="absent")
 
 
 def thesis_state(conn: sqlite3.Connection, storage: Path) -> str:
@@ -567,18 +518,24 @@ def _package_name(workspace: Path) -> str | None:
     return None
 
 
-def recorded_project_name(storage: Path) -> str | None:
-    """The name onboarding recorded on the `**Codebase**:` line, or None.
+def recorded_project_name(conn: sqlite3.Connection) -> str | None:
+    """The name the store records for the project, or None.
 
-    The first line of that form decides: a blank one records nothing. The
-    import (`legacy_extract`) reads the name through this function too, so the
-    store holds what the page printed.
+    The newest `project_profile` row decides; the import writes one from the
+    onboarding report's `**Codebase**:` line. A store whose profile was never
+    written but which holds that report as an import reads the name from the
+    imported text, by the same rule (store-only PLAN §3.3).
     """
 
-    report = storage / "onboarding-report.md"
-    if not report.is_file():
-        return None
-    return project_name_from_report(report.read_text())
+    if table_exists(conn, "project_profile"):
+        profile = row(conn, "SELECT name FROM project_profile ORDER BY id DESC LIMIT 1")
+        if profile and str(profile["name"]).strip():
+            return str(profile["name"]).strip()
+    for imported in imported_bodies(conn, kind="onboarding-report"):
+        recorded = project_name_from_report(imported.body)
+        if recorded:
+            return recorded
+    return None
 
 
 def project_name_from_report(text: str) -> str | None:
@@ -591,7 +548,7 @@ def project_name_from_report(text: str) -> str | None:
     return None
 
 
-def project_name(storage: Path) -> str:
+def project_name(conn: sqlite3.Connection, storage: Path) -> str:
     """The project's own name, which is the projection's primary identity.
 
     Amanuensis is the producing method and never the title
@@ -599,8 +556,9 @@ def project_name(storage: Path) -> str:
     separate").
 
     Three sources, in the order of how deliberately each was chosen: the name
-    onboarding recorded, the name the repository binding resolved, and the name
-    the workspace's package manifest declares. A directory name is not among
+    the store records (a profile, or the imported onboarding report), the name the
+    repository binding resolved, and the name the workspace's package manifest
+    declares. A directory name is not among
     them at any position. A store surveyed from a second worktree, a scratch
     clone, or a temporary checkout answers with the same project name as the
     first, because none of those change the binding — and where the record
@@ -608,7 +566,7 @@ def project_name(storage: Path) -> str:
     checkout's folder as an identity.
     """
 
-    recorded = recorded_project_name(storage)
+    recorded = recorded_project_name(conn)
     if recorded:
         return recorded
     bound = _binding_name(storage)
@@ -805,13 +763,6 @@ def _metric_table(pairs: Sequence[tuple[str, str]]) -> list[str]:
     return out
 
 
-def _prose_source(storage: Path, rel: str) -> dict[str, str]:
-    p = storage / rel
-    if not p.is_file():
-        return {}
-    return {f"prose:{rel}": sha256_bytes(p.read_bytes())}
-
-
 def _ageing_sentence(
     workspace: Path, bound: bool, record: Mapping[str, Any], head: str
 ) -> str:
@@ -855,6 +806,25 @@ def _provenance_line(
         sha=str(record["ref_sha"])[:8],
         n=len(record.get("cited_files") or []),
         ageing=_ageing_sentence(workspace, bound, record, head),
+    )
+
+
+def _survey_row(imported: ImportedBody) -> dict[str, str]:
+    """An import in the shape the survey provenance and dated line read."""
+
+    return {
+        "path": imported.path,
+        "content_hash": imported.registered_hash,
+        "ref_sha": imported.ref_sha,
+        "written_at": imported.written_at,
+    }
+
+
+def _imported_text(bodies: Sequence[ImportedBody], under: int) -> str:
+    """Imported bodies as Markdown: each behind its label, its headings moved under `under`."""
+
+    return "\n\n".join(
+        f"{body.label()}\n\n{_nest_prose(body.body.strip(), under)}" for body in bodies
     )
 
 
@@ -1077,7 +1047,7 @@ def render_index(
     prose (§11.1).
     """
 
-    name = project_name(storage)
+    name = project_name(conn, storage)
     thesis = project_thesis(conn, storage)
     if thesis.violations and warn is not None:
         warn(
@@ -1342,7 +1312,7 @@ def render_index(
         **_db_source("index:verification", verification or {}),
         **_db_source("index:session", latest_session or {}),
         **_db_source("index:identity", {"project_name": name}),
-        **_prose_source(storage, THESIS_SOURCE),
+        **_db_source("index:purpose", {"state": thesis.state, "text": thesis.text}),
     }
     return text, sources
 
@@ -1399,7 +1369,7 @@ def render_architecture(
         *fit,
         "## Runtime boundary map",
         "",
-        runtime_boundary_map(storage),
+        runtime_boundary_map(conn),
         "",
         f"## {dependency_heading}",
         "",
@@ -1424,7 +1394,7 @@ def render_architecture(
         **_db_source("arch:subs", subs),
         **_db_source("arch:seams", seams),
         **_db_source("arch:explanations", {"head": head, "rows": explanations}),
-        **_prose_source(storage, "onboarding-report.md"),
+        **_db_source("arch:runtime", runtime_boundary_rows(conn)),
     }
     return "\n".join(out) + "\n", sources
 
@@ -1623,22 +1593,13 @@ def render_subsystem(
         (sid, _like_prefix(str(sid)), sid),
     )
 
-    # The per-subsystem survey artifact — hand-authored markdown lives in
-    # storage root as <ID>-<slug>.md or similar. We look for any registered
-    # artifact with kind='subsystem-survey' and this subsystem_id.
-    survey_rows = rows(
-        conn,
-        "SELECT path, content_hash, ref_sha, written_at FROM artifacts"
-        " WHERE kind = 'subsystem-survey' AND subsystem_id = ?",
-        (sid,),
-    )
-    survey_prose = ""
-    prose_sources: dict[str, str] = {}
-    for sv in survey_rows:
-        prose_path = storage / sv["path"]
-        if prose_path.is_file():
-            survey_prose += prose_path.read_text() + "\n\n"
-            prose_sources.update(_prose_source(storage, sv["path"]))
+    # The per-subsystem survey bodies: the imports of an earlier version's
+    # hand-written survey files, which the store holds as written. A body a
+    # subsystem reset withdrew is not printed (store-only PLAN §3.3, §5.4).
+    surveys = imported_bodies(conn, kind="subsystem-survey", subsystem_id=str(sid))
+    survey_rows = [_survey_row(imported) for imported in surveys]
+    survey_prose = "".join(imported.body + "\n\n" for imported in surveys)
+    survey_text = _imported_text(surveys, 3)
 
     # The effective explanation (§3.2), read by the function the read-back reads
     # so the page and its custody check cannot name different rows.
@@ -1777,7 +1738,7 @@ def render_subsystem(
                 "",
                 f"*{NARRATIVE_LABEL}.*" + (f" Its source is {provenance}." if provenance else ""),
                 "",
-                _nest_prose(survey_prose.strip(), 3),
+                survey_text,
                 "",
             ]
     else:
@@ -1788,7 +1749,7 @@ def render_subsystem(
                 f" *{NARRATIVE_LABEL}.*"
                 + (f" Its source is {provenance}." if provenance else ""),
                 "",
-                _nest_prose(survey_prose.strip(), 3),
+                survey_text,
                 "",
             ]
         elif placement == "survey-record":
@@ -2014,10 +1975,9 @@ def render_subsystem(
             out += [
                 _survey_notes_line(sv, account.row)
                 for sv in survey_rows
-                if (storage / sv["path"]).is_file()
             ]
             out.append("")
-        out += [_nest_prose(survey_prose, 3)]
+        out += [survey_text]
     elif placement == "structure-narrative":
         out += [
             "### Survey artifact",
@@ -2052,9 +2012,8 @@ def render_subsystem(
         | _db_source(f"subsystem:{sid}:concerns", active_concerns)
         | _db_source(f"subsystem:{sid}:standing", standing)
         | _db_source(f"subsystem:{sid}:claims", claims)
-        | _db_source(f"subsystem:{sid}:artifacts", survey_rows)
+        | imports_source(f"subsystem:{sid}:imports", surveys)
         | _db_source(f"subsystem:{sid}:explanations", {"head": checked_head, "rows": explanations})
-        | prose_sources
     )
     return text, sources
 
@@ -2952,9 +2911,6 @@ PLACEHOLDER_SENTENCES: tuple[str, ...] = (
     PROJECT_ACCOUNT_ABSENT,
 )
 
-_THESIS_HEADING = "## What is this codebase?"
-_RUNTIME_HEADING = "## Runtime boundary map"
-
 
 def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, str]]:
     """One row per slot that applies and is unfilled, from the predicates the pages use.
@@ -2976,7 +2932,10 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
                 "page": "index.md",
                 "subject": "project",
                 "state": state,
-                "discharge": f"add a '{_THESIS_HEADING}' section to {THESIS_SOURCE}",
+                "discharge": (
+                    "call record_explanation with subject_type project and slot purpose,"
+                    " or decline_explanation with the reason there is none"
+                ),
             }
         )
     elif state == "refused":
@@ -2987,12 +2946,12 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
                 "subject": "project",
                 "state": state,
                 "discharge": (
-                    f"correct the '{_THESIS_HEADING}' section of {THESIS_SOURCE}, so that it"
-                    " carries no status vocabulary and no composite figure"
+                    "call record_explanation with subject_type project and slot purpose,"
+                    " so that it carries no status vocabulary and no composite figure"
                 ),
             }
         )
-    if runtime_boundary_state(storage) == "absent":
+    if runtime_boundary_state(conn) == "absent":
         census.append(
             {
                 "slot": "runtime-boundary-map",
@@ -3000,8 +2959,8 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
                 "subject": "project",
                 "state": "absent",
                 "discharge": (
-                    f"add a '{_RUNTIME_HEADING}' table with the columns"
-                    f" {', '.join(RUNTIME_BOUNDARY_COLUMNS)} to onboarding-report.md"
+                    "call record_runtime_boundary for each edge between runtimes, with the"
+                    f" columns {', '.join(RUNTIME_BOUNDARY_COLUMNS)}"
                 ),
             }
         )
@@ -3829,7 +3788,7 @@ def render_how_to_read(
     """
 
     body = [HOW_TO_READ_INTRO, ""]
-    body += _site_is(project_name(storage))
+    body += _site_is(project_name(conn, storage))
     body += _route_tables(routes or ())
     body += _survey_passes_section()
     body += _terms_section(routes or ())
@@ -3949,24 +3908,6 @@ def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResu
         **_db_source("open_questions:open", questions),
         **_db_source("open_questions:closed-count", closed),
     }
-
-
-# ---------------------------------------------------------------------------
-# Prose passthroughs (onboarding report, entry-point, concern-checklist)
-# ---------------------------------------------------------------------------
-
-
-def passthrough_prose(storage: Path, rel_source: str, title: str) -> RenderResult | None:
-    p = storage / rel_source
-    if not p.is_file():
-        return None
-    body = p.read_text()
-    # Prepend a banner only if the source doesn't already open with an H1: the
-    # page head (hint and use_when) is inserted under the page's H1, so a source
-    # opening with "## " still needs one.
-    if not re.match(r"#[ \t]", body.lstrip()):
-        body = f"# {title}\n\n{body}"
-    return body, _prose_source(storage, rel_source)
 
 
 # ---------------------------------------------------------------------------

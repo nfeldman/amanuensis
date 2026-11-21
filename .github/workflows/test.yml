@@ -499,6 +499,11 @@ jobs:
       - name: Survey narrative placement — inside Structure when claims exist
         working-directory: materializer
         run: python3 test-narrative-placement.py
+      # GATE SO8 (design/store-only/PLAN.md §3.3, §8 SO8). Seeds its own stores
+      # and publishes them under an audit of every file the materializer opens.
+      - name: Materializer reads the store — records over files, only database and binding files opened, imports labelled as written
+        working-directory: materializer
+        run: python3 test-store-only-sources.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py

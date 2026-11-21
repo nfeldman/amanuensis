@@ -1,17 +1,16 @@
 """Architecture projection generation from recorded survey state.
 
-Every diagram is a pure function of DB rows or registered prose artifacts —
-no relationships are inferred from names. Surfaces may be portable Markdown
+Every diagram is a pure function of DB rows — no relationships are inferred
+from names. Surfaces may be portable Markdown
 tables or Mermaid where a graph exists.
 """
 from __future__ import annotations
 
 import re
 import sqlite3
-from pathlib import Path
 from typing import Any
 
-from .db import rows
+from .db import rows, table_exists
 from .slugs import subsystem_page
 
 # The obligation predicate is generated from the `obligation_bearing` flag on
@@ -379,26 +378,71 @@ def _runtime_boundary_table(markdown: str) -> str | None:
     return "\n".join(table_lines) if len(table_lines) > 2 else None
 
 
-def _recorded_runtime_table(storage: Path) -> str | None:
-    source = storage / "onboarding-report.md"
-    return _runtime_boundary_table(source.read_text() if source.exists() else "")
+def _cell(value: object) -> str:
+    """One table cell: a row's text on one line, with no pipe to split it."""
+
+    return " ".join(str(value or "").replace("|", "/").split())
 
 
-def runtime_boundary_state(storage: Path) -> str:
+def runtime_boundary_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """The effective runtime boundaries: the newest row per edge, none withdrawn.
+
+    An edge is `(from_runtime, to_runtime, mechanism)`. A later row replaces an
+    earlier one, and a row with `withdrawn = 1` retracts the edge. Edges keep the
+    order in which they were first recorded, so a replacement does not move one.
+    """
+
+    if not table_exists(conn, "runtime_boundaries"):
+        return []
+    newest: dict[tuple[str, str, str], dict[str, Any]] = {}
+    first: dict[tuple[str, str, str], int] = {}
+    for record in rows(conn, "SELECT * FROM runtime_boundaries ORDER BY id"):
+        edge = (record["from_runtime"], record["to_runtime"], record["mechanism"])
+        newest[edge] = record
+        first.setdefault(edge, int(record["id"]))
+    return [
+        newest[edge]
+        for edge in sorted(newest, key=lambda edge: first[edge])
+        if not int(newest[edge]["withdrawn"])
+    ]
+
+
+def _recorded_runtime_table(conn: sqlite3.Connection) -> str | None:
+    """The effective boundaries as the five-column table the HTML draws, or None."""
+
+    edges = runtime_boundary_rows(conn)
+    if not edges:
+        return None
+    lines = [
+        "| " + " | ".join(RUNTIME_BOUNDARY_COLUMNS) + " |",
+        "|" + "---|" * len(RUNTIME_BOUNDARY_COLUMNS),
+    ]
+    for edge in edges:
+        cells = (
+            edge["from_runtime"],
+            edge["from_language"],
+            edge["to_runtime"],
+            edge["mechanism"],
+            edge["notes"],
+        )
+        lines.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
+    return "\n".join(lines)
+
+
+def runtime_boundary_state(conn: sqlite3.Connection) -> str:
     """`recorded` or `absent`: the one answer the page and the census both read."""
-    return "recorded" if _recorded_runtime_table(storage) else "absent"
+    return "recorded" if runtime_boundary_rows(conn) else "absent"
 
 
-def runtime_boundary_map(storage: Path) -> str:
-    """Project the recorded onboarding runtime table into architecture output."""
-    if runtime_boundary_state(storage) == "absent":
+def runtime_boundary_map(conn: sqlite3.Connection) -> str:
+    """Project the recorded runtime boundaries into architecture output."""
+    table = _recorded_runtime_table(conn)
+    if table is None:
         return f"_{RUNTIME_BOUNDARY_ABSENT}_"
-    table = _recorded_runtime_table(storage)
     return "\n\n".join(
         [
-            "_Projected from the recorded [onboarding runtime boundary table]"
-            "(onboarding-report.md#runtime-boundary-map); mechanisms and targets "
-            "are preserved as surveyed._",
+            "_Projected from the recorded runtime boundaries; mechanisms and targets"
+            " are preserved as recorded._",
             table,
         ]
     )

@@ -8,8 +8,10 @@ changed.
 Source identifiers:
   - `db:<table>:<filter>`   — a DB query result; hash is sha256 of the
     canonical-JSON-serialized rows.
-  - `prose:<rel-path>`      — a markdown file in the project storage
-    directory; hash is sha256 of the file bytes.
+  - `db:imports:<kind>`     — the imported bodies a page printed, which
+    the store holds as written; hash is sha256 of their canonical JSON. No
+    source names a file under the storage directory: a page's inputs are
+    the store's rows (store-only PLAN §3.3).
   - `synthetic:<name>`      — generated page with no stable external
     source (used sparingly; always re-rendered).
 
@@ -26,7 +28,7 @@ from dataclasses import dataclass, field
 from datetime import UTC
 from pathlib import Path
 
-MATERIALIZER_VERSION = "0.5.0"
+MATERIALIZER_VERSION = "0.6.0"
 
 
 def _now_iso() -> str:
@@ -51,7 +53,7 @@ class Manifest:
     generated_at: str = ""
     pages: dict[str, PageManifest] = field(default_factory=dict)
     # Generated companions that are derived from the finished Markdown
-    # projection rather than directly from DB/prose sources.  Keeping them in
+    # projection rather than directly from DB sources.  Keeping them in
     # the same custody manifest lets clean publication distinguish our HTML
     # from unrelated files a human placed beside the docs.
     projection_files: dict[str, str] = field(default_factory=dict)

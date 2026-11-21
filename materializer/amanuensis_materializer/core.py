@@ -44,6 +44,7 @@ from .html_projection import (
     render_html_projection,
     terms_line,
 )
+from .legacy_prose import imported_bodies, imported_page
 from .manifest import (
     MATERIALIZER_VERSION,
     Manifest,
@@ -391,7 +392,7 @@ class Materializer:
             # Identity resolution lives beside the renderer that publishes it, so
             # the HTML shell and the overview cannot name the project differently.
             workspace = renderers.resolve_workspace(self.storage)
-            project_name = renderers.project_name(self.storage)
+            project_name = renderers.project_name(conn, self.storage)
             html_context = {
                 **git,
                 "project_name": project_name,
@@ -510,21 +511,22 @@ class Materializer:
         storage = self.storage
         plan: list[PagePlan] = []
 
-        def passthrough(
-            rel_src: str, title: str, label: str, hint: str, use_when: str
+        def imported(
+            rel_src: str, kind: str, title: str, label: str, hint: str, use_when: str
         ) -> PagePlan | None:
-            """One canonical artifact, passed through when it is on disk.
+            """One of the three pages an earlier version wrote by hand, from its import.
 
             Planned inline rather than in a trailing loop so the rail's order
             inside Method is §7.1's table order, not "every generated page,
-            then whatever prose happened to exist".
+            then whatever imports happened to exist". A store with no unwithdrawn
+            import of the kind has no such page (store-only PLAN §3.3, §5.4).
             """
 
-            if not (storage / rel_src).is_file():
+            if not imported_bodies(conn, kind=kind):
                 return None
             return PagePlan(
                 rel_src,
-                (lambda r=rel_src, t=title: renderers.passthrough_prose(storage, r, t) or ("", {})),
+                (lambda t=title, k=kind: imported_page(conn, k, t) or ("", {})),
                 title=title,
                 label=label,
                 hint=hint,
@@ -565,10 +567,10 @@ class Materializer:
                 # a new page could be left out of.
                 PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="How to read this survey", label="Reader's guide", hint="What each page is for, the terms the site uses, and how a survey works.", use_when="a word, an ID or a page is unfamiliar.", group="Method", kind="guide"),
                 PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="Which failure modes were tested where, and the disposition each one reached.", use_when="you want to know which defect kinds were checked where.", group="Method", kind="coverage"),
-                passthrough("concern-checklist.md", "Calibrated review checklist", "Review checklist", "The concern set and its provenance.", "you want the list of defect kinds and where it came from."),
+                imported("concern-checklist.md", "concern-checklist", "Calibrated review checklist", "Review checklist", "The concern set and its provenance.", "you want the list of defect kinds and where it came from."),
                 PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Index of evidence matrices and their outcomes.", use_when="you want to see how a symptom's cause was weighed.", group="Method", kind="diagnosticity"),
-                passthrough("onboarding-report.md", "Onboarding record", "Onboarding record", "The repository boundary and initial decomposition that established this conspectus.", "you want the first pass's decisions about scope and split."),
-                passthrough("entry-point.md", "Where to begin", "Where to begin", "A dated reading path recorded by an earlier session; it is survey history, not a current index.", "you want the reading path an earlier session wrote."),
+                imported("onboarding-report.md", "onboarding-report", "Onboarding record", "Onboarding record", "The repository boundary and initial decomposition that established this conspectus.", "you want the first pass's decisions about scope and split."),
+                imported("entry-point.md", "entry-point", "Where to begin", "Where to begin", "A dated reading path recorded by an earlier session; it is survey history, not a current index.", "you want the reading path an earlier session wrote."),
             ]
             if page is not None
         )

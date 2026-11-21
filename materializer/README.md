@@ -56,7 +56,8 @@ Mermaid runtime.
 rendered from and their content hashes. Sources are one of:
 
 - `db:<logical-name>` — canonical-JSON hash of a DB query result
-- `prose:<relative-path>` — sha256 of a markdown file
+- `db:imports:<kind>` — canonical-JSON hash of the imported bodies a page
+  printed; no source names a file in the storage directory
 - `synthetic:<name>` — no stable source; always re-rendered
 
 On each run we:
