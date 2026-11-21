@@ -30,6 +30,9 @@ Turns red when:
   - a step whose cited file the ledger holds as stale is not hatched, or its box and account do
     not say "cited file changed since <the revision it was examined at>", or a step citing only
     an unchanged file is hatched (Appendix B rule 3);
+  - a step or mark resting only on comment-asserted, name-inferred or pattern-matched evidence
+    lacks the linchpin mark (◆, and the word in its label and account), a step that survived a
+    challenge lacks the tick (✓), or either is drawn where the store holds neither (rule 7);
   - a flow with no marks and no declination does not say "marks not recorded", one with a
     declination does not print its reason or still says so, a flow with marks says so, or the
     account does not count the steps that have no recorded mark ("n of m");
@@ -147,6 +150,9 @@ MARK_SHA = "cafebabe"
 MARK_SHA_LABEL = "locked out"
 # Files cited by login's steps: one changed since it was examined at EXAMINED_SHA, one not.
 STALE_FILE, FRESH_FILE, EXAMINED_SHA = "auth/flow-stale.ts", "auth/flow-fresh.ts", "abad1dea"
+# Appendix B rule 7: login step 03 rests only on comment-asserted evidence, as does the crash mark on step
+# 01 (the golden store's evidence row 2); step 04 survived a challenge.
+WEAK_EVIDENCE, WEAK_MARK_LABEL, WEAK_STEP, SURVIVED_STEP = 2, "session row half written", "03", "04"
 # (subsystem, slug, step count, {step: epistemic kind} where not an observation)
 FLOWS = (
     ("B-02", "login", 5, {"01": "inference", "03": "hypothesis"}),
@@ -211,7 +217,7 @@ def build_store(root: Path) -> Path:
         for flow, step, kind, label, target in (*MARKS, WITHDRAWN):
             db.execute(
                 "INSERT INTO claim_marks (claim_id, kind, label, target, evidence_id, ref_sha, session_id) VALUES (?,?,?,?,?,?,?)",
-                (f"{flow}/{step}", kind, label, target, 1, MARK_SHA if label == MARK_SHA_LABEL else SHA, "s1"),
+                (f"{flow}/{step}", kind, label, target, WEAK_EVIDENCE if label == WEAK_MARK_LABEL else 1, MARK_SHA if label == MARK_SHA_LABEL else SHA, "s1"),
             )
         withdrawn_id = db.execute("SELECT id FROM claim_marks WHERE label = ?", (WITHDRAWN[3],)).fetchone()[0]
         db.execute("INSERT INTO claim_mark_withdrawals (mark_id, reason, session_id) VALUES (?,?,?)", (withdrawn_id, "mistaken", "s1"))
@@ -221,6 +227,15 @@ def build_store(root: Path) -> Path:
             (f"{closed_mark[0]}/{closed_mark[1]}@old", closed_mark[2], closed_mark[3], closed_mark[4], 1, SHA, "s1"),
         )
         db.execute("INSERT INTO claim_mark_declinations (flow_key, reason, ref_sha, session_id) VALUES (?,?,?,?)", (DECLINED, DECLINATION, SHA, "s1"))
+        db.execute(
+            "INSERT INTO claim_evidence (claim_id, evidence_id, role) VALUES (?, ?, 'supports')",
+            (f"B-02/flow/login/{WEAK_STEP}", WEAK_EVIDENCE),
+        )
+        db.execute(
+            "INSERT INTO claim_challenge_outcomes (claim_id, claim_key, outcome, challenge, at_sha, session_id)"
+            " VALUES (?, ?, 'survived', 'Could the token be issued before the session row is written?', ?, 's1')",
+            (f"B-02/flow/login/{SURVIVED_STEP}", f"B-02/flow/login/{SURVIVED_STEP}", SHA),
+        )
         # Login step 01 cites a file the repository changed after it was examined; step 02 one that has not changed.
         for path, step, stale in ((STALE_FILE, "01", 1), (FRESH_FILE, "02", 0)):
             evidence = db.execute(
@@ -706,6 +721,38 @@ def main() -> int:
             return None
 
         check("a step whose cited file changed since it was examined is hatched and says since when", stale_hatched)
+
+        def linchpins_and_ticks() -> str | None:
+            # Appendix B rule 7: a mark resting only on comment-asserted, name-inferred or pattern-matched
+            # evidence carries the linchpin mark; a claim that survived a challenge carries a tick.
+            figure = figure_of(text_of("B-02"), "B-02/flow/login") or ""
+            crash = next(m for m in want["B-02/flow/login"]["marks"] if m["label"] == WEAK_MARK_LABEL)
+            expect = {
+                "flow-step:B-02/flow/login/" + WEAK_STEP: ("linchpin", "◆"),
+                "flow-step:B-02/flow/login/" + SURVIVED_STEP: ("survived a challenge", "✓"),
+                f"flow-mark:{crash['id']}": ("linchpin", "◆"),
+            }
+            for record, body in re.findall(r'<g\b[^>]*\bdata-node="([^"]*)"[^>]*>(.*?)</g>', figure, re.S):
+                body = html.unescape(body)
+                named = re.search(r'aria-label="([^"]*)"', body)
+                said = named.group(1) if named else ""
+                shown = " ".join(plain(body).split())
+                if record in expect:
+                    words, glyph = expect[record]
+                    if words not in said or glyph not in shown:
+                        return f"{record} does not carry {words!r} ({glyph}): label {said!r}, drawn {shown!r}"
+                elif "linchpin" in said or "survived" in said or "◆" in shown or "✓" in shown:
+                    return f"{record} carries a linchpin or a tick the store does not hold: {said!r}"
+            text = " ".join(account_of(figure).split())
+            if not re.search(rf"Step {WEAK_STEP}:[^.]*\.[^.]*Comment asserted[^.]*linchpin", text):
+                return f"the account does not say step {WEAK_STEP} rests only on comment-asserted evidence, a linchpin: {text[:600]!r}"
+            if not re.search(rf"Step {SURVIVED_STEP}:[^.]*\.[^.]*survived a challenge", text):
+                return f"the account does not say step {SURVIVED_STEP} survived a challenge: {text[:600]!r}"
+            if not re.search(rf"{re.escape(WEAK_MARK_LABEL)}\.[^.]*Comment asserted[^.]*linchpin", text):
+                return f"the account does not say the crash mark rests only on comment-asserted evidence: {text[:600]!r}"
+            return None
+
+        check("a step or mark resting only on weak evidence carries the linchpin mark; a survived challenge a tick", linchpins_and_ticks)
 
         def seam_links() -> str | None:
             seams = (output / "seams.html").read_text()
