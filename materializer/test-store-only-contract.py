@@ -25,7 +25,8 @@ Turns red when:
     `min_status`; one whose `min_status` is not on the subsystem_status ladder; a
     project section with a `min_status`; a mark kind whose `applies_to` is missing or
     not a claim key family; a duplicate label (as spelled, or in other case and
-    padded with whitespace); a `requires` naming a column a mark does not have; an
+    padded with whitespace); a `requires` naming a column a mark does not have, or
+    none at all; an
     `evidence` other than required or optional; a section with a `subject_type`
     other than subsystem or project; a new enum missing `reader_facing`;
   - the generator rejects the unbroken copy, rejects a valid copy that adds a
@@ -451,6 +452,12 @@ def _requires_unknown_column(doc: dict[str, Any]) -> None:
     mark(doc, "exit")["requires"] = ["label", "status"]
 
 
+def _requires_missing(doc: dict[str, Any]) -> None:
+    # A missing list is not an empty one: every kind states what a mark of it
+    # needs (F10/codex, slice-S1).
+    del mark(doc, "exit")["requires"]
+
+
 def _evidence_other(doc: dict[str, Any]) -> None:
     section(doc, "start-here")["evidence"] = "sometimes"
 
@@ -480,6 +487,7 @@ SABOTAGE: tuple[tuple[str, Callable[[dict[str, Any]], None], str], ...] = (
     ("a duplicate section label in other case, padded", _duplicate_label_padded, "label"),
     ("a duplicate mark label", _duplicate_mark_label, "label"),
     ("a requires naming a column a mark lacks", _requires_unknown_column, "requires"),
+    ("a mark kind without requires", _requires_missing, "requires"),
     ("an evidence other than required or optional", _evidence_other, "evidence"),
     ("a section for a subject type other than subsystem or project", _subject_type_other, "subject_type"),
     ("a section without a subject_type", _subject_type_missing, "subject_type"),
