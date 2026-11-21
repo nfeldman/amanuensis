@@ -41,6 +41,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { ensureBuilt } from "./scripts/ensure-built.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(here, "fixtures", "legacy-stores");
@@ -167,6 +168,11 @@ try {
 } catch (error) {
   finish(`better-sqlite3 cannot be loaded (run npm ci): ${error?.message ?? error}`);
 }
+// `dist/` is a build artifact: without compiling first, a sabotaged src/db.ts
+// leaves the previous migration in dist/ and the gate certifies the old bytes
+// (slice-S1 F2/codex: deleting the concerns-column migration stayed green).
+const built = ensureBuilt();
+if (!built.ok) finish(`src/ does not compile into dist/: ${built.detail}`);
 if (!existsSync(join(here, "dist", "db.js"))) finish("dist/db.js is absent; run npm run build");
 try {
   ({ openDatabase } = await import(pathToFileURL(join(here, "dist", "db.js")).href));
