@@ -8,8 +8,10 @@ parser, so the half of this gate that fed recorded Markdown through it is retire
 it (the recorded Markdown stays in the corpus as history): the corpus is now compared by
 rebuilding each store fixture from its recorded SQL dump and publishing it. The
 `hooks` fixture, written Markdown with no store behind it, and `materializer-github`, a
-second printing of the `materializer` store, cannot be rebuilt that way; their golden
-HTML stays in the corpus and is not compared here.
+second printing of the `materializer` store, cannot be rebuilt that way. The `hooks`
+fixture's Markdown is read by the one Markdown reader left, the imported-body reader
+(`legacy_prose.py`), and the elements of the block kinds no store fixture prints are
+compared with its golden HTML; its page-level hooks, which SO19 deleted, are not.
 
 Turns red when:
 
@@ -19,6 +21,10 @@ Turns red when:
   - the HTML a rebuilt store fixture publishes differs from the golden HTML by one
     byte, or prints a page the corpus does not hold, or `write_html` does not run
     exactly once for each page (counted by instrumenting the module);
+  - a relationship trace (edge direction and all), a diagram's printed source or a
+    quote, read from the `hooks` fixture's Markdown by the imported-body reader,
+    prints otherwise than in its golden HTML, or a block kind is printed by no page
+    either comparison covers (slice-S3 review F2);
   - `page.py` lacks a block kind for any shape a page prints (the kinds the recognition
     hooks resolved to), or still carries a `HOOKS` table of the parser's;
   - `write_html`, or any function or method it reaches in its module, imports the
@@ -163,6 +169,18 @@ def rebuild(store: str, root: Path) -> Path:
     return storage
 
 
+# The block kinds the compared store pages print, collected as `write_html` runs.
+PRINTED_KINDS: set[str] = set()
+
+# The elements of the block kinds no store fixture prints, compared on the `hooks`
+# fixture; each pattern is the element its writer branch prints.
+HOOKS_ELEMENTS = {
+    "RelationshipTrace": r'<figure class="figure"><figcaption class="figure-label">Relationship trace</figcaption>.*?</figure>',
+    "DiagramSource": r'<figure class="figure"><figcaption class="figure-label">Diagram source</figcaption>.*?</figure>',
+    "Quote": r"<blockquote>.*?</blockquote>",
+}
+
+
 def publish(hp: Any, storage: Path, output: Path) -> tuple[int, int, int]:
     """Publish in this process: the CLI's exit code and how many times `write_html` ran for how many pages."""
 
@@ -173,6 +191,7 @@ def publish(hp: Any, storage: Path, output: Path) -> tuple[int, int, int]:
 
     def counted(*args: Any, **kwargs: Any) -> Any:
         counts[0] += 1
+        PRINTED_KINDS.update(type(item).__name__ for item in walk_model(args[0]))
         return real(*args, **kwargs)
 
     hp.write_html = counted
@@ -266,6 +285,7 @@ def main() -> int:
     emit(f"GATE {PACKET} — the page model between a renderer and the HTML, byte for byte on the golden corpus")
     hp, hp_error = load("html_projection")
     page, page_error = load("page")
+    legacy, legacy_error = load("legacy_prose")
 
     # ------------------------------------------------------------- the corpus
     def corpus_present() -> str | None:
@@ -318,6 +338,47 @@ def main() -> int:
         return None if compared >= 100 else f"only {compared} golden pages were compared"
 
     check("C2 HTML for every golden page of a rebuilt store is byte-identical, one write_html per page", byte_identical)
+
+    def hooks_elements() -> str | None:
+        if hp is None or legacy is None:
+            return hp_error or legacy_error
+        base = GOLDEN / "hooks"
+        inputs = json.loads((base / "inputs.json").read_text())
+        pages: list[Any] = []
+        models: dict[str, Any] = {}
+        for entry in inputs["pages"]:
+            fields = dict(entry)
+            markdown = base / "md" / fields.pop("markdown_path")
+            fields["path"] = markdown.relative_to(base / "md").with_suffix(".html").as_posix()
+            fields["terms"] = tuple(tuple(term) for term in fields["terms"])
+            pages.append(hp.SitePage(**fields))
+            models[fields["path"]] = legacy._LegacyParser(fields["path"]).parse(markdown.read_text())
+        with tempfile.TemporaryDirectory(prefix="amanuensis-so11-hooks-") as tmp:
+            output = Path(tmp)
+            hp.render_html_projection(
+                output, pages, inputs["context"], locus_index=inputs["locus_index"], notice=inputs["notice"], models=models
+            )
+            printed = {page.path: (output / page.path).read_text() for page in pages if (output / page.path).is_file()}
+        golden = fixture_pages("hooks")
+        if sorted(printed) != sorted(golden):
+            return f"the hooks fixture printed {sorted(printed)}, not {sorted(golden)}"
+        for kind, pattern in HOOKS_ELEMENTS.items():
+            wanted = [m for rel in sorted(golden) for m in re.findall(pattern, golden[rel], re.S)]
+            got = [m for rel in sorted(printed) for m in re.findall(pattern, printed[rel], re.S)]
+            if not wanted:
+                return f"the hooks fixture's golden HTML prints no {kind}, so the comparison is blind"
+            if got != wanted:
+                at = next((i for i, (a, b) in enumerate(zip(got, wanted, strict=False)) if a != b), min(len(got), len(wanted)))
+                shown = got[at] if at < len(got) else "nothing"
+                return f"hooks {kind} #{at + 1} prints {first_difference(wanted[at] if at < len(wanted) else '', shown)}"
+        if not PRINTED_KINDS:
+            return "no block kind was collected from the store fixtures, so the coverage check is blind"
+        unseen = [kind for kind in BLOCK_KINDS if kind not in PRINTED_KINDS and kind not in HOOKS_ELEMENTS]
+        if unseen:
+            return f"block kinds printed by no compared page: {unseen}"
+        return None
+
+    check("C2b the block kinds no store prints match the hooks fixture's golden HTML, edges and all", hooks_elements)
 
     # ---------------------------------------------------- the block kinds
     def block_kinds() -> str | None:
