@@ -593,6 +593,38 @@ async function main(mods) {
     return pointerOf(ctx, "B-01") ? "a pointer is served for a withdrawn imported body" : null;
   });
 
+  // §2.5: the pointer names each record "with its revision". Two topics
+  // recorded at different commits were served with only the newer one's
+  // revision beside both ids (F6/codex, slice-S1).
+  check("L5 narratives recorded at different revisions are each served with their own revision", () => {
+    const ctx = claimlessWorld("l5");
+    const first = recordStructure(ctx, "B-01", { topic: "dispatch" });
+    const firstSha = headSha(ctx);
+    const ws = ctx.project.workspacePath;
+    writeFileSync(join(ws, "later.txt"), "a later commit\n");
+    git(ws, "add", "later.txt");
+    gitCommit(ws, "later");
+    const secondSha = headSha(ctx);
+    if (secondSha === firstSha) return "the fixture could not make a second commit";
+    const second = recordStructure(ctx, "B-01", { topic: "storage", body: `${BODY} It then writes the row.` });
+    const pointer = pointerOf(ctx, "B-01");
+    if (!pointer) return "no narrative pointer is served";
+    const want = [
+      { id: Number(first.id ?? first.narrative_id), ref_sha: firstSha },
+      { id: Number(second.id ?? second.narrative_id), ref_sha: secondSha },
+    ];
+    const served = [...(pointer.records ?? [])]
+      .map((r) => ({ id: Number(r.id), ref_sha: r.ref_sha }))
+      .sort((a, b) => a.id - b.id);
+    if (JSON.stringify(served) !== JSON.stringify(want)) {
+      return `the pointer serves ${JSON.stringify(pointer.records ?? null)}, expected ${JSON.stringify(want)}`;
+    }
+    if (pointer.ref_sha === firstSha || pointer.ref_sha === secondSha) {
+      return `the pointer names one revision (${pointer.ref_sha}) for records bound to two`;
+    }
+    return null;
+  });
+
   check("L4 a subsystem with no narrative serves no pointer", () => {
     const ctx = claimlessWorld("l4");
     return pointerOf(ctx, "B-01") ? "a pointer is served with nothing recorded" : null;
