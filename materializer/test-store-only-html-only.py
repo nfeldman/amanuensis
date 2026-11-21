@@ -73,8 +73,15 @@ GOLDEN = ROOT / "fixtures" / "store-only-golden"
 CI_FILE = REPO / ".github" / "workflows" / "test.yml"
 PACKET = "SO13"
 # Later writers of the corpus under PLAN §3.2's rule whose changes this gate can
-# remove: SO20 adds only `data-record`, `data-state`, `data-node` and `data-edge`.
-LATER_WRITERS = {"SO20": re.compile(r' data-(?:record|state|node|edge)="[^"]*"')}
+# remove: SO20 adds only `data-record`, `data-state`, `data-node` and `data-edge`;
+# SO22–SO25 add those on diagram nodes and edges inside figures.
+# SO22–SO25 add `<figure data-diagram>` blocks, which are removed whole.
+_RECORD_MARKS = r' data-(?:record|state|node|edge)="[^"]*"'
+_FIGURES = r'<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>\n?'
+LATER_WRITERS = {
+    "SO20": re.compile(_RECORD_MARKS),
+    **{packet: re.compile(f"{_FIGURES}|{_RECORD_MARKS}", re.S) for packet in ("SO22", "SO23", "SO24", "SO25")},
+}
 # The commit this packet started from; its golden corpus is the one SO11 wrote.
 START_SHA = "67db121aea4482be8fbfaa3990d47f67c3557fa9"
 GOLDEN_FIXTURES = ("materializer", "materializer-github", "lens", "axiomdb-shaped", "self-shaped", "hooks")

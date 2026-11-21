@@ -69,8 +69,13 @@ START_SHA = "65d2a403bc09b853e47d2e18ad9bff5dba157b4a"
 _SO20_MARKS = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
 
 
+# SO22 adds a drawn figure to the guide and to each subsystem page (PLAN §3.2's update
+# rule); the start tree predates them, so a figure is removed whole as well.
+_SO22_FIGURES = re.compile(r'<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>\n?', re.S)
+
+
 def unmarked(text: str) -> str:
-    return _SO20_MARKS.sub("", text)
+    return _SO20_MARKS.sub("", _SO22_FIGURES.sub("", text))
 
 # The tree SO19 started from: it still held the text pass and the parser the xref check compares with.
 SO19_START_SHA = "d4fd052932cc64fb083228ba81ce1ed206fdab51"
