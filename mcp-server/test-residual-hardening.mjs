@@ -162,7 +162,7 @@ const built = ensureBuilt();
 let mods = null;
 let loadError = null;
 try {
-  const [db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried, explanations] =
+  const [db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried, explanations, narratives, projectRecords, claimMarks] =
     await Promise.all([
       import("./dist/db.js"),
       import("./dist/project.js"),
@@ -182,8 +182,11 @@ try {
       import("./dist/tools/diagnosticity.js"),
       import("./dist/tools/carried.js"),
       import("./dist/tools/explanations.js"),
+      import("./dist/tools/narratives.js"),
+      import("./dist/tools/project-records.js"),
+      import("./dist/tools/claim-marks.js"),
     ]);
-  mods = { db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried, explanations };
+  mods = { db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried, explanations, narratives, projectRecords, claimMarks };
 } catch (e) {
   loadError = e && e.message ? e.message : String(e);
 }
@@ -205,6 +208,8 @@ const TOOL_SETS = () => [
   mods?.diagnosticity?.diagnosticityTools,
   mods?.carried?.carriedTools,
   mods?.explanations?.explanationTools,
+  mods?.narratives?.narrativeTools,
+  mods?.projectRecords?.projectRecordTools,
 ];
 
 function tool(name) {
@@ -1079,6 +1084,25 @@ function validatorProbes() {
       },
       enumName: "explanation_slot",
     },
+    // The store-only lane's two caller-supplied enums that refuse in the shared
+    // `must be one of:` form; the claim-mark kind is checked on its schema below.
+    {
+      label: "record_narrative.section",
+      tool: "record_narrative",
+      args: {
+        subject_type: "project",
+        section: OUT_OF_SOURCE,
+        body: "a narrative of a section the vocabulary does not carry",
+        ref_sha: head,
+      },
+      enumName: "narrative_section",
+    },
+    {
+      label: "record_territory_disposition.disposition",
+      tool: "record_territory_disposition",
+      args: { territory: "T1", disposition: OUT_OF_SOURCE, ref_sha: head },
+      enumName: "territory_disposition",
+    },
   ];
 }
 
@@ -1124,7 +1148,12 @@ check("no tool validator accepts a value the vocabulary source does not carry", 
 // behavioural arm above cannot reach them. The tool is found by the property
 // it publishes rather than by name, which also keeps this assertion out of
 // P13's whole-file scan for `context`-less edge writers.
-const SCHEMA_ENFORCED = [{ module: "xrefs", property: "strength", enumName: "xref_strength" }];
+const SCHEMA_ENFORCED = [
+  { module: "xrefs", property: "strength", enumName: "xref_strength" },
+  // record_claim_mark refuses an unknown kind in its own sentence, which the
+  // probe above cannot read, so the published schema is what is compared.
+  { module: "claimMarks", property: "kind", enumName: "claim_mark_kind" },
+];
 
 check("every enum a tool schema publishes is exactly the source's list", () => {
   const blocked = needFixture();
@@ -1183,6 +1212,10 @@ const NOT_A_TOOL_INPUT = {
     "derived per subsystem from the vocabulary and declination rows at the advance to 'structural', never accepted from a caller; the discharge gate drives that surface",
   explanation_disposition:
     "set by the two writers and the reset rule from which of them ran, never accepted from a caller; EX9's and EX15's gates drive those surfaces",
+  narrative_disposition:
+    "'recorded' is written by record_narrative and 'imported' by the import, never accepted from a caller",
+  runtime_boundary_origin:
+    "'recorded' is written by record_runtime_boundary and 'imported' by the import, never accepted from a caller",
   explanation_discharge:
     "computed by readExplanation from the rows at every read and never stored or accepted from a caller; the shared effective-row cases drive it",
 };
