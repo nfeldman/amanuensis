@@ -392,6 +392,33 @@ async function main(mods) {
       return null;
     });
 
+    // §5.4: what no page renders stays queryable. The checks above read the
+    // table directly; the reader a session uses is get_imported_artifacts, and
+    // emptying its result stayed green (F15/codex, slice-S1).
+    check(`${tag}5b ${name}: get_imported_artifacts returns every imported record, its metadata, and bodies on request`, () => {
+      const listed = call("get_imported_artifacts", {}, ctx);
+      const served = listed?.artifacts ?? [];
+      if (served.length !== rows.length) return `get_imported_artifacts served ${served.length} record(s) for ${rows.length} imported`;
+      for (const reg of rows) {
+        const got = served.find((r) => r.path === reg.path);
+        const row = byPath.get(reg.path);
+        if (!got || !row) return `${reg.path} is not served`;
+        for (const key of ["kind", "subsystem_id", "body_sha256", "registered_hash", "hash_matches", "registered_ref_sha", "written_at"]) {
+          if ((got[key] ?? null) !== (row[key] ?? null)) return `${reg.path}: ${key} is served as ${JSON.stringify(got[key])}, stored as ${JSON.stringify(row[key])}`;
+        }
+        if (got.bytes !== Buffer.byteLength(row.body, "utf8")) return `${reg.path}: bytes is ${got.bytes}`;
+        if ("body" in got) return `${reg.path}: the body is served without include_body`;
+        if (got.withdrawn !== null) return `${reg.path}: served as withdrawn`;
+      }
+      const target = rows[0];
+      const one = call("get_imported_artifacts", { path: target.path, include_body: true }, ctx)?.artifacts ?? [];
+      if (one.length !== 1) return `filtering by path served ${one.length} record(s)`;
+      if (one[0].body !== byPath.get(target.path)?.body) return `${target.path}: the requested body is not the imported one`;
+      const kind = call("get_imported_artifacts", { kind: target.kind }, ctx)?.artifacts ?? [];
+      const want = rows.filter((r) => r.kind === target.kind).length;
+      return kind.length === want ? null : `filtering by kind ${target.kind} served ${kind.length}, expected ${want}`;
+    });
+
     check(`${tag}6 ${name}: the thesis is what read_thesis returns, as the project's imported purpose`, () => {
       if (reading.state !== "filled") return `the fixture's thesis reads ${reading.state}`;
       const purposes = db
