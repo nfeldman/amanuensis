@@ -30,7 +30,9 @@ Turns red when:
   - the golden corpus's `VERSION` is not SO13, it holds a different page set,
     or its HTML differs from SO11's anywhere but the removed Markdown links, the
     guide's views paragraph, and the clock and commit values a re-seeded store
-    carries (PLAN §3.2's update rule);
+    carries (PLAN §3.2's update rule), or one of those values differs where the
+    fixture's recorded inputs still hold the old one, for a value of another kind,
+    or not one-to-one across the fixture's pages;
   - the gate does not run in CI.
 
 Retired by SO19: the check that SO11's recorded Markdown inputs, printed through the HTML
@@ -285,6 +287,46 @@ _VOLATILE = re.compile(
 
 def masked(text: str) -> str:
     return _VOLATILE.sub("@@volatile@@", normalise(text))
+
+
+def _volatile_kind(token: str) -> str:
+    if re.fullmatch(r"[0-9a-f]{7,40}", token):
+        return f"hex{len(token)}"
+    return "session" if re.fullmatch(r"[0-9a-z]{8}-[0-9a-z]{8}", token) else "time"
+
+
+def recorded_inputs(corpus: Path, name: str) -> str:
+    """What a fixture's store and context recorded; a value in it is fixed, not volatile."""
+
+    return "".join(
+        (corpus / name / part).read_text() for part in ("memory.sql", "inputs.json") if (corpus / name / part).is_file()
+    )
+
+
+def volatile_drift(pairs: dict[str, str], before: str, after: str, fixed: str) -> str | None:
+    """Where a masked token differs: one a re-seeded run made, or a changed value.
+
+    A token may differ only for one of the same kind, the same way on every page of
+    the fixture (one value to one value), and only when the fixture's recorded inputs
+    no longer hold the old value: a value the store still records cannot have moved
+    with the clock or a re-seeded workspace (slice-S3 review F5).
+    """
+
+    old, new = _VOLATILE.findall(normalise(before)), _VOLATILE.findall(normalise(after))
+    if len(old) != len(new):
+        return f"{len(old)} volatile values became {len(new)}"
+    reverse = {value: key for key, value in pairs.items()}
+    for was, now in zip(old, new, strict=True):
+        if was == now:
+            continue
+        if _volatile_kind(was) != _volatile_kind(now):
+            return f"{was!r} became {now!r}, a different kind of value"
+        if pairs.setdefault(was, now) != now or reverse.setdefault(now, was) != was:
+            return f"{was!r} became {now!r} here and something else elsewhere"
+        stamp = was[:16].replace(" ", "T") if _volatile_kind(was) == "time" else was
+        if was in fixed or stamp in fixed:
+            return f"{was!r} became {now!r}, but the fixture's recorded inputs still hold {was!r}"
+    return None
 
 
 def so11_corpus(into: Path) -> Path | None:
@@ -586,6 +628,8 @@ def main() -> int:
             for name in GOLDEN_FIXTURES:
                 before = html_pages(previous, name)
                 after = html_pages(GOLDEN, name)
+                pairs: dict[str, str] = {}
+                fixed = recorded_inputs(GOLDEN, name)
                 if not after or sorted(after) != sorted(before):
                     return f"the golden fixture {name} holds {len(after)} pages for SO11's {len(before)}"
                 for rel, new in after.items():
@@ -593,6 +637,9 @@ def main() -> int:
                         return f"golden {name}/{rel} links {md_targets(new)[:3]}"
                     if masked(before[rel]) != masked(new):
                         return f"golden {name}/{rel} differs from SO11's outside the Markdown links and the views paragraph"
+                    drift = volatile_drift(pairs, before[rel], new, fixed)
+                    if drift:
+                        return f"golden {name}/{rel}: {drift}"
                     compared += 1
             return None if compared >= 140 else f"only {compared} golden pages were compared"
 
