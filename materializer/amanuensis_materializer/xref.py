@@ -76,6 +76,18 @@ class XrefIndex:
     # Generated copy (page hints, "Use it when" sentences, terms lines) left
     # exactly as written: an ID-shaped word in it is not a mention.
     protected: tuple[str, ...] = ()
+    _patterns: tuple[re.Pattern[str] | None, ...] | None = field(default=None, init=False, repr=False)
+
+    def patterns(self) -> tuple[re.Pattern[str] | None, ...]:
+        """The known IDs, the named IDs and the protected copy, each compiled once per index."""
+
+        if self._patterns is None:
+            self._patterns = (
+                identifier_pattern(self.entries),
+                identifier_pattern(self.names),
+                re.compile(identifier_alternation(self.protected)) if self.protected else None,
+            )
+        return self._patterns
 
 
 # "concern RC-2" already says what RC-2 is.
@@ -198,9 +210,7 @@ class _Walk:
         index = self.index
         if not index.entries:
             return cells
-        ids = identifier_pattern(index.entries)
-        inner = identifier_pattern(index.names)
-        protected = re.compile(identifier_alternation(index.protected)) if index.protected else None
+        ids, inner, protected = index.patterns()
         offsets: list[int] = []
         at = 0
         for cell in cells:
