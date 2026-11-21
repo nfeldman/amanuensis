@@ -814,9 +814,9 @@ def badge_note(conn: sqlite3.Connection, badges: dict[str, tuple[Badge, ...]]) -
     return (
         BadgeNote(
             "Each badge is one count from the Hot spots page: open critical or high (C+H), open medium or low (M+L),"
-            " awaiting verification (V), undiscriminated (U). Subsystems below Concerns carry none."
-            + (" Those at Concerns or Adversarial are under review." if review else "")
-            + f" {bare} of {len(eligible)} subsystems at Concerns or above show no badge: nothing is counted for"
+            f" awaiting verification (V), undiscriminated (U). Subsystems below {_DEPTH_LABELS['concerns']} carry none."
+            + (f" Those at {_DEPTH_LABELS['concerns']} or {_DEPTH_LABELS['adversarial']} are under review." if review else "")
+            + f" {bare} of {len(eligible)} subsystems at {_DEPTH_LABELS['concerns']} or above show no badge: nothing is counted for"
             " them, which is not a verdict that they are clean."
         ),
     )
@@ -1171,7 +1171,7 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
             nodes += bar
             items += lines
         if not nodes:
-            return sentence("no subsystem at Scoping or above has a ledger row, so no bar is drawn.")
+            return sentence(f"no subsystem at {_DEPTH_LABELS['scoping']} or above has a ledger row, so no bar is drawn.")
         account.append(
             "Each bar is one subsystem's ledger by standing, and the last is the repository's tracked paths at the latest"
             " reconciliation. A segment is a share of its own bar."
@@ -1182,7 +1182,10 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
                 f" {'it has' if len(bare) == 1 else 'they have'} no bar ({', '.join(bare)})."
             )
         if parked:
-            account.append(f"{_count(len(parked), 'subsystem')} at Unmapped or Deferred {'is' if len(parked) == 1 else 'are'} not drawn ({', '.join(parked)}).")
+            account.append(
+                f"{_count(len(parked), 'subsystem')} at {_DEPTH_LABELS['unmapped']} or {_DEPTH_LABELS['deferred']}"
+                f" {'is' if len(parked) == 1 else 'are'} not drawn ({', '.join(parked)})."
+            )
         account.append(reconciliation_line)
         in_tree = ledgered - absent
         if tracked == in_tree + unledgered and 0 <= exempt <= in_tree:

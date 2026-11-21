@@ -317,7 +317,9 @@ _EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 # out of both the start's corpus and the current one, which still pins everything around them.
 _EARLIER = re.compile(
     r'<figure\b[^>]*data-diagram="(?:survey-workflow|status-ladder|coverage-bars)"[^>]*>.*?</figure>\n?'
-    r'|<p class="diagram-below"[^>]*data-diagram="(?:survey-workflow|status-ladder|coverage-bars)"[^>]*>.*?</p>\n?',
+    r'|<p class="diagram-below"[^>]*data-diagram="(?:survey-workflow|status-ladder|coverage-bars)"[^>]*>.*?</p>\n?'
+    # SO23's note under a surface that draws finding badges.
+    r'|<p class="finding-badge-note"[^>]*>.*?</p>\n?',
     re.S,
 )
 _SEAM_ADDED = re.compile(rf'<(?:figure|p)\b[^>]*data-diagram="{KIND}"')
