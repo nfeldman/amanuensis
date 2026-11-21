@@ -19,6 +19,8 @@ from .page import (
     Atlas,
     AtlasItem,
     AtlasRegion,
+    Badge,
+    BadgeNote,
     Block,
     BoundaryDiagram,
     BoundaryRow,
@@ -50,6 +52,7 @@ from .vocabulary import (
     VOCABULARY,
     VOCABULARY_CONTRACT_VERSION,
     labels,
+    values_of,
 )
 
 # An atlas prints a depth's contract label, as the HTML chip does, never the
@@ -309,21 +312,26 @@ def dependency_section(
 
     edges, subs = _dependency_rows(conn)
     heading = DEPENDENCY_HEADING if edges else ATLAS_HEADING
-    return heading, _dependency_blocks(edges, subs, caption(heading))
+    return heading, _dependency_blocks(edges, subs, caption(heading), conn if not edges else None)
 
 
 def dependency_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
     """The dependency section's body: the atlas when no edge is recorded, else the edge table."""
 
-    return _dependency_blocks(*_dependency_rows(conn), caption)
+    edges, subs = _dependency_rows(conn)
+    return _dependency_blocks(edges, subs, caption, conn if not edges else None)
 
 
 def _dependency_blocks(
-    edges: list[dict[str, Any]], subs: dict[str, dict[str, Any]], caption: str
+    edges: list[dict[str, Any]],
+    subs: dict[str, dict[str, Any]],
+    caption: str,
+    conn: sqlite3.Connection | None = None,
 ) -> tuple[Block, ...]:
     if not subs and not edges:
         return (_sentence("_No subsystems recorded yet._"),)
     if not edges:
+        badges = finding_badges(conn) if conn is not None else {}
         regions: dict[str, list[AtlasItem]] = {}
         for sid, subsystem in sorted(
             subs.items(), key=lambda item: ((item[1].get("layer") or "Other"), item[0])
@@ -336,6 +344,7 @@ def _dependency_blocks(
                     depth_cell(label),
                     record=f"subsystem:{sid}",
                     state=str(subsystem["status"]),
+                    badges=badges.get(sid, ()),
                 )
             )
         return (
@@ -343,6 +352,7 @@ def _dependency_blocks(
                 "_No dependency edges are recorded in this publication. The layer map below is a subsystem atlas, not an inferred dependency graph._"
             ),
             Atlas(caption, tuple(AtlasRegion(name, tuple(items)) for name, items in regions.items())),
+            *(badge_note(conn, badges) if conn is not None else ()),
         )
 
     covered = {
@@ -406,6 +416,7 @@ def boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]
     if any(edge["kind"] == "xref" for edge in edges):
         kinds.append("recorded dependency")
     names = {node["id"]: node["name"] for node in nodes}
+    badges = finding_badges(conn)
     rows_out: list[BoundaryRow] = []
     for node in nodes:
         sid = node["id"]
@@ -421,6 +432,7 @@ def boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]
                     seam=bool(seam_id),
                     seam_id=seam_id,
                     record=record,
+                    badges=badges.get(sid, ()),
                 )
             )
     return (
@@ -429,6 +441,7 @@ def boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]
             f" no line is inferred from a name or a layer.{skipped}_"
         ),
         BoundaryDiagram(caption, tuple(rows_out)),
+        *badge_note(conn, badges),
     )
 
 
@@ -595,6 +608,216 @@ def depth_cell(label: str) -> Inlines:
         if name.lower() == _plain(label).lower():
             return Inlines((Chip("status", value),), _plain(label))
     return inlines(label)
+
+
+# ---------------------------------------------------------------------------
+# The hot-spots measures (store-only PLAN §7.6), shared by the Hot spots page and the
+# finding badges (A4) so a badge can never count what the table does not.
+# ---------------------------------------------------------------------------
+
+
+def hot_spot_access(conn: sqlite3.Connection) -> dict[str, int]:
+    """Recorded accesses per subsystem, by way of the entry each one names.
+
+    `access_log` records an entry, not a subsystem, so an access reaches a
+    subsystem only through an `entries` row that carries one. When none does,
+    §7.6 omits the column rather than printing a column of zeros: zero recorded
+    accesses and no access recording at all are different claims (VP4).
+    """
+
+    return {
+        str(r["subsystem_id"]): int(r["n"] or 0)
+        for r in rows(
+            conn,
+            "SELECT e.subsystem_id, COUNT(*) AS n"
+            "  FROM access_log a"
+            "  JOIN entries e ON e.id = a.entry_id AND e.tier = a.entry_tier"
+            " WHERE e.subsystem_id IS NOT NULL"
+            " GROUP BY e.subsystem_id",
+        )
+    }
+
+
+def _weakest_quality(qualities: Sequence[str | None]) -> str:
+    """The weakest rung recorded among some confirmed-bug reviews, or `—`.
+
+    A review that records no quality at all is weaker than any recorded rung —
+    there is nothing to read the claim against — so it wins the comparison.
+    """
+
+    if not qualities:
+        return "—"
+    ladder = values_of("evidence_quality")
+    if any(not quality for quality in qualities):
+        return "not recorded"
+    return max(
+        (str(q) for q in qualities),
+        key=lambda q: ladder.index(q) if q in ladder else len(ladder),
+    )
+
+
+def hot_spot_measures(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """One dict per subsystem, in ID order: nine separate measures, none combined with another."""
+
+    subs = rows(conn, "SELECT id, name, layer FROM subsystems ORDER BY id")
+    findings = rows(
+        conn,
+        "SELECT v.subsystem_id, f.severity, v.resolution_state"
+        "  FROM finding_state_current v"
+        "  JOIN findings f ON f.finding_id = v.finding_id"
+        " WHERE v.resolution_state IN ('open','fixed-pending-verification')",
+    )
+    contradiction_parties = rows(
+        conn,
+        "SELECT DISTINCT c.id, f.subsystem_id"
+        "  FROM contradictions c"
+        "  JOIN findings f ON f.finding_id IN (c.finding_a, c.finding_b)"
+        " WHERE COALESCE(c.resolution,'unresolved')='unresolved'"
+        "   AND f.subsystem_id IS NOT NULL",
+    )
+    competing_matrices = rows(
+        conn,
+        "SELECT subsystem_id, COUNT(*) AS n FROM diagnosticity_sessions"
+        " WHERE COALESCE(outcome,'open') IN ('open','unresolved-competition')"
+        "   AND subsystem_id IS NOT NULL GROUP BY subsystem_id",
+    )
+    competing_reviews = rows(
+        conn,
+        "SELECT subsystem_id, COUNT(*) AS n FROM dispositions"
+        " WHERE classification='unresolved-competition' GROUP BY subsystem_id",
+    )
+    bug_reviews = rows(
+        conn,
+        "SELECT subsystem_id, evidence_quality FROM dispositions"
+        " WHERE classification='confirmed-bug'",
+    )
+    ledger = rows(
+        conn,
+        "SELECT subsystem_id, COALESCE(classification,'candidate') AS classification,"
+        f" COALESCE(stale,0) AS stale FROM file_ledger WHERE {_OBLIGATION_BEARING}",
+    )
+    seams = rows(
+        conn,
+        "SELECT seam_id, party_a, party_b, assessable FROM seam_assessability"
+        " ORDER BY seam_id",
+    )
+    seam_concern_parties = {
+        str(d["subsystem_id"])
+        for d in rows(
+            conn,
+            "SELECT DISTINCT subsystem_id FROM dispositions WHERE concern_code LIKE 'SC-%'",
+        )
+    }
+    access = hot_spot_access(conn)
+
+    measures: list[dict[str, Any]] = []
+    for s in subs:
+        sid = str(s["id"])
+        owned = [f for f in findings if str(f["subsystem_id"]) == sid]
+        open_rows = [f for f in owned if f["resolution_state"] == "open"]
+        crit_high = sum(1 for f in open_rows if f["severity"] in ("CRITICAL", "HIGH"))
+        med_low = sum(1 for f in open_rows if f["severity"] in ("MEDIUM", "LOW"))
+        awaiting = sum(
+            1 for f in owned if f["resolution_state"] == "fixed-pending-verification"
+        )
+        undiscriminated = (
+            sum(1 for c in contradiction_parties if str(c["subsystem_id"]) == sid)
+            + sum(int(m["n"] or 0) for m in competing_matrices if str(m["subsystem_id"]) == sid)
+            + sum(int(r["n"] or 0) for r in competing_reviews if str(r["subsystem_id"]) == sid)
+        )
+        quality = _weakest_quality(
+            [r["evidence_quality"] for r in bug_reviews if str(r["subsystem_id"]) == sid]
+        )
+        owned_rows = [r for r in ledger if str(r["subsystem_id"]) == sid]
+        unread = sum(1 for r in owned_rows if r["classification"] == "candidate")
+        stale = sum(1 for r in owned_rows if int(r["stale"] or 0))
+        party_seams = [
+            seam for seam in seams if sid in (str(seam["party_a"]), str(seam["party_b"]))
+        ]
+        unassessed = 0
+        for seam in party_seams:
+            assessable = int(seam["assessable"] or 0)
+            for side in (str(seam["party_a"]), str(seam["party_b"])):
+                if not assessable or side not in seam_concern_parties:
+                    unassessed += 1
+        measures.append(
+            {
+                "id": sid,
+                "name": str(s["name"] or sid),
+                "crit_high": crit_high,
+                "med_low": med_low,
+                "awaiting": awaiting,
+                "undiscriminated": undiscriminated,
+                "quality": quality,
+                "unread": unread,
+                "obligation": len(owned_rows),
+                "unread_fraction": (unread / len(owned_rows)) if owned_rows else 0.0,
+                "stale": stale,
+                "unassessed_sides": unassessed,
+                "seam_sides": 2 * len(party_seams),
+                "access": access.get(sid),
+            }
+        )
+    return measures
+
+
+#: A4's measures, in the order a subsystem's badges print: the badge key, the Hot spots
+#: measure it is read from, the short mark on the boundary diagram, and its words.
+BADGE_MEASURES = (
+    ("crit-high", "crit_high", "C+H", "open critical or high"),
+    ("med-low", "med_low", "M+L", "open medium or low"),
+    ("awaiting", "awaiting", "V", "awaiting verification"),
+    ("undiscriminated", "undiscriminated", "U", "undiscriminated"),
+)
+#: Appendix B rule 2: finding badges come from `concerns` up; the first two are still under review.
+BADGE_FROM = ("concerns", "adversarial", "mapped")
+UNDER_REVIEW = ("concerns", "adversarial")
+
+
+def finding_badges(
+    conn: sqlite3.Connection, measures: Sequence[dict[str, Any]] | None = None
+) -> dict[str, tuple[Badge, ...]]:
+    """A4: each subsystem's open-finding counts as badges, from the Hot spots measures (§7.6).
+
+    One badge per measure, never merged. A zero count draws nothing: no badge says "clean",
+    because an absent count is not a verdict. A subsystem below `concerns` has none, since a
+    verdict badge before the concerns pass would assert a review nobody did.
+    """
+
+    measures = hot_spot_measures(conn) if measures is None else measures
+    status = {str(r["id"]): str(r["status"] or "unmapped") for r in rows(conn, "SELECT id, status FROM subsystems")}
+    out: dict[str, tuple[Badge, ...]] = {}
+    for m in measures:
+        sid = str(m["id"])
+        if status.get(sid) not in BADGE_FROM:
+            continue
+        found = tuple(
+            Badge(key, int(m[field]), short, f"{int(m[field])} {words}", status[sid] in UNDER_REVIEW)
+            for key, field, short, words in BADGE_MEASURES
+            if int(m[field]) > 0
+        )
+        if found:
+            out[sid] = found
+    return out
+
+
+def badge_note(conn: sqlite3.Connection, badges: dict[str, tuple[Badge, ...]]) -> tuple[Block, ...]:
+    """The sentence under a surface that draws badges: what they count, and what no badge means."""
+
+    if not badges:
+        return ()
+    eligible = [r for r in rows(conn, "SELECT status FROM subsystems") if str(r["status"]) in BADGE_FROM]
+    bare = len(eligible) - len(badges)
+    review = any(b.review for found in badges.values() for b in found)
+    return (
+        BadgeNote(
+            "Each badge is one count from the Hot spots page: open critical or high (C+H), open medium or low (M+L),"
+            " awaiting verification (V), undiscriminated (U). Subsystems below Concerns carry none."
+            + (" Those at Concerns or Adversarial are under review." if review else "")
+            + f" {bare} of {len(eligible)} subsystems at Concerns or above show no badge: nothing is counted for"
+            " them, which is not a verdict that they are clean."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -822,6 +1045,159 @@ def status_ladder_model(
     return Diagram("status-ladder", subject, title, caption, (), tuple(nodes), tuple(edges), tuple(paragraphs), tuple(items), read_at=read_at)
 
 
+
+# -- A5: coverage bars --------------------------------------------------------
+
+#: Standings a bar can hold, in the order its segments run, with the fill token and the
+#: line that tells them apart without colour.
+_STANDING_ORDER: tuple[tuple[str, str, str], ...] = (
+    ("examined", "accent", "solid"),
+    ("examined-stale", "accent-soft", "dashed"),
+    ("scoped-unread", "surface", "solid"),
+    ("excluded", "canvas-subtle", "dotted"),
+    ("absent", "surface", "dashed"),
+)
+#: Appendix B rule 2: a subsystem's files are drawn as coverage from `scoping` up.
+COVERAGE_FROM = ("scoping", "structural", "concerns", "adversarial", "mapped")
+_STANDING_LABELS = labels("standing_state")
+_NOT_MEASURED = "Coverage not measured"
+
+
+def _latest_reconciliation(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    if not table_exists(conn, "scope_reconciliations"):
+        return None
+    return row(
+        conn,
+        "SELECT id, detected_sha, tracked_paths, ledger_rows, unledgered, absent, exempt"
+        " FROM scope_reconciliations ORDER BY id DESC LIMIT 1",
+    )
+
+
+def _bar(sid: str, lane: int, counts: dict[str, int]) -> tuple[list[DiagramNode], list[tuple[str, str]], int]:
+    """One bar's segments (a state with no file has none), and an account line for every state."""
+
+    total = sum(counts.values())
+    nodes: list[DiagramNode] = []
+    items: list[tuple[str, str]] = []
+    for state, tone, style in _STANDING_ORDER:
+        n = counts.get(state, 0)
+        label = _STANDING_LABELS.get(state, state)
+        anchor = f"coverage-{_id_part(sid)}-{state}"
+        if n:
+            nodes.append(DiagramNode(f"coverage:{sid}:{state}", label, lane, len(nodes), str(n), style, f"#{anchor}", count=n, tone=tone))
+            items.append((anchor, f"{label} — {n} of {total} files."))
+        else:
+            items.append((anchor, f"{label} — none of the {total} files."))
+    return nodes, items, total
+
+
+def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = None) -> Diagram:
+    """A5: what was read, as bars of `file_standing`; for no subsystem, every subsystem's and the repository's.
+
+    A bar is a share of its own total. The repository bar is the latest `scope_reconciliations`
+    row, read at the revision it names; without a reconciliation there is no denominator, so a
+    sentence says coverage is not measured and nothing is drawn as zero. A subsystem at `unmapped`
+    or `deferred`, or with no ledger row, is not drawn either.
+    """
+
+    subject = str(subsystem_id) if subsystem_id is not None else ""
+    caption = (
+        f"Which of {subject}'s files have been read, and how much of the repository do they reach?" if subject
+        else "Which files have been read in each subsystem, and how much of the repository does the ledger reach?"
+    )
+    title = f"Coverage of {subject}" if subject else "Coverage of the repository"
+
+    def sentence(why: str) -> Diagram:
+        return Diagram("coverage-bars", subject, title, caption, below=f"{_NOT_MEASURED}: {why}")
+
+    depth_of = {str(r["id"]): str(r["status"] or "unmapped") for r in rows(conn, "SELECT id, status FROM subsystems")}
+    standing: dict[str, dict[str, int]] = {}
+    for r in rows(conn, "SELECT subsystem_id, standing_state, COUNT(*) AS n FROM file_standing GROUP BY subsystem_id, standing_state"):
+        standing.setdefault(str(r["subsystem_id"]), {})[str(r["standing_state"])] = int(r["n"])
+    if subject and depth_of.get(subject, "unmapped") not in COVERAGE_FROM:
+        shown = _DEPTH_LABELS.get(depth_of.get(subject, "unmapped"), depth_of.get(subject, "unmapped"))
+        return sentence(f"{subject} is at {shown}, a depth that authorizes no reading of its files, so no bar is drawn.")
+    recon = _latest_reconciliation(conn)
+    if recon is None:
+        return sentence(
+            "no reconciliation of the repository's tracked files against the ledger is recorded, so no bar is drawn."
+            " That says nothing about how much was read."
+        )
+    sha = str(recon["detected_sha"])
+    read_at = f"Read at revision {sha[:8]}, the latest reconciliation's, and at the ledger as it stands now."
+    tracked, ledgered, unledgered = int(recon["tracked_paths"]), int(recon["ledger_rows"]), int(recon["unledgered"])
+    absent, exempt = int(recon["absent"]), int(recon["exempt"])
+    reconciliation_line = (
+        f"The repository tracked {_count(tracked, 'path')} at {sha[:8]}; the ledger holds {ledgered} of them"
+        f" and {unledgered} {'has' if unledgered == 1 else 'have'} no ledger row."
+    )
+
+    lanes: list[str] = []
+    nodes: list[DiagramNode] = []
+    items: list[tuple[str, str]] = []
+    account: list[str] = []
+    if subject:
+        counts = standing.get(subject, {})
+        if not counts:
+            return sentence(f"no file is recorded against {subject}, so no bar is drawn.")
+        bar, lines, total = _bar(subject, 0, counts)
+        lanes.append(f"{subject}\n{_count(total, 'file')}")
+        nodes += bar
+        items += lines
+        account += [
+            f"{subject} has {_count(total, 'ledger file')}. Each segment is the share of them in one standing,"
+            " not a share of the repository.",
+            reconciliation_line,
+        ]
+    else:
+        ids = sorted(depth_of)
+        parked = [sid for sid in ids if depth_of[sid] not in COVERAGE_FROM]
+        eligible = [sid for sid in ids if sid not in parked]
+        bare = [sid for sid in eligible if not standing.get(sid)]
+        for sid in eligible:
+            if not standing.get(sid):
+                continue
+            bar, lines, total = _bar(sid, len(lanes), standing[sid])
+            lanes.append(f"{sid}\n{_count(total, 'file')}")
+            nodes += bar
+            items += lines
+        if not nodes:
+            return sentence("no subsystem at Scoping or above has a ledger row, so no bar is drawn.")
+        account.append(
+            "Each bar is one subsystem's ledger by standing, and the last is the repository's tracked paths at the latest"
+            " reconciliation. A segment is a share of its own bar."
+        )
+        if bare:
+            account.append(
+                f"{len(bare)} of {len(depth_of)} subsystems {'has' if len(bare) == 1 else 'have'} no ledger row, so"
+                f" {'it has' if len(bare) == 1 else 'they have'} no bar ({', '.join(bare)})."
+            )
+        if parked:
+            account.append(f"{_count(len(parked), 'subsystem')} at Unmapped or Deferred {'is' if len(parked) == 1 else 'are'} not drawn ({', '.join(parked)}).")
+        account.append(reconciliation_line)
+        in_tree = ledgered - absent
+        if tracked == in_tree + unledgered and 0 <= exempt <= in_tree:
+            lane = len(lanes)
+            lanes.append(f"Repository\n{_count(tracked, 'path')}")
+            wanted = (
+                ("ledgered", "In the ledger", in_tree - exempt, "accent", "solid"),
+                ("exempt", "In the ledger, exempt from the survey", exempt, "canvas-subtle", "dotted"),
+                ("unledgered", "In no ledger", unledgered, "surface", "dashed"),
+            )
+            for key, label, n, tone, style in wanted:
+                anchor = f"coverage-repository-{key}"
+                if n:
+                    nodes.append(DiagramNode(f"coverage:repository:{key}", label, lane, len(nodes), str(n), style, f"#{anchor}", count=n, tone=tone))
+                    items.append((anchor, f"{label} — {n} of {tracked} tracked paths."))
+                else:
+                    items.append((anchor, f"{label} — none of the {tracked} tracked paths."))
+        else:
+            account.append(
+                f"The reconciliation's counts do not add up ({tracked} tracked; {ledgered} in the ledger, {absent} gone,"
+                f" {exempt} exempt, {unledgered} with no row), so the repository bar is not drawn."
+            )
+    return Diagram("coverage-bars", subject, title, caption, tuple(lanes), tuple(nodes), (), tuple(account), tuple(items), read_at=read_at)
+
 # -- drawing ----------------------------------------------------------------
 
 _GRID: dict[str, tuple[float, float, float, float, float, float]] = {
@@ -915,6 +1291,8 @@ def svg_ids(diagram: Diagram) -> tuple[str, str]:
 def draw_svg(diagram: Diagram) -> str:
     """A diagram as one inline SVG: a fixed 960-wide viewBox, tokens for colour, no script."""
 
+    if diagram.kind == "coverage-bars":
+        return _draw_bars(diagram)
     left, top, colw, rowh, boxw, boxh = _GRID.get(diagram.kind, _GRID["status-ladder"])
     centres: dict[str, tuple[float, float]] = {}
     for node in diagram.nodes:
@@ -958,6 +1336,70 @@ def draw_svg(diagram: Diagram) -> str:
             inner = f'<a href="{escape(node.href, quote=True)}">{inner}</a>'
         body.append(f'<g data-node="{escape(node.record, quote=True)}">{inner}</g>')
     description = f"{boxes} {'box' if boxes == 1 else 'boxes'} and {arrows} {'arrow' if arrows == 1 else 'arrows'}: {diagram.caption}"
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
+        f'width="{VIEW_WIDTH}" role="img" aria-labelledby="{title_id} {desc_id}">'
+        f'<title id="{title_id}">{escape(diagram.title, quote=False)}</title>'
+        f'<desc id="{desc_id}">{escape(description, quote=False)}</desc>'
+        + "".join(body)
+        + "</svg>"
+    )
+
+
+_BAR_LEFT, _BAR_RIGHT, _BAR_ROW, _BAR_HEIGHT = 112.0, 950.0, 46.0, 26.0
+
+
+def _draw_bars(diagram: Diagram) -> str:
+    """Bars as one inline SVG: a full-width bar per lane, its segments sized by count, a legend beneath."""
+
+    title_id, desc_id = svg_ids(diagram)
+    width = _BAR_RIGHT - _BAR_LEFT
+    body: list[str] = []
+    for lane_row, lane in enumerate(diagram.lanes):
+        y = 8 + lane_row * _BAR_ROW
+        shade = "var(--canvas-subtle)" if lane_row % 2 == 0 else "var(--surface)"
+        body.append(f'<rect x="0" y="{_n(y)}" width="{VIEW_WIDTH}" height="{_n(_BAR_ROW)}" fill="{shade}" opacity="0.7"/>')
+        body.append(svg_text(lane.split("\n"), 10, y + _BAR_ROW / 2, size=12, weight="600", anchor="start", fill="var(--text-muted)"))
+        segments = [n for n in diagram.nodes if n.row == lane_row]
+        total = sum(n.count for n in segments) or 1
+        raw = [max(n.count / total * width, 4.0) for n in segments]
+        scale = width / (sum(raw) or 1.0)
+        x = _BAR_LEFT
+        for node, size in zip(segments, raw, strict=True):
+            w = size * scale
+            top = y + (_BAR_ROW - _BAR_HEIGHT) / 2
+            stroke = "var(--accent-strong)" if node.tone == "accent" else "var(--rule-strong)"
+            dash = f' stroke-dasharray="{_DASH[node.style]}"' if node.style in _DASH else ""
+            ink = "var(--canvas)" if node.tone == "accent" else "var(--text)"
+            words = f"{node.label}: {node.count} of {total}"
+            inner = (
+                f"<title>{escape(words, quote=False)}</title>"
+                f'<rect x="{_n(x)}" y="{_n(top)}" width="{_n(w)}" height="{_n(_BAR_HEIGHT)}" fill="var(--{node.tone})" stroke="{stroke}" stroke-width="1.2"{dash}/>'
+            )
+            if w >= 30:
+                inner += svg_text([str(node.count)], x + w / 2, top + _BAR_HEIGHT / 2, size=12, weight="600", fill=ink)
+            if node.href:
+                inner = f'<a href="{escape(node.href, quote=True)}">{inner}</a>'
+            body.append(f'<g data-node="{escape(node.record, quote=True)}">{inner}</g>')
+            x += w
+    present: list[tuple[str, str, str, str]] = []
+    for node in diagram.nodes:
+        key = (node.label, node.tone, node.style)
+        if all(key != (p[0], p[1], p[2]) for p in present):
+            present.append((node.label, node.tone, node.style, ""))
+    legend_top = 8 + len(diagram.lanes) * _BAR_ROW + 8
+    per_line, cell = 3, (VIEW_WIDTH - 20) / 3
+    for index, (label, tone, style, _) in enumerate(present):
+        lx = 10 + (index % per_line) * cell
+        ly = legend_top + (index // per_line) * 20
+        dash = f' stroke-dasharray="{_DASH[style]}"' if style in _DASH else ""
+        stroke = "var(--accent-strong)" if tone == "accent" else "var(--rule-strong)"
+        body.append(f'<rect x="{_n(lx)}" y="{_n(ly)}" width="22" height="12" fill="var(--{tone})" stroke="{stroke}" stroke-width="1.2"{dash}/>')
+        body.append(svg_text([label], lx + 30, ly + 6, size=11, anchor="start", fill="var(--text-muted)"))
+    legend_rows = (len(present) + per_line - 1) // per_line
+    height = legend_top + legend_rows * 20 + 6
+    segments = len(diagram.nodes)
+    description = f"{segments} {'segment' if segments == 1 else 'segments'} in {len(diagram.lanes)} {'bar' if len(diagram.lanes) == 1 else 'bars'}: {diagram.caption}"
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
         f'width="{VIEW_WIDTH}" role="img" aria-labelledby="{title_id} {desc_id}">'

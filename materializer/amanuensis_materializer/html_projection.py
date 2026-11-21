@@ -33,6 +33,9 @@ from .page import (
     Abbr,
     Anchor,
     Atlas,
+    AtlasItem,
+    Badge,
+    BadgeNote,
     Block,
     BoundaryDiagram,
     Break,
@@ -1519,6 +1522,69 @@ def _svg_mark(kind: str, record: str) -> str:
     return f' data-{kind}="{html.escape(record, quote=True)}"' if record else ""
 
 
+#: Colour tokens a badge's measure borrows from the page's severity and resolution ramps.
+_BADGE_TONE = {
+    "crit-high": "severity-critical",
+    "med-low": "severity-medium",
+    "awaiting": "resolution-pending",
+    "undiscriminated": "disposition-ambiguous",
+}
+
+
+def _badge_attrs(badge: Badge, subsystem: str) -> str:
+    review = ' data-under-review="yes"' if badge.review else ""
+    return (
+        f' data-finding-badge="{html.escape(badge.measure, quote=True)}"'
+        f' data-subsystem="{html.escape(subsystem, quote=True)}" data-count="{badge.count}"{review}'
+    )
+
+
+def _atlas_badges(item: AtlasItem) -> str:
+    """An atlas item's finding badges, one pill per measure; nothing when it has none (A4)."""
+
+    if not item.badges:
+        return ""
+    sid = item.record.removeprefix("subsystem:")
+    pills = "".join(
+        f'<span class="finding-badge"{_badge_attrs(b, sid)}'
+        f' style="display:inline-block;margin:0 .4rem .2rem 0;padding:.08rem .4rem;font:.62rem/1.4 var(--mono);'
+        f'border:1px solid var(--rule-strong);border-left:.35rem solid var(--{_BADGE_TONE[b.measure]})">'
+        f"{html.escape(b.label)}</span>"
+        for b in item.badges
+    )
+    review = (
+        ' <span class="finding-badge-review" style="font:.62rem/1.4 var(--mono)">under review</span>'
+        if any(b.review for b in item.badges)
+        else ""
+    )
+    return (
+        '<div class="atlas-badges" role="group" aria-label="Open findings'
+        f'{" (under review)" if review else ""}" style="grid-column:1 / -1">{pills}{review}</div>'
+    )
+
+
+def _boundary_badges(badges: tuple[Badge, ...], subsystem: str, x: float, y: float, box_w: float) -> str:
+    """A boundary box's badges, right-aligned along its top edge, each a rectangle and its short mark (A4)."""
+
+    widths = [10 + 6.6 * len(f"{b.short} {b.count}") for b in badges]
+    cursor = x + box_w - sum(widths) - 4 * (len(badges) - 1) - 2
+    out: list[str] = []
+    for badge, width in zip(badges, widths, strict=True):
+        words = badge.label + (" (under review)" if badge.review else "")
+        dash = ' stroke-dasharray="3 2"' if badge.review else ""
+        out.append(
+            f'<g class="boundary-svg-badge"{_badge_attrs(badge, subsystem)}>'
+            f"<title>{html.escape(words)}</title>"
+            f'<rect x="{round(cursor, 1):g}" y="{round(y - 9, 1):g}" width="{round(width, 1):g}" height="16" rx="2"'
+            f' fill="var(--surface)" stroke="var(--{_BADGE_TONE[badge.measure]})" stroke-width="2"{dash}/>'
+            f'<text x="{round(cursor + width / 2, 1):g}" y="{round(y + 3, 1):g}" text-anchor="middle" font-size="11"'
+            f' font-family="var(--mono)" fill="var(--text)">{html.escape(badge.short)} {badge.count}</text>'
+            "</g>"
+        )
+        cursor += width + 4
+    return "".join(out)
+
+
 _START_TAG = re.compile(r"^<([a-zA-Z][a-zA-Z0-9]*)")
 
 
@@ -1785,6 +1851,7 @@ class _HtmlWriter:
                 + f'<li class="atlas-item"{_mark_attrs(item.record, item.state)}>'
                 + f'<div class="atlas-subsystem" data-identifier-defined>{_inlines_html(item.subsystem)}</div>'
                 + f'<div class="atlas-depth">{_inlines_html(item.depth)}</div>'
+                + _atlas_badges(item)
                 + "</li>"
                 for item in region.items
             )
@@ -1977,7 +2044,11 @@ class _HtmlWriter:
         """A drawn figure with the account beside it, or the sentence that says why none is drawn (§7, Appendix B)."""
 
         if not block.nodes:
-            return f"<p>{html.escape(block.below, quote=False)}</p>"
+            subject_attr = f' data-subject="{html.escape(block.subject, quote=True)}"' if block.subject else ""
+            return (
+                f'<p class="diagram-below" data-diagram="{html.escape(block.kind, quote=True)}"{subject_attr}>'
+                f"{html.escape(block.below, quote=False)}</p>"
+            )
         subject = f' data-subject="{html.escape(block.subject, quote=True)}"' if block.subject else ""
 
         def text(value: str) -> str:
@@ -2014,10 +2085,12 @@ class _HtmlWriter:
         touched: set[str] = set()
         seams: dict[str, tuple[str, str, str]] = {}
         xrefs: list[tuple[str, str, str, str]] = []
+        badges: dict[str, tuple[Badge, ...]] = {}
         for row in block.rows:
             sid = row.subsystem_id
             if sid not in names:
                 names[sid] = row.name
+                badges[sid] = row.badges
                 layers.setdefault(row.layer, []).append(sid)
             if not row.other_id:
                 continue
@@ -2095,6 +2168,7 @@ class _HtmlWriter:
                 f'<text class="boundary-svg-id" x="{x + 10}" y="{y + 18}">{html.escape(sid)}</text>'
                 f'<text class="boundary-svg-name" x="{x + 10}" y="{y + 35}">{html.escape(shown)}</text>'
                 "</g>"
+                + _boundary_badges(badges[sid], sid, x, y, box_w)
             )
 
         total = len(names)
@@ -2563,6 +2637,8 @@ class _HtmlWriter:
             return self._relationship_trace(block)
         if isinstance(block, StalenessBars):
             return self._staleness_bars(block)
+        if isinstance(block, BadgeNote):
+            return f'<p class="finding-badge-note">{html.escape(block.text, quote=False)}</p>'
         if isinstance(block, Diagram):
             return self._diagram(block)
         if isinstance(block, DiagramSource):

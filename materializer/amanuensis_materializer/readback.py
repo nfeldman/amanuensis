@@ -1469,6 +1469,7 @@ class ProjectionVerifier:
             mismatches.extend(self._record_mark_census(conn, projection))
             mismatches.extend(self._drawn_element_census(conn, projection))
             mismatches.extend(self._figure_census(conn, projection))
+            mismatches.extend(self._badge_census(conn, projection))
         finally:
             conn.close()
         # Every finding carries exactly one authoritative marker across the
@@ -2523,6 +2524,57 @@ class ProjectionVerifier:
                 )
         return mismatches
 
+    def _badge_census(self, conn: Any, projection: dict[str, str]) -> list[dict[str, str]]:
+        """The finding badges (A4), badge by badge, against the Hot spots measures they are read from.
+
+        The atlas and the boundary diagram each print a badge per measure above zero for a
+        subsystem at `concerns` or above, and nothing else. A badge the store does not hold, one
+        missing, one whose mark disagrees with its printed words, or one whose count is not
+        the store's is a content mismatch.
+        """
+
+        from .diagrams import finding_badges  # noqa: PLC0415 — it imports this module
+
+        wanted = {
+            (sid, b.measure): (b.count, b.review) for sid, found in finding_badges(conn).items() for b in found
+        }
+        mismatches: list[dict[str, str]] = []
+        for rel, text in sorted(projection.items()):
+            if Path(rel).suffix not in HTML_SUFFIXES:
+                continue
+            surfaces = {
+                "atlas": 'class="subsystem-atlas"' in text,
+                "boundary": 'class="boundary-svg-node"' in text,
+            }
+            found: dict[str, Counter[tuple[str, str, int, bool, bool]]] = {"atlas": Counter(), "boundary": Counter()}
+            for m in re.finditer(r'<(span|g)\b([^>]*\bdata-finding-badge="[^"]*"[^>]*)>(.*?)</\1>', text, re.S):
+                attrs = dict(re.findall(r'([\w-]+)="([^"]*)"', m.group(2)))
+                surface = "atlas" if m.group(1) == "span" else "boundary"
+                count = int(attrs.get("data-count") or -1)
+                printed = count in {int(n) for n in re.findall(r"\d+", re.sub(r"<[^>]+>", " ", m.group(3)))}
+                found[surface][(attrs.get("data-subsystem", ""), attrs["data-finding-badge"], count, attrs.get("data-under-review") == "yes", printed)] += 1
+            for surface, drawn in surfaces.items():
+                if not drawn and not found[surface]:
+                    continue
+                want = Counter({(sid, measure, n, review, True): 1 for (sid, measure), (n, review) in wanted.items()}) if drawn else Counter()
+                for key in sorted(set(want) | set(found[surface])):
+                    if want[key] == found[surface][key]:
+                        continue
+                    sid, measure, count, review, printed = key
+                    mismatches.append(
+                        {
+                            "axis": "content",
+                            "object_type": "finding-badge",
+                            "object_id": f"{surface}:{sid}:{measure}",
+                            "detail": (
+                                f"{rel} prints the {surface} badge {measure} on {sid} {found[surface][key]} time(s) with count {count}"
+                                f"{', under review' if review else ''}{'' if printed else ' (its words say another count)'};"
+                                f" the store's rows draw it {want[key]} time(s)"
+                            ),
+                        }
+                    )
+        return mismatches
+
     def _figure_census(self, conn: Any, projection: dict[str, str]) -> list[dict[str, str]]:
         """The survey workflow and the status ladders, figure by figure, against their models (§3.5, §7.3).
 
@@ -2532,15 +2584,24 @@ class ProjectionVerifier:
         elements, must be the models' records (a content mismatch).
         """
 
-        from .diagrams import status_ladder_model, survey_workflow_model  # noqa: PLC0415 — it imports this module
+        from .diagrams import (  # noqa: PLC0415 — it imports this module
+            coverage_bars_model,
+            status_ladder_model,
+            survey_workflow_model,
+        )
 
         models: dict[str, list[tuple[tuple[str, str], Any]]] = {}
         if "how-to-read.html" in projection:
             models["how-to-read.html"] = [(("survey-workflow", ""), survey_workflow_model()), (("status-ladder", ""), status_ladder_model())]
+        if "files.html" in projection:
+            models["files.html"] = [(("coverage-bars", ""), coverage_bars_model(conn))]
         for sub in rows(conn, "SELECT id, name FROM subsystems ORDER BY id"):
             page = subsystem_page(str(sub["id"]), str(sub["name"]))
             if page in projection:
-                models[page] = [(("status-ladder", str(sub["id"])), status_ladder_model(conn, str(sub["id"])))]
+                models[page] = [
+                    (("status-ladder", str(sub["id"])), status_ladder_model(conn, str(sub["id"]))),
+                    (("coverage-bars", str(sub["id"])), coverage_bars_model(conn, str(sub["id"]))),
+                ]
         mismatches: list[dict[str, str]] = []
         for rel, text in sorted(projection.items()):
             if Path(rel).suffix not in HTML_SUFFIXES or (rel not in models and 'data-diagram="' not in text):

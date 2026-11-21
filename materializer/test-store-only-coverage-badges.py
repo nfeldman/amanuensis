@@ -68,6 +68,7 @@ START_SHA = "636d91df62d972759f67e0ab9306cf7a126da26a"
 
 FILES = "files.html"
 ARCHITECTURE = "architecture.html"
+MASTER_PLAN = "master-plan.html"
 HOT_SPOTS = "hot-spots.html"
 PAGES = {
     "B-01": "subsystems/b01-job-scheduler.html",
@@ -406,7 +407,8 @@ def golden_additions_only(previous: Path | None) -> str | None:
     gained = 0
     for rel in sorted(after):
         new, old = after[rel].read_text(), before[rel].read_text()
-        if _ADDED.sub("", new) != old:
+        # Blocks are joined by a newline, so taking one out can leave a newline behind; only that is let go.
+        if _ADDED.sub("", new).replace("\n", "") != old.replace("\n", ""):
             return f"{rel} differs from the start's corpus outside a coverage figure, a sentence, a badge or its note"
         gained += new != old
     for asset in (previous / "assets").iterdir():
@@ -488,29 +490,34 @@ def main() -> int:
         check("the boundary diagram's badges equal Hot spots' counts", boundary_badges)
 
         def atlas_badges() -> str | None:
-            text = (out_b / ARCHITECTURE).read_text()
-            if 'class="subsystem-atlas"' not in text:
-                return "store B has no dependency edge, yet the architecture page draws no atlas"
-            found = [b for b in badges_on(text) if b["surface"] == "atlas"]
-            seen = {(b["subsystem"], b["measure"]): int(b["count"] or -1) for b in found}
-            want = wanted_badges(store_b, hot_b)
-            if seen != want or len(found) != len(want):
-                return f"the atlas's badges are {sorted(seen.items())}; hot-spots.html's counts are {sorted(want.items())}"
-            for m in re.finditer(r'<li class="atlas-item"[^>]*data-record="subsystem:([^"]+)"[^>]*>(.*?)</li>', text, re.S):
-                inside = {b["measure"] for b in badges_on(m.group(2))}
-                held = {measure for (sid, measure) in want if sid == m.group(1)}
-                if inside != held:
-                    return f"the atlas item for {m.group(1)} carries badges {sorted(inside)}; it should carry {sorted(held)}"
-            boundary = [b for b in badges_on(text) if b["surface"] == "boundary"]
-            if {(b["subsystem"], b["measure"]) for b in boundary} != set(want):
-                return "the boundary diagram on the atlas page carries different badges from the atlas"
+            # The Subsystem map (O7) on the master plan, always drawn; the architecture page's atlas
+            # only when no dependency edge is recorded (store B).
+            for label, output, storage, hot in (("A", out_a, store_a, hot_a), ("B", out_b, store_b, hot_b)):
+                want = wanted_badges(storage, hot)
+                pages = [MASTER_PLAN] + ([ARCHITECTURE] if label == "B" else [])
+                for rel in pages:
+                    text = (output / rel).read_text()
+                    if 'class="subsystem-atlas"' not in text:
+                        return f"store {label}: {rel} draws no atlas"
+                    found = [b for b in badges_on(text) if b["surface"] == "atlas"]
+                    seen = {(b["subsystem"], b["measure"]): int(b["count"] or -1) for b in found}
+                    if seen != want or len(found) != len(want):
+                        return f"store {label}: the atlas on {rel} badges {sorted(seen.items())}; hot-spots.html's counts are {sorted(want.items())}"
+                    for m in re.finditer(r'<li class="atlas-item"[^>]*data-record="subsystem:([^"]+)"[^>]*>(.*?)</li>', text, re.S):
+                        inside = {b["measure"] for b in badges_on(m.group(2))}
+                        held = {measure for (sid, measure) in want if sid == m.group(1)}
+                        if inside != held:
+                            return f"store {label}: {rel}'s atlas item for {m.group(1)} carries badges {sorted(inside)}; it should carry {sorted(held)}"
+                boundary = [b for b in badges_on((output / ARCHITECTURE).read_text()) if b["surface"] == "boundary"]
+                if {(b["subsystem"], b["measure"]) for b in boundary} != set(want):
+                    return f"store {label}: the boundary diagram carries different badges from the atlas"
             return None
 
         check("the atlas's badges equal Hot spots' counts, one item each", atlas_badges)
 
         def badge_rules() -> str | None:
             for label, output, storage in (("A", out_a, store_a), ("B", out_b, store_b)):
-                text = (output / ARCHITECTURE).read_text()
+                text = (output / ARCHITECTURE).read_text() + (output / MASTER_PLAN).read_text()
                 status = statuses(storage)
                 for b in badges_on(text):
                     if status.get(b["subsystem"]) not in BADGED:
@@ -710,7 +717,7 @@ def main() -> int:
         sabotage("a badge added where the store holds none", store_a, out_a, ARCHITECTURE,
                  lambda t: t.replace("</svg>", '<g class="boundary-svg-badge" data-finding-badge="crit-high" data-subsystem="F-01" data-count="1"><text>C+H 1</text></g></svg>', 1),
                  "content", "finding-badge", "F-01")
-        sabotage("a badge removed from the atlas", store_b, out_b, ARCHITECTURE,
+        sabotage("a badge removed from the atlas", store_b, out_b, MASTER_PLAN,
                  first(r'<span\b[^>]*data-finding-badge="[^"]*"[^>]*>.*?</span>', lambda m: ""), "content", "finding-badge", "")
         sabotage("a segment removed from B-01's bar", store_a, out_a, PAGES["B-01"],
                  first(r'<g\b[^>]*data-node="coverage:B-01:examined"[^>]*>.*?</g>', lambda m: ""), "content", "coverage-bars-diagram-node", "coverage:B-01:examined")

@@ -297,12 +297,27 @@ class SummaryList:
 
 
 @dataclass(frozen=True)
+class Badge:
+    """One measure of unresolved findings on one subsystem (A4): never a verdict, never a zero."""
+
+    # `crit-high`, `med-low`, `awaiting` or `undiscriminated`: the Hot spots column it is read from.
+    measure: str
+    count: int
+    # The short mark drawn on the boundary diagram, and the words the atlas prints.
+    short: str
+    label: str
+    # The subsystem's depth is `concerns` or `adversarial`: its findings are not final.
+    review: bool = False
+
+
+@dataclass(frozen=True)
 class AtlasItem:
     subsystem: Inlines
     depth: Inlines
     markers: tuple[str, ...] = ()
     record: str = ""
     state: str = ""
+    badges: tuple[Badge, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -371,6 +386,8 @@ class BoundaryRow:
     seam_id: str = ""
     # The record the row's line draws: `seam:<id>` or `xref:<from>:<to>:<relationship>`.
     record: str = ""
+    # The subsystem's finding badges; every row of one subsystem carries the same ones.
+    badges: tuple[Badge, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -493,6 +510,9 @@ class DiagramNode:
     href: str = ""
     # The box marks where the subject stands now.
     marker: bool = False
+    # A bar segment's size, and the colour token it is filled with; zero and empty elsewhere.
+    count: int = 0
+    tone: str = ""
 
 
 @dataclass(frozen=True)
@@ -534,6 +554,13 @@ class Diagram:
 
 
 @dataclass(frozen=True)
+class BadgeNote:
+    """The sentence that says what a surface's badges are and are not (A4)."""
+
+    text: str
+
+
+@dataclass(frozen=True)
 class Facets:
     """A filterable page's scope and the values each facet takes, in first-appearance order."""
 
@@ -545,7 +572,7 @@ Block = (
     Heading | Paragraph | List | Code | Quote | Anchor | RecordMarker | Section | Marked | Details
     | Table | EnumTable | LifecycleTable | RecordList | SummaryList | Atlas | Topology
     | RuntimeDiagram | BoundaryDiagram | CoverageIndex | ConcernChecklist
-    | RelationshipTrace | StalenessBars | DiagramSource | Diagram
+    | RelationshipTrace | StalenessBars | DiagramSource | Diagram | BadgeNote
 )
 
 

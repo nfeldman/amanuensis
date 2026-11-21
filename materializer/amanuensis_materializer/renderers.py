@@ -25,10 +25,15 @@ from .diagrams import (
     BOUNDARY_HEADING,
     RUNTIME_BOUNDARY_ABSENT,
     RUNTIME_BOUNDARY_COLUMNS,
+    badge_note,
     boundary_blocks,
+    coverage_bars_model,
     coverage_blocks,
     dependency_section,
     depth_cell,
+    finding_badges,
+    hot_spot_access,
+    hot_spot_measures,
     runtime_boundary_blocks,
     runtime_boundary_rows,
     runtime_boundary_state,
@@ -1993,6 +1998,7 @@ def render_master_plan(
         # never the stored value. It opens the page before any section, so the
         # page's own title is its caption.
         depth_labels = labels("subsystem_status")
+        badges = finding_badges(conn)
         regions: dict[str, list[AtlasItem]] = {}
         for layer, items in layers.items():
             for s in items:
@@ -2002,11 +2008,13 @@ def render_master_plan(
                         depth_cell(_table_cell(depth_labels.get(s["status"], s["status"]))),
                         record=f"subsystem:{s['id']}",
                         state=str(s["status"]),
+                        badges=badges.get(str(s["id"]), ()),
                     )
                 )
         blocks.append(
             Atlas("Subsystem map", tuple(AtlasRegion(name, tuple(items)) for name, items in regions.items()))
         )
+        blocks.extend(badge_note(conn, badges))
         for layer, items in layers.items():
             records: list[Record] = []
             for number, s in enumerate(items, start=1):
@@ -2506,6 +2514,7 @@ def render_subsystem(
                 f" It cannot justify {SUBSYSTEM_STATUS_LIMITS.get(status, 'more than it records')}."
             ),
             ladder,
+            coverage_bars_model(conn, str(sid)),
             _summary(
                 _caption("Standing"),
                 [
@@ -4794,6 +4803,7 @@ def render_files(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 ]
             )
         blocks.append(_table("Files", ("File", "Owners", "Standing", "Examined at", "Open defects"), body))
+    blocks.append(coverage_bars_model(conn))
 
     sources = {
         **_db_source("files:standing", standing),
@@ -5356,46 +5366,6 @@ HOT_SPOT_COLUMN_NOTES: tuple[str, ...] = (
 )
 
 
-def _hot_spot_access(conn: sqlite3.Connection) -> dict[str, int]:
-    """Recorded accesses per subsystem, by way of the entry each one names.
-
-    `access_log` records an entry, not a subsystem, so an access reaches a
-    subsystem only through an `entries` row that carries one. When none does,
-    §7.6 omits the column rather than printing a column of zeros: zero recorded
-    accesses and no access recording at all are different claims (VP4).
-    """
-
-    return {
-        str(r["subsystem_id"]): int(r["n"] or 0)
-        for r in rows(
-            conn,
-            "SELECT e.subsystem_id, COUNT(*) AS n"
-            "  FROM access_log a"
-            "  JOIN entries e ON e.id = a.entry_id AND e.tier = a.entry_tier"
-            " WHERE e.subsystem_id IS NOT NULL"
-            " GROUP BY e.subsystem_id",
-        )
-    }
-
-
-def _weakest_quality(qualities: Sequence[str | None]) -> str:
-    """The weakest rung recorded among some confirmed-bug reviews, or `—`.
-
-    A review that records no quality at all is weaker than any recorded rung —
-    there is nothing to read the claim against — so it wins the comparison.
-    """
-
-    if not qualities:
-        return "—"
-    ladder = values_of("evidence_quality")
-    if any(not quality for quality in qualities):
-        return "not recorded"
-    return max(
-        (str(q) for q in qualities),
-        key=lambda q: ladder.index(q) if q in ladder else len(ladder),
-    )
-
-
 def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """One row per subsystem, nine separate measures, one declared sort (§7.6).
 
@@ -5408,55 +5378,7 @@ def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     del storage  # every measure is a property of the durable tables
 
     subs = rows(conn, "SELECT id, name, layer FROM subsystems ORDER BY id")
-    findings = rows(
-        conn,
-        "SELECT v.subsystem_id, f.severity, v.resolution_state"
-        "  FROM finding_state_current v"
-        "  JOIN findings f ON f.finding_id = v.finding_id"
-        " WHERE v.resolution_state IN ('open','fixed-pending-verification')",
-    )
-    contradiction_parties = rows(
-        conn,
-        "SELECT DISTINCT c.id, f.subsystem_id"
-        "  FROM contradictions c"
-        "  JOIN findings f ON f.finding_id IN (c.finding_a, c.finding_b)"
-        " WHERE COALESCE(c.resolution,'unresolved')='unresolved'"
-        "   AND f.subsystem_id IS NOT NULL",
-    )
-    competing_matrices = rows(
-        conn,
-        "SELECT subsystem_id, COUNT(*) AS n FROM diagnosticity_sessions"
-        " WHERE COALESCE(outcome,'open') IN ('open','unresolved-competition')"
-        "   AND subsystem_id IS NOT NULL GROUP BY subsystem_id",
-    )
-    competing_reviews = rows(
-        conn,
-        "SELECT subsystem_id, COUNT(*) AS n FROM dispositions"
-        " WHERE classification='unresolved-competition' GROUP BY subsystem_id",
-    )
-    bug_reviews = rows(
-        conn,
-        "SELECT subsystem_id, evidence_quality FROM dispositions"
-        " WHERE classification='confirmed-bug'",
-    )
-    ledger = rows(
-        conn,
-        "SELECT subsystem_id, COALESCE(classification,'candidate') AS classification,"
-        f" COALESCE(stale,0) AS stale FROM file_ledger WHERE {OBLIGATION_BEARING_SQL}",
-    )
-    seams = rows(
-        conn,
-        "SELECT seam_id, party_a, party_b, assessable FROM seam_assessability"
-        " ORDER BY seam_id",
-    )
-    seam_concern_parties = {
-        str(d["subsystem_id"])
-        for d in rows(
-            conn,
-            "SELECT DISTINCT subsystem_id FROM dispositions WHERE concern_code LIKE 'SC-%'",
-        )
-    }
-    access = _hot_spot_access(conn)
+    access = hot_spot_access(conn)
 
     blocks: list[Block] = []
     if not subs:
@@ -5470,54 +5392,7 @@ def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         )
         return Page("Hot spots", "hot-spots.html", tuple(blocks)), _db_source("hotspots:subsystems", subs)
 
-    measures: list[dict[str, Any]] = []
-    for s in subs:
-        sid = str(s["id"])
-        owned = [f for f in findings if str(f["subsystem_id"]) == sid]
-        open_rows = [f for f in owned if f["resolution_state"] == "open"]
-        crit_high = sum(1 for f in open_rows if f["severity"] in ("CRITICAL", "HIGH"))
-        med_low = sum(1 for f in open_rows if f["severity"] in ("MEDIUM", "LOW"))
-        awaiting = sum(
-            1 for f in owned if f["resolution_state"] == "fixed-pending-verification"
-        )
-        undiscriminated = (
-            sum(1 for c in contradiction_parties if str(c["subsystem_id"]) == sid)
-            + sum(int(m["n"] or 0) for m in competing_matrices if str(m["subsystem_id"]) == sid)
-            + sum(int(r["n"] or 0) for r in competing_reviews if str(r["subsystem_id"]) == sid)
-        )
-        quality = _weakest_quality(
-            [r["evidence_quality"] for r in bug_reviews if str(r["subsystem_id"]) == sid]
-        )
-        owned_rows = [r for r in ledger if str(r["subsystem_id"]) == sid]
-        unread = sum(1 for r in owned_rows if r["classification"] == "candidate")
-        stale = sum(1 for r in owned_rows if int(r["stale"] or 0))
-        party_seams = [
-            seam for seam in seams if sid in (str(seam["party_a"]), str(seam["party_b"]))
-        ]
-        unassessed = 0
-        for seam in party_seams:
-            assessable = int(seam["assessable"] or 0)
-            for side in (str(seam["party_a"]), str(seam["party_b"])):
-                if not assessable or side not in seam_concern_parties:
-                    unassessed += 1
-        measures.append(
-            {
-                "id": sid,
-                "name": str(s["name"] or sid),
-                "crit_high": crit_high,
-                "med_low": med_low,
-                "awaiting": awaiting,
-                "undiscriminated": undiscriminated,
-                "quality": quality,
-                "unread": unread,
-                "obligation": len(owned_rows),
-                "unread_fraction": (unread / len(owned_rows)) if owned_rows else 0.0,
-                "stale": stale,
-                "unassessed_sides": unassessed,
-                "seam_sides": 2 * len(party_seams),
-                "access": access.get(sid),
-            }
-        )
+    measures = hot_spot_measures(conn)
 
     measures.sort(
         key=lambda m: (-m["crit_high"], -m["med_low"], -m["unread_fraction"], m["id"])
