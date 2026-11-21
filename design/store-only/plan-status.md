@@ -28,7 +28,7 @@
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
 | SO11 | Split the parser: Markdown → page model → HTML | done (1 attempt) | SO9 | `materializer/test-store-only-model.py` | §8 SO11, §3.1, §3.2 |
-| SO12 | Move the tests to HTML while Markdown is still written | ready | SO11 | `dev/test-store-only-test-views.mjs` | §8 SO12, §3.2, §11 |
+| SO12 | Move the tests to HTML while Markdown is still written | ready (1 attempt) | SO11 | `dev/test-store-only-test-views.mjs` | §8 SO12, §3.2, §11 |
 | SO13 | HTML-only output | ready | SO12 | `materializer/test-store-only-html-only.py` | §8 SO13, §3.2, §3.5, §6 |
 | SO14 | Renderers build the model: overview, architecture, subsystem map, guide | ready | SO13 | `materializer/test-store-only-convert-overview.py` | §8 SO14–SO18, §3.4 |
 | SO15 | Renderers build the model: subsystem pages | ready | SO14 | `materializer/test-store-only-convert-subsystem.py` | §8 SO14–SO18, §3.4, §5.4 |
