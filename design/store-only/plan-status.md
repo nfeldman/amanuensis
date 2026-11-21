@@ -33,7 +33,7 @@
 | SO14 | Renderers build the model: overview, architecture, subsystem map, guide | done (1 attempt) | SO13 | `materializer/test-store-only-convert-overview.py` | §8 SO14–SO18, §3.4 |
 | SO15 | Renderers build the model: subsystem pages | done (1 attempt) | SO14 | `materializer/test-store-only-convert-subsystem.py` | §8 SO14–SO18, §3.4, §5.4 |
 | SO16 | Renderers build the model: Unresolved pages | done (1 attempt) | SO15 | `materializer/test-store-only-convert-unresolved.py` | §8 SO14–SO18 |
-| SO17 | Renderers build the model: History pages | ready | SO16 | `materializer/test-store-only-convert-history.py` | §8 SO14–SO18 |
+| SO17 | Renderers build the model: History pages | ready (1 attempt) | SO16 | `materializer/test-store-only-convert-history.py` | §8 SO14–SO18 |
 | SO18 | Renderers build the model: Method and remaining pages | ready | SO17 | `materializer/test-store-only-convert-method.py` | §8 SO14–SO18 |
 | SO19 | Delete the Markdown intermediate | ready | SO18 | `materializer/test-store-only-no-markdown.py` | §8 SO19, §3.2, §3.4 |
 
