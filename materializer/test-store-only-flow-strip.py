@@ -27,6 +27,9 @@ Turns red when:
     not link the seam on System boundaries, or a step with more than two exits draws any of
     them or does not list them all in the account, or an exit's box or account line names a
     target other than its stored one (a step it unwinds to, or `leaves-flow`);
+  - a step whose cited file the ledger holds as stale is not hatched, or its box and account do
+    not say "cited file changed since <the revision it was examined at>", or a step citing only
+    an unchanged file is hatched (Appendix B rule 3);
   - a flow with no marks and no declination does not say "marks not recorded", one with a
     declination does not print its reason or still says so, a flow with marks says so, or the
     account does not count the steps that have no recorded mark ("n of m");
@@ -142,6 +145,8 @@ SHA = "deadbeef"
 # One mark is recorded at a later revision than its flow's steps; the strip must print both.
 MARK_SHA = "cafebabe"
 MARK_SHA_LABEL = "locked out"
+# Files cited by login's steps: one changed since it was examined at EXAMINED_SHA, one not.
+STALE_FILE, FRESH_FILE, EXAMINED_SHA = "auth/flow-stale.ts", "auth/flow-fresh.ts", "abad1dea"
 # (subsystem, slug, step count, {step: epistemic kind} where not an observation)
 FLOWS = (
     ("B-02", "login", 5, {"01": "inference", "03": "hypothesis"}),
@@ -216,6 +221,17 @@ def build_store(root: Path) -> Path:
             (f"{closed_mark[0]}/{closed_mark[1]}@old", closed_mark[2], closed_mark[3], closed_mark[4], 1, SHA, "s1"),
         )
         db.execute("INSERT INTO claim_mark_declinations (flow_key, reason, ref_sha, session_id) VALUES (?,?,?,?)", (DECLINED, DECLINATION, SHA, "s1"))
+        # Login step 01 cites a file the repository changed after it was examined; step 02 one that has not changed.
+        for path, step, stale in ((STALE_FILE, "01", 1), (FRESH_FILE, "02", 0)):
+            evidence = db.execute(
+                "INSERT INTO evidence (file_path, symbol, ref_sha, kind, note, session_id) VALUES (?, NULL, ?, 'code-verified', 'cited by a flow step', 's1')",
+                (path, SHA),
+            ).lastrowid
+            db.execute("INSERT INTO claim_evidence (claim_id, evidence_id, role) VALUES (?, ?, 'supports')", (f"B-02/flow/login/{step}", evidence))
+            db.execute(
+                "INSERT INTO file_ledger (subsystem_id, file_path, classification, ref_sha, stale) VALUES ('B-02', ?, 'examined', ?, ?)",
+                (path, EXAMINED_SHA, stale),
+            )
         db.commit()
     finally:
         db.close()
@@ -666,6 +682,30 @@ def main() -> int:
             return None if seen["step"] >= 2 and seen["leaves"] >= 2 else f"the fixture's exits are {seen}"
 
         check("each exit, drawn or listed, names the target the store holds", exit_targets)
+
+        def stale_hatched() -> str | None:
+            # Appendix B rule 3: a current claim whose cited file is stale is hatched, and says since when.
+            figure = figure_of(text_of("B-02"), "B-02/flow/login") or ""
+            hatched = [
+                record for record, body in re.findall(r'<g\b[^>]*\bdata-node="(flow-step:[^"]*)"[^>]*>(.*?)</g>', figure, re.S)
+                if re.search(r'fill="url\(#[^)]+\)"', body)
+            ]
+            if hatched != ["flow-step:B-02/flow/login/01"]:
+                return f"the login strip hatches {hatched}; only step 01 cites a file changed since it was examined"
+            pattern = re.search(r'<pattern\b[^>]*\bid="([^"]+)"', figure)
+            if pattern is None or f"url(#{pattern.group(1)})" not in node_body(figure, "flow-step:B-02/flow/login/01"):
+                return "step 01's hatching names no pattern the SVG defines"
+            label = re.search(r'aria-label="([^"]*)"', html.unescape(node_body(figure, "flow-step:B-02/flow/login/01")))
+            if label is None or f"changed since {EXAMINED_SHA}" not in label.group(1):
+                return f"step 01's box does not say its cited file changed since {EXAMINED_SHA}: {label.group(1) if label else None!r}"
+            text = " ".join(account_of(figure).split())
+            if not re.search(rf"Step 01:.*?cited file changed since {EXAMINED_SHA}: {re.escape(STALE_FILE)}", text, re.I):
+                return f"the account does not say step 01's cited file {STALE_FILE} changed since {EXAMINED_SHA}: {text[:500]!r}"
+            if FRESH_FILE in text:
+                return f"the account calls {FRESH_FILE} changed, and it is not"
+            return None
+
+        check("a step whose cited file changed since it was examined is hatched and says since when", stale_hatched)
 
         def seam_links() -> str | None:
             seams = (output / "seams.html").read_text()
