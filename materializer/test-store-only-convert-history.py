@@ -437,7 +437,46 @@ def start_tree(into: Path) -> Path | None:
     if subprocess.run(["tar", "-xf", str(tarball), "-C", str(into)], capture_output=True).returncode != 0:
         return None
     tree = into / "materializer"
-    return tree if (tree / "materialize.py").is_file() else None
+    if not (tree / "materialize.py").is_file():
+        return None
+    return tree if repair_start_tree(tree) is None else None
+
+
+# The start tree printed a code span inside a link label as its stash placeholder
+# (slice-S3 review F1); the tree before the slice printed `<code>` inside the link.
+# The reference is the start tree with that one repair, each edit applied exactly once,
+# so the comparison holds every other byte to what the packet started from.
+START_TREE_REPAIRS: tuple[tuple[str, str, str], ...] = (
+    (
+        "page.py",
+        "    external: bool = False\n",
+        "    external: bool = False\n    children: tuple = ()\n",
+    ),
+    (
+        "prose.py",
+        '        return keep(Link(href, _plain(match.group(1)), href.startswith(("http://", "https://"))))\n',
+        '        parts = re.split(r"\\x00(\\d+)\\x00", _plain(match.group(1)))\n'
+        "        children = tuple(stash[int(p)] if n % 2 else Text(p) for n, p in enumerate(parts) if n % 2 or p)\n"
+        '        label = "".join(c.value if isinstance(c, Chip) else getattr(c, "text", "") for c in children)\n'
+        '        external = href.startswith(("http://", "https://"))\n'
+        "        return keep(Link(href, label, external, children if len(parts) > 1 else ()))\n",
+    ),
+    (
+        "html_projection.py",
+        "{html.escape(node.label)}</a>'\n",
+        "{''.join(html.escape(c.text) if isinstance(c, Text) else _inline_html(c) for c in node.children or (Text(node.label),))}</a>'\n",
+    ),
+)
+
+
+def repair_start_tree(tree: Path) -> str | None:
+    for name, old, new in START_TREE_REPAIRS:
+        path = tree / "amanuensis_materializer" / name
+        text = path.read_text() if path.is_file() else ""
+        if text.count(old) != 1:
+            return f"{name} at {START_SHA[:12]} does not hold the F1 site exactly once"
+        path.write_text(text.replace(old, new))
+    return None
 
 
 def run_start_tree(tree: Path, storage: Path, output: Path) -> bool:
