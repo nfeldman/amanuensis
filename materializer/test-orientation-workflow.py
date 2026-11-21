@@ -435,7 +435,10 @@ def main() -> int:
             # browser, so the page would print a shorter sentence than the record
             # holds. Outside a code span a placeholder is escaped text; every tag
             # the section opens is one the browser knows.
-            tags = sorted({t.lower() for t in re.findall(r"</?([A-Za-z][A-Za-z0-9-]*)\b[^>]*>", section)} - KNOWN_TAGS)
+            # A drawn figure (SO22's survey workflow and status ladder) holds SVG elements the
+            # writer prints from records; the check is for placeholders an author typed.
+            prose = re.sub(r'<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>', "", section, flags=re.S)
+            tags = sorted({t.lower() for t in re.findall(r"</?([A-Za-z][A-Za-z0-9-]*)\b[^>]*>", prose)} - KNOWN_TAGS)
             return f"the HTML section carries tags a browser does not know: {tags[:4]}" if tags else None
 
         check("the section's HTML carries no tag a browser would drop", no_raw_tags)
