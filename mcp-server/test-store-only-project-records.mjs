@@ -579,7 +579,10 @@ async function main(mods) {
         }
         return `the ${kind} purpose's store did not publish (exit ${published.status}): ${mismatches}`;
       }
-      for (const page of ["index.md", "index.html"]) {
+      // The run writes HTML only (SO13): the overview is index.html, and an
+      // index.md beside it would be a second view the read-back does not hold.
+      if (existsSync(join(out, "index.md"))) return `the ${kind} purpose's publication wrote index.md`;
+      for (const page of ["index.html"]) {
         const text = existsSync(join(out, page)) ? readFileSync(join(out, page), "utf8") : "";
         if (!text.includes(body)) return `the ${kind} purpose is not on ${page}`;
         if ((kind === "imported") !== text.includes(LABEL)) {
