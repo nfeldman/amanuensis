@@ -362,7 +362,16 @@ interface NarrativePointer {
   /** Which table `record_ids` are ids of: `narratives`, or `imported_artifacts` for a survey body written as a file. */
   source: "narrative" | "imported_artifact";
   record_ids: number[];
-  /** The revision of the newest recorded narrative; null for an imported body, which names none. */
+  /**
+   * Each record with the revision it is bound to (§2.5: "by record id, with its
+   * revision"); null for an imported body, which names none.
+   */
+  records: Array<{ id: number; ref_sha: string | null }>;
+  /**
+   * The one revision every recorded narrative is bound to; null when they were
+   * recorded at different revisions (each is then named in `records`), and for
+   * an imported body.
+   */
   ref_sha: string | null;
   /** True for a recorded narrative, which is bound to the revision it was written at. */
   revision_bound: boolean;
@@ -507,11 +516,17 @@ function surveyNarrative(db: DB, scope: AccountScope): NarrativePointer | null {
     (row) => row.disposition === "recorded",
   );
   if (recorded.length > 0) {
-    const newest = recorded.reduce((a, b) => (b.id > a.id ? b : a));
+    // Topics are recorded separately and may be bound to different revisions;
+    // naming the newest one's for all of them misdated the rest (F6/codex, slice-S1).
+    const records = recorded
+      .map((row) => ({ id: row.id, ref_sha: row.ref_sha }))
+      .sort((a, b) => a.id - b.id);
+    const revisions = new Set(records.map((record) => record.ref_sha));
     return {
       source: "narrative",
-      record_ids: recorded.map((row) => row.id).sort((a, b) => a - b),
-      ref_sha: newest.ref_sha,
+      record_ids: records.map((record) => record.id),
+      records,
+      ref_sha: revisions.size === 1 ? (records[0]?.ref_sha ?? null) : null,
       revision_bound: true,
       label: NARRATIVE_LABEL,
     };
@@ -521,6 +536,7 @@ function surveyNarrative(db: DB, scope: AccountScope): NarrativePointer | null {
   return {
     source: "imported_artifact",
     record_ids: imported.map((row) => row.id),
+    records: imported.map((row) => ({ id: row.id, ref_sha: null })),
     ref_sha: null,
     revision_bound: false,
     label: IMPORTED_NARRATIVE_LABEL,

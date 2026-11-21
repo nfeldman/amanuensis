@@ -472,12 +472,25 @@
         "session_attribution": { "const": "by-citation" },
         "narrative": {
           "type": "object",
-          "description": "§3.4's narrative attachment, served only on a `structure` section whose claim list is empty and whose locus is a subsystem. It is a pointer, not prose: it names the subsystem's effective structure narratives (source `narrative`) or its imported survey bodies (source `imported_artifact`) by record id, never by file path, and the bodies are rendered on the subsystem page, where the labelling travels with them, rather than inside a response §4.1 bounds to 15360 bytes. A recorded narrative is revision-bound and names the revision of the newest one; an imported body, written as a file before narratives were recorded, is not and names none.",
+          "description": "§3.4's narrative attachment, served only on a `structure` section whose claim list is empty and whose locus is a subsystem. It is a pointer, not prose: it names the subsystem's effective structure narratives (source `narrative`) or its imported survey bodies (source `imported_artifact`) by record id, never by file path, and the bodies are rendered on the subsystem page, where the labelling travels with them, rather than inside a response §4.1 bounds to 15360 bytes. A recorded narrative is revision-bound: `records` names each record with the revision it was recorded at, and `ref_sha` names the one revision they share, or null when they were recorded at different revisions. An imported body, written as a file before narratives were recorded, is not bound and names none.",
           "additionalProperties": false,
-          "required": ["source", "record_ids", "ref_sha", "revision_bound", "label"],
+          "required": ["source", "record_ids", "records", "ref_sha", "revision_bound", "label"],
           "properties": {
             "source": { "enum": ["narrative", "imported_artifact"] },
             "record_ids": { "type": "array", "minItems": 1, "items": { "type": "integer", "minimum": 1 } },
+            "records": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "ref_sha"],
+                "properties": {
+                  "id": { "type": "integer", "minimum": 1 },
+                  "ref_sha": { "type": ["string", "null"] }
+                }
+              }
+            },
             "ref_sha": { "type": ["string", "null"] },
             "revision_bound": { "type": "boolean" },
             "label": { "type": "string", "minLength": 1 }
