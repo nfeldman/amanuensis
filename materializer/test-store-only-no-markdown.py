@@ -17,6 +17,11 @@ Turns red when:
     module-level name ending `_PROJECTION`) is left in any module of the package;
   - `render_html_projection` still takes Markdown, or `SitePage` still names a
     `markdown_path`;
+  - a diagram section is still built as Markdown text: `diagrams.py` defines one of
+    the Markdown producers (`staleness_map`, `subsystem_dependency_view`,
+    `subsystem_dependency_graph`, `boundary_view`, `runtime_boundary_map`,
+    `_recorded_runtime_table`) or writes a table rule or a fence, or any module but
+    the imported-body reader writes a Mermaid fence (slice-S3 review F3);
   - the Markdown parser is reached by anything but `legacy_prose.py` on an
     imported body: it is not read at all (the counter is blind), it is called
     from outside `render_body` or `imported_page`, or it is called while a page is
@@ -289,6 +294,38 @@ def leftovers() -> str | None:
     return f"still in the tree: {sorted(set(found))[:6]}" if found else None
 
 
+# The functions that wrote a diagram section as Markdown for the parser to read back.
+MARKDOWN_PRODUCERS = (
+    "staleness_map", "subsystem_dependency_view", "subsystem_dependency_graph", "boundary_view",
+    "runtime_boundary_map", "_recorded_runtime_table",
+)
+# Modules that read Markdown (imported bodies, stored prose, the lint's fence rule), not write it.
+MARKDOWN_READERS = ("legacy_prose.py", "legacy_extract.py", "prose.py", "lint.py")
+
+
+def markdown_producers() -> str | None:
+    diagrams = PACKAGE / "diagrams.py"
+    tree = ast.parse(diagrams.read_text())
+    defined = sorted(
+        node.name for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name in MARKDOWN_PRODUCERS
+    )
+    if defined:
+        return f"diagrams.py still builds sections as Markdown: {defined}"
+    found: list[str] = []
+    for path in package_sources():
+        if path.name in MARKDOWN_READERS:
+            continue
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                value = node.value
+                if "```mermaid" in value or (
+                    path.name == "diagrams.py" and ("```" in value or "|---" in value or "---|" in value)
+                ):
+                    found.append(f"{path.name}:{node.lineno}")
+    return f"Markdown block syntax is still written at {found[:6]}" if found else None
+
+
 def html_stage_signature() -> str | None:
     hp, error = load("html_projection")
     if hp is None:
@@ -352,6 +389,7 @@ def composite_in_overview(root: Path) -> str | None:
 def main() -> int:
     check("no Markdown parser, text xref pass, page-head text helper or page-level projection is left", leftovers)
     check("the HTML stage takes page models only", html_stage_signature)
+    check("no diagram section is built as Markdown text and read back", markdown_producers)
     check("legacy_prose.py holds the one parser", parser_only_in_legacy)
 
     with tempfile.TemporaryDirectory(prefix="amanuensis-so19-") as tmp:
