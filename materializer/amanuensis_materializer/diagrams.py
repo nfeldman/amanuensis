@@ -1131,9 +1131,14 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
     read_at = f"Read at revision {sha[:8]}, the latest reconciliation's, and at the ledger as it stands now."
     tracked, ledgered, unledgered = int(recon["tracked_paths"]), int(recon["ledger_rows"]), int(recon["unledgered"])
     absent, exempt = int(recon["absent"]), int(recon["exempt"])
+    # The ledger's rows for paths gone from the tree are not among the tracked paths it holds.
     reconciliation_line = (
-        f"The repository tracked {_count(tracked, 'path')} at {sha[:8]}; the ledger holds {ledgered} of them"
+        f"The repository tracked {_count(tracked, 'path')} at {sha[:8]}; the ledger holds {ledgered - absent} of them"
         f" and {unledgered} {'has' if unledgered == 1 else 'have'} no ledger row."
+        + (
+            f" {absent} more ledger {'row names a path' if absent == 1 else 'rows name paths'} no longer in the tree."
+            if absent else ""
+        )
     )
 
     lanes: list[str] = []

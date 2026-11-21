@@ -35,7 +35,8 @@ Turns red when:
     field;
   - the read-back of the publication is not green on every axis;
   - the golden corpus's `VERSION` is not SO24, or a golden page differs from the corpus this
-    packet started from outside a seam-contract figure or sentence, or no golden page gained one;
+    packet started from outside a seam-contract figure or sentence (or a figure or sentence of the
+    slice's other diagrams, which a fix to the slice may reprint), or no golden page gained one;
   - the gate has no step in `.github/workflows/test.yml`.
 
 Output protocol: exactly one status line, last, on stdout.
@@ -312,8 +313,18 @@ _ADDED = re.compile(
 _EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 
 
+# The slice's earlier diagrams (SO22, SO23): a fix to slice S5 may reprint them, so they are taken
+# out of both the start's corpus and the current one, which still pins everything around them.
+_EARLIER = re.compile(
+    r'<figure\b[^>]*data-diagram="(?:survey-workflow|status-ladder|coverage-bars)"[^>]*>.*?</figure>\n?'
+    r'|<p class="diagram-below"[^>]*data-diagram="(?:survey-workflow|status-ladder|coverage-bars)"[^>]*>.*?</p>\n?',
+    re.S,
+)
+_SEAM_ADDED = re.compile(rf'<(?:figure|p)\b[^>]*data-diagram="{KIND}"')
+
+
 def _without_additions(text: str) -> str:
-    return _EMPTY_FLOW.sub("", _ADDED.sub("", text)).replace("\n", "")
+    return _EMPTY_FLOW.sub("", _ADDED.sub("", _EARLIER.sub("", text))).replace("\n", "")
 
 
 def start_corpus(into: Path) -> Path | None:
@@ -340,9 +351,9 @@ def golden_additions_only(previous: Path | None) -> str | None:
     gained = 0
     for rel in sorted(after):
         new, old = after[rel].read_text(), before[rel].read_text()
-        if _without_additions(new) != _EMPTY_FLOW.sub("", old).replace("\n", ""):
-            return f"{rel} differs from the start's corpus outside a seam-contract figure or sentence"
-        gained += new != old
+        if _without_additions(new) != _EMPTY_FLOW.sub("", _EARLIER.sub("", old)).replace("\n", ""):
+            return f"{rel} differs from the start's corpus outside a seam-contract figure or sentence, or the slice's earlier diagrams"
+        gained += bool(_SEAM_ADDED.search(new))
     for asset in (previous / "assets").iterdir():
         if not (GOLDEN / "assets" / asset.name).is_file():
             return f"the folded asset {asset.name[:12]} changed"
