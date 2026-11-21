@@ -73,8 +73,6 @@ from .readback import (
     effective_narratives,
     effective_territory_dispositions,
     escaped_cell,
-    territory_label,
-    territory_row,
     explanation_rows,
     finding_marker,
     finding_page,
@@ -87,6 +85,8 @@ from .readback import (
     reconciliation_standing,
     resolve_workspace,
     revision_resolves,
+    territory_label,
+    territory_row,
     workspace_is_bound,
 )
 from .slugs import matrix_page, matrix_slug, subsystem_page

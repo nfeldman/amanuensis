@@ -789,9 +789,9 @@ def run(work: Path) -> int:
         for label, docs in (("A", docs_a), ("B", docs_b)):
             md = read(docs / "concern-checklist.md")
             markup = read(docs / "concern-checklist.html")
-            for view, finder in (("Markdown", lambda t: md_rows(md, t)), ("HTML", lambda t: html_rows(markup, t))):
+            for view in ("Markdown", "HTML"):
                 for territory, (disposition, condition) in expected.items():
-                    found = finder(territory)
+                    found = md_rows(md, territory) if view == "Markdown" else html_rows(markup, territory)
                     if len(found) != 1:
                         return f"store {label}: {len(found)} Territories rows for {territory} ({view})"
                     cells = found[0]
