@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Amanuensis HTML projection 1.14.0">
+<meta name="description" content="B-01 Job Scheduler">
+<title>B-01 Job Scheduler · Hooks · Amanuensis</title>
+<script>@@golden-asset 474fce93bb0108a05f04e953ced71e35ffc53b066c893b90a2285d02f1d051ce@@</style>
+</head>
+<body data-root="../">
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="shell">
+  <aside class="nav-rail" aria-label="Hooks report navigation">
+    <a class="brand" href="../index.html">
+      <span class="brand-mark">Hooks</span>
+      <span class="brand-sub">Architecture survey · Amanuensis</span>
+    </a>
+    <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
+    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Page, path, or symbol…" autocomplete="off">
+    <p class="search-status" data-search-status role="status" aria-live="polite"></p>
+    <nav class="rail-nav"><section class="nav-group"><h2 class="nav-group-title" id="nav-group-overview">Overview</h2><ul class="nav-list" aria-labelledby="nav-group-overview"><li class="nav-item" data-search="hooks every hook once."><a class="nav-link" href="../hooks.html" title="Every hook once."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Hooks</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-codebase">Codebase</h2><ul class="nav-list" aria-labelledby="nav-group-codebase"><li class="nav-item" data-search="architecture"><a class="nav-link" href="../architecture.html"><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Architecture</span></span></a></li><li class="nav-item" data-search="seams"><a class="nav-link" href="../seams.html"><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Seams</span></span></a></li></ul><div class="nav-subgroup"><h3 class="nav-subgroup-title" id="nav-group-codebase-subsystems">Subsystems</h3><ul class="nav-list" aria-labelledby="nav-group-codebase-subsystems"><li class="nav-item" data-search="job scheduler b-01 mapped subsystems"><a class="nav-link" href="b-01.html" aria-current="page"><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Job Scheduler</span><span class="nav-id" data-identifier-defined>B-01</span></span></a></li></ul></div></section></nav>
+    <div class="rail-foot">
+      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="b-01.md">Markdown source</a></div>
+    </div>
+  </aside>
+  <main class="document" id="content">
+    <div class="mobile-bar"><span class="mobile-brand">Hooks</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
+    <div class="document-inner">
+      <header class="page-head">
+        <p class="eyebrow">Subsystem · <span data-identifier-defined>B-01</span></p>
+        <h1>B-01 Job Scheduler</h1>
+        
+        
+        
+        
+        <div class="snapshot-strip">
+          <span class="snapshot-item"><b>Branch</b>&nbsp; main</span>
+          <span class="snapshot-item"><b>Checked</b>&nbsp; deadbeefdead</span>
+          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-11-20T00:00:00Z</span>
+          <span class="snapshot-item"><span class="freshness unmeasured">Freshness not measured by this projection</span></span>
+          <span class="snapshot-item">Survey depth&nbsp; <span class="status status-survey status-mapped" title="Survey complete through structural analysis, concern review, and adversarial challenge.">Mapped</span></span>
+        </div>
+      </header>
+      <article class="content content-subsystem"><section class="section-findings">
+<h2 id="findings"><a class="heading-anchor" href="#findings" aria-label="Link to Findings">§</a>Findings</h2>
+<div class="record-list record-list-finding" role="list" aria-label="findings"><article class="record record-finding" role="listitem" aria-labelledby="finding-b-01-1" data-record-label="finding B-01-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b-01-1">B-01-1</h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>deadbeef</code></dd></div></dl></header><div class="record-body"><p class="record-lede">Jobs drop.</p><div class="record-fields"><div class="record-field"><p class="record-label">Observed behavior</p><div class="record-copy">Under load the queue loses entries!</div></div><div class="record-field"><p class="record-label">Why it matters</p><div class="record-copy">Lost work.</div></div><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">Reuse.</div></div></div></div></article><article class="record record-finding" role="listitem" aria-labelledby="finding-b-01-2" data-record-label="finding B-01-2"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b-01-2">B-01-2</h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-fixed">Fixed</span></dd></div></dl></header><div class="record-body"><p class="record-lede">One sentence only</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">Root.</div></div></div></div></article></div>
+</section>
+<section class="section-seams">
+<h2 id="seams"><a class="heading-anchor" href="#seams" aria-label="Link to Seams">§</a>Seams</h2>
+<div class="record-list record-list-seam" role="list" aria-label="seams"><article class="record record-seam" role="listitem" aria-labelledby="seam-sm-01" data-record-label="seam SM-01"><header class="record-meta"><h3 class="record-primary" id="seam-sm-01"><abbr class="identifier-definition" title="SM-01 — jobs queue seam" aria-label="SM-01 — jobs queue seam">SM-01</abbr></h3><dl class="record-facts"><div class="record-fact record-fact-kind"><dt>Kind</dt><dd>data</dd></div><div class="record-fact record-fact-parties"><dt>Parties</dt><dd><abbr class="identifier-definition" title="B-01 — Job Scheduler" aria-label="B-01 — Job Scheduler">B-01</abbr>, B-02</dd></div><div class="record-fact record-fact-assessable"><dt>Assessment ready</dt><dd>yes</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Shared object</p><div class="record-copy">jobs queue</div></div></div></article></div>
+</section>
+<section class="section-open-questions">
+<h2 id="open-questions"><a class="heading-anchor" href="#open-questions" aria-label="Link to Open questions">§</a>Open questions</h2>
+<div class="record-list record-list-open-question" role="list" aria-label="open questions"><article class="record record-open-question" role="listitem" aria-labelledby="open-question-1" data-record-label="open question 1"><header class="record-meta"><h3 class="record-primary" id="open-question-1">Question 1</h3><dl class="record-facts"><div class="record-fact record-fact-category"><dt>Category</dt><dd>scope</dd></div><div class="record-fact record-fact-resolution"><dt>Resolution</dt><dd>answered</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Question</p><div class="record-copy">Who drains it?</div></div><div class="record-field"><p class="record-label">Answer</p><div class="record-copy">The reader.</div></div></div></article></div>
+</section></article>
+      <footer class="page-foot"><p><a href="b-01.md">Inspect Markdown</a></p></footer>
+    </div>
+  </main>
+</div>
+<script src="../search-index.js"></script>
+<script>@@golden-asset cc33c4331dd974978b7196a23a032bc65d2e1533bf77ec57b6b2af02c44425df@@</script>
+</body>
+</html>
