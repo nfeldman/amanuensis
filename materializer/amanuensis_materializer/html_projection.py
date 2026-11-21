@@ -52,6 +52,7 @@ from .page import (
     LifecycleTable,
     Link,
     List,
+    Marked,
     Page,
     Paragraph,
     Quote,
@@ -1485,6 +1486,32 @@ _DISPLAY_FIELD = {
 }
 
 
+def _mark_attrs(record: str, state: str = "") -> str:
+    """A rendered record's mark (store-only PLAN §3.5): its type and id, and the state it prints."""
+
+    if not record:
+        return ""
+    attrs = f' data-record="{html.escape(record, quote=True)}"'
+    if state:
+        attrs += f' data-state="{html.escape(state, quote=True)}"'
+    return attrs
+
+
+def _svg_mark(kind: str, record: str) -> str:
+    """A drawn node's or edge's mark: `data-node` or `data-edge`, naming its record (§3.5)."""
+
+    return f' data-{kind}="{html.escape(record, quote=True)}"' if record else ""
+
+
+_START_TAG = re.compile(r"^<([a-zA-Z][a-zA-Z0-9]*)")
+
+
+def _marked(element: str, attrs: str) -> str:
+    """An element with a record's mark added to its start tag; a comment is left as it is."""
+
+    return _START_TAG.sub(lambda m: f"<{m.group(1)}{attrs}", element, count=1)
+
+
 def _compose_prose_runs(elements: list[str]) -> list[str]:
     """Give finite runs of sustained prose an editorial multicolumn surface.
 
@@ -1508,7 +1535,7 @@ def _compose_prose_runs(elements: list[str]) -> list[str]:
         run.clear()
 
     for element in elements:
-        if element.startswith("<p>") and element.endswith("</p>"):
+        if element.startswith(("<p>", "<p ")) and element.endswith("</p>"):
             run.append(element)
             continue
         flush()
@@ -1662,7 +1689,7 @@ class _HtmlWriter:
                 )
             rendered.append(
                 "".join(record.markers)
-                + f'<article class="record record-{kind}"{filter_attrs} role="listitem" aria-labelledby="{html.escape(heading_id, quote=True)}" data-record-label="{aria}">'
+                + f'<article class="record record-{kind}"{filter_attrs} role="listitem" aria-labelledby="{html.escape(heading_id, quote=True)}" data-record-label="{aria}"{_mark_attrs(record.record, record.state)}>'
                 + meta
                 + content
                 + "</article>"
@@ -1739,7 +1766,7 @@ class _HtmlWriter:
         for region in block.regions:
             items = "".join(
                 "".join(item.markers)
-                + '<li class="atlas-item">'
+                + f'<li class="atlas-item"{_mark_attrs(item.record, item.state)}>'
                 + f'<div class="atlas-subsystem" data-identifier-defined>{_inlines_html(item.subsystem)}</div>'
                 + f'<div class="atlas-depth">{_inlines_html(item.depth)}</div>'
                 + "</li>"
@@ -1827,19 +1854,23 @@ class _HtmlWriter:
             center_y = box_y + content_height / 2
             mechanism_y = center_y - mechanism_height / 2
             lane_class = "runtime-svg-lane-even" if index % 2 else "runtime-svg-lane"
+            # A drawn runtime and a drawn edge name what the store holds (§3.5).
+            source_node = _svg_mark("node", f"runtime:{row.source_node}" if row.source_node else "")
+            target_node = _svg_mark("node", f"runtime:{row.target_node}" if row.target_node else "")
+            edge_mark = _svg_mark("edge", row.record)
 
             svg_rows.append(
                 f'<g class="runtime-svg-row">'
                 f'<rect class="{lane_class}" x="0" y="{current_y:g}" '
                 f'width="{width}" height="{lane_height:g}"/>'
                 f'<rect class="runtime-svg-node" x="{source_x}" y="{box_y:g}" '
-                f'width="{source_width}" height="{content_height:g}"/>'
+                f'width="{source_width}" height="{content_height:g}"{source_node}/>'
                 f'<rect class="runtime-svg-node runtime-svg-target" x="{target_x}" y="{box_y:g}" '
-                f'width="{target_width}" height="{content_height:g}"/>'
+                f'width="{target_width}" height="{content_height:g}"{target_node}/>'
                 f'<line class="runtime-svg-edge" x1="{source_x + source_width}" y1="{center_y:g}" '
-                f'x2="{target_x}" y2="{center_y:g}"/>'
+                f'x2="{target_x}" y2="{center_y:g}"{edge_mark}/>'
                 f'<path class="runtime-svg-arrow" d="M {target_x:g} {center_y:g} '
-                f'L {target_x - 10:g} {center_y - 5:g} L {target_x - 10:g} {center_y + 5:g} Z"/>'
+                f'L {target_x - 10:g} {center_y - 5:g} L {target_x - 10:g} {center_y + 5:g} Z"{edge_mark}/>'
                 f'<rect class="runtime-svg-edge-label" x="{mechanism_x}" y="{mechanism_y:g}" '
                 f'width="{mechanism_width}" height="{mechanism_height:g}"/>'
                 + svg_text(
@@ -1882,7 +1913,7 @@ class _HtmlWriter:
             )
             details.append(
                 "".join(row.markers)
-                + '<article class="runtime-detail" role="listitem">'
+                + f'<article class="runtime-detail" role="listitem"{_mark_attrs(row.record)}>'
                 '<header class="runtime-detail-head">'
                 f'<h3>{_inlines_html(source)}</h3>'
                 f'<span class="runtime-detail-language">{_inlines_html(language)}</span></header>'
@@ -1937,8 +1968,8 @@ class _HtmlWriter:
         layers: dict[str, list[str]] = {}
         names: dict[str, str] = {}
         touched: set[str] = set()
-        seams: dict[str, tuple[str, str]] = {}
-        xrefs: list[tuple[str, str, str]] = []
+        seams: dict[str, tuple[str, str, str]] = {}
+        xrefs: list[tuple[str, str, str, str]] = []
         for row in block.rows:
             sid = row.subsystem_id
             if sid not in names:
@@ -1948,9 +1979,9 @@ class _HtmlWriter:
                 continue
             touched.add(sid)
             if row.seam:
-                seams.setdefault(row.seam_id, (sid, row.other_id))
+                seams.setdefault(row.seam_id, (sid, row.other_id, row.record))
             elif row.relation.endswith("→"):
-                xrefs.append((sid, row.other_id, row.relation.removesuffix("→").strip()))
+                xrefs.append((sid, row.other_id, row.relation.removesuffix("→").strip(), row.record))
 
         columns = list(layers)
         bands = [columns[i : i + per_band] for i in range(0, len(columns), per_band)]
@@ -1985,10 +2016,10 @@ class _HtmlWriter:
 
         lines: list[str] = []
         labels: list[str] = []
-        for seam_id, (a, b) in seams.items():
+        for seam_id, (a, b, record) in seams.items():
             x1, y1, x2, y2 = ends(a, b)
             lines.append(
-                f'<line class="boundary-svg-seam" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"/>'
+                f'<line class="boundary-svg-seam" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"{_svg_mark("edge", record)}/>'
             )
             mx, my = (x1 + x2) / 2, (y1 + y2) / 2
             label_w = 12 + 6.4 * len(seam_id)
@@ -1997,15 +2028,16 @@ class _HtmlWriter:
                 f'width="{num(label_w)}" height="16" rx="2"/>'
                 f'<text class="boundary-svg-label" x="{num(mx)}" y="{num(my + 3.5)}">{html.escape(seam_id)}</text>'
             )
-        for a, b, _relation in xrefs:
+        for a, b, _relation, record in xrefs:
             x1, y1, x2, y2 = ends(a, b)
             length = max(((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5, 1.0)
             ux, uy = (x2 - x1) / length, (y2 - y1) / length
+            edge_mark = _svg_mark("edge", record)
             lines.append(
-                f'<line class="boundary-svg-xref" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"/>'
+                f'<line class="boundary-svg-xref" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"{edge_mark}/>'
                 f'<path class="boundary-svg-arrow" d="M {num(x2)} {num(y2)} '
                 f'L {num(x2 - 10 * ux - 5 * uy)} {num(y2 - 10 * uy + 5 * ux)} '
-                f'L {num(x2 - 10 * ux + 5 * uy)} {num(y2 - 10 * uy - 5 * ux)} Z"/>'
+                f'L {num(x2 - 10 * ux + 5 * uy)} {num(y2 - 10 * uy - 5 * ux)} Z"{edge_mark}/>'
             )
 
         nodes: list[str] = []
@@ -2013,7 +2045,7 @@ class _HtmlWriter:
             name = names[sid]
             shown = name if len(name) <= 28 else name[:27].rstrip() + "…"
             nodes.append(
-                f'<g class="boundary-svg-node" data-subsystem="{html.escape(sid, quote=True)}">'
+                f'<g class="boundary-svg-node" data-subsystem="{html.escape(sid, quote=True)}"{_svg_mark("node", f"subsystem:{sid}")}>'
                 f"<title>{html.escape(f'{sid} {name}')}</title>"
                 f'<rect x="{x}" y="{y}" width="{box_w}" height="{box_h}" rx="3"/>'
                 f'<text class="boundary-svg-id" x="{x + 10}" y="{y + 18}">{html.escape(sid)}</text>'
@@ -2438,6 +2470,13 @@ class _HtmlWriter:
                 out.append(f'<details class="{html.escape(block.css_class, quote=True)}"><summary>{html.escape(block.summary)}</summary>')
                 self._elements(block.blocks, out)
                 out.append("</details>")
+            elif isinstance(block, Marked):
+                # Every element the record prints carries its mark, so the read-back can
+                # gather its text without a wrapper changing the page's layout.
+                inner: list[str] = []
+                self._elements(block.blocks, inner)
+                attrs = _mark_attrs(block.record, block.state)
+                out.extend(_marked(element, attrs) for element in inner)
             else:
                 out.append(self._block(block))
 

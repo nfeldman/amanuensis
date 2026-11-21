@@ -505,6 +505,11 @@ CHECKLIST_PAGE = "concern-checklist.html"
 #: subsystem's name (store-only PLAN §8 SO9; F8/codex, slice S2).
 COVERAGE_PAGE = "concerns.html"
 ARCHITECTURE_PAGE = "architecture.html"
+#: The subsystem map (atlas and record list) and the seam register (§3.5).
+MASTER_PLAN_PAGE = "master-plan.html"
+SEAM_PAGE = "seams.html"
+#: The import kind a subsystem's survey body carries; it prints on the subsystem's page.
+SURVEY_KIND = "subsystem-survey"
 NARRATIVE_LABELS = labels("narrative_section")
 
 
@@ -1194,6 +1199,186 @@ def write_contract(output: Path, page_paths: list[str], notice: str = "") -> dic
     return contract
 
 
+# ---------------------------------------------------------------------------
+# Record marks and drawn elements (store-only PLAN §3.5).
+# ---------------------------------------------------------------------------
+
+#: The attributes a rendered record and a drawn node or edge carry. Nothing else
+#: in a page is named by them, so a golden page that gained only these is unchanged.
+RECORD_MARK_ATTRIBUTES = ("data-record", "data-state", "data-node", "data-edge")
+_RECORD_MARK = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
+
+
+def without_record_marks(text: str) -> str:
+    """A page with its record marks removed: what it printed before SO20 added them."""
+
+    return _RECORD_MARK.sub("", text)
+
+
+#: The diagrams whose drawn elements are read back, by their SVG's class.
+DRAWN_DIAGRAMS = {"runtime-boundary-svg": "runtime", "boundary-svg": "boundary"}
+#: The record types whose text is compared with the store's (the prose bodies).
+PROSE_RECORDS = ("narrative", "imported-body")
+#: Elements that print a whole record: two of them side by side are two records.
+_WHOLE_RECORD_TAGS = {"article", "li"}
+_VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+#: What may sit between two elements of one record: whitespace and the prose
+#: column the writer wraps a run of paragraphs in.
+_RUN_GAP = re.compile(r'(?:\s|<div class="prose-flow">|</div>)*')
+
+
+@dataclass
+class _Piece:
+    record: str
+    state: str | None
+    tag: str
+    start: int
+    end: int = -1
+    text: list[str] | None = None
+    chips: list[tuple[set[str], str]] | None = None
+
+
+class _MarkInventory(HTMLParser):
+    """The record marks on one page, and the nodes and edges its two census'd SVGs draw.
+
+    A marked element nested in one carrying the same record is part of it. Text
+    inside `<caption>` is left out: a table's caption names the section it sits
+    in, not the record.
+    """
+
+    def __init__(self, text: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self.source = text
+        self.line_starts = [0, *(m.end() for m in re.finditer("\n", text))]
+        self.stack: list[tuple[str, _Piece | None, str | None, bool]] = []
+        self.pieces: list[_Piece] = []
+        self.drawn: dict[str, list[tuple[str, str, str]]] = {}
+        self.chip: tuple[set[str], list[str]] | None = None
+
+    def _offset(self) -> int:
+        line, column = self.getpos()
+        return self.line_starts[line - 1] + column
+
+    def _open_piece(self) -> _Piece | None:
+        return next((piece for _tag, piece, _svg, _c in reversed(self.stack) if piece is not None), None)
+
+    def _svg(self) -> str | None:
+        return next((svg for _tag, _piece, svg, _c in reversed(self.stack) if svg is not None), None)
+
+    def _start(self, tag: str, attrs: list[tuple[str, str | None]], closed: bool) -> None:
+        values = {name: value or "" for name, value in attrs}
+        classes = set(values.get("class", "").split())
+        svg = next((DRAWN_DIAGRAMS[c] for c in classes if tag == "svg" and c in DRAWN_DIAGRAMS), None)
+        within = svg or self._svg()
+        if within is not None:
+            if tag in ("line", "path"):
+                self.drawn.setdefault(within, []).append(("edge", tag, values.get("data-edge", "")))
+            elif "data-node" in values or (tag == "rect" and "runtime-svg-node" in classes) or (
+                tag == "g" and "boundary-svg-node" in classes
+            ):
+                self.drawn.setdefault(within, []).append(("node", tag, values.get("data-node", "")))
+        piece = None
+        record = values.get("data-record")
+        current = self._open_piece()
+        if current is not None and current.text is not None:
+            current.text.append(" ")  # a tag is a word boundary, as `_html_words` reads it
+        if record and (current is None or current.record != record):
+            piece = _Piece(record, values.get("data-state"), tag, self._offset(), text=[], chips=[])
+            self.pieces.append(piece)
+        # A status chip inside a record is the state the reader sees printed.
+        chip = tag == "span" and "status" in classes and (piece or current) is not None
+        if chip:
+            self.chip = (classes, [])
+        if closed or tag in _VOID:
+            if piece is not None:
+                piece.end = self._offset() + len(self.get_starttag_text() or "")
+            return
+        self.stack.append((tag, piece, svg, chip))
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._start(tag, attrs, False)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._start(tag, attrs, True)
+
+    def handle_endtag(self, tag: str) -> None:
+        if not any(open_tag == tag for open_tag, *_rest in self.stack):
+            return
+        at = self._offset()
+        holder = self._open_piece()
+        if holder is not None and holder.text is not None:
+            holder.text.append(" ")
+        while self.stack:
+            open_tag, piece, _svg, chip = self.stack.pop()
+            if chip and self.chip is not None:
+                piece_open = piece or self._open_piece()
+                if piece_open is not None and piece_open.chips is not None:
+                    piece_open.chips.append((self.chip[0], " ".join("".join(self.chip[1]).split())))
+                self.chip = None
+            if piece is not None:
+                close = self.source.find(">", at)
+                piece.end = close + 1 if close >= 0 else at
+            if open_tag == tag:
+                break
+
+    def handle_data(self, data: str) -> None:
+        if any(open_tag == "caption" for open_tag, *_rest in self.stack):
+            return
+        piece = self._open_piece()
+        if piece is not None and piece.text is not None:
+            piece.text.append(data)
+        if self.chip is not None:
+            self.chip[1].append(data)
+
+
+def _words_of(text: str) -> str:
+    """Text as `_html_words` reads a page: its words, one space apart."""
+
+    return " ".join(re.findall(r"[^\W_]+", text))
+
+
+def _fragment_words(fragment: str) -> str:
+    """The words an HTML fragment prints, its table captions left out."""
+
+    return _html_words(re.sub(r"(?is)<caption\b.*?</caption>", " ", fragment)).strip()
+
+
+@dataclass
+class _Occurrence:
+    record: str
+    states: set[str | None]
+    text: str
+    chips: list[tuple[set[str], str]]
+
+
+def _record_occurrences(text: str) -> tuple[list[_Occurrence], dict[str, list[tuple[str, str, str]]]]:
+    """A page's marked records, one per run of elements carrying the same mark, and its drawn elements."""
+
+    parser = _MarkInventory(text)
+    parser.feed(text)
+    parser.close()
+    out: list[_Occurrence] = []
+    previous: _Piece | None = None
+    for piece in parser.pieces:
+        joined = (
+            previous is not None
+            and previous.record == piece.record
+            and not {previous.tag, piece.tag} & _WHOLE_RECORD_TAGS
+            and previous.end >= 0
+            and _RUN_GAP.fullmatch(text[previous.end : piece.start]) is not None
+        )
+        words = _words_of("".join(piece.text or []))
+        if joined and out:
+            last = out[-1]
+            last.states.add(piece.state)
+            last.text = f"{last.text} {words}".strip()
+            last.chips += piece.chips or []
+        else:
+            out.append(_Occurrence(piece.record, {piece.state}, words, list(piece.chips or [])))
+        previous = piece
+    return out, parser.drawn
+
+
 def _resolver_names(conn: Any) -> tuple[dict[str, str], dict[str, str], set[str]]:
     """The names the xref resolver adds beside an ID: `(all subsystems, the ones it names, concern codes)`.
 
@@ -1279,6 +1464,8 @@ class ProjectionVerifier:
             mismatches.extend(self._coverage_measurement_census(conn, projection))
             mismatches.extend(self._explanation_census(conn, projection))
             mismatches.extend(self._record_page_census(conn, projection))
+            mismatches.extend(self._record_mark_census(conn, projection))
+            mismatches.extend(self._drawn_element_census(conn, projection))
         finally:
             conn.close()
         # Every finding carries exactly one authoritative marker across the
@@ -2071,6 +2258,214 @@ class ProjectionVerifier:
                 owed,
                 f"the runtime boundary (row {edge['id']})",
             )
+        return mismatches
+
+    def _record_mark_census(
+        self, conn: Any, projection: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """Each rendered record against the store, by its mark (store-only PLAN §3.5).
+
+        The records owed come from the store: a finding on the page its state
+        selects, a subsystem in the map's atlas and record list (and in the
+        architecture page's atlas when no dependency is recorded), a seam on the
+        seam page, each narrative in force and each imported survey body on its
+        page. Three checks, one per axis:
+
+        * coverage: each owed record is printed exactly as often as its page
+          prints it, on no other page, and no mark names a record the store does
+          not hold;
+        * state: the state a record is marked with is the store's, and a status
+          chip it prints for that state shows the store's value and label;
+        * content: a prose body's words are the stored body's, rendered again
+          from the store, with only the names the cross-reference pass adds.
+
+        A mark is printed by the writer; nothing here trusts it beyond what it
+        names, and a page edited with its receipt rewritten still fails.
+        """
+
+        from .diagrams import runtime_boundary_rows, runtime_edge_record  # noqa: PLC0415
+        from .html_projection import DISPLAY_STATUS, write_html  # noqa: PLC0415 — it imports this module
+        from .legacy_prose import imported_bodies  # noqa: PLC0415
+        from .page import Page  # noqa: PLC0415
+        from .renderers import imported_body_blocks, narrative_body  # noqa: PLC0415
+
+        names, named, concerns = _resolver_names(conn)
+        owed: dict[str, tuple[dict[str, int], str | None, Any]] = {}
+        # Imported bodies of the three record pages: an import-only page prints them
+        # as one document, so they are checked where marked and not owed a mark.
+        allowed: dict[str, tuple[str, Any]] = {}
+
+        if table_exists(conn, "finding_state_current"):
+            for r in rows(conn, "SELECT finding_id, resolution_state FROM finding_state_current"):
+                page = finding_page(r["resolution_state"])
+                if page is not None:
+                    owed[f"finding:{r['finding_id']}"] = ({page: 1}, str(r["resolution_state"]), None)
+        atlas_on_architecture = not (
+            table_exists(conn, "xrefs") and rows(conn, "SELECT 1 FROM xrefs LIMIT 1")
+        )
+        for r in rows(conn, "SELECT id, status FROM subsystems ORDER BY id"):
+            pages = {MASTER_PLAN_PAGE: 2}
+            if atlas_on_architecture:
+                pages[ARCHITECTURE_PAGE] = 1
+            owed[f"subsystem:{r['id']}"] = (pages, str(r["status"]), None)
+        if table_exists(conn, "seams"):
+            for r in rows(conn, "SELECT id FROM seams ORDER BY id"):
+                owed[f"seam:{r['id']}"] = ({SEAM_PAGE: 1}, None, None)
+        for edge in runtime_boundary_rows(conn):
+            owed[runtime_edge_record(edge)] = ({ARCHITECTURE_PAGE: 1}, None, None)
+        for record in effective_narratives(conn, self.storage):
+            page = narrative_page(record, names)
+            if page is not None:
+                owed[f"narrative:{record['id']}"] = (
+                    {page: 1},
+                    str(record["disposition"]),
+                    (narrative_body(record), page),
+                )
+        for body in imported_bodies(conn):
+            if not body.body.strip():
+                continue
+            if body.kind == SURVEY_KIND and body.subsystem_id in names:
+                page = subsystem_page(str(body.subsystem_id), names[str(body.subsystem_id)])
+                owed[f"imported-body:{body.path}"] = (
+                    {page: 1},
+                    None,
+                    (imported_body_blocks(body, 3, "Structure", page), page),
+                )
+            else:
+                page = f"{body.kind}.html"
+                allowed[f"imported-body:{body.path}"] = (
+                    page,
+                    (imported_body_blocks(body, 2, "Structure", page), page),
+                )
+
+        found: dict[str, dict[str, list[_Occurrence]]] = {}
+        for rel, text in projection.items():
+            if Path(rel).suffix not in HTML_SUFFIXES or "data-record=" not in text:
+                continue
+            for occurrence in _record_occurrences(text)[0]:
+                found.setdefault(occurrence.record, {}).setdefault(rel, []).append(occurrence)
+
+        enums = {
+            "finding": set(values_of("finding_resolution_state")),
+            "subsystem": set(values_of("subsystem_status")),
+        }
+        mismatches: list[dict[str, str]] = []
+
+        def report(axis: str, record: str, detail: str) -> None:
+            kind, _, identifier = record.partition(":")
+            mismatches.append(
+                {"axis": axis, "object_type": kind, "object_id": identifier, "detail": detail}
+            )
+
+        for record in sorted(set(owed) | set(found)):
+            printed = found.get(record, {})
+            if record in owed:
+                pages, state, prose = owed[record]
+            elif record in allowed:
+                page, prose = allowed[record]
+                pages, state = {page: min(1, len(printed.get(page, [])))}, None
+            else:
+                report("coverage", record, "the mark names no record the store holds")
+                continue
+            for page, count in sorted(pages.items()):
+                seen = len(printed.get(page, []))
+                if seen != count:
+                    report("coverage", record, f"{page} prints the record {seen} time(s), not {count}")
+            for page in sorted(set(printed) - set(pages)):
+                report("coverage", record, f"{page} prints the record, and the page plan does not put it there")
+            expected_words = None
+            if prose is not None:
+                blocks, page = prose
+                expected_words = _fragment_words(write_html(Page("", page, blocks.blocks)))
+            kind = record.partition(":")[0]
+            for page, occurrences in sorted(printed.items()):
+                for occurrence in occurrences:
+                    if state is not None and occurrence.states != {state}:
+                        marked = ", ".join(sorted(str(s) for s in occurrence.states))
+                        report("state", record, f"{page} marks it {marked}; the store holds {state}")
+                    for classes, label in occurrence.chips:
+                        keys = {c.removeprefix("status-") for c in classes} & enums.get(kind, set())
+                        if state is None or not keys:
+                            continue
+                        wanted = DISPLAY_STATUS.get(state, state.replace("-", " ").title())
+                        if keys != {state} or label != wanted:
+                            report("state", record, f"{page} prints {label!r}; the store holds {state} ({wanted!r})")
+                    if expected_words is not None:
+                        pattern = _resolver_pattern(f" {expected_words} ", named, concerns, words=True)
+                        if not pattern.fullmatch(f" {occurrence.text} "):
+                            report(
+                                "content",
+                                record,
+                                f"{page} prints {occurrence.text[:80]!r}; the store's body reads"
+                                f" {expected_words[:80]!r}",
+                            )
+        return mismatches
+
+    def _drawn_element_census(
+        self, conn: Any, projection: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """The architecture page's two SVGs, element by element, against the store (§3.5).
+
+        The drawn nodes and edges are read from the SVG elements themselves (every
+        line and arrow is an edge, every runtime box and subsystem box a node) and
+        compared, as counts, with the diagram's model recomputed from the rows: a
+        line no record joins, a record drawn twice and a missing box each turn the
+        content axis red.
+        """
+
+        from .diagrams import (  # noqa: PLC0415 — it imports this module
+            boundary_edge_record,
+            boundary_relations,
+            runtime_boundary_rows,
+            runtime_edge_record,
+            runtime_node,
+        )
+
+        text = projection.get(ARCHITECTURE_PAGE)
+        if text is None:
+            return []  # coverage owns the missing page
+        drawn = _record_occurrences(text)[1]
+        expected: dict[str, Counter[tuple[str, str, str]]] = {"runtime": Counter(), "boundary": Counter()}
+        for edge in runtime_boundary_rows(conn):
+            record = runtime_edge_record(edge)
+            expected["runtime"].update(
+                [
+                    ("edge", "line", record),
+                    ("edge", "path", record),
+                    ("node", "rect", f"runtime:{runtime_node(edge['from_runtime'])}"),
+                    ("node", "rect", f"runtime:{runtime_node(edge['to_runtime'])}"),
+                ]
+            )
+        graph = boundary_relations(conn)
+        if graph["edges"]:
+            expected["boundary"].update(("node", "g", f"subsystem:{node['id']}") for node in graph["nodes"])
+            seams: set[str] = set()
+            for edge in graph["edges"]:
+                record = boundary_edge_record(edge)
+                if edge["kind"] == "seam":
+                    if edge["label"] not in seams:
+                        seams.add(edge["label"])
+                        expected["boundary"].update([("edge", "line", record)])
+                else:
+                    expected["boundary"].update([("edge", "line", record), ("edge", "path", record)])
+        mismatches: list[dict[str, str]] = []
+        for diagram, wanted in expected.items():
+            got = Counter(drawn.get(diagram, []))
+            for element, tag, record in sorted(set(wanted) | set(got)):
+                if got[(element, tag, record)] == wanted[(element, tag, record)]:
+                    continue
+                named_as = record or f"(an unmarked <{tag}>)"
+                mismatches.append(
+                    {
+                        "axis": "content",
+                        "object_type": f"{diagram}-diagram-{element}",
+                        "object_id": record,
+                        "detail": (
+                            f"the {diagram} SVG draws {named_as} as <{tag}> {got[(element, tag, record)]}"
+                            f" time(s); the store's rows draw it {wanted[(element, tag, record)]}"
+                        ),
+                    }
+                )
         return mismatches
 
     def _coverage_measurement_census(

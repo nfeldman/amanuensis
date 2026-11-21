@@ -169,6 +169,20 @@ class Section:
 
 
 @dataclass(frozen=True)
+class Marked:
+    """Blocks that print one record (store-only PLAN §3.5).
+
+    Each element they print carries `data-record="<record>"`, and `data-state`
+    when the record has a state, so the read-back can find the record's printed
+    text and compare it with the store's.
+    """
+
+    record: str
+    state: str
+    blocks: tuple[Block, ...]
+
+
+@dataclass(frozen=True)
 class Details:
     """A disclosure: the guide's full vocabulary stays closed until asked for."""
 
@@ -242,6 +256,9 @@ class Record:
     revision: str = ""
     subsystem_id: str = ""
     filter: RowFilter | None = None
+    # The record's mark, `<type>:<id>`, and the stored state it prints (§3.5).
+    record: str = ""
+    state: str = ""
 
 
 @dataclass(frozen=True)
@@ -269,6 +286,8 @@ class AtlasItem:
     subsystem: Inlines
     depth: Inlines
     markers: tuple[str, ...] = ()
+    record: str = ""
+    state: str = ""
 
 
 @dataclass(frozen=True)
@@ -311,6 +330,11 @@ class RuntimeRow:
     mechanism: Inlines
     note: Inlines
     markers: tuple[str, ...] = ()
+    # The boundary's record and the two runtimes it joins, as the store names
+    # them; empty for a table an imported body wrote, which no record holds.
+    record: str = ""
+    source_node: str = ""
+    target_node: str = ""
 
 
 @dataclass(frozen=True)
@@ -330,6 +354,8 @@ class BoundaryRow:
     # Whether the boundary cell links to a seam, and the seam it names.
     seam: bool = False
     seam_id: str = ""
+    # The record the row's line draws: `seam:<id>` or `xref:<from>:<to>:<relationship>`.
+    record: str = ""
 
 
 @dataclass(frozen=True)
@@ -445,7 +471,7 @@ class Facets:
 
 
 Block = (
-    Heading | Paragraph | List | Code | Quote | Anchor | RecordMarker | Section | Details
+    Heading | Paragraph | List | Code | Quote | Anchor | RecordMarker | Section | Marked | Details
     | Table | EnumTable | LifecycleTable | RecordList | SummaryList | Atlas | Topology
     | RuntimeDiagram | BoundaryDiagram | CoverageIndex | ConcernChecklist
     | RelationshipTrace | StalenessBars | DiagramSource

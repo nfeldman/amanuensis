@@ -73,6 +73,7 @@ from .page import (
     Link,
     List,
     ListItem,
+    Marked,
     Page,
     Paragraph,
     Quote,
@@ -279,7 +280,7 @@ def page_text(page: Page) -> str:
 
     def walk(blocks: Sequence[Block]) -> None:
         for block in blocks:
-            if isinstance(block, Section | Details):
+            if isinstance(block, Section | Details | Marked):
                 walk(block.blocks)
             elif isinstance(block, Heading):
                 lines.extend(["", f"{'#' * block.level} {_words(block.text)}", ""])
@@ -1083,8 +1084,34 @@ def _imported_blocks(
     out: list[Block] = []
     for body in bodies:
         out.append(_paragraph(body.label()))
-        out += render_body(body.body, under=under, section=section, path=path)
+        out.append(imported_body_blocks(body, under, section, path))
     return out
+
+
+def narrative_body(record: Mapping[str, Any], level: int = 3) -> Marked:
+    """A narrative's body (or its declination) as the blocks that carry its mark (§3.5).
+
+    The page prints these and the read-back renders them again from the store to
+    compare with what the page carries, so both read the body one way.
+    """
+
+    text, _is_body = narrative_text(record)
+    mark = f"narrative:{record['id']}"
+    if str(record["disposition"]) == "declined":
+        sentence = NARRATIVE_DECLINED.format(
+            declined=_DECLINED,
+            sha=str(record["ref_sha"])[:8],
+            date=_stored_date(record["recorded_at"]),
+            reason=text.strip(),
+        )
+        return Marked(mark, "declined", tuple(render_prose(sentence)))
+    return Marked(mark, "recorded", tuple(render_prose(text.strip(), under=level)))
+
+
+def imported_body_blocks(body: ImportedBody, under: int, section: str, path: str) -> Marked:
+    """An imported body as the blocks that carry its mark (§3.5)."""
+
+    return Marked(f"imported-body:{body.path}", "", render_body(body.body, under=under, section=section, path=path))
 
 
 def _narrative_blocks(
@@ -1118,13 +1145,8 @@ def _narrative_blocks(
             out.append(_heading(level, _one_line(narrative_heading(record))))
         date = _stored_date(record["recorded_at"])
         sha = str(record["ref_sha"])[:8]
-        if str(record["disposition"]) == "declined":
-            out += render_prose(
-                NARRATIVE_DECLINED.format(declined=_DECLINED, sha=sha, date=date, reason=text.strip())
-            )
-            continue
-        out += render_prose(text.strip(), under=level)
-        if not is_body:
+        out.append(narrative_body(record, level))
+        if str(record["disposition"]) == "declined" or not is_body:
             continue
         files = record.get("cited_files") or []
         out.append(
@@ -1941,6 +1963,8 @@ def render_master_plan(
                     AtlasItem(
                         inlines(f"**[{s['id']}]({subsystem_page(str(s['id']), str(s['name']))})** {_table_cell(s['name'])}"),
                         depth_cell(_table_cell(depth_labels.get(s["status"], s["status"]))),
+                        record=f"subsystem:{s['id']}",
+                        state=str(s["status"]),
                     )
                 )
         blocks.append(
@@ -1978,6 +2002,8 @@ def render_master_plan(
                         fields=tuple(fields),
                         path=_plain(str(s["name"])),
                         subsystem_id=sid,
+                        record=f"subsystem:{sid}",
+                        state=str(s["status"]),
                     )
                 )
             blocks.append(_section(layer, RecordList("subsystem", _caption(layer), tuple(records))))
@@ -2655,6 +2681,8 @@ def _finding_record(f: Mapping[str, Any]) -> Record:
         path=key_text,
         revision=_plain(ref),
         subsystem_id=key_text,
+        record=f"finding:{finding_id}",
+        state=state,
     )
 
 
@@ -2968,9 +2996,15 @@ def _resolved_blocks(
         out += [
             RecordMarker(finding_marker(fid)),
             Anchor(fid.lower()),
-            _heading(4, f"{fid} · `{f['severity']}`"),
-            *_paragraphs(str(f["symptom"])),
-            _bullets(facts),
+            Marked(
+                f"finding:{fid}",
+                str(f["resolution_state"]),
+                (
+                    _heading(4, f"{fid} · `{f['severity']}`"),
+                    *_paragraphs(str(f["symptom"])),
+                    _bullets(facts),
+                ),
+            ),
         ]
     return out
 
@@ -3185,6 +3219,7 @@ def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                     number,
                 )
             )
+            records[-1] = replace(records[-1], record=f"seam:{s['id']}")
         blocks.append(RecordList("seam", "Seams", tuple(records)))
     return Page("Seams", "seams.html", tuple(blocks)), _db_source("seams:all", seams) | _db_source("seams:assess", assess)
 

@@ -45,6 +45,7 @@ from .page import (
     Link,
     List,
     ListItem,
+    Marked,
     Page,
     Paragraph,
     Quote,
@@ -409,7 +410,7 @@ class _Walk:
                     for item in resolved
                 )
             return replace(block, slug=slug, blocks=resolved)
-        if isinstance(block, Details):
+        if isinstance(block, Details | Marked):
             return replace(block, blocks=self.blocks(block.blocks))
         if isinstance(block, SummaryList):
             items: list[SummaryItem] = []

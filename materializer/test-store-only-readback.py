@@ -193,7 +193,8 @@ def publish(storage: Path) -> tuple[Path | None, str | None]:
         summary = {}
     output = storage / "docs"
     if not (output / "index.html").is_file():
-        return None, f"the fixture was not published (exit {proc.returncode}): {scrub(proc.stderr[-300:])}"
+        said = summary.get("error") or proc.stderr[-300:]
+        return None, f"the fixture was not published (exit {proc.returncode}): {scrub(said)}"
     return output, None
 
 

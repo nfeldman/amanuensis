@@ -130,6 +130,14 @@ def boundary_relations(conn: sqlite3.Connection) -> dict[str, Any]:
     }
 
 
+def boundary_edge_record(edge: dict[str, Any]) -> str:
+    """The record a drawn boundary line names: its seam, or its xref's two ends and relationship."""
+
+    if edge["kind"] == "seam":
+        return f"seam:{edge['label']}"
+    return f"xref:{edge['from']}>{edge['to']}:{edge['label']}"
+
+
 def _no_boundary_sentence(unconnected: int, total: int) -> str:
     verb = "has" if unconnected == 1 else "have"
     noun = "subsystem" if total == 1 else "subsystems"
@@ -220,6 +228,18 @@ def runtime_boundary_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     ]
 
 
+def runtime_edge_record(edge: dict[str, Any]) -> str:
+    """The record a drawn runtime edge names: the boundary row in force (§3.5)."""
+
+    return f"runtime-boundary:{edge['id']}"
+
+
+def runtime_node(value: object) -> str:
+    """A drawn runtime's name, as the store holds it on one line."""
+
+    return " ".join(str(value or "").split())
+
+
 #: What the page says of the rows the import copied from the onboarding report:
 #: they are as written, and no evidence ties them to the code (store-only PLAN §8 SO9).
 IMPORTED_RUNTIME_LABEL = "Imported from the onboarding report and not tied to evidence:"
@@ -300,7 +320,12 @@ def _dependency_blocks(
             region = _plain(_safe_label(subsystem.get("layer") or "Other")) or "Other"
             label = _DEPTH_LABELS.get(subsystem["status"], subsystem["status"])
             regions.setdefault(region, []).append(
-                AtlasItem(_linked_subsystem(sid, subsystem["name"]), depth_cell(label))
+                AtlasItem(
+                    _linked_subsystem(sid, subsystem["name"]),
+                    depth_cell(label),
+                    record=f"subsystem:{sid}",
+                    state=str(subsystem["status"]),
+                )
             )
         return (
             _sentence(
@@ -342,16 +367,17 @@ def boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]
     nodes, edges = graph["nodes"], graph["edges"]
     if not nodes:
         return (_sentence("_No subsystems recorded yet._"),)
-    touching: dict[str, list[tuple[str, str, str]]] = {node["id"]: [] for node in nodes}
+    touching: dict[str, list[tuple[str, str, str, str]]] = {node["id"]: [] for node in nodes}
     for edge in edges:
+        record = boundary_edge_record(edge)
         if edge["kind"] == "seam":
             label = edge["label"]
-            touching[edge["from"]].append((f"{label} seam", label, edge["to"]))
-            touching[edge["to"]].append((f"{label} seam", label, edge["from"]))
+            touching[edge["from"]].append((f"{label} seam", label, edge["to"], record))
+            touching[edge["to"]].append((f"{label} seam", label, edge["from"], record))
         else:
             relationship = _safe_label(edge["label"])
-            touching[edge["from"]].append((f"{relationship} →", "", edge["to"]))
-            touching[edge["to"]].append((f"← {relationship}", "", edge["from"]))
+            touching[edge["from"]].append((f"{relationship} →", "", edge["to"], record))
+            touching[edge["to"]].append((f"← {relationship}", "", edge["from"], record))
     census = _no_boundary_sentence(sum(1 for found in touching.values() if not found), len(nodes))
     not_drawn = graph["not_drawn"]
     skipped = (
@@ -373,7 +399,7 @@ def boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]
     for node in nodes:
         sid = node["id"]
         layer = _plain(_safe_label(node["layer"])) or "unlayered"
-        for boundary, seam_id, other in touching[sid] or [("none recorded", "", "")]:
+        for boundary, seam_id, other, record in touching[sid] or [("none recorded", "", "", "")]:
             rows_out.append(
                 BoundaryRow(
                     layer=layer,
@@ -383,6 +409,7 @@ def boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]
                     relation=boundary,
                     seam=bool(seam_id),
                     seam_id=seam_id,
+                    record=record,
                 )
             )
     return (
@@ -538,7 +565,10 @@ def runtime_boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Blo
                             edge["mechanism"],
                             edge["notes"],
                         )
-                    )
+                    ),
+                    record=runtime_edge_record(edge),
+                    source_node=runtime_node(edge["from_runtime"]),
+                    target_node=runtime_node(edge["to_runtime"]),
                 )
                 for edge in edges
             ),
