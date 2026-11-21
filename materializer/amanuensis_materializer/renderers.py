@@ -77,6 +77,7 @@ from .page import (
     Quote,
     Record,
     RecordList,
+    RecordMarker,
     Row,
     RowFilter,
     Section,
@@ -221,7 +222,7 @@ def _table(caption: str, headers: Sequence[str], body: Sequence[Sequence[str | I
         caption,
         tuple(inlines(header) for header in headers),
         tuple(
-            Row(tuple(cell if isinstance(cell, Inlines) else inlines(cell) for cell in cells))
+            Row(tuple(cell if isinstance(cell, Inlines) else inlines(cell.strip()) for cell in cells))
             for cells in body
         ),
     )
@@ -1485,9 +1486,9 @@ def checked_revision(conn: sqlite3.Connection) -> str:
     )
 
 
-def _empty_lens(
+def _empty_lens_blocks(
     conn: sqlite3.Connection, nothing: str, scope: str, basis: str
-) -> list[str]:
+) -> list[Block]:
     """What a lens page with no rows says instead of "none" (§6.1, C28).
 
     An empty page is the one place a reader cannot check the record against
@@ -1497,21 +1498,6 @@ def _empty_lens(
     records it read, and the revision it read them at, and the absence becomes
     a reading rather than a silence.
     """
-
-    return [
-        nothing,
-        "",
-        f"- **Scope** — {scope}",
-        f"- **Basis** — {basis}",
-        f"- **Checked revision** — {checked_revision(conn)}.",
-        "",
-    ]
-
-
-def _empty_lens_blocks(
-    conn: sqlite3.Connection, nothing: str, scope: str, basis: str
-) -> list[Block]:
-    """`_empty_lens` for a page that builds its model: the sentence, then what it would have carried."""
 
     return [
         _paragraph(nothing),
@@ -2601,35 +2587,6 @@ def _finding_rows(
     )
 
 
-def _finding_table(subsystem_rows: Sequence[dict[str, Any]], level: int = 3) -> list[str]:
-    """One subsystem's findings as full marked records (spec §6.2).
-
-    `level` is where the subsystem sits in the page's own hierarchy: the
-    Unresolved lens nests it under resolution state and then severity, the
-    History lens under resolution state alone.
-    """
-    subsystem_id = str(subsystem_rows[0]["subsystem_id"])
-    subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
-    out = [
-        f"{'#' * level} [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
-        "",
-        f"| ID | Status | Symptom | {WHY_IT_MATTERS} | Root cause | Ref SHA |",
-        "|---|---|---|---|---|---|",
-    ]
-    for f in subsystem_rows:
-        out.append(finding_marker(str(f["finding_id"])))
-        context = _table_cell(f.get("business_context") or "")
-        out.append(
-            f"| <a id=\"{f['finding_id'].lower()}\"></a>**{f['finding_id']}** | "
-            f"{f['resolution_state']} | "
-            f"{_table_cell(f['symptom'])} | {context} | "
-            f"{_table_cell(f['root_cause'])} | "
-            f"`{(f['ref_sha'] or '—')[:8]}` |"
-        )
-    out.append("")
-    return out
-
-
 def _by_subsystem(fs: Sequence[dict[str, Any]]) -> list[list[dict[str, Any]]]:
     """Group rows by subsystem, keeping the order the query established."""
     groups: dict[str, list[dict[str, Any]]] = {}
@@ -2686,65 +2643,6 @@ def _successor_pages(conn: sqlite3.Connection) -> dict[str, str]:
         )
         if (page := finding_page(str(r["resolution_state"]))) is not None
     }
-
-
-def _carried_section(
-    records: Sequence[dict[str, Any]],
-    page: str,
-    successors: dict[str, str],
-) -> list[str]:
-    """Every carried record for one lens, each as a full marked record."""
-
-    if not records:
-        return []
-    outcome_labels = labels("carried_finding_outcome")
-    out = [f"## {CARRIED_HEADING}", ""]
-    lead = CARRIED_LEAD.get(page)
-    if lead:
-        out += [lead.format(n=_count(len(records), "inherited obligation")), ""]
-    for record in records:
-        store_id = str(record["archived_store_id"])
-        archived_id = str(record["archived_finding_id"])
-        outcome = str(record["outcome"])
-        heading = (
-            "Undecided"
-            if outcome == CARRIED_UNDECIDED
-            else outcome_labels.get(outcome, outcome)
-        )
-        out += [
-            f"### {archived_id} · {_sev_badge(str(record['severity']))} · {heading}",
-            "",
-            f"{carried_marker(store_id, archived_id)}"
-            f'<a id="{carried_anchor(store_id, archived_id)}"></a>',
-            "",
-            f"- **Carried from** `{store_id}` at {_short(str(record['archived_anchor_sha']))},"
-            f" recorded there as `{record['archived_resolution']}`",
-            f"- **Subsystem there** {record['subsystem_id']}",
-        ]
-        if outcome == CARRIED_UNDECIDED:
-            out.append(
-                f"- **Outcome** `{CARRIED_UNDECIDED}` — nobody here has re-found it,"
-                " ruled it out, or recorded a repair"
-            )
-        else:
-            detail = f"- **Outcome** `{outcome}`"
-            successor = str(record.get("successor_id") or "")
-            if successor:
-                target = successors.get(successor)
-                detail += (
-                    f" — [{successor}]({target}#{successor.lower()})"
-                    if target
-                    else f" — {successor}, which this store does not hold"
-                )
-            elif record.get("repaired_sha"):
-                detail += f" — repaired at {_short(str(record['repaired_sha']))}"
-            out.append(detail)
-            if record.get("rationale"):
-                out.append(f"- **Recorded because** {record['rationale']}")
-        out += ["", str(record["symptom"]), ""]
-        if record.get("root_cause"):
-            out += [f"**Root cause, as archived.** {record['root_cause']}", ""]
-    return out
 
 
 def _finding_record(f: Mapping[str, Any]) -> Record:
@@ -2830,7 +2728,11 @@ def _carried_blocks(
             if record.get("rationale"):
                 facts.append(f"**Recorded because** {_one_line(record['rationale'])}")
         body += [
-            _heading(3, f"{archived_id} · {_sev_badge(str(record['severity']))} · {heading}"),
+            Heading(
+                3,
+                inlines(f"{archived_id} · {_sev_badge(str(record['severity']))} · {heading}"),
+                finding_group=page == "resolved-findings.md",
+            ),
             _paragraph(
                 f"{carried_marker(store_id, archived_id)}"
                 f'<a id="{carried_anchor(store_id, archived_id)}"></a>'
@@ -3042,9 +2944,9 @@ def _resolution_basis(
     return BASIS_NONE, NO_BASIS_SENTENCE
 
 
-def _resolved_records(
+def _resolved_blocks(
     subsystem_rows: Sequence[dict[str, Any]], bases: dict[str, tuple[str, str]]
-) -> list[str]:
+) -> list[Block]:
     """One subsystem's resolved findings as full marked records (§6.2, §7.7).
 
     A register rather than a table: the basis is a sentence, not a peer column,
@@ -3054,24 +2956,24 @@ def _resolved_records(
 
     subsystem_id = str(subsystem_rows[0]["subsystem_id"])
     subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
-    out = [
-        f"### [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
-        "",
+    out: list[Block] = [
+        Heading(
+            3,
+            inlines(f"[{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})"),
+            finding_group=True,
+        )
     ]
     for f in subsystem_rows:
         fid = str(f["finding_id"])
         kind, detail = bases[fid]
-        out.append(finding_marker(fid))
-        out.append(f'<a id="{fid.lower()}"></a>')
-        out += [f"#### {fid} · `{f['severity']}`", ""]
-        out += [str(f["symptom"]).strip(), ""]
+        facts: list[str] = []
         context = _one_line(f.get("business_context") or "")
         if context:
-            out.append(f"- **{WHY_IT_MATTERS}** — {context}")
-        out.append(f"- **Root cause** — {_one_line(f['root_cause'])}")
+            facts.append(f"**{WHY_IT_MATTERS}** — {context}")
+        facts.append(f"**Root cause** — {_one_line(f['root_cause'])}")
         recorded = str(f["resolution_recorded_at"] or "")
-        out.append(
-            f"- **Resolution** — `{f['resolution_state']}`"
+        facts.append(
+            f"**Resolution** — `{f['resolution_state']}`"
             + (
                 f", recorded {_fmt_time(recorded)}."
                 if recorded
@@ -3079,12 +2981,18 @@ def _resolved_records(
             )
         )
         if f["fix_sha"] or f["fix_location"]:
-            out.append(
-                f"- **Repair** — {_short(str(f['fix_sha'] or ''))} at"
+            facts.append(
+                f"**Repair** — {_short(str(f['fix_sha'] or ''))} at"
                 f" `{f['fix_location'] or 'no location recorded'}`."
             )
-        out.append(f"- **Basis** — `{kind}`: {_one_line(detail)}")
-        out.append("")
+        facts.append(f"**Basis** — `{kind}`: {_one_line(detail)}")
+        out += [
+            RecordMarker(finding_marker(fid)),
+            Anchor(fid.lower()),
+            _heading(4, f"{fid} · `{f['severity']}`"),
+            *_paragraphs(str(f["symptom"])),
+            _bullets(facts),
+        ]
     return out
 
 
@@ -3125,63 +3033,63 @@ def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderR
         for record in carried_records(conn)
         if carried_page(str(record["outcome"])) == "resolved-findings.md"
     ]
-    carried_block = _carried_section(carried, "resolved-findings.md", _successor_pages(conn))
-    carried_source = _db_source("findings:carried-resolved", carried)
+    carried_block = _carried_blocks(carried, "resolved-findings.md", _successor_pages(conn))
+    sources = {
+        **_db_source("findings:resolved", fs),
+        **_db_source("findings:resolved-basis", bases),
+        **_db_source("findings:carried-resolved", carried),
+    }
 
-    out = ["# Resolved findings", ""]
+    blocks: list[Block] = []
     if not fs:
-        out += _empty_lens(
+        blocks += _empty_lens_blocks(
             conn,
             "No finding has reached a terminal state.",
             "findings recorded verified-fixed, ruled out, or accepted, each with the"
             " basis its resolution rests on.",
             "`finding_state_current` over `findings` and `finding_resolution_events`.",
         )
-        out += carried_block
-        return "\n".join(out) + "\n", {
-            **_db_source("findings:resolved", fs),
-            **_db_source("findings:resolved-basis", bases),
-            **carried_source,
-        }
+        blocks += carried_block
+        return Page("Resolved findings", "resolved-findings.html", tuple(blocks)), sources
 
-    out += [
-        "_Each record carries the basis its resolution rests on, labelled by kind."
-        " A verified repair rests on evidence; a claim ruled out or a behaviour"
-        " accepted rests on an argument someone authorized to make it recorded._",
-        "",
-    ]
+    blocks.append(
+        _paragraph(
+            "_Each record carries the basis its resolution rests on, labelled by kind."
+            " A verified repair rests on evidence; a claim ruled out or a behaviour"
+            " accepted rests on an argument someone authorized to make it recorded._"
+        )
+    )
 
     unbacked = [f for f in fs if bases[str(f["finding_id"])][0] == BASIS_NONE]
     if unbacked:
         ids = ", ".join(
             f"[**{f['finding_id']}**](#{str(f['finding_id']).lower()})" for f in unbacked
         )
-        out += [
-            f"## {NO_BASIS_HEADING}",
-            "",
-            f"{_count(len(unbacked), 'record')} below reached a terminal state with"
-            " neither verification evidence nor a recorded rationale. The store says"
-            f" they are closed and does not say on what: {ids}.",
-            "",
-        ]
+        blocks.append(
+            _section(
+                NO_BASIS_HEADING,
+                _paragraph(
+                    f"{_count(len(unbacked), 'record')} below reached a terminal state with"
+                    " neither verification evidence nor a recorded rationale. The store says"
+                    f" they are closed and does not say on what: {ids}."
+                ),
+            )
+        )
 
     for state in FINDING_LENS_STATES["resolved-findings.md"]:
         state_rows = [f for f in fs if f["resolution_state"] == state]
         if not state_rows:
             continue
-        out += [f"## {RESOLUTION_LABELS.get(state, state)}", ""]
+        body: list[Block] = []
         hint = _RESOLVED_STATE_HINTS.get(state)
         if hint:
-            out += [hint.format(n=_count(len(state_rows), "record")), ""]
+            body.append(_paragraph(hint.format(n=_count(len(state_rows), "record"))))
         for subsystem_rows in _by_subsystem(state_rows):
-            out += _resolved_records(subsystem_rows, bases)
+            body += _resolved_blocks(subsystem_rows, bases)
+        blocks.append(_section(RESOLUTION_LABELS.get(state, state), *body))
 
-    out += carried_block
-    return "\n".join(out) + "\n", {
-        **_db_source("findings:resolved", fs),
-        **_db_source("findings:resolved-basis", bases),
-        **carried_source,
-    }
+    blocks += carried_block
+    return Page("Resolved findings", "resolved-findings.html", tuple(blocks)), sources
 
 
 def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -3260,21 +3168,6 @@ def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     return "\n".join(out) + "\n", _db_source("seams:all", seams) | _db_source("seams:assess", assess)
 
 
-def _contradiction_records(
-    cs: Sequence[dict[str, Any]], columns: Sequence[str], cell: Any
-) -> list[str]:
-    """One contradiction per row, anchored so an event can link back to it."""
-
-    out = [f"| {' | '.join(columns)} |", "|" + "---|" * len(columns)]
-    for c in cs:
-        anchor = contradiction_anchor(c["id"])
-        out.append(
-            f'| <a id="{anchor}"></a>**#{c["id"]}** | ' + " | ".join(cell(c)) + " |"
-        )
-    out.append("")
-    return out
-
-
 def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The History lens for contradictions: the ones the evidence settled.
 
@@ -3303,9 +3196,8 @@ def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResu
         "SELECT COUNT(*) AS n FROM contradictions"
         " WHERE COALESCE(resolution,'unresolved')='unresolved'",
     ) or {"n": 0}
-    out = ["# Conflicting evidence", ""]
     if not cs:
-        out += _empty_lens(
+        blocks = _empty_lens_blocks(
             conn,
             "No disagreement between findings has been settled."
             f" {_count(int(standing['n'] or 0), 'pair')} still stand"
@@ -3315,26 +3207,18 @@ def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResu
             "`contradictions` whose resolution is recorded, with"
             " `contradiction_resolution_events` for the account of how.",
         )
-        return "\n".join(out) + "\n", {
+        return Page("Conflicting evidence", "contradictions.html", tuple(blocks)), {
             **_db_source("contradictions:resolved", cs),
             **_db_source("contradictions:events", sorted(events)),
             **_db_source("contradictions:standing", standing),
         }
 
-    out += [
-        "_Two findings made incompatible claims about the same locus and the record"
-        " now says which one holds. The disagreement is kept rather than smoothed"
-        " away, so a reader who forms the overturned reading again meets the"
-        " argument that settled it. Disagreements still standing are on"
-        " [Records that disagree](disagreements.md)._",
-        "",
-    ]
-
-    def cell(c: dict[str, Any]) -> list[str]:
+    def cells(c: dict[str, Any]) -> list[str]:
         event = events.get(int(c["id"]))
         rationale = _table_cell((event or {}).get("rationale") or "")
         scope_note = _table_cell(c["scope_note"] or "")
         return [
+            f'<a id="{contradiction_anchor(c["id"])}"></a>**#{c["id"]}**',
             f"**{c['finding_a']}** / **{c['finding_b']}**",
             f"`{c['resolution']}`",
             f"`{c['shared_location']}`" if c["shared_location"] else "—",
@@ -3342,12 +3226,21 @@ def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResu
             rationale or scope_note or "No account of the resolution is recorded.",
         ]
 
-    out += _contradiction_records(
-        cs,
-        ("Record", "Findings", "Resolution", "Shared locus", "Settled", "On what"),
-        cell,
-    )
-    return "\n".join(out) + "\n", {
+    blocks = [
+        _paragraph(
+            "_Two findings made incompatible claims about the same locus and the record"
+            " now says which one holds. The disagreement is kept rather than smoothed"
+            " away, so a reader who forms the overturned reading again meets the"
+            " argument that settled it. Disagreements still standing are on"
+            " [Records that disagree](disagreements.md)._"
+        ),
+        _table(
+            "Conflicting evidence",
+            ("Record", "Findings", "Resolution", "Shared locus", "Settled", "On what"),
+            [cells(c) for c in cs],
+        ),
+    ]
+    return Page("Conflicting evidence", "contradictions.html", tuple(blocks)), {
         **_db_source("contradictions:resolved", cs),
         **_db_source("contradictions:events", sorted(events)),
     }
@@ -5629,7 +5522,6 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
         " ORDER BY e.id DESC",
     )
 
-    out = ["# Resolution history", ""]
     sources = {
         **_db_source("history:finding-events", finding_events),
         **_db_source("history:contradiction-events", contradiction_events),
@@ -5637,7 +5529,7 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
     if severity_events:
         sources.update(_db_source("history:severity-events", severity_events))
     if not (finding_events or contradiction_events or severity_events):
-        out += _empty_lens(
+        blocks = _empty_lens_blocks(
             conn,
             "No resolution event is recorded.",
             "every state a finding or a contradiction was recorded in, newest first,"
@@ -5645,7 +5537,7 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
             "`finding_resolution_events` and `contradiction_resolution_events`, the"
             " two tables nothing updates or deletes.",
         )
-        return "\n".join(out) + "\n", sources
+        return Page("Resolution history", "resolution-history.html", tuple(blocks)), sources
 
     timeline: list[tuple[str, int, int, list[str]]] = []
     for e in finding_events:
@@ -5710,23 +5602,22 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
         )
     timeline.sort(key=lambda entry: (entry[0], entry[1], entry[2]), reverse=True)
 
-    out += [
-        "_Every state a finding or a contradiction was recorded in, and every"
-        " re-grade of a finding's severity, newest first, with the account given"
-        " at the time. Nothing here is rewritten when a"
-        " record moves on: a repair that was later defeated keeps the event that"
-        " recorded it, which is how a regression is visible at all. Each row links"
-        " to where that record is written in full today._",
-        "",
+    blocks = [
+        _paragraph(
+            "_Every state a finding or a contradiction was recorded in, and every"
+            " re-grade of a finding's severity, newest first, with the account given"
+            " at the time. Nothing here is rewritten when a"
+            " record moves on: a repair that was later defeated keeps the event that"
+            " recorded it, which is how a regression is visible at all. Each row links"
+            " to where that record is written in full today._"
+        ),
+        _table(
+            "Resolution history",
+            ("Recorded", "Record", "State", "Session", "Account"),
+            [cells for _at, _rank, _id, cells in timeline],
+        ),
     ]
-    out += [
-        "| Recorded | Record | State | Session | Account |",
-        "|---|---|---|---|---|",
-    ]
-    out += [f"| {' | '.join(cells)} |" for _at, _rank, _id, cells in timeline]
-    out.append("")
-
-    return "\n".join(out) + "\n", sources
+    return Page("Resolution history", "resolution-history.html", tuple(blocks)), sources
 
 
 # §1.1's two statements about what the store keeps for the record families that
@@ -5762,10 +5653,13 @@ def render_resolved_leads(conn: sqlite3.Connection, storage: Path) -> RenderResu
         "SELECT * FROM field_notes WHERE COALESCE(follow_up,'open')<>'open'"
         " ORDER BY id DESC",
     )
+    sources = {
+        **_db_source("resolved-leads:questions", questions),
+        **_db_source("resolved-leads:notes", notes),
+    }
 
-    out = ["# Resolved leads and questions", ""]
     if not (questions or notes):
-        out += _empty_lens(
+        blocks = _empty_lens_blocks(
             conn,
             "No question has been settled and no lead has been closed.",
             "questions answered, dismissed, or superseded, and leads closed either by"
@@ -5773,75 +5667,71 @@ def render_resolved_leads(conn: sqlite3.Connection, storage: Path) -> RenderResu
             "`open_questions.resolution` and `field_notes.follow_up`, both mutable"
             " columns with no event table behind them.",
         )
-        return "\n".join(out) + "\n", {
-            **_db_source("resolved-leads:questions", questions),
-            **_db_source("resolved-leads:notes", notes),
-        }
+        return Page("Resolved leads and questions", "resolved-leads.html", tuple(blocks)), sources
 
-    out += [
-        "_These two families reach a terminal state in a column, not in an event"
-        " table. The record says what state they are in; for how they got there it"
-        " says only what is written below. Findings and contradictions do keep an"
-        " event trail, on [Resolution history](resolution-history.md)._",
-        "",
+    blocks: list[Block] = [
+        _paragraph(
+            "_These two families reach a terminal state in a column, not in an event"
+            " table. The record says what state they are in; for how they got there it"
+            " says only what is written below. Findings and contradictions do keep an"
+            " event trail, on [Resolution history](resolution-history.md)._"
+        )
     ]
 
-    out += ["## Questions", ""]
+    settled: list[Block] = []
     if questions:
-        out += [
-            f"_{_count(len(questions), 'question')} settled, newest first by the time"
-            f" recorded. {QUESTION_TERMINAL_LIMIT}_",
-            "",
-        ]
+        settled.append(
+            _paragraph(
+                f"_{_count(len(questions), 'question')} settled, newest first by the time"
+                f" recorded. {QUESTION_TERMINAL_LIMIT}_"
+            )
+        )
         for q in questions:
-            settled = (
-                _fmt_time(q["resolved_at"]) if q["resolved_at"] else "not recorded"
-            )
-            subsystem = (
-                f" · subsystem **{q['subsystem_id']}**" if q["subsystem_id"] else ""
-            )
-            out.append(f'<a id="{question_anchor(q["id"])}"></a>')
-            out += [f"### #{q['id']} · {q['category']}{subsystem}", ""]
-            out += [f"> {q['question']}", ""]
-            out.append(f"- **Settled** — `{q['resolution']}`, {settled}.")
-            out.append(
-                f"- **Answer** — {q['answer']}"
+            when = _fmt_time(q["resolved_at"]) if q["resolved_at"] else "not recorded"
+            subsystem = f" · subsystem **{q['subsystem_id']}**" if q["subsystem_id"] else ""
+            facts = [
+                f"**Settled** — `{q['resolution']}`, {when}.",
+                f"**Answer** — {_one_line(q['answer'])}"
                 if q["answer"]
-                else "- **Answer** — No answer is recorded."
-            )
+                else "**Answer** — No answer is recorded.",
+            ]
             if q["what_blocked"]:
-                out.append(f"- **What it blocked** — {q['what_blocked']}")
-            out.append("")
+                facts.append(f"**What it blocked** — {_one_line(q['what_blocked'])}")
+            settled += [
+                Anchor(question_anchor(q["id"])),
+                _heading(3, f"#{q['id']} · {q['category']}{subsystem}"),
+                Quote(inlines(_one_line(q["question"]))),
+                _bullets(facts),
+            ]
     else:
-        out += ["No question has been answered, dismissed, or superseded.", ""]
+        settled.append(_paragraph("No question has been answered, dismissed, or superseded."))
+    blocks.append(_section("Questions", *settled))
 
-    out += ["## Leads", ""]
+    closed: list[Block] = []
     if notes:
-        out += [
-            f"_{_count(len(notes), 'lead')} closed. {LEAD_TERMINAL_LIMIT}_",
-            "",
+        closed += [
+            _paragraph(f"_{_count(len(notes), 'lead')} closed. {LEAD_TERMINAL_LIMIT}_"),
+            _table(
+                "leads",
+                ("Lead", "Category", "Opened", "Closed as", "Observation"),
+                [
+                    [
+                        f'<a id="{lead_anchor(n["id"])}"></a>**#{n["id"]}**',
+                        str(n["category"]),
+                        _fmt_time(n["created_at"]),
+                        str(n["follow_up"]),
+                        _table_cell(n["observation"])
+                        + (f" @ `{n['location']}`" if n["location"] else ""),
+                    ]
+                    for n in notes
+                ],
+            ),
         ]
-        out += [
-            "| Lead | Category | Opened | Closed as | Observation |",
-            "|---|---|---|---|---|",
-        ]
-        for n in notes:
-            anchor = lead_anchor(n["id"])
-            observation = _table_cell(n["observation"])
-            location = f" @ `{n['location']}`" if n["location"] else ""
-            out.append(
-                f'| <a id="{anchor}"></a>**#{n["id"]}** | {n["category"]} |'
-                f" {_fmt_time(n['created_at'])} | {n['follow_up']} |"
-                f" {observation}{location} |"
-            )
-        out.append("")
     else:
-        out += ["No lead has been closed.", ""]
+        closed.append(_paragraph("No lead has been closed."))
+    blocks.append(_section("Leads", *closed))
 
-    return "\n".join(out) + "\n", {
-        **_db_source("resolved-leads:questions", questions),
-        **_db_source("resolved-leads:notes", notes),
-    }
+    return Page("Resolved leads and questions", "resolved-leads.html", tuple(blocks)), sources
 
 
 def render_sessions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -5869,85 +5759,101 @@ def render_sessions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         "       verified_at FROM projection_verification_runs"
         " ORDER BY verified_at DESC, run_id DESC",
     )
+    sources = {
+        **_db_source("sessions:sessions", sessions),
+        **_db_source("sessions:refreshes", refreshes),
+        **_db_source("sessions:verifications", verifications),
+    }
 
-    out = ["# Sessions and publications", ""]
     if not (sessions or refreshes or verifications):
-        out += _empty_lens(
+        blocks = _empty_lens_blocks(
             conn,
             "Nothing is recorded as having run against this conspectus.",
             "the survey sessions that were opened, the refresh runs that were"
             " dispatched, and the publications whose read-back was verified.",
             "`sessions`, `refresh_runs`, and `projection_verification_runs`.",
         )
-        return "\n".join(out) + "\n", {
-            **_db_source("sessions:sessions", sessions),
-            **_db_source("sessions:refreshes", refreshes),
-            **_db_source("sessions:verifications", verifications),
-        }
+        return Page("Sessions and publications", "sessions.html", tuple(blocks)), sources
 
-    out += [
-        "_What ran against this conspectus, and what each run produced. A session"
-        " still without an end is one that was never closed, which is a fact about"
-        " the record rather than about the work._",
-        "",
+    blocks: list[Block] = [
+        _paragraph(
+            "_What ran against this conspectus, and what each run produced. A session"
+            " still without an end is one that was never closed, which is a fact about"
+            " the record rather than about the work._"
+        )
     ]
 
-    out += ["## Survey sessions", ""]
-    if sessions:
-        out += ["| Session | Intent | Started | Ended | Outcome |", "|---|---|---|---|---|"]
-        for s in sessions:
-            intent = _table_cell(s["intent"] or "")
-            out.append(
-                f"| `{s['session_id']}` | `{intent}` | {_fmt_time(s['started_at'])} |"
-                f" {_fmt_time(s['ended_at']) if s['ended_at'] else 'not closed'} |"
-                f" {_table_cell(s['outcome'] or 'not recorded')} |"
+    blocks.append(
+        _section(
+            "Survey sessions",
+            _table(
+                "survey sessions",
+                ("Session", "Intent", "Started", "Ended", "Outcome"),
+                [
+                    [
+                        f"`{s['session_id']}`",
+                        f"`{_table_cell(s['intent'] or '')}`",
+                        _fmt_time(s["started_at"]),
+                        _fmt_time(s["ended_at"]) if s["ended_at"] else "not closed",
+                        _table_cell(s["outcome"] or "not recorded"),
+                    ]
+                    for s in sessions
+                ],
             )
-        out.append("")
-    else:
-        out += ["No survey session is recorded.", ""]
+            if sessions
+            else _paragraph("No survey session is recorded."),
+        )
+    )
 
-    out += ["## Refresh runs", ""]
-    if refreshes:
-        out += [
-            "| Run | Status | Base | Head | Provider | Model | Completed |",
-            "|---|---|---|---|---|---|---|",
-        ]
-        for r in refreshes:
-            out.append(
-                f"| `{r['run_id']}` | `{r['status']}` | {_short(str(r['base_sha'] or ''))} |"
-                f" {_short(str(r['head_sha'] or ''))} | {r['selected_provider']} |"
-                f" `{r['model']}` |"
-                f" {_fmt_time(r['completed_at']) if r['completed_at'] else 'not completed'} |"
+    blocks.append(
+        _section(
+            "Refresh runs",
+            _table(
+                "refresh runs",
+                ("Run", "Status", "Base", "Head", "Provider", "Model", "Completed"),
+                [
+                    [
+                        f"`{r['run_id']}`",
+                        f"`{r['status']}`",
+                        _short(str(r["base_sha"] or "")),
+                        _short(str(r["head_sha"] or "")),
+                        str(r["selected_provider"]),
+                        f"`{r['model']}`",
+                        _fmt_time(r["completed_at"]) if r["completed_at"] else "not completed",
+                    ]
+                    for r in refreshes
+                ],
             )
-        out.append("")
-    else:
-        out += ["No refresh run is recorded.", ""]
+            if refreshes
+            else _paragraph("No refresh run is recorded."),
+        )
+    )
 
-    out += ["## Publication read-back", ""]
-    if verifications:
-        out += [
-            "| Run | Mode | State | Coverage | Content | Verified |",
-            "|---|---|---|---|---|---|",
-        ]
-        for v in verifications:
-            axes = " | ".join(
-                "green" if int(v[f"{axis}_ok"] or 0) else "red"
-                for axis in ("state", "coverage", "content")
+    blocks.append(
+        _section(
+            "Publication read-back",
+            _table(
+                "publication read back",
+                ("Run", "Mode", "State", "Coverage", "Content", "Verified"),
+                [
+                    [
+                        f"`{v['run_id']}`",
+                        f"`{v['mode']}`",
+                        *(
+                            "green" if int(v[f"{axis}_ok"] or 0) else "red"
+                            for axis in ("state", "coverage", "content")
+                        ),
+                        _fmt_time(v["verified_at"]),
+                    ]
+                    for v in verifications
+                ],
             )
-            out.append(
-                f"| `{v['run_id']}` | `{v['mode']}` | {axes} |"
-                f" {_fmt_time(v['verified_at'])} |"
-            )
-        out.append("")
-    else:
-        out += [
-            "No publication read-back is recorded, so none of the three axes has a"
-            " result to report.",
-            "",
-        ]
+            if verifications
+            else _paragraph(
+                "No publication read-back is recorded, so none of the three axes has a"
+                " result to report."
+            ),
+        )
+    )
 
-    return "\n".join(out) + "\n", {
-        **_db_source("sessions:sessions", sessions),
-        **_db_source("sessions:refreshes", refreshes),
-        **_db_source("sessions:verifications", verifications),
-    }
+    return Page("Sessions and publications", "sessions.html", tuple(blocks)), sources

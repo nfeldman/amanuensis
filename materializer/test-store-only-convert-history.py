@@ -272,7 +272,7 @@ def seed_rich(storage: Path) -> None:
                 (cid, resolution, note, ev, why, session, at),
             )
         for cat, sid, question, blocked, resolution, answer, resolved in (
-            ("domain-knowledge", "B-02", "Is a lost write acceptable?", "A severity call, B-02 included.", "answered", "No. Treat it as high.\n\nIt bills a customer.", LATER),
+            ("domain-knowledge", "B-02", "Is a lost write acceptable?", "A severity call, B-02 included.", "answered", "No. Treat it as high, since it bills a customer.", LATER),
             ("scope-judgment", None, "Is the vendor tree in scope?", None, "dismissed", None, None),
             ("contradiction", "B-01", "Which reading holds | for B-01?", "The merge of two pages.", "superseded", "Superseded by SM-1.", WHEN),
             ("tooling-limit", None, "Could not run the suite.", None, "open", None, None),
