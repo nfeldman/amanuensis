@@ -1,19 +1,17 @@
 """The page model the HTML writer prints (store-only PLAN §3.1).
 
 A page is a title and a sequence of blocks; a section is a block that holds
-blocks. Every Markdown shape the projection used to recognise while it printed
-HTML is a block kind here, resolved once by `html_projection.parse_markdown`, so
-`write_html` lays out what a block already says and reads no Markdown.
+blocks. Every shape a page can print is a block kind here, built by a renderer
+(or, for an imported body, by `legacy_prose.py`), so `write_html` lays out what a
+block already says and reads no Markdown.
 
 Inline content is a tuple of inline nodes and the plain text a reader sees in
 it. The plain text is what labels, slugs, captions and the SVG drawings use;
 the nodes are what the writer prints.
 
-Until the renderers build pages themselves (SO14–SO18) the model is filled from
-Markdown, so a few fields still carry what that Markdown said rather than what
-a record says: `RecordMarker.raw` is the marker comment as written, and `Tag` is
-an emphasis mark the Markdown left misnested, which the parser always printed
-as it stood.
+A few fields still carry what a Markdown source said rather than what a record
+says: `RecordMarker.raw` is the marker comment as written, and `Tag` is an
+emphasis mark an imported body left misnested, which the writer prints as it stood.
 """
 
 from __future__ import annotations
@@ -444,37 +442,3 @@ class Page:
     path: str
     blocks: tuple[Block, ...]
     facets: Facets | None = None
-
-
-# Every recognition hook the HTML stage had (§1.2), and the block kind
-# `parse_markdown` resolves it to. Table hooks are keyed by the constant in
-# `html_projection.py` that holds their header signature.
-HOOKS: dict[str, type] = {
-    "_SUBSYSTEM_ATLAS_PROJECTION": Atlas,
-    "_ENUM_TABLE_PROJECTION": EnumTable,
-    "_DEPENDENCY_TOPOLOGY_PROJECTION": Topology,
-    "_SEAM_TOPOLOGY_PROJECTION": Topology,
-    "_BOUNDARY_PROJECTION": BoundaryDiagram,
-    "_RUNTIME_BOUNDARY_PROJECTION": RuntimeDiagram,
-    "_CONCERN_CHECKLIST_PROJECTION": ConcernChecklist,
-    "_RECORDED_CHECKLIST_PROJECTION": ConcernChecklist,
-    "_RECORD_PROJECTIONS": RecordList,
-    "_SUMMARY_LIST_PROJECTIONS": SummaryList,
-    "_LIFECYCLE_TABLE_PROJECTIONS": LifecycleTable,
-    "coverage index (Subsystem and concern-code columns)": CoverageIndex,
-    "hot-spot measure table": Table,
-    "hot-spot and finding facets": Facets,
-    "mermaid graph": RelationshipTrace,
-    "mermaid pie showData": StalenessBars,
-    "mermaid, any other shape": DiagramSource,
-    "table, any other signature": Table,
-    "heading": Heading,
-    "section (a level-2 heading)": Section,
-    "full vocabulary disclosure": Details,
-    "paragraph": Paragraph,
-    "list": List,
-    "fence": Code,
-    "blockquote": Quote,
-    "anchor line": Anchor,
-    "marker comment": RecordMarker,
-}

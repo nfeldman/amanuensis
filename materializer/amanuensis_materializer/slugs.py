@@ -31,7 +31,7 @@ def subsystem_slug(subsystem_id: str, name: str | None = None) -> str:
 
 
 def subsystem_page(subsystem_id: str, name: str | None = None) -> str:
-    return f"subsystems/{subsystem_slug(subsystem_id, name)}.md"
+    return f"subsystems/{subsystem_slug(subsystem_id, name)}.html"
 
 
 def seam_slug(seam_id: str, shared_object: str | None = None) -> str:
@@ -42,7 +42,7 @@ def seam_slug(seam_id: str, shared_object: str | None = None) -> str:
 
 
 def seam_page(seam_id: str, shared_object: str | None = None) -> str:
-    return f"seams/{seam_slug(seam_id, shared_object)}.md"
+    return f"seams/{seam_slug(seam_id, shared_object)}.html"
 
 
 def matrix_slug(matrix_id: int) -> str:
@@ -50,4 +50,4 @@ def matrix_slug(matrix_id: int) -> str:
 
 
 def matrix_page(matrix_id: int) -> str:
-    return f"diagnosticity/{matrix_slug(matrix_id)}.md"
+    return f"diagnosticity/{matrix_slug(matrix_id)}.html"

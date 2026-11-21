@@ -18,8 +18,10 @@ What it owns:
   new import re-renders the page.
 
 - the page blocks an imported body is read into (`render_body`): the block grammar
-  of today's parser, the record-list projections included, so a body prints as it
-  always did.
+  the Markdown parser had, the record-list projections included, so a body prints
+  as it always did. The parser (`_LegacyParser`) lives here and is called by nothing
+  else: stored prose has its own, smaller grammar (`prose.py`), and every other page
+  is built as a model.
 
 A store that has not been opened by a server carrying the tables reads as one
 with no imports.
@@ -27,15 +29,47 @@ with no imports.
 
 from __future__ import annotations
 
+import html
 import re
 import sqlite3
 from dataclasses import dataclass
 from typing import Any
 
 from .db import rows, table_exists
-from .html_projection import _MarkdownParser
 from .manifest import sha256_json
-from .page import Block, Page, Section
+from .page import (
+    Anchor,
+    Block,
+    Chip,
+    Code,
+    ConcernChecklist,
+    ConcernFamily,
+    ConcernItem,
+    DiagramSource,
+    Fact,
+    Heading,
+    Inlines,
+    LifecycleTable,
+    Page,
+    Paragraph,
+    Quote,
+    Record,
+    RecordList,
+    RecordMarker,
+    RelationshipTrace,
+    Row,
+    RuntimeDiagram,
+    RuntimeRow,
+    Section,
+    StalenessBars,
+    SummaryItem,
+    SummaryList,
+    Table,
+    TraceEdge,
+    TraceNode,
+)
+from .prose import _LIST_ITEM, _parse_list, _plain, parse_inlines
+from .slugs import slugify
 
 # CommonMark fences: three or more backticks or tildes, indented at most three
 # spaces.  Tracking only the backtick form let a `~~~` block's contents through
@@ -85,7 +119,7 @@ def render_body(text: str, *, under: int, section: str, path: str) -> tuple[Bloc
     """An imported body as page blocks, its headings moved `under` levels down.
 
     The body is full Markdown (headings, tables, fences, record-list tables), so
-    it is read with the parser's block grammar, as it always was; this is the one
+    it is read with the legacy block grammar, as it always was; this is the one
     place a page's blocks still come from Markdown. It is read as the content of
     a level-2 section titled `section`, which is what names its tables' captions,
     so the body prints exactly as it did when it sat inside that section of the
@@ -98,7 +132,7 @@ def render_body(text: str, *, under: int, section: str, path: str) -> tuple[Bloc
     body = nest_headings(text.strip(), under)
     if not body.strip():
         return ()
-    page = _MarkdownParser(path).parse(f"## {section}\n\n{body}")
+    page = _LegacyParser(path).parse(f"## {section}\n\n{body}")
     held = page.blocks[0]
     assert isinstance(held, Section)
     out = list(held.blocks[1:])
@@ -114,9 +148,9 @@ def render_body(text: str, *, under: int, section: str, path: str) -> tuple[Bloc
 #: Master plan, findings index and field notes are held, not rendered (§5.4):
 #: the pages already print the tables they duplicated.
 IMPORTED_PAGES: tuple[tuple[str, str], ...] = (
-    ("concern-checklist.md", "concern-checklist"),
-    ("onboarding-report.md", "onboarding-report"),
-    ("entry-point.md", "entry-point"),
+    ("concern-checklist.html", "concern-checklist"),
+    ("onboarding-report.html", "onboarding-report"),
+    ("entry-point.html", "entry-point"),
 )
 
 EDITED_SENTENCE = "It was edited after it was registered."
@@ -246,4 +280,437 @@ def imported_page(
             out += [heading, "", body.label(), "", rest.strip(), ""]
         else:
             out += [f"# {title}", "", body.label(), "", text, ""]
-    return _MarkdownParser(path).parse("\n".join(out)), imports_source(f"imports:{kind}", bodies)
+    return _LegacyParser(path).parse("\n".join(out)), imports_source(f"imports:{kind}", bodies)
+
+
+# ---------------------------------------------------------------------------
+# The block grammar of an imported body.
+#
+# Imported bodies are whole documents an earlier version wrote by hand: headings,
+# tables, fences, lists, quotes. They are read into the page model once, here. The
+# table shapes below are the ones those documents carry and the page printed as
+# records, not as tables: a survey narrative's key types and state containers, the
+# onboarding report's runtime table, the concern checklist. Nothing else in the
+# package reads Markdown.
+# ---------------------------------------------------------------------------
+
+
+def _split_table_row(line: str) -> list[str]:
+    raw = line.strip().strip("|")
+    cells = re.split(r"(?<!\\)\|", raw)
+    return [cell.strip().replace("\\|", "|") for cell in cells]
+
+
+def _is_table_separator(line: str) -> bool:
+    cells = _split_table_row(line)
+    return bool(cells) and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
+
+
+def _header_key(value: str) -> str:
+    return re.sub(r"\s+", " ", _plain(value)).strip().lower()
+
+
+@dataclass(frozen=True)
+class _RecordTable:
+    """How one known table shape of an imported body prints as records."""
+
+    kind: str
+    key: str
+    metadata: tuple[str, ...]
+    content: tuple[str, ...]
+
+
+_RECORD_TABLES: dict[tuple[str, ...], _RecordTable] = {
+    ("id", "status", "symptom", "why it matters", "root cause", "ref sha"): _RecordTable(
+        "finding", "id", ("status", "ref sha"), ("symptom", "why it matters", "root cause")
+    ),
+    ("id", "status", "symptom", "root cause", "ref sha"): _RecordTable(
+        "finding", "id", ("status", "ref sha"), ("symptom", "root cause")
+    ),
+    ("path", "classification", "why in scope", "ref sha"): _RecordTable(
+        "file-ledger", "path", ("classification", "ref sha"), ("why in scope",)
+    ),
+    ("concern", "classification", "evidence quality", "linchpin?", "rationale"): _RecordTable(
+        "concern-disposition",
+        "concern",
+        ("classification", "evidence quality", "linchpin?"),
+        ("rationale",),
+    ),
+    ("symbol", "role", "source"): _RecordTable("structural-inventory", "symbol", ("source",), ("role",)),
+    ("priority", "id", "name", "status", "purpose", "scope", "jump-in", "findings"): _RecordTable(
+        "subsystem",
+        "name",
+        ("id", "status", "findings", "priority"),
+        ("purpose", "scope", "jump-in"),
+    ),
+    ("code", "category", "origin", "discovered in", "notes"): _RecordTable(
+        "concern", "code", ("category", "origin", "discovered in"), ("notes",)
+    ),
+    ("code", "category", "discovered in", "notes"): _RecordTable(
+        "concern", "code", ("category", "discovered in"), ("notes",)
+    ),
+    ("territory", "verdict", "derived", "rationale"): _RecordTable(
+        "territory", "territory", ("verdict", "derived"), ("rationale",)
+    ),
+    ("id", "sev", "subsystem", "one-line"): _RecordTable(
+        "finding-summary", "id", ("sev", "subsystem"), ("one-line",)
+    ),
+    ("#", "category", "question", "resolution", "answer"): _RecordTable(
+        "open-question", "#", ("category", "resolution"), ("question", "answer")
+    ),
+    ("seam", "shared object", "kind", "parties", "assessable?", "notes"): _RecordTable(
+        "seam", "seam", ("kind", "parties", "assessable?"), ("shared object", "notes")
+    ),
+}
+
+_SUMMARY_TABLES = {
+    ("metric", "value"),
+    ("status", "what it means"),
+    ("status", "what claims are authorized"),
+    ("mapping status", "authorized claims"),
+    ("quality", "what it means"),
+    ("severity", "typical shape"),
+    ("task", "start here"),
+    ("if you're here because…", "start here"),
+    ("prefix", "maps"),
+    ("exit", "meaning"),
+    ("territory", "attenuating condition"),
+}
+
+_LIFECYCLE_TABLES = {
+    ("name", "location", "stores", "lifetime", "populated by", "invalidated by"),
+    ("name", "location", "what it stores", "lifetime", "populated by", "invalidated by"),
+}
+
+# The onboarding report's runtime table, which drew the runtime diagram, and the
+# concern checklist's table, which printed as concerns grouped by category.
+_RUNTIME_TABLE = ("runtime / process", "language", "communicates with", "mechanism", "notes")
+_CHECKLIST_TABLE = (
+    "code",
+    "category",
+    "territory",
+    "codebase-specific probe (abbreviated)",
+    "primary subsystems",
+)
+_CHECKLIST_PAGE = "concern-checklist.html"
+
+
+def _trace_name(record_id: str, label: str) -> str:
+    name = re.sub(r"<br\s*/?>", " ", label, flags=re.IGNORECASE)
+    name = html.unescape(name).strip()
+    if name.startswith(record_id):
+        name = name[len(record_id) :].strip()
+    return name
+
+
+def _parse_mermaid(source: str) -> Block:
+    lines = [line.strip() for line in source.splitlines() if line.strip()]
+    if lines and lines[0].startswith("graph "):
+        nodes: dict[str, tuple[str, str]] = {}
+        edges: list[tuple[str, str, str, str]] = []
+        for line in lines[1:]:
+            node = re.fullmatch(r'(\w+)\["(.+?)"\]', line)
+            if node:
+                label = node.group(2)
+                record = re.split(r"<br\s*/?>", label, flags=re.IGNORECASE)[0]
+                nodes[node.group(1)] = (record, label)
+                continue
+            edge = re.fullmatch(r'(\w+)\s+(-->|<-->)\|"?(.+?)"?\|\s+(\w+)', line)
+            if edge:
+                edges.append((edge.group(1), edge.group(2), edge.group(3), edge.group(4)))
+        if edges:
+            traced: list[TraceEdge] = []
+            for left, arrow, edge_label, right in edges:
+                left_id, left_label = nodes.get(left, (left, left))
+                right_id, right_label = nodes.get(right, (right, right))
+                traced.append(
+                    TraceEdge(
+                        TraceNode(left_id, _trace_name(left_id, left_label)),
+                        TraceNode(right_id, _trace_name(right_id, right_label)),
+                        re.sub(r"<br\s*/?>", " · ", edge_label, flags=re.IGNORECASE).strip('"'),
+                        arrow == "<-->",
+                    )
+                )
+            return RelationshipTrace(tuple(traced))
+    if lines and lines[0] == "pie showData":
+        values: list[tuple[str, float]] = []
+        for line in lines[1:]:
+            match = re.fullmatch(r'"(.+?)"\s*:\s*([0-9.]+)', line)
+            if match:
+                values.append((match.group(1), float(match.group(2))))
+        if values:
+            return StalenessBars(tuple(values))
+    return DiagramSource(source)
+
+
+class _LegacyParser:
+    """One imported body's Markdown, read into page blocks."""
+
+    def __init__(self, current_html_path: str) -> None:
+        self.current_html_path = current_html_path
+
+    @staticmethod
+    def _records(
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+        projection: _RecordTable,
+    ) -> RecordList:
+        keys = [_header_key(header) for header in headers]
+        records: list[Record] = []
+        for row_number, (values, markers) in enumerate(rows, start=1):
+            record = dict(zip(keys, values, strict=True))
+            key_raw = record[projection.key]
+            key_text = _plain(key_raw) or f"Record {row_number}"
+            # A concern's anchor is its code, not the "concern RC-2" the cross-reference
+            # pass prints before it.
+            anchor_text = (
+                re.sub(r"^concern\s+", "", key_text)
+                if projection.kind == "concern-disposition"
+                else key_text
+            )
+            facts: list[Fact] = []
+            if projection.kind == "file-ledger":
+                facts.append(Fact("path", parse_inlines(key_raw)))
+            for key in projection.metadata:
+                value = record.get(key, "")
+                if not _plain(value):
+                    continue
+                if projection.kind == "finding" and key == "status":
+                    facts.append(
+                        Fact(key, Inlines((Chip("status", _plain(value), show_hint=False),), _plain(value)))
+                    )
+                else:
+                    facts.append(Fact(key, parse_inlines(value)))
+
+            lede: Inlines | None = None
+            fields: list[Fact] = []
+            if projection.kind == "finding":
+                parts = re.split(r"(?<=[.!?])\s+", record["symptom"], maxsplit=1)
+                lede = parse_inlines(parts[0])
+                if len(parts) == 2 and _plain(parts[1]):
+                    fields.append(Fact("observed behavior", parse_inlines(parts[1])))
+                if _plain(record.get("why it matters", "")):
+                    fields.append(Fact("why it matters", parse_inlines(record["why it matters"])))
+                fields.append(Fact("root cause", parse_inlines(record["root cause"])))
+            else:
+                for key in projection.content:
+                    value = record.get(key, "")
+                    if _plain(value):
+                        fields.append(Fact(key, parse_inlines(value)))
+            records.append(
+                Record(
+                    markers=tuple(markers),
+                    key=parse_inlines(key_raw),
+                    key_text=key_text,
+                    slug_text=_plain(f"{projection.kind}-{anchor_text}"),
+                    facts=tuple(facts),
+                    fields=tuple(fields),
+                    lede=lede,
+                    path=_plain(key_raw),
+                    revision=_plain(record.get("ref sha", "")),
+                    subsystem_id=_plain(record.get("id", "")),
+                )
+            )
+        return RecordList(projection.kind, caption, tuple(records))
+
+    @staticmethod
+    def _checklist(
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> ConcernChecklist:
+        """The calibrated concern table, grouped by category and territory."""
+
+        keys = [_header_key(header) for header in headers]
+        groups: dict[tuple[str, str], list[tuple[dict[str, str], list[str]]]] = {}
+        for values, markers in rows:
+            record = dict(zip(keys, values, strict=True))
+            group_key = (_plain(record["category"]), _plain(record["territory"]))
+            groups.setdefault(group_key, []).append((record, markers))
+
+        families: list[ConcernFamily] = []
+        for (category, territory), records in groups.items():
+            family_name = category.replace("-", " ").capitalize()
+            items: list[ConcernItem] = []
+            for row_number, (record, markers) in enumerate(records, start=1):
+                code_raw = record["code"]
+                code_text = _plain(code_raw) or f"Concern {row_number}"
+                items.append(
+                    ConcernItem(
+                        code=parse_inlines(code_raw),
+                        code_text=code_text,
+                        slug_text=_plain(f"concern-checklist-{code_text}"),
+                        primary_subsystems=parse_inlines(record.get("primary subsystems", "")),
+                        probe=parse_inlines(record.get("codebase-specific probe (abbreviated)", "")),
+                        markers=tuple(markers),
+                    )
+                )
+            families.append(
+                ConcernFamily(
+                    name=family_name,
+                    territory=territory,
+                    slug_text=_plain(f"{family_name} concerns"),
+                    items=tuple(items),
+                )
+            )
+        return ConcernChecklist(caption, tuple(families))
+
+    def _table(
+        self,
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> Block:
+        signature = tuple(_header_key(header) for header in headers)
+        if signature == _RUNTIME_TABLE:
+            return RuntimeDiagram(
+                caption,
+                tuple(
+                    RuntimeRow(*(parse_inlines(value) for value in values[:5]), markers=tuple(markers))
+                    for values, markers in rows
+                ),
+            )
+        if signature == _CHECKLIST_TABLE:
+            return self._checklist(headers, rows, caption)
+        projection = _RECORD_TABLES.get(signature)
+        if projection:
+            return self._records(headers, rows, caption, projection)
+        if signature in _SUMMARY_TABLES:
+            return SummaryList(
+                caption,
+                tuple(
+                    SummaryItem(parse_inlines(values[0]), parse_inlines(values[1]), tuple(markers))
+                    for values, markers in rows
+                ),
+            )
+        table_rows = [
+            Row(tuple(parse_inlines(value) for value in values), tuple(markers)) for values, markers in rows
+        ]
+        kind = LifecycleTable if signature in _LIFECYCLE_TABLES else Table
+        return kind(caption, tuple(parse_inlines(header) for header in headers), tuple(table_rows))
+
+    def parse(self, markdown: str) -> Page:
+        lines = markdown.splitlines()
+        title = "Conspectus"
+        root: list[Block] = []
+        section: tuple[str, list[Block]] | None = None
+        current_section = ""
+
+        def target() -> list[Block]:
+            return section[1] if section is not None else root
+
+        def close_section() -> None:
+            nonlocal section
+            if section is not None:
+                root.append(Section(section[0], tuple(section[1])))
+            section = None
+
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            if not line.strip():
+                i += 1
+                continue
+
+            if line.startswith("<!--") and line.rstrip().endswith("-->"):
+                target().append(RecordMarker(line))
+                i += 1
+                continue
+
+            anchor = re.fullmatch(r'<a\s+id="([a-zA-Z0-9_.:-]+)"></a>', line.strip())
+            if anchor:
+                target().append(Anchor(anchor.group(1)))
+                i += 1
+                continue
+
+            fence = re.match(r"^```\s*([\w-]*)\s*$", line)
+            if fence:
+                language = fence.group(1).lower()
+                code_lines: list[str] = []
+                i += 1
+                while i < len(lines) and not lines[i].startswith("```"):
+                    code_lines.append(lines[i])
+                    i += 1
+                i += 1 if i < len(lines) else 0
+                source = "\n".join(code_lines)
+                target().append(_parse_mermaid(source) if language == "mermaid" else Code(language, source))
+                continue
+
+            heading = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
+            if heading:
+                level = len(heading.group(1))
+                raw = heading.group(2)
+                if level == 1:
+                    title = _plain(raw)
+                    i += 1
+                    continue
+                display_raw = raw
+                if (
+                    self.current_html_path == _CHECKLIST_PAGE
+                    and level == 2
+                    and re.fullmatch(r"Active concerns(?:\s+\(\d+\))?", _plain(raw), re.IGNORECASE)
+                ):
+                    display_raw = "Active concerns"
+                if level == 2:
+                    close_section()
+                    current_section = slugify(_plain(display_raw))
+                    section = (current_section, [])
+                target().append(Heading(level, parse_inlines(display_raw)))
+                i += 1
+                continue
+
+            if line.startswith("|") and i + 1 < len(lines) and _is_table_separator(lines[i + 1]):
+                headers = _split_table_row(line)
+                i += 2
+                rows: list[tuple[list[str], list[str]]] = []
+                pending_markers: list[str] = []
+                while i < len(lines):
+                    if lines[i].startswith("<!--") and lines[i].rstrip().endswith("-->"):
+                        pending_markers.append(lines[i])
+                        i += 1
+                        continue
+                    if not lines[i].startswith("|"):
+                        break
+                    rows.append((_split_table_row(lines[i]), pending_markers))
+                    pending_markers = []
+                    i += 1
+                # A table before the first `##` has no section to name it; the
+                # body's own title is a true caption.
+                caption = current_section.replace("-", " ") or title or "Data"
+                normalized_rows = []
+                for values, markers in rows:
+                    values += [""] * max(0, len(headers) - len(values))
+                    normalized_rows.append((values[: len(headers)], markers))
+                target().append(self._table(headers, normalized_rows, caption))
+                continue
+
+            if _LIST_ITEM.match(line):
+                parsed, i = _parse_list(lines, i)
+                target().append(parsed)
+                continue
+
+            if line.startswith(">"):
+                quoted: list[str] = []
+                while i < len(lines) and lines[i].startswith(">"):
+                    quoted.append(lines[i][1:].lstrip())
+                    i += 1
+                target().append(Quote(parse_inlines(" ".join(quoted))))
+                continue
+
+            paragraph = [line.strip()]
+            i += 1
+            while i < len(lines) and lines[i].strip():
+                candidate = lines[i]
+                if (
+                    re.match(r"^(#{1,6})\s+", candidate)
+                    or candidate.startswith(("```", "|", ">", "<!--", '<a id="'))
+                    or re.match(r"^\s*([-*+] |\d+\. )", candidate)
+                ):
+                    break
+                paragraph.append(candidate.strip())
+                i += 1
+            target().append(Paragraph(parse_inlines(" ".join(paragraph))))
+
+        close_section()
+        return Page(title, self.current_html_path, tuple(root))

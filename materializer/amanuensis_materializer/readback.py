@@ -62,8 +62,8 @@ SEARCH_INDEX_ASSIGNMENT = re.compile(
 # as a full marked record on exactly one of these pages; every other surface
 # links to it.  The order is the page order a reader meets.
 FINDING_LENS_PAGES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    ("Unresolved", "findings.md", ("open", "fixed-pending-verification")),
-    ("History", "resolved-findings.md", ("verified-fixed", "ruled-out", "accepted")),
+    ("Unresolved", "findings.html", ("open", "fixed-pending-verification")),
+    ("History", "resolved-findings.html", ("verified-fixed", "ruled-out", "accepted")),
 )
 
 FINDING_PAGE_BY_STATE: dict[str, str] = {
@@ -99,7 +99,7 @@ def finding_marker(finding_id: str) -> str:
 # reported under its own heading with its own denominator (C60), and why
 # `deferred-with-reason` gets a third heading rather than being folded into
 # either of the other two.
-LEDGER_STALE_PAGE = "stale.md"
+LEDGER_STALE_PAGE = "stale.html"
 
 LEDGER_STALE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Examined files the repository has changed under", ("examined",)),
@@ -493,18 +493,18 @@ def effective_explanations(
 #: The page a project narrative's section is printed on. A subsystem's
 #: narratives are printed on the subsystem's own page.
 PROJECT_NARRATIVE_PAGES: dict[str, str] = {
-    "repository-shape": "onboarding-report.md",
-    "runtime": "onboarding-report.md",
-    "stateful-entities": "onboarding-report.md",
-    "concern-calibration": "onboarding-report.md",
-    "survey-plan": "onboarding-report.md",
-    "start-here": "entry-point.md",
+    "repository-shape": "onboarding-report.html",
+    "runtime": "onboarding-report.html",
+    "stateful-entities": "onboarding-report.html",
+    "concern-calibration": "onboarding-report.html",
+    "survey-plan": "onboarding-report.html",
+    "start-here": "entry-point.html",
 }
-CHECKLIST_PAGE = "concern-checklist.md"
+CHECKLIST_PAGE = "concern-checklist.html"
 #: Review coverage: a subsystem's concern reasoning prints here, under the
 #: subsystem's name (store-only PLAN §8 SO9; F8/codex, slice S2).
-COVERAGE_PAGE = "concerns.md"
-ARCHITECTURE_PAGE = "architecture.md"
+COVERAGE_PAGE = "concerns.html"
+ARCHITECTURE_PAGE = "architecture.html"
 NARRATIVE_LABELS = labels("narrative_section")
 
 
@@ -1021,10 +1021,10 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
 CARRIED_UNDECIDED = "undecided"
 
 CARRIED_LENS_PAGES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    ("Unresolved", "findings.md", (CARRIED_UNDECIDED,)),
+    ("Unresolved", "findings.html", (CARRIED_UNDECIDED,)),
     (
         "History",
-        "resolved-findings.md",
+        "resolved-findings.html",
         ("successor-finding", "ruled-out", "repaired", "archived-terminal"),
     ),
 )
@@ -1622,7 +1622,7 @@ class ProjectionVerifier:
         Three properties, each able to turn the state axis red on its own:
 
         * every obligation-bearing classification is claimed by exactly one
-          section of `stale.md` — a new classification with no section is a
+          section of `stale.html` — a new classification with no section is a
           partition hole, not a rendering detail;
         * each obligation-bearing stale row carries exactly one marker in the
           HTML corpus, on the page §6.2 selects;
@@ -1967,11 +1967,11 @@ class ProjectionVerifier:
             elif slot == "purpose":
                 # The project's purpose is the overview's thesis (store-only PLAN
                 # §3.3), with its imported label when it was imported (D2).
-                page = "index.md"
+                page = "index.html"
                 owed = (project_purpose_text(reading) or (owed, ()))[0]
             else:
                 # The project account is owed by the architecture page (§3.7).
-                page = "architecture.md"
+                page = "architecture.html"
             html_page = str(Path(page).with_suffix(".html"))
             absent = _missing_html_line(
                 owed, _html_words(projection.get(html_page, "")), named, concerns

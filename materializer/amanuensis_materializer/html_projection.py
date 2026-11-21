@@ -1,16 +1,15 @@
 """Self-contained HTML projection for the human-facing conspectus.
 
 HTML is the only published view (store-only PLAN §3.2).  This module turns each
-page's post-xref Markdown, held in memory and never written, into a
+page's model, built by its renderer and linked by the cross-reference pass, into a
 dependency-free HTML site with global navigation, reader hints, semantic
 status labels, and local-link integrity.  Every page embeds the same compact
 CSS and JavaScript so the projection works from ``file://`` as well as from a
 static web server.
 
-Each page goes Markdown → page model → HTML (store-only PLAN §3.1, §3.2):
-`parse_markdown` resolves the Markdown and every shape it once recognised into
-the blocks of `page.py`, and `write_html` prints those blocks without reading
-any Markdown.
+A page is a model of the blocks of `page.py`, and `write_html` prints those blocks.
+No Markdown is read here: the one Markdown reader left is `legacy_prose.py`, for
+the bodies an earlier version had the survey write by hand.
 """
 
 from __future__ import annotations
@@ -33,27 +32,18 @@ from .page import (
     Abbr,
     Anchor,
     Atlas,
-    AtlasItem,
-    AtlasRegion,
     Block,
     BoundaryDiagram,
-    BoundaryRow,
     Break,
     Chip,
     Code,
     CodeSpan,
     ConcernChecklist,
-    ConcernFamily,
-    ConcernItem,
     CoverageIndex,
-    CoverageReview,
-    CoverageRow,
     Details,
     DiagramSource,
     Emph,
     EnumTable,
-    Facets,
-    Fact,
     Heading,
     Inline,
     InlineAnchor,
@@ -65,41 +55,29 @@ from .page import (
     Page,
     Paragraph,
     Quote,
-    Record,
     RecordList,
     RecordMarker,
     RelationshipTrace,
-    Row,
-    RowFilter,
     RuntimeDiagram,
-    RuntimeRow,
     Section,
     StalenessBars,
     Strong,
-    SummaryItem,
     SummaryList,
     Table,
     Tag,
     Text,
     Topology,
-    TopologyEdge,
-    TraceEdge,
     TraceNode,
 )
 from .prose import (
-    _LIST_ITEM,
     DISPLAY_STATUS,
     EVIDENCE_HINTS,
     SEVERITY_HINTS,
     STATUS_AXIS,
     STATUS_HINTS,
-    _html_href,
-    _parse_list,
-    _plain,
     parse_inlines,
 )
 from .slugs import slugify
-from .vocabulary import labels
 from .xref import identifier_pattern
 
 HTML_PROJECTION_VERSION = "1.14.0"
@@ -129,7 +107,7 @@ def assert_nav_groups(groups: Sequence[tuple[str, str]]) -> None:
 
     Raised before anything is written. The projection cannot render a page it
     has nowhere to route from, and appending a sixth group would publish a
-    lens with no definition in `how-to-read.md` (§7.8).
+    lens with no definition in `how-to-read.html` (§7.8).
     """
 
     rogue = sorted({f"{path} (group {group!r})" for path, group in groups if group not in NAV_GROUPS})
@@ -142,9 +120,9 @@ def assert_nav_groups(groups: Sequence[tuple[str, str]]) -> None:
 
 @dataclass(frozen=True)
 class SitePage:
-    """Human-facing identity for one page; `markdown_path` is its plan id until SO19."""
+    """Human-facing identity for one page; `path` is its plan id and its HTML path."""
 
-    markdown_path: str
+    path: str
     title: str
     label: str
     hint: str
@@ -164,23 +142,10 @@ class SitePage:
 
     @property
     def html_path(self) -> str:
-        return str(Path(self.markdown_path).with_suffix(".html")).replace("\\", "/")
+        return self.path
 
 
-def page_head_line(hint: str, use_when: str) -> str:
-    """The italic paragraph the Markdown view prints under a page's H1.
-
-    The HTML head prints the same two sentences as separate paragraphs, so the
-    two views say one thing; `strip_page_head` removes this line before the
-    HTML body is built, so it is not printed twice.
-    """
-
-    sentence = f"Use it when {use_when}" if use_when else ""
-    text = " ".join(part for part in (hint.strip(), sentence) if part)
-    return f"*{text}*" if text else ""
-
-
-GUIDE_PAGE = "how-to-read.md"
+GUIDE_PAGE = "how-to-read.html"
 TERMS_LABEL = "Terms on this page:"
 
 # A page `materialize.py` writes for a caller that does not record its read-back
@@ -204,29 +169,12 @@ def cli_render_notice(*, recorded: bool, verified: bool) -> str:
     return CLI_RENDER_NOTICE if verified else CLI_RENDER_NOTICE_UNVERIFIED
 
 
-def notice_paragraph(notice: str) -> str:
-    return f"*{notice}*"
-
-
-def strip_notice(markdown: str, notice: str) -> str:
-    """Remove the notice paragraph a Markdown text ends with: the HTML prints it in its page head.
-
-    The run no longer appends it (store-only PLAN §3.2); SO11's golden Markdown
-    still ends with it.
-    """
-
-    paragraph = notice_paragraph(notice)
-    body = markdown.rstrip("\n")
-    if not notice or not body.endswith("\n" + paragraph):
-        return markdown
-    return body[: -len(paragraph)].rstrip("\n") + "\n"
-
-
 def terms_line(page_path: str, terms: Sequence[tuple[str, str]]) -> str:
-    """The Markdown paragraph listing a page's terms, linked to the guide's anchors.
+    """The line listing a page's terms, linked to the guide's anchors.
 
-    The HTML head prints the same terms as its own paragraph, and
-    `strip_page_head` removes this one before the HTML body is built.
+    The HTML head prints the terms itself; this text is the page's recorded
+    head, hashed with the model so a changed term list re-renders the page, and
+    held out of the cross-reference pass as generated copy.
     """
 
     if not terms:
@@ -235,52 +183,6 @@ def terms_line(page_path: str, terms: Sequence[tuple[str, str]]) -> str:
     guide = posixpath.relpath(GUIDE_PAGE, base)
     links = " · ".join(f"[{term}]({guide}#term-{slug})" for term, slug in terms)
     return f"{TERMS_LABEL} {links}"
-
-
-def _first_two_content_lines(lines: list[str]) -> tuple[int, int] | None:
-    first = next((i for i, line in enumerate(lines) if line.strip()), None)
-    if first is None or not lines[first].startswith("# "):
-        return None
-    second = next((i for i in range(first + 1, len(lines)) if lines[i].strip()), len(lines))
-    return first, second
-
-
-def insert_page_head(markdown: str, hint: str, use_when: str, terms: str = "") -> str:
-    """Put the page-head paragraph, then the terms line, directly under the page's H1."""
-
-    line = page_head_line(hint, use_when)
-    lines = markdown.split("\n")
-    found = _first_two_content_lines(lines) if line else None
-    if found is None:
-        return markdown
-    first, _second = found
-    head = [line, "", terms] if terms else [line]
-    return "\n".join(lines[: first + 1] + [""] + head + lines[first + 1 :])
-
-
-def _visible_inline(text: str) -> str:
-    return re.sub(r"\*\*(.+?)\*\*", r"\1", re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text))
-
-
-def strip_page_head(markdown: str, hint: str, use_when: str, terms: str = "") -> str:
-    """The inverse of `insert_page_head`, for the HTML projection's body."""
-
-    line = page_head_line(hint, use_when)
-    lines = markdown.split("\n")
-    found = _first_two_content_lines(lines) if line else None
-    if found is None or found[1] >= len(lines):
-        return markdown
-    # The xref pass may have linked or bolded an ID inside the paragraph since
-    # it was written (a subsystem named after its own ID gets `**B-01**`);
-    # compare what the reader sees, not the link or bold markup.
-    if _visible_inline(lines[found[1]]) != _visible_inline(line):
-        return markdown
-    del lines[found[1]]
-    if terms:
-        nxt = next((i for i in range(found[1], len(lines)) if lines[i].strip()), None)
-        if nxt is not None and _visible_inline(lines[nxt]) == _visible_inline(terms):
-            del lines[nxt]
-    return "\n".join(lines)
 
 
 @dataclass
@@ -1485,731 +1387,6 @@ _JS = r"""
 
 
 # ---------------------------------------------------------------------------
-# Markdown → page model. Everything below until the writer reads Markdown:
-# the inline subset, the block grammar, and every recognition hook (§1.2),
-# each resolved to a block kind of `page.py`. Removed with the Markdown
-# intermediate (store-only PLAN §3.2, SO19).
-# ---------------------------------------------------------------------------
-
-
-def _record_key_text(value: str) -> str:
-    """The human name a heading or key cell carries, without link or emphasis.
-
-    A subsystem heading and a hot-spot row both name their subsystem as a
-    Markdown link, so the facet a filter offers has to be the link's text and
-    not the whole cell — otherwise the two pages would name one subsystem two
-    different ways.
-    """
-
-    match = re.search(r"\[([^\]]+)\]\([^)]*\)", value)
-    return _plain(match.group(1) if match else value)
-
-
-def _positive_count(value: str) -> bool:
-    """Whether a measure cell records a count above zero."""
-
-    match = re.match(r"^\s*(\d+)", _plain(value))
-    return bool(match) and int(match.group(1)) > 0
-
-
-_DEPTH_VALUE_BY_LABEL = {label.lower(): value for value, label in labels("subsystem_status").items()}
-
-
-def _atlas_depth(cell: str) -> Inlines:
-    """An atlas depth cell, which carries the contract's label, as its status chip."""
-
-    value = _DEPTH_VALUE_BY_LABEL.get(_plain(cell).lower())
-    return Inlines((Chip("status", value),), _plain(cell)) if value else parse_inlines(cell)
-
-
-# The shape of a concern code heading a review-coverage column. It only
-# recognises that table; which IDs get a definition is decided by the index's
-# own keys (`identifier_pattern`), whatever their shape (PLAN §2.2 item 4).
-_IDENTIFIER_SHAPE = re.compile(
-    r"(?<![\w-])([A-Z]{1,3}\d{0,3}-\d{1,3})(?![\w-])"
-)
-
-
-def _split_table_row(line: str) -> list[str]:
-    raw = line.strip().strip("|")
-    cells = re.split(r"(?<!\\)\|", raw)
-    return [cell.strip().replace("\\|", "|") for cell in cells]
-
-
-def _is_table_separator(line: str) -> bool:
-    cells = _split_table_row(line)
-    return bool(cells) and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
-
-
-@dataclass(frozen=True)
-class RecordProjection:
-    """Explicit presentation contract for one known Markdown table schema."""
-
-    kind: str
-    key: str
-    metadata: tuple[str, ...]
-    content: tuple[str, ...]
-
-
-def _header_key(value: str) -> str:
-    return re.sub(r"\s+", " ", _plain(value)).strip().lower()
-
-
-_RECORD_PROJECTIONS: dict[tuple[str, ...], RecordProjection] = {
-    ("id", "status", "symptom", "why it matters", "root cause", "ref sha"): RecordProjection(
-        "finding", "id", ("status", "ref sha"), ("symptom", "why it matters", "root cause")
-    ),
-    ("id", "status", "symptom", "root cause", "ref sha"): RecordProjection(
-        "finding", "id", ("status", "ref sha"), ("symptom", "root cause")
-    ),
-    ("path", "classification", "why in scope", "ref sha"): RecordProjection(
-        "file-ledger", "path", ("classification", "ref sha"), ("why in scope",)
-    ),
-    ("concern", "classification", "evidence quality", "linchpin?", "rationale"): RecordProjection(
-        "concern-disposition",
-        "concern",
-        ("classification", "evidence quality", "linchpin?"),
-        ("rationale",),
-    ),
-    ("symbol", "role", "source"): RecordProjection(
-        "structural-inventory", "symbol", ("source",), ("role",)
-    ),
-    ("priority", "id", "name", "status", "purpose", "scope", "jump-in", "findings"): RecordProjection(
-        "subsystem",
-        "name",
-        ("id", "status", "findings", "priority"),
-        ("purpose", "scope", "jump-in"),
-    ),
-    ("code", "category", "origin", "discovered in", "notes"): RecordProjection(
-        "concern", "code", ("category", "origin", "discovered in"), ("notes",)
-    ),
-    ("code", "category", "discovered in", "notes"): RecordProjection(
-        "concern", "code", ("category", "discovered in"), ("notes",)
-    ),
-    ("territory", "verdict", "derived", "rationale"): RecordProjection(
-        "territory", "territory", ("verdict", "derived"), ("rationale",)
-    ),
-    ("id", "sev", "subsystem", "one-line"): RecordProjection(
-        "finding-summary", "id", ("sev", "subsystem"), ("one-line",)
-    ),
-    ("#", "category", "question", "resolution", "answer"): RecordProjection(
-        "open-question", "#", ("category", "resolution"), ("question", "answer")
-    ),
-    ("seam", "shared object", "kind", "parties", "assessable?", "notes"): RecordProjection(
-        "seam", "seam", ("kind", "parties", "assessable?"), ("shared object", "notes")
-    ),
-}
-
-
-_SUMMARY_LIST_PROJECTIONS = {
-    ("metric", "value"),
-    ("status", "what it means"),
-    ("status", "what claims are authorized"),
-    ("mapping status", "authorized claims"),
-    ("quality", "what it means"),
-    ("severity", "typical shape"),
-    ("task", "start here"),
-    ("if you're here because…", "start here"),
-    ("prefix", "maps"),
-    ("exit", "meaning"),
-    ("territory", "attenuating condition"),
-}
-
-
-_LIFECYCLE_TABLE_PROJECTIONS = {
-    ("name", "location", "stores", "lifetime", "populated by", "invalidated by"),
-    ("name", "location", "what it stores", "lifetime", "populated by", "invalidated by"),
-}
-
-
-_SUBSYSTEM_ATLAS_PROJECTION = ("region", "subsystem", "survey depth")
-# The guide's enum tables. Their Value column is the stored value itself, so it
-# prints as literal code: chipping it would print some enum's label in its
-# place (pass_type's `adversarial` as subsystem_status's "Challenging claims").
-_ENUM_TABLE_PROJECTION = ("value", "label", "what it means", "what it cannot justify")
-_DEPENDENCY_TOPOLOGY_PROJECTION = ("from", "relationship", "to", "strength", "context")
-_SEAM_TOPOLOGY_PROJECTION = ("seam", "party a", "shared object", "party b")
-_BOUNDARY_PROJECTION = ("layer", "subsystem", "boundary", "other end")
-_RUNTIME_BOUNDARY_PROJECTION = (
-    "runtime / process",
-    "language",
-    "communicates with",
-    "mechanism",
-    "notes",
-)
-_CONCERN_CHECKLIST_PROJECTION = (
-    "code",
-    "category",
-    "territory",
-    "codebase-specific probe (abbreviated)",
-    "primary subsystems",
-)
-
-# A checklist the store records prints the probe in full, so its column is not
-# "abbreviated" (store-only PLAN §8 SO9). Removed with the Markdown parser (SO19).
-_RECORDED_CHECKLIST_PROJECTION = ("code", "category", "territory", "probe", "primary subsystems")
-
-# The symbol a coverage cell carries for each outcome, in legend order.
-_COVERAGE_SYMBOLS = dict(zip(("🔴", "🟡", "🟢", "⚪", "⚠"), COVERAGE_STATES, strict=True))
-
-
-def _record_identifier(value: str) -> str:
-    """The record ID a cell names: its link's label, whatever the ID's shape.
-
-    The renderer links every record ID it prints, so the label is the exact
-    ID (`auth`, `B04-R6`); a cell with no link falls back to the first
-    letters-dash-number token, the shape the renderer once assumed.
-    """
-
-    link = re.search(r"\[([^\]]+)\]\([^)]*\)", value)
-    if link:
-        return _plain(link.group(1))
-    plain = _plain(value)
-    match = re.search(r"\b[A-Za-z][A-Za-z0-9]*-\d+\b", plain)
-    return match.group(0) if match else plain
-
-
-def _trace_name(record_id: str, label: str) -> str:
-    name = re.sub(r"<br\s*/?>", " ", label, flags=re.IGNORECASE)
-    name = html.unescape(name).strip()
-    if name.startswith(record_id):
-        name = name[len(record_id) :].strip()
-    return name
-
-
-def _parse_mermaid(source: str) -> Block:
-    lines = [line.strip() for line in source.splitlines() if line.strip()]
-    if lines and lines[0].startswith("graph "):
-        nodes: dict[str, tuple[str, str]] = {}
-        edges: list[tuple[str, str, str, str]] = []
-        for line in lines[1:]:
-            node = re.fullmatch(r'(\w+)\["(.+?)"\]', line)
-            if node:
-                label = node.group(2)
-                record = re.split(r"<br\s*/?>", label, flags=re.IGNORECASE)[0]
-                nodes[node.group(1)] = (record, label)
-                continue
-            edge = re.fullmatch(r'(\w+)\s+(-->|<-->)\|"?(.+?)"?\|\s+(\w+)', line)
-            if edge:
-                edges.append((edge.group(1), edge.group(2), edge.group(3), edge.group(4)))
-        if edges:
-            traced: list[TraceEdge] = []
-            for left, arrow, edge_label, right in edges:
-                left_id, left_label = nodes.get(left, (left, left))
-                right_id, right_label = nodes.get(right, (right, right))
-                traced.append(
-                    TraceEdge(
-                        TraceNode(left_id, _trace_name(left_id, left_label)),
-                        TraceNode(right_id, _trace_name(right_id, right_label)),
-                        re.sub(r"<br\s*/?>", " · ", edge_label, flags=re.IGNORECASE).strip('"'),
-                        arrow == "<-->",
-                    )
-                )
-            return RelationshipTrace(tuple(traced))
-    if lines and lines[0] == "pie showData":
-        values: list[tuple[str, float]] = []
-        for line in lines[1:]:
-            match = re.fullmatch(r'"(.+?)"\s*:\s*([0-9.]+)', line)
-            if match:
-                values.append((match.group(1), float(match.group(2))))
-        if values:
-            return StalenessBars(tuple(values))
-    return DiagramSource(source)
-
-
-class _MarkdownParser:
-    """One page's Markdown, resolved into the page model."""
-
-    def __init__(self, current_html_path: str) -> None:
-        self.current_html_path = current_html_path
-        # The heading a record currently sits under, by level. Both filterable
-        # pages group by exactly what the filter narrows on (§8.1.2), so the
-        # facets are read from the page's own hierarchy rather than restated.
-        self.headings: dict[int, str] = {}
-        self.facets: dict[str, list[str]] = {}
-        self.filter_scope = ""
-
-    def _remember_heading(self, level: int, raw: str) -> None:
-        self.headings[level] = _record_key_text(raw)
-        for deeper in [key for key in self.headings if key > level]:
-            del self.headings[deeper]
-
-    def _add_facet(self, key: str, value: str) -> str:
-        """Record one facet value in first-appearance order and return it."""
-
-        if value:
-            values = self.facets.setdefault(key, [])
-            if value not in values:
-                values.append(value)
-        return value
-
-    def _resolve_records(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-        projection: RecordProjection,
-    ) -> RecordList:
-        keys = [_header_key(header) for header in headers]
-        records: list[Record] = []
-        for row_number, (values, markers) in enumerate(rows, start=1):
-            record = dict(zip(keys, values, strict=True))
-            key_raw = record[projection.key]
-            key_text = _plain(key_raw) or f"Record {row_number}"
-            # The xref pass introduces a concern code as "concern RC-2" (PLAN
-            # §2.2 item 5); the anchor other pages link to is the code's.
-            anchor_text = (
-                re.sub(r"^concern\s+", "", key_text)
-                if projection.kind == "concern-disposition"
-                else key_text
-            )
-            facts: list[Fact] = []
-            if projection.kind == "file-ledger":
-                facts.append(Fact("path", parse_inlines(key_raw)))
-            for key in projection.metadata:
-                value = record.get(key, "")
-                if not _plain(value):
-                    continue
-                if projection.kind == "finding" and key == "status":
-                    facts.append(Fact(key, Inlines((Chip("status", _plain(value), show_hint=False),), _plain(value))))
-                else:
-                    facts.append(Fact(key, parse_inlines(value)))
-
-            lede: Inlines | None = None
-            fields: list[Fact] = []
-            if projection.kind == "finding":
-                parts = re.split(r"(?<=[.!?])\s+", record["symptom"], maxsplit=1)
-                lede = parse_inlines(parts[0])
-                if len(parts) == 2 and _plain(parts[1]):
-                    fields.append(Fact("observed behavior", parse_inlines(parts[1])))
-                if _plain(record.get("why it matters", "")):
-                    fields.append(Fact("why it matters", parse_inlines(record["why it matters"])))
-                fields.append(Fact("root cause", parse_inlines(record["root cause"])))
-            else:
-                for key in projection.content:
-                    value = record.get(key, "")
-                    if _plain(value):
-                        fields.append(Fact(key, parse_inlines(value)))
-
-            # The Unresolved lens's records are this page's filterable rows
-            # (§8.1.2). Subsystem and severity are the headings the record
-            # already sits under, so the filter narrows on the page's own
-            # grouping rather than on a second, restated classification.
-            row_filter: RowFilter | None = None
-            if self.current_html_path == "findings.html" and projection.kind == "finding":
-                self.filter_scope = "findings"
-                row_filter = RowFilter(
-                    self._add_facet("subsystem", self.headings.get(4, "")),
-                    self._add_facet(
-                        "severity",
-                        re.sub(r"\s+findings$", "", self.headings.get(3, ""), flags=re.IGNORECASE),
-                    ),
-                )
-            records.append(
-                Record(
-                    markers=tuple(markers),
-                    key=parse_inlines(key_raw),
-                    key_text=key_text,
-                    slug_text=_plain(f"{projection.kind}-{anchor_text}"),
-                    facts=tuple(facts),
-                    fields=tuple(fields),
-                    lede=lede,
-                    path=_plain(key_raw),
-                    revision=_plain(record.get("ref sha", "")),
-                    subsystem_id=_plain(record.get("id", "")),
-                    filter=row_filter,
-                )
-            )
-        return RecordList(projection.kind, caption, tuple(records))
-
-    @staticmethod
-    def _resolve_checklist(
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> ConcernChecklist:
-        """The calibrated concern table, grouped by category and territory."""
-
-        keys = [_header_key(header) for header in headers]
-        groups: dict[tuple[str, str], list[tuple[dict[str, str], list[str]]]] = {}
-        for values, markers in rows:
-            record = dict(zip(keys, values, strict=True))
-            group_key = (_plain(record["category"]), _plain(record["territory"]))
-            groups.setdefault(group_key, []).append((record, markers))
-
-        families: list[ConcernFamily] = []
-        for (category, territory), records in groups.items():
-            family_name = category.replace("-", " ").capitalize()
-            items: list[ConcernItem] = []
-            for row_number, (record, markers) in enumerate(records, start=1):
-                code_raw = record["code"]
-                code_text = _plain(code_raw) or f"Concern {row_number}"
-                probe = record.get("codebase-specific probe (abbreviated)") or record.get("probe", "")
-                items.append(
-                    ConcernItem(
-                        code=parse_inlines(code_raw),
-                        code_text=code_text,
-                        slug_text=_plain(f"concern-checklist-{code_text}"),
-                        primary_subsystems=parse_inlines(record.get("primary subsystems", "")),
-                        probe=parse_inlines(probe),
-                        markers=tuple(markers),
-                    )
-                )
-            families.append(
-                ConcernFamily(
-                    name=family_name,
-                    territory=territory,
-                    slug_text=_plain(f"{family_name} concerns"),
-                    items=tuple(items),
-                )
-            )
-        return ConcernChecklist(caption, tuple(families))
-
-    @staticmethod
-    def _resolve_coverage(
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-    ) -> CoverageIndex:
-        """The exact coverage matrix, each cell resolved to its recorded outcome."""
-
-        concern_codes = [_plain(header) for header in headers[1:]]
-
-        def outcome(code: str, value: str) -> CoverageReview | None:
-            plain = _plain(value)
-            if not plain or plain == "—":
-                return None
-            for symbol, (key, label, mark) in _COVERAGE_SYMBOLS.items():
-                if symbol in plain:
-                    return CoverageReview(code, key, label, mark, "🔗" in plain)
-            return CoverageReview(code, "unknown", "Recorded outcome", "?", "🔗" in plain)
-
-        resolved: list[CoverageRow] = []
-        for values, markers in rows:
-            identity = values[0]
-            link = re.search(r"\[([^]]+)\]\(([^)]+)\)", identity)
-            subsystem_id = _plain(link.group(1)) if link else _plain(identity).split(" ", 1)[0]
-            subsystem_name = _plain(identity)
-            if subsystem_name.startswith(subsystem_id):
-                subsystem_name = subsystem_name[len(subsystem_id) :].strip()
-            reviews = [
-                review
-                for code, value in zip(concern_codes, values[1:], strict=True)
-                if (review := outcome(code, value))
-            ]
-            resolved.append(
-                CoverageRow(
-                    subsystem_id=subsystem_id,
-                    name=subsystem_name or subsystem_id,
-                    href=_html_href(link.group(2)) if link else None,
-                    reviews=tuple(reviews),
-                    markers=tuple(markers),
-                )
-            )
-        return CoverageIndex(tuple(concern_codes), tuple(resolved))
-
-    @staticmethod
-    def _resolve_topology(
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-        kind: str,
-    ) -> Topology:
-        edges: list[TopologyEdge] = []
-        for values, markers in rows:
-            if kind == "seam":
-                key, left, detail, right = values[:4]
-                qualifier = ""
-            else:
-                left, key, right, qualifier, detail = values[:5]
-            edges.append(
-                TopologyEdge(
-                    key=parse_inlines(key),
-                    left_id=_record_identifier(left),
-                    left=parse_inlines(left),
-                    right_id=_record_identifier(right),
-                    right=parse_inlines(right),
-                    detail=parse_inlines(detail),
-                    qualifier=parse_inlines(qualifier),
-                    directed=kind != "seam",
-                    markers=tuple(markers),
-                )
-            )
-        return Topology(kind, caption, tuple(edges))
-
-    @staticmethod
-    def _resolve_boundaries(
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> BoundaryDiagram:
-        resolved: list[BoundaryRow] = []
-        for values, _markers in rows:
-            layer, subsystem, boundary, other = values[:4]
-            sid = _record_identifier(subsystem)
-            other_id = _record_identifier(other) if _plain(other) not in ("", "—") else ""
-            seam = "](seams.md#" in boundary
-            resolved.append(
-                BoundaryRow(
-                    layer=_plain(layer) or "unlayered",
-                    subsystem_id=sid,
-                    name=_plain(subsystem).removeprefix(sid).strip(),
-                    other_id=other_id,
-                    relation=_plain(boundary),
-                    seam=seam,
-                    seam_id=_record_identifier(boundary) if seam else "",
-                )
-            )
-        return BoundaryDiagram(caption, tuple(resolved))
-
-    def _resolve_table(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> Block:
-        signature = tuple(_header_key(header) for header in headers)
-        if signature == _SUBSYSTEM_ATLAS_PROJECTION:
-            regions: dict[str, list[AtlasItem]] = {}
-            for values, markers in rows:
-                region, subsystem, depth = values[:3]
-                regions.setdefault(_plain(region) or "Other", []).append(
-                    AtlasItem(parse_inlines(subsystem), _atlas_depth(depth), tuple(markers))
-                )
-            return Atlas(caption, tuple(AtlasRegion(name, tuple(items)) for name, items in regions.items()))
-        if signature == _DEPENDENCY_TOPOLOGY_PROJECTION:
-            return self._resolve_topology(rows, caption, "dependency")
-        if signature == _SEAM_TOPOLOGY_PROJECTION:
-            return self._resolve_topology(rows, caption, "seam")
-        if signature == _RUNTIME_BOUNDARY_PROJECTION:
-            return RuntimeDiagram(
-                caption,
-                tuple(
-                    RuntimeRow(*(parse_inlines(value) for value in values[:5]), markers=tuple(markers))
-                    for values, markers in rows
-                ),
-            )
-        if signature == _BOUNDARY_PROJECTION:
-            return self._resolve_boundaries(rows, caption)
-        if signature in (_CONCERN_CHECKLIST_PROJECTION, _RECORDED_CHECKLIST_PROJECTION):
-            return self._resolve_checklist(headers, rows, caption)
-        if (
-            len(signature) > 1
-            and signature[0] == "subsystem"
-            and all(_IDENTIFIER_SHAPE.fullmatch(header.upper()) for header in signature[1:])
-        ):
-            return self._resolve_coverage(headers, rows)
-        projection = _RECORD_PROJECTIONS.get(signature)
-        if projection:
-            return self._resolve_records(headers, rows, caption, projection)
-        if signature in _SUMMARY_LIST_PROJECTIONS:
-            return SummaryList(
-                caption,
-                tuple(
-                    SummaryItem(parse_inlines(values[0]), parse_inlines(values[1]), tuple(markers))
-                    for values, markers in rows
-                ),
-            )
-
-        lifecycle = signature in _LIFECYCLE_TABLE_PROJECTIONS
-        enum_table = signature == _ENUM_TABLE_PROJECTION
-        # `hot-spots.md`'s one measure table carries this page's filterable
-        # rows (§8.1.2). The severity facet is named by the band columns
-        # themselves: the table keeps critical+high and medium+low apart on
-        # purpose, and a filter that merged them into four severities would
-        # assert a resolution the columns do not record.
-        hot_spots = (
-            self.current_html_path == "hot-spots.html"
-            and signature[:1] == ("subsystem",)
-            and any(re.search(r"critical|medium", key) for key in signature)
-        )
-        severity_columns: list[tuple[int, str]] = []
-        if hot_spots:
-            self.filter_scope = "hot-spots"
-            for index, key in enumerate(signature):
-                if re.search(r"critical|medium", key):
-                    severity_columns.append((index, self._add_facet("severity", _plain(headers[index]))))
-        table_rows: list[Row] = []
-        for values, markers in rows:
-            cells: list[Inlines] = []
-            for index, value in enumerate(values):
-                literal = re.fullmatch(r"`([^`]+)`", value.strip()) if enum_table and index == 0 else None
-                cells.append(
-                    Inlines((CodeSpan(literal.group(1)),), _plain(value)) if literal else parse_inlines(value)
-                )
-            row_filter: RowFilter | None = None
-            if hot_spots:
-                row_filter = RowFilter(
-                    self._add_facet("subsystem", _record_key_text(values[0])),
-                    "|".join(
-                        label
-                        for index, label in severity_columns
-                        if index < len(values) and _positive_count(values[index])
-                    ),
-                )
-            table_rows.append(Row(tuple(cells), tuple(markers), row_filter))
-        kind = LifecycleTable if lifecycle else EnumTable if enum_table else Table
-        return kind(caption, tuple(parse_inlines(header) for header in headers), tuple(table_rows))
-
-    def parse(self, markdown: str) -> Page:
-        lines = markdown.splitlines()
-        title = "Conspectus"
-        root: list[Block] = []
-        section: tuple[str, list[Block]] | None = None
-        disclosure: list[Block] | None = None
-        disclose = False
-        current_section = ""
-
-        def target() -> list[Block]:
-            if disclosure is not None:
-                return disclosure
-            return section[1] if section is not None else root
-
-        def close_section() -> None:
-            nonlocal section, disclosure
-            if section is not None and disclosure is not None:
-                section[1].append(Details("Show the full vocabulary", tuple(disclosure)))
-            disclosure = None
-            if section is not None:
-                root.append(Section(section[0], tuple(section[1])))
-            section = None
-
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            if not line.strip():
-                i += 1
-                continue
-
-            if line.startswith("<!--") and line.rstrip().endswith("-->"):
-                target().append(RecordMarker(line))
-                i += 1
-                continue
-
-            if (
-                current_section in {"coverage-overview", "coverage-heatmap"}
-                and line.startswith("**Legend**:")
-            ):
-                i += 1
-                continue
-
-            anchor = re.fullmatch(r'<a\s+id="([a-zA-Z0-9_.:-]+)"></a>', line.strip())
-            if anchor:
-                target().append(Anchor(anchor.group(1)))
-                i += 1
-                continue
-
-            fence = re.match(r"^```\s*([\w-]*)\s*$", line)
-            if fence:
-                language = fence.group(1).lower()
-                code_lines: list[str] = []
-                i += 1
-                while i < len(lines) and not lines[i].startswith("```"):
-                    code_lines.append(lines[i])
-                    i += 1
-                i += 1 if i < len(lines) else 0
-                source = "\n".join(code_lines)
-                target().append(_parse_mermaid(source) if language == "mermaid" else Code(language, source))
-                continue
-
-            heading = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
-            if heading:
-                level = len(heading.group(1))
-                raw = heading.group(2)
-                if level == 1:
-                    title = _plain(raw)
-                    i += 1
-                    continue
-                display_raw = raw
-                if (
-                    self.current_html_path == "concern-checklist.html"
-                    and level == 2
-                    and re.fullmatch(r"Active concerns(?:\s+\(\d+\))?", _plain(raw), re.IGNORECASE)
-                ):
-                    display_raw = "Active concerns"
-                self._remember_heading(level, display_raw)
-                if level == 2:
-                    close_section()
-                    current_section = slugify(_plain(display_raw))
-                    section = (current_section, [])
-                    # The guide's last section holds the tables a reader never
-                    # meets as a label; it stays closed until asked for.
-                    disclose = self.current_html_path == "how-to-read.html" and current_section == "full-vocabulary"
-                # The Unresolved lens nests the subsystem under resolution
-                # state and severity, so its subsystem headings are one level
-                # deeper than the History lens's.
-                finding_group = (self.current_html_path == "findings.html" and level == 4) or (
-                    self.current_html_path == "resolved-findings.html" and level == 3
-                )
-                target().append(Heading(level, parse_inlines(display_raw), finding_group))
-                if level == 2 and disclose:
-                    disclosure = []
-                    disclose = False
-                i += 1
-                continue
-
-            if line.startswith("|") and i + 1 < len(lines) and _is_table_separator(lines[i + 1]):
-                headers = _split_table_row(line)
-                i += 2
-                rows: list[tuple[list[str], list[str]]] = []
-                pending_markers: list[str] = []
-                while i < len(lines):
-                    if lines[i].startswith("<!--") and lines[i].rstrip().endswith("-->"):
-                        pending_markers.append(lines[i])
-                        i += 1
-                        continue
-                    if not lines[i].startswith("|"):
-                        break
-                    rows.append((_split_table_row(lines[i]), pending_markers))
-                    pending_markers = []
-                    i += 1
-                # A table before the first `##` (the Files index is one) has no
-                # section to name it. The page's own title is a true caption;
-                # "Data" is furniture that tells a screen-reader user nothing.
-                caption = current_section.replace("-", " ") or title or "Data"
-                normalized_rows = []
-                for values, markers in rows:
-                    values += [""] * max(0, len(headers) - len(values))
-                    normalized_rows.append((values[: len(headers)], markers))
-                target().append(self._resolve_table(headers, normalized_rows, caption))
-                continue
-
-            if _LIST_ITEM.match(line):
-                parsed, i = _parse_list(lines, i)
-                target().append(parsed)
-                continue
-
-            if line.startswith(">"):
-                quoted: list[str] = []
-                while i < len(lines) and lines[i].startswith(">"):
-                    quoted.append(lines[i][1:].lstrip())
-                    i += 1
-                target().append(Quote(parse_inlines(" ".join(quoted))))
-                continue
-
-            paragraph = [line.strip()]
-            i += 1
-            while i < len(lines) and lines[i].strip():
-                candidate = lines[i]
-                if re.match(r"^(#{1,6})\s+", candidate) or candidate.startswith(("```", "|", ">", "<!--", '<a id="')) or re.match(r"^\s*([-*+] |\d+\. )", candidate):
-                    break
-                paragraph.append(candidate.strip())
-                i += 1
-            target().append(Paragraph(parse_inlines(" ".join(paragraph))))
-
-        close_section()
-        facets = (
-            Facets(self.filter_scope, tuple((key, tuple(values)) for key, values in self.facets.items()))
-            if self.filter_scope
-            else None
-        )
-        return Page(title, self.current_html_path, tuple(root), facets)
-
-
-def parse_markdown(markdown: str, current_html_path: str) -> Page:
-    """Resolve one page's finished Markdown into the page model (§3.1)."""
-
-    return _MarkdownParser(current_html_path).parse(markdown)
-
-
-# ---------------------------------------------------------------------------
 # Page model → HTML. Nothing below reads Markdown: every block already says
 # what it is, and every inline already says how it prints.
 # ---------------------------------------------------------------------------
@@ -3317,28 +2494,6 @@ def write_html(
     return _HtmlWriter(route_map or {}, page.path, repository_url).write(page)
 
 
-class MarkdownRenderer:
-    """Markdown in, page body out: `parse_markdown`, then `write_html`.
-
-    For callers that hold a page's Markdown; the projection itself calls the
-    two steps directly.
-    """
-
-    def __init__(
-        self,
-        route_map: dict[str, str],
-        current_html_path: str,
-        repository_url: str | None = None,
-    ) -> None:
-        self.route_map = route_map
-        self.current_html_path = current_html_path
-        self.repository_url = repository_url
-
-    def render(self, markdown: str) -> tuple[str, str]:
-        page = parse_markdown(markdown, self.current_html_path)
-        return page.title, write_html(page, self.route_map, self.repository_url)
-
-
 class _IdentifierMarkup(HTMLParser):
     """Add semantic definitions to known opaque IDs in an HTML fragment."""
 
@@ -3462,7 +2617,7 @@ def _nav(pages: list[SitePage], current: SitePage) -> str:
     scanning the rail meets the group's own pages before its divisions.
     """
 
-    assert_nav_groups([(page.markdown_path, page.group) for page in pages])
+    assert_nav_groups([(page.path, page.group) for page in pages])
     chunks: list[str] = []
     for group in NAV_GROUPS:
         items = [page for page in pages if page.group == group]
@@ -3536,7 +2691,7 @@ def _shell(
         if page.use_when
         else ""
     )
-    guide_href = _rel_link(page.html_path, GUIDE_PAGE.replace(".md", ".html"))
+    guide_href = _rel_link(page.html_path, GUIDE_PAGE)
     terms_para = (
         f'<p class="page-terms">{html.escape(TERMS_LABEL)} '
         + " · ".join(
@@ -3666,22 +2821,17 @@ def render_html_projection(
     previous_files: dict[str, str] | None = None,
     locus_index: dict[str, Any] | None = None,
     notice: str = "",
-    markdown: dict[str, str] | None = None,
     models: dict[str, Page] | None = None,
 ) -> HtmlProjectionResult:
-    """Render each page's HTML from its finished Markdown and retire old HTML.
+    """Print each page's HTML from its model and retire old HTML.
 
-    `markdown` holds each page's post-xref Markdown by plan id, in memory: the
-    run writes no `.md` (store-only PLAN §3.2 step 3). Without it the Markdown
-    is read from `output`, which only the golden corpus's recorded inputs use.
-    `models` holds the pages a renderer built as a model, by plan id, after the
-    cross-reference pass: they are printed as they are, and the Markdown parser
-    is not called for them (store-only PLAN §3.2 step 4).
-    `notice` is the command-line render notice; the HTML prints it in the page
-    head, and a Markdown text that still ends with it has it removed first.
+    `models` holds the pages the renderers built, by plan id, after the
+    cross-reference pass. `notice` is the command-line render notice; the HTML
+    prints it in the page head.
     """
 
     previous_files = previous_files or {}
+    models = models or {}
     route_map = {
         page.record_id: page.html_path
         for page in pages
@@ -3706,26 +2856,10 @@ def render_html_projection(
         index_target.write_text(index_text)
 
     for page in pages:
-        if models is not None and page.markdown_path in models:
-            model = models[page.markdown_path]
-        else:
-            if markdown is not None:
-                text = markdown.get(page.markdown_path)
-            else:
-                source = output / page.markdown_path
-                text = source.read_text() if source.is_file() else None
-            if text is None:
-                warnings.append(f"HTML source missing for {page.markdown_path}")
-                continue
-            model = parse_markdown(
-                strip_page_head(
-                    strip_notice(text, notice),
-                    page.hint,
-                    page.use_when,
-                    terms_line(page.markdown_path, page.terms),
-                ),
-                page.html_path,
-            )
+        model = models.get(page.path)
+        if model is None:
+            warnings.append(f"HTML source missing for {page.path}")
+            continue
         body = write_html(
             model,
             route_map,

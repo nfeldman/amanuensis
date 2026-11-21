@@ -556,6 +556,12 @@ jobs:
       - name: Method and the remaining pages are built as page models
         working-directory: materializer
         run: python3 test-store-only-convert-method.py
+      # SO19: the Markdown intermediate is deleted. No parser, text xref pass or page-level
+      # projection is left; imported bodies are read only by legacy_prose.py; no page id ends
+      # in .md; the composite-index lint runs on the overview model; the HTML equals the golden pages.
+      - name: The Markdown intermediate is deleted
+        working-directory: materializer
+        run: python3 test-store-only-no-markdown.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py

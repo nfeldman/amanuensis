@@ -66,7 +66,7 @@ PACKAGE = ROOT / "amanuensis_materializer"
 STORES = ("materializer", "axiomdb-shaped", "self-shaped", "lens")
 LEGACY_PARSER = "_LegacyParser"
 # Pages whose golden HTML was written against a git workspace the corpus does not carry.
-WORKSPACE_DEPENDENT = {("lens", "not-yet-surveyed")}
+WORKSPACE_DEPENDENT = {("lens", "index"), ("lens", "not-yet-surveyed")}
 
 _SCRUB: tuple[tuple[str, str], ...] = (
     ("MODULE_NOT_FOUND", "module-absent"),
@@ -284,9 +284,7 @@ def leftovers() -> str | None:
             elif isinstance(node, ast.ImportFrom | ast.Import):
                 names = [a.asname or a.name for a in node.names]
             for name in names:
-                if name in DELETED_NAMES:
-                    found.append(f"{path.name}: {name}")
-                elif PROJECTION_NAME.match(name):
+                if name in DELETED_NAMES or PROJECTION_NAME.match(name):
                     found.append(f"{path.name}: {name}")
     return f"still in the tree: {sorted(set(found))[:6]}" if found else None
 
@@ -437,8 +435,8 @@ def main() -> int:
                 bad = [t for t in run.targets if t.split("#", 1)[0].endswith(".md")]
                 if bad:
                     return f"{store}: a cross-reference target is {bad[0]}"
-                manifests = [p for p in (output.parent / "storage").rglob("*manifest*.json")]
-                manifests += [p for p in output.rglob("*manifest*.json")]
+                manifests = list((output.parent / "storage").rglob("*manifest*.json"))
+                manifests += list(output.rglob("*manifest*.json"))
                 for manifest in manifests:
                     keys = re.findall(r'"([^"]+\.md)"\s*:', manifest.read_text())
                     if keys:

@@ -1,4 +1,4 @@
-"""Page renderers — each function returns (markdown_text, sources_dict).
+"""Page renderers — each function returns (page model, sources_dict).
 
 The sources dict maps source identifiers to their content hashes so the
 manifest can detect when to re-render. DB sources are keyed as
@@ -149,9 +149,9 @@ from .vocabulary import (
     values_of,
 )
 
-# A renderer returns a page's Markdown, or the page model it built itself (store-only
-# PLAN §3.2 step 4), and the hash of each source it read.
-RenderResult = tuple[str | Page, dict[str, str]]
+# A renderer returns the page model it built (store-only PLAN §3.2 step 4) and the
+# hash of each source it read.
+RenderResult = tuple[Page, dict[str, str]]
 
 # The resolution states each findings page renders, from the one definition in
 # readback.py, and their human labels from the enum source (spec §6.1, §10).
@@ -1171,8 +1171,8 @@ def _project_narratives(
     """The project narratives the page for `kind` prints, in the contract's section order."""
 
     page = {
-        "onboarding-report": "onboarding-report.md",
-        "entry-point": "entry-point.md",
+        "onboarding-report": "onboarding-report.html",
+        "entry-point": "entry-point.html",
     }.get(kind)
     if page is None:
         return []
@@ -1426,8 +1426,8 @@ def _checked_head(conn: sqlite3.Connection) -> str:
 # as `finding_state_current` partitions findings. The page a contradiction's
 # record renders on is read from that one predicate, so the record, the
 # timeline that links to it, and the reader all agree about where it is.
-DISAGREEMENTS_PAGE = "disagreements.md"
-CONTRADICTIONS_PAGE = "contradictions.md"
+DISAGREEMENTS_PAGE = "disagreements.html"
+CONTRADICTIONS_PAGE = "contradictions.html"
 
 
 def contradiction_page(resolution: str | None) -> str:
@@ -1502,7 +1502,7 @@ def _empty_lens_blocks(
 OVERVIEW_IDENTITY = (
     "An architecture survey of {name}. An AI agent running Amanuensis read the"
     " repository, without changing it, and recorded what it found here. New to this"
-    " site? Start with [{guide}](how-to-read.md)."
+    " site? Start with [{guide}](how-to-read.html)."
 )
 
 # The read-back is recorded after the pages are written, so the overview can only
@@ -1755,13 +1755,13 @@ def render_index(
             "The four lenses",
             _bullets(
                 [
-                    "**Codebase** — [Subsystem map](master-plan.md): every region, grouped by"
+                    "**Codebase** — [Subsystem map](master-plan.html): every region, grouped by"
                     " layer, with the boundaries and terms recorded for it.",
-                    "**Unresolved** — [Open findings](findings.md): defects open or awaiting"
+                    "**Unresolved** — [Open findings](findings.html): defects open or awaiting"
                     " verification at the checked revision.",
-                    "**History** — [Resolved findings](resolved-findings.md): the records that"
+                    "**History** — [Resolved findings](resolved-findings.html): the records that"
                     " reached a terminal state, with the basis each one rests on.",
-                    f"**Method** — [{GUIDE_TITLE}](how-to-read.md): what each page is for,"
+                    f"**Method** — [{GUIDE_TITLE}](how-to-read.html): what each page is for,"
                     " the terms it uses, and how a survey works.",
                 ]
             ),
@@ -1791,7 +1791,7 @@ def render_index(
     # not stop (F5/codex).
     if warn is not None:
         for message in composite_index_violations(page_text(page)):
-            warn(f"index.md: the overview may not publish a composite index — {message}")
+            warn(f"index.html: the overview may not publish a composite index — {message}")
 
     sources = {
         **_db_source("index:alignment", alignment),
@@ -2126,7 +2126,7 @@ def render_subsystem(
         for section in ("structure", "concern-reasoning", "challenge")
     }
 
-    path = subsystem_page(str(sid), str(s["name"]))[: -len(".md")] + ".html"
+    path = subsystem_page(str(sid), str(s["name"]))
     blocks: list[Block] = [
         _paragraph(f"**Status**: {_badge(s['status'])} **Layer**: {s.get('layer') or '—'}"),
     ]
@@ -2354,13 +2354,13 @@ def render_subsystem(
     blocks.append(_section("Vocabulary", *vocabulary))
 
     # 6. Known defects here — links, never a second full record (§6.2).
-    open_states = FINDING_LENS_STATES.get("findings.md", ())
+    open_states = FINDING_LENS_STATES.get("findings.html", ())
     open_findings = [f for f in findings if str(f["resolution_state"]) in open_states]
     resolved = [f for f in findings if str(f["resolution_state"]) not in open_states]
     defects: list[Block] = []
     # Subsystem pages live one directory down, so every link to a top-level
-    # lens page is written relative to this page. A bare `findings.md` here
-    # resolves to `subsystems/findings.md` and turns the coverage axis red.
+    # lens page is written relative to this page. A bare `findings.html` here
+    # resolves to `subsystems/findings.html` and turns the coverage axis red.
     up = "../"
     if open_findings:
         defects.append(
@@ -2368,12 +2368,12 @@ def render_subsystem(
                 f"{_count(len(open_findings), 'defect')} here"
                 f" {'is' if len(open_findings) == 1 else 'are'} open or awaiting"
                 " verification. Each one's full record, with its evidence, is on"
-                f" [Open findings]({up}findings.md)."
+                f" [Open findings]({up}findings.html)."
             )
         )
         lines = []
         for f in open_findings:
-            page = finding_page(str(f["resolution_state"])) or "findings.md"
+            page = finding_page(str(f["resolution_state"])) or "findings.html"
             state = RESOLUTION_LABELS.get(
                 str(f["resolution_state"]), str(f["resolution_state"])
             )
@@ -2390,7 +2390,7 @@ def render_subsystem(
             _paragraph(
                 f"{_count(len(resolved), 'further defect')} here reached a terminal"
                 f" state; {'it is' if len(resolved) == 1 else 'they are'} recorded on"
-                f" [Resolved findings]({up}resolved-findings.md)."
+                f" [Resolved findings]({up}resolved-findings.html)."
             )
         )
     blocks.append(_section("Known defects here", *defects))
@@ -2491,7 +2491,7 @@ def render_subsystem(
         record.append(
             _paragraph(
                 "The survey's reasoning about the concerns it reviewed here is on"
-                f" [Review coverage]({'../'}concerns.md#concern-reasoning), under this subsystem."
+                f" [Review coverage]({'../'}concerns.html#concern-reasoning), under this subsystem."
             )
         )
     if by_section["challenge"]:
@@ -2592,13 +2592,13 @@ _STATE_HINTS: dict[str, str] = {
 # one page, the rule §6.2 already fixes for findings, which is what lets the
 # read-back census count exactly one marker per corpus.
 CARRIED_LEAD = {
-    "findings.md": (
+    "findings.html": (
         "_{n} carried forward from an earlier store and still undecided. An"
         " inherited defect is an obligation to re-find it, rule it out with"
         " evidence, or mark it repaired at a commit — not a defect this survey"
         " confirmed, and not counted among the findings open above._"
     ),
-    "resolved-findings.md": (
+    "resolved-findings.html": (
         "_{n} carried forward from an earlier store and decided here. The"
         " archived record is what the predecessor held; the outcome is what this"
         " store did about it._"
@@ -2711,7 +2711,7 @@ def _carried_blocks(
             Heading(
                 3,
                 inlines(f"{archived_id} · {_sev_badge(str(record['severity']))} · {heading}"),
-                finding_group=page == "resolved-findings.md",
+                finding_group=page == "resolved-findings.html",
             ),
             _paragraph(
                 f"{carried_marker(store_id, archived_id)}"
@@ -2728,7 +2728,7 @@ def _carried_blocks(
 def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The Unresolved lens: open defects and repairs awaiting verification.
 
-    Resolved records render on `resolved-findings.md` instead, each with its
+    Resolved records render on `resolved-findings.html` instead, each with its
     marker, so every finding is a full record on exactly one page (spec §6.2).
     """
     # §6.1 orders the Unresolved lens state-major: every open finding, by
@@ -2739,7 +2739,7 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     # a denominator a reader can see.
     fs = _finding_rows(
         conn,
-        FINDING_LENS_STATES["findings.md"],
+        FINDING_LENS_STATES["findings.html"],
         """CASE v.resolution_state WHEN 'open' THEN 0 ELSE 1 END,
                      CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
                        WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END,
@@ -2773,7 +2773,7 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             conn,
             "No finding is open or awaiting verification."
             f" {_count(int(resolved['n'] or 0), 'resolved record')} are on"
-            " [Resolved findings](resolved-findings.md).",
+            " [Resolved findings](resolved-findings.html).",
             "defects with no terminal resolution event, and repairs recorded against a"
             " commit with no evidence yet that they hold.",
             f"`finding_state_current` over `findings`, read across"
@@ -2818,9 +2818,9 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     carried = [
         record
         for record in carried_records(conn)
-        if carried_page(str(record["outcome"])) == "findings.md"
+        if carried_page(str(record["outcome"])) == "findings.html"
     ]
-    blocks += _carried_blocks(carried, "findings.md", _successor_pages(conn))
+    blocks += _carried_blocks(carried, "findings.html", _successor_pages(conn))
     page_facets = (
         Facets("findings", tuple((key, tuple(values)) for key, values in facets.items()))
         if fs
@@ -2883,7 +2883,7 @@ def _cited_path(path: str, ledgered: set[str]) -> str:
     """
 
     if path in ledgered:
-        return f"[`{path}`](files.md#{file_anchor(path)})"
+        return f"[`{path}`](files.html#{file_anchor(path)})"
     return f"`{path}`"
 
 
@@ -2994,7 +2994,7 @@ def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderR
 
     fs = _finding_rows(
         conn,
-        FINDING_LENS_STATES["resolved-findings.md"],
+        FINDING_LENS_STATES["resolved-findings.html"],
         "v.resolution_recorded_at DESC, f.subsystem_id, f.finding_id",
     )
     events = _resolution_events(conn)
@@ -3011,9 +3011,9 @@ def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderR
     carried = [
         record
         for record in carried_records(conn)
-        if carried_page(str(record["outcome"])) == "resolved-findings.md"
+        if carried_page(str(record["outcome"])) == "resolved-findings.html"
     ]
-    carried_block = _carried_blocks(carried, "resolved-findings.md", _successor_pages(conn))
+    carried_block = _carried_blocks(carried, "resolved-findings.html", _successor_pages(conn))
     sources = {
         **_db_source("findings:resolved", fs),
         **_db_source("findings:resolved-basis", bases),
@@ -3056,7 +3056,7 @@ def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderR
             )
         )
 
-    for state in FINDING_LENS_STATES["resolved-findings.md"]:
+    for state in FINDING_LENS_STATES["resolved-findings.html"]:
         state_rows = [f for f in fs if f["resolution_state"] == state]
         if not state_rows:
             continue
@@ -3193,7 +3193,7 @@ def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
 def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The History lens for contradictions: the ones the evidence settled.
 
-    Rows still standing move to `disagreements.md` (§6.1, §7.1). Keeping a copy
+    Rows still standing move to `disagreements.html` (§6.1, §7.1). Keeping a copy
     here would put one record in two lenses, and an event linking back to "the
     contradiction" would have two places to land.
     """
@@ -3223,7 +3223,7 @@ def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResu
             conn,
             "No disagreement between findings has been settled."
             f" {_count(int(standing['n'] or 0), 'pair')} still stand"
-            " undiscriminated, on [Records that disagree](disagreements.md).",
+            " undiscriminated, on [Records that disagree](disagreements.html).",
             "pairs of findings that made incompatible claims about one locus, and the"
             " evidence or argument that chose between them.",
             "`contradictions` whose resolution is recorded, with"
@@ -3254,7 +3254,7 @@ def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResu
             " now says which one holds. The disagreement is kept rather than smoothed"
             " away, so a reader who forms the overturned reading again meets the"
             " argument that settled it. Disagreements still standing are on"
-            " [Records that disagree](disagreements.md)._"
+            " [Records that disagree](disagreements.html)._"
         ),
         _table(
             "Conflicting evidence",
@@ -3409,7 +3409,7 @@ def render_diagnosticity_matrix(
         | _db_source(f"matrix:{mid}:value", value)
     )
     title = _plain(f"DM-{mid} · {m['symptom']}")
-    return Page(title, matrix_page(mid).replace(".md", ".html"), tuple(blocks)), sources
+    return Page(title, matrix_page(mid), tuple(blocks)), sources
 
 
 # §4.5's three states, named once. `terms`, `declined` and `not-recorded` are
@@ -3563,7 +3563,7 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
         census.append(
             {
                 "slot": "thesis",
-                "page": "index.md",
+                "page": "index.html",
                 "subject": "project",
                 "state": state,
                 # Only a recorded purpose discharges it: the server refuses to
@@ -3578,7 +3578,7 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
         census.append(
             {
                 "slot": "thesis",
-                "page": "index.md",
+                "page": "index.html",
                 "subject": "project",
                 "state": state,
                 "discharge": (
@@ -3591,7 +3591,7 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
         census.append(
             {
                 "slot": "runtime-boundary-map",
-                "page": "architecture.md",
+                "page": "architecture.html",
                 "subject": "project",
                 "state": "absent",
                 "discharge": (
@@ -3657,7 +3657,7 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
         census.append(
             {
                 "slot": "project-account",
-                "page": "architecture.md",
+                "page": "architecture.html",
                 "subject": "project",
                 "state": "not-recorded",
                 "discharge": (
@@ -3742,7 +3742,7 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
 def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The Unresolved lens for leads: observations still open (§6.1, §7.1).
 
-    Closed leads move to `resolved-leads.md`, where the page states what the
+    Closed leads move to `resolved-leads.html`, where the page states what the
     store does not record about how they got there. `field_notes.follow_up` is
     free text whose one reserved value is `open`, so membership is the negation
     of that value rather than a list of terminal ones.
@@ -3764,7 +3764,7 @@ def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             "_Observations from every survey pass that are not yet findings: patterns, "
             "anomalies, connections, tensions, and candidate concerns recorded when a "
             "reader noticed something the phase structure did not ask for. Closed leads "
-            "are on [Resolved leads and questions](resolved-leads.md)._"
+            "are on [Resolved leads and questions](resolved-leads.html)._"
         )
     ]
     if not notes:
@@ -3772,7 +3772,7 @@ def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             conn,
             "No lead is open."
             f" {_count(int(closed['n'] or 0), 'closed lead')} are on"
-            " [Resolved leads and questions](resolved-leads.md).",
+            " [Resolved leads and questions](resolved-leads.html).",
             "observations a survey pass recorded that are not yet findings and have"
             " not been closed.",
             "`field_notes` whose `follow_up` is still `open`.",
@@ -3923,7 +3923,7 @@ def render_stale(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 f" {freshness['stale_exempt']} of"
                 f" {freshness['scoped_files'] - freshness['obligation_files']} scoped files"
                 " exempt from that obligation have also changed; they are counted on the"
-                " [overview](index.md) and are not recorded here, because drift in"
+                " [overview](index.html) and are not recorded here, because drift in"
                 " generated or vendored territory is not survey staleness."
             )
         )
@@ -4018,8 +4018,8 @@ SITE_VIEWS = (
 
 # A term's `pages` may name a family; the family's listing page stands for it.
 _FAMILY_LISTINGS: dict[str, tuple[str, str]] = {
-    "subsystems/*.md": ("Subsystem pages", "master-plan.md"),
-    "diagnosticity/*.md": ("Evidence tables", "diagnosticity.md"),
+    "subsystems/*.md": ("Subsystem pages", "master-plan.html"),
+    "diagnosticity/*.md": ("Evidence tables", "diagnosticity.html"),
 }
 
 
@@ -4033,17 +4033,18 @@ def page_terms(page: str) -> tuple[tuple[str, str], ...]:
     """The `READER_TERMS` entries a page names, as `(term, anchor slug)` in contract order.
 
     A term's `pages` holds exact page paths, or a family glob (`subsystems/*.md`)
-    for every page directly under that directory.
+    for every page directly under that directory. The contract names pages by the
+    stem the server shares; a page here is its `.html` path.
     """
 
     found: list[tuple[str, str]] = []
     for entry in READER_TERMS:
         for pattern in entry.get("pages") or ():  # type: ignore[union-attr]
-            pattern = str(pattern)
+            pattern = str(pattern).removesuffix(".md") + ".html"
             if pattern == page or (
-                pattern.endswith("/*.md")
-                and page.startswith(pattern[: -len("*.md")])
-                and "/" not in page[len(pattern) - len("*.md") :]
+                pattern.endswith("/*.html")
+                and page.startswith(pattern[: -len("*.html")])
+                and "/" not in page[len(pattern) - len("*.html") :]
             ):
                 term = str(entry["term"])
                 found.append((term, term_slug(term)))
@@ -4188,8 +4189,8 @@ def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> Sec
             page = str(page)
             if page in _FAMILY_LISTINGS:
                 label, target = _FAMILY_LISTINGS[page]
-            elif page in labels:
-                label, target = labels[page], page
+            elif (target := page.removesuffix(".md") + ".html") in labels:
+                label = labels[target]
             else:
                 continue  # not planned for this store (a prose page with no source)
             link = f"[{label}]({target})"
@@ -4377,8 +4378,8 @@ def _vocabulary_tables() -> tuple[Section, Section]:
 # row. The row routes to the page that lists the family's members: the
 # subsystem map and the competing-explanations index.
 _SUBGROUP_ROWS: dict[str, tuple[str, str, str]] = {
-    "Subsystems": ("Subsystem pages", "master-plan.md", "one page per subsystem"),
-    "Evidence matrices": ("Evidence tables", "diagnosticity.md", "one page per evidence matrix"),
+    "Subsystems": ("Subsystem pages", "master-plan.html", "one page per subsystem"),
+    "Evidence matrices": ("Evidence tables", "diagnosticity.html", "one page per evidence matrix"),
 }
 
 
@@ -4488,7 +4489,7 @@ HOW_TO_ANSWER = (
 def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The Unresolved lens for decisions: questions still open (§6.1, §7.1).
 
-    Answered, dismissed, and superseded questions move to `resolved-leads.md`.
+    Answered, dismissed, and superseded questions move to `resolved-leads.html`.
     This page is the decision docket: what is still unsettled, what each
     question blocked, and the assumption the survey proceeded with so a reader
     can tell how much of the record rests on it.
@@ -4516,7 +4517,7 @@ def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResu
             "blocked and the assumption the survey proceeded with, so a reader can see "
             "which readings would change if the assumption turns out wrong. Questions "
             "already settled are on "
-            "[Resolved leads and questions](resolved-leads.md)._"
+            "[Resolved leads and questions](resolved-leads.html)._"
         ),
         _paragraph(HOW_TO_ANSWER),
     ]
@@ -4525,7 +4526,7 @@ def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResu
             conn,
             "No question is open."
             f" {_count(int(closed['n'] or 0), 'settled question')} are on"
-            " [Resolved leads and questions](resolved-leads.md).",
+            " [Resolved leads and questions](resolved-leads.html).",
             "questions the survey could not settle, with what each one blocked and"
             " the assumption used to keep moving.",
             "`open_questions` whose resolution is still `open`.",
@@ -4615,7 +4616,7 @@ def _open_defects_by_path(conn: sqlite3.Connection) -> dict[str, int]:
     """
 
     counts: dict[str, int] = {}
-    open_states = FINDING_LENS_STATES.get("findings.md", ())
+    open_states = FINDING_LENS_STATES.get("findings.html", ())
     if not open_states:
         return counts
     placeholders = ",".join("?" for _ in open_states)
@@ -5124,7 +5125,7 @@ def render_disagreements(conn: sqlite3.Connection, storage: Path) -> RenderResul
             " reading and did not, because the evidence it had does not choose. That is"
             " information: it says where a further pass would change the record, and"
             " what kind of evidence it would take. Records the evidence did settle are"
-            " on [Conflicting evidence](contradictions.md)._"
+            " on [Conflicting evidence](contradictions.html)._"
         )
     )
 
@@ -5527,7 +5528,7 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
     deletes their event tables. A finding's severity re-grades are a third
     trail (`finding_severity_events`), read when the store has the table.
     Every other family carries a mutable terminal column and is reported on
-    `resolved-leads.md`, which says so (§1.1, C58).
+    `resolved-leads.html`, which says so (§1.1, C58).
     """
 
     del storage  # the two event tables are the only source
@@ -5715,7 +5716,7 @@ def render_resolved_leads(conn: sqlite3.Connection, storage: Path) -> RenderResu
             "_These two families reach a terminal state in a column, not in an event"
             " table. The record says what state they are in; for how they got there it"
             " says only what is written below. Findings and contradictions do keep an"
-            " event trail, on [Resolution history](resolution-history.md)._"
+            " event trail, on [Resolution history](resolution-history.html)._"
         )
     ]
 

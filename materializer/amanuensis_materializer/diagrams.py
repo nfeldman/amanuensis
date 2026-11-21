@@ -205,7 +205,7 @@ def boundary_view(conn: sqlite3.Connection) -> str:
     touching: dict[str, list[tuple[str, str]]] = {node["id"]: [] for node in nodes}
     for edge in edges:
         if edge["kind"] == "seam":
-            link = f"**[{edge['label']}](seams.md#{edge['label'].lower()})** seam"
+            link = f"**[{edge['label']}](seams.html#{edge['label'].lower()})** seam"
             touching[edge["from"]].append((link, edge["to"]))
             touching[edge["to"]].append((link, edge["from"]))
         else:
@@ -643,7 +643,7 @@ def seam_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
         name_b = subs.get(s["party_b"], {}).get("name", s["party_b"])
         edges.append(
             TopologyEdge(
-                key=inlines(f"**[{s['id']}](seams.md#{s['id'].lower()})**"),
+                key=inlines(f"**[{s['id']}](seams.html#{s['id'].lower()})**"),
                 left_id=s["party_a"],
                 left=_linked_subsystem(s["party_a"], name_a),
                 right_id=s["party_b"],
