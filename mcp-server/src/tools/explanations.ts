@@ -54,7 +54,7 @@ const RECORD_REFUSALS = {
   onePurposeParagraph: () =>
     "record_explanation refuses: a purpose is one paragraph, with no blank line and no line starting with '#', '-', '*' or '|'.",
   accountShape: () =>
-    "record_explanation refuses: an account is prose and lists, with no line starting with '#' or '|'. A heading or a table would sit above the page's own structure.",
+    "record_explanation refuses: an account is prose and lists, with no line outside fenced code starting with '#' or '|', and no raw HTML or image outside code. A heading or a table would sit above the page's own structure.",
   orientation: (slot: string, violations: string[]) =>
     `record_explanation refuses: the ${slot} carries survey-status language or a count fraction, which the pages withhold: ${violations.join("; ")}. Say what the code does instead; the same lint runs again when the pages are rendered.`,
 } as const;
@@ -96,9 +96,45 @@ export function isOneParagraph(text: string): boolean {
   });
 }
 
-/** An account is prose and lists: blank lines and list lines pass, headings and tables do not. */
-export function isProseAndLists(text: string): boolean {
-  return text.split(LINE_BREAK).every((line) => !/^[#|]/.test(line.trimStart()));
+/** A fence opens on three or more backticks or tildes, as the page's `_FENCE` reads it. */
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+/** A raw HTML tag or comment, which the stored-prose grammar does not admit (§3.4). */
+const RAW_HTML = /<!--|<\/?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?\/?>/;
+/** A Markdown image. */
+const IMAGE = /!\[[^\]]*\]\(/;
+
+/**
+ * The lines of `text` outside fenced code. A fence closes only on the same
+ * character, at least as long (CommonMark), which is how `_nest_prose` decides
+ * which lines the page treats as headings.
+ */
+function linesOutsideFences(text: string): string[] {
+  const out: string[] = [];
+  let fence: { char: string; length: number } | null = null;
+  for (const line of text.split(LINE_BREAK)) {
+    const run = FENCE.exec(line)?.[1] ?? "";
+    if (fence === null) {
+      if (run) fence = { char: run.charAt(0), length: run.length };
+      else out.push(line);
+    } else if (run.charAt(0) === fence.char && run.length >= fence.length) {
+      fence = null;
+    }
+  }
+  return out;
+}
+
+/**
+ * Stored prose (store-only PLAN §3.4): paragraphs, lists, code spans and fenced
+ * code, emphasis, links. Outside a fence no line is a heading or a table line,
+ * and outside a code span there is no raw HTML and no image. Fenced code is
+ * whatever it is: a `# comment` in a fence is not a heading (F5/codex, slice-S1).
+ */
+export function isStoredProse(text: string): boolean {
+  return linesOutsideFences(text).every((line) => {
+    if (/^[#|]/.test(line.trimStart())) return false;
+    const prose = line.replace(/(`+)[^`]*?\1/g, "");
+    return !RAW_HTML.test(prose) && !IMAGE.test(prose);
+  });
 }
 
 interface Subject {
@@ -227,7 +263,7 @@ export const explanationTools: ToolDefinition[] = [
       if (subject.slot === "purpose" && !isOneParagraph(body)) {
         throw new ToolError(RECORD_REFUSALS.onePurposeParagraph());
       }
-      if (subject.slot === "account" && !isProseAndLists(body)) {
+      if (subject.slot === "account" && !isStoredProse(body)) {
         throw new ToolError(RECORD_REFUSALS.accountShape());
       }
       const violations = orientationViolations(body);

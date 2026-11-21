@@ -24,7 +24,7 @@ import {
   byteLength,
   EVIDENCE_CAP,
   isOneParagraph,
-  isProseAndLists,
+  isStoredProse,
   LINE_BREAK,
   REASON_CAP,
 } from "./explanations.js";
@@ -57,9 +57,9 @@ const RECORD_REFUSALS = {
   tooLong: () =>
     `record_narrative refuses: a narrative is limited to ${BODY_CAP} bytes. Split it into topics; the cap counts UTF-8 bytes.`,
   shape: () =>
-    "record_narrative refuses: a narrative is prose and lists, with no line starting with '#' or '|'. The page owns its headings and tables; name a part of the section with topic instead.",
+    "record_narrative refuses: a narrative is prose and lists, with no line outside fenced code starting with '#' or '|', and no raw HTML or image outside code. The page owns its headings and tables; name a part of the section with topic instead.",
   topic: () =>
-    `record_narrative refuses: a topic is a short title on one line of at most ${TOPIC_CAP} characters, with no line starting with '#' or '|'.`,
+    `record_narrative refuses: a topic is a short title on one line of at most ${TOPIC_CAP} characters, not starting with '#' or '|', with no raw HTML or image.`,
   revision: (ref: string) =>
     `record_narrative refuses: ref_sha ${ref} does not resolve to a commit in the bound workspace. Record the revision the reading was taken at.`,
   orientation: (violations: string[]) =>
@@ -78,7 +78,7 @@ const DECLINE_REFUSALS = {
   reasonOneParagraph: () =>
     "decline_narrative refuses: a reason is one paragraph, with no blank line and no line starting with '#', '-', '*' or '|'.",
   topic: () =>
-    `decline_narrative refuses: a topic is a short title on one line of at most ${TOPIC_CAP} characters, with no line starting with '#' or '|'.`,
+    `decline_narrative refuses: a topic is a short title on one line of at most ${TOPIC_CAP} characters, not starting with '#' or '|', with no raw HTML or image.`,
   revision: (ref: string) =>
     `decline_narrative refuses: ref_sha ${ref} does not resolve to a commit in the bound workspace. Record the revision the reading was taken at.`,
   orientation: (violations: string[]) =>
@@ -98,7 +98,7 @@ interface Subject {
 /** A topic is one short line; it prints as a subheading, so it cannot carry a heading or table marker. */
 function topicOf(args: Record<string, unknown>, refusal: string): string {
   const topic = (optString(args, "topic") ?? "").trim();
-  if ([...topic].length > TOPIC_CAP || LINE_BREAK.test(topic) || !isProseAndLists(topic)) {
+  if ([...topic].length > TOPIC_CAP || LINE_BREAK.test(topic) || !isStoredProse(topic)) {
     throw new ToolError(refusal);
   }
   return topic;
@@ -231,7 +231,7 @@ export const narrativeTools: ToolDefinition[] = [
       const body = requireString(args, "body");
       if (body.trim() === "") throw new ToolError("missing required string: body");
       if (byteLength(body) > BODY_CAP) throw new ToolError(RECORD_REFUSALS.tooLong());
-      if (!isProseAndLists(body)) throw new ToolError(RECORD_REFUSALS.shape());
+      if (!isStoredProse(body)) throw new ToolError(RECORD_REFUSALS.shape());
       const violations = [
         ...(orientationViolations(body) ?? []),
         ...(subject.topic === "" ? [] : (orientationViolations(subject.topic) ?? [])),
