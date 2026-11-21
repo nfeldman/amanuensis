@@ -31,6 +31,8 @@ Turns red when:
       * an edge added to the runtime SVG (one naming a real boundary, one naming
         none): content axis, `runtime-diagram-edge`;
       * a node removed from the boundary SVG: content axis, `boundary-diagram-node`;
+      * a node removed from, and a node drawn twice in, the runtime SVG: content
+        axis, `runtime-diagram-node`;
       * beyond the plan's table, one per record type it adds: a disposition's
         verdict re-marked (state, `disposition`), a claim removed (coverage,
         `claim`), an explanation altered (content, `explanation`), a territory row
@@ -363,6 +365,20 @@ def _boundary_node_removed(sid: str) -> Callable[[str], str]:
     return edit
 
 
+def _runtime_node(*, twice: bool) -> Callable[[str], str]:
+    """The runtime SVG's first source box, removed or drawn a second time."""
+
+    def edit(text: str) -> str:
+        svg = re.search(r'<svg class="runtime-boundary-svg".*?</svg>', text, re.S)
+        node = svg and re.search(r'<rect class="runtime-svg-node"[^>]*data-node="runtime:[^"]*"[^>]*/>', svg.group(0))
+        if not svg or not node:
+            return text
+        drawn = svg.group(0).replace(node.group(0), node.group(0) * 2 if twice else "", 1)
+        return text.replace(svg.group(0), drawn, 1)
+
+    return edit
+
+
 def _remark(tag: str, record: str, state: str) -> Callable[[str], str]:
     def edit(text: str) -> str:
         found = re.search(rf'<{tag}\b[^>]*data-record="{re.escape(record)}"[^>]*>', text)
@@ -418,6 +434,11 @@ def sabotages(facts: dict[str, Any]) -> list[tuple[str, str, Callable[[str], str
          _runtime_edge_added(None), "content", "runtime-diagram-edge", ""),
         ("a node removed from the boundary SVG", "architecture.html", _boundary_node_removed("F-01"),
          "content", "boundary-diagram-node", "subsystem:F-01"),
+        # A census that skipped the runtime SVG's boxes would pass both edge rows above.
+        ("a node removed from the runtime SVG", "architecture.html", _runtime_node(twice=False),
+         "content", "runtime-diagram-node", f"runtime:{facts['runtime'][0][1]}"),
+        ("a node drawn twice in the runtime SVG", "architecture.html", _runtime_node(twice=True),
+         "content", "runtime-diagram-node", f"runtime:{facts['runtime'][0][1]}"),
         ("a disposition's verdict re-marked", f"subsystems/{disposition_page}",
          _remark("article", f"disposition:{disposition}", "ruled-out" if facts["dispositions"][disposition] != "ruled-out" else "out-of-scope"),
          "state", "disposition", disposition),
