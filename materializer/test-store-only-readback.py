@@ -16,7 +16,9 @@ Turns red when:
   - an unsabotaged publication does not read back green on all three axes;
   - a rendered finding, subsystem, seam, narrative, imported body, runtime
     boundary, claim, concern disposition, explanation or territory disposition does
-    not carry its `data-record` mark, or its `data-state` is not the store's value;
+    not carry its `data-record` mark, or its `data-state` is not the store's value
+    (an import-only page's body, a subsystem page's own status line and the
+    overview's purpose included);
   - a drawn edge of the runtime SVG, or a node or edge of the boundary SVG, does
     not carry `data-edge` / `data-node` naming its record;
   - any sabotage is not reported on its axis with its `object_type` and id, or is
@@ -38,6 +40,13 @@ Turns red when:
         `claim`), an explanation altered (content, `explanation`), a territory row
         re-marked (state, `territory`), and a mark naming a record the store does
         not hold (coverage);
+      * a narrative's `<` printed as `>`, every word kept: content, `narrative`;
+      * a paragraph removed from the import-only onboarding page's body: content,
+        `imported-body`;
+      * a subsystem page's own status chip changed: state, `subsystem`;
+      * a disposition's verdict chip changed under an unchanged mark: state,
+        `disposition`; a finding's status chip removed: state, `finding`;
+      * the project's purpose printed twice on the overview: coverage, `explanation`;
   - the golden corpus's `VERSION` is not SO20 or a later packet the update rule names
     (SO22–SO25, which add `<figure data-diagram>` blocks), or a golden page differs
     from the corpus this packet started from by anything but `data-record`,
@@ -75,8 +84,9 @@ START_SHA = "29eb0798b4b90d9e9081da226c93536e8e92d47f"
 NARRATIVE_BODY = (
     "The scheduler takes a job from the queue, checks the caller with the auth"
     " service and then starts it.\n\nA job that fails its check is put back on the"
-    " queue with its attempt count raised."
+    " queue with its attempt count raised, while attempts < 3."
 )
+PURPOSE_BODY = "FictionalProject runs queued jobs for the callers its auth service admits."
 EXPLANATION_BODY = (
     "The auth service decides whether a caller may run a job, and keeps the policy it"
     " decides by."
@@ -186,12 +196,20 @@ def build_store(root: Path) -> tuple[Path, dict[str, Any]]:
         )
         explanation_id = cur.lastrowid
         cur.execute(
+            "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
+            " ref_sha, session_id, recorded_at) VALUES ('project', 'project', 'purpose', 'recorded', ?,"
+            " 'deadbeef', 's1', '2026-11-20 10:00:00')",
+            (PURPOSE_BODY,),
+        )
+        purpose_id = cur.lastrowid
+        cur.execute(
             "INSERT INTO territory_dispositions (territory, disposition, condition, ref_sha, session_id)"
             " VALUES ('T2', 'disqualified', 'The service holds no cache between requests.', 'deadbeef', 's1')"
         )
         db.commit()
         facts = {
             "explanation_id": explanation_id,
+            "purpose_id": purpose_id,
             "dispositions": {
                 f"{r[0]}:{r[1]}": str(r[2])
                 for r in db.execute("SELECT subsystem_id, concern_code, classification FROM dispositions")
@@ -365,6 +383,55 @@ def _boundary_node_removed(sid: str) -> Callable[[str], str]:
     return edit
 
 
+def _operator_flipped(narrative_id: int) -> Callable[[str], str]:
+    """Only an operator changed: every word of the narrative stays as it was."""
+
+    def edit(text: str) -> str:
+        for found in re.finditer(rf'<p\b[^>]*data-record="narrative:{narrative_id}"[^>]*>.*?</p>', text, re.S):
+            if "&lt; 3" in found.group(0):
+                return text.replace(found.group(0), found.group(0).replace("&lt; 3", "&gt; 3"), 1)
+        return text
+
+    return edit
+
+
+def _imported_paragraph_removed(text: str) -> str:
+    """The import-only onboarding page loses its body's first paragraph."""
+
+    return re.sub(r"<p\b[^>]*><strong>Codebase</strong>:[^\n]*</p>\n?", "", text, count=1)
+
+
+def _status_chip(record: str, value: str, label: str, family: str) -> Callable[[str], str]:
+    """The record's status chip changed to another value of its family, its mark left as it was."""
+
+    def edit(text: str) -> str:
+        found = re.search(rf'<(\w+)\b[^>]*data-record="{re.escape(record)}"[^>]*>', text)
+        if found is None:
+            return text
+        chip = re.compile(rf'<span class="status status-{family} status-[a-z-]+"([^>]*)>[^<]*</span>')
+        at = chip.search(text, found.start())
+        if at is None:
+            return text
+        return text[: at.start()] + f'<span class="status status-{family} status-{value}"{at.group(1)}>{label}</span>' + text[at.end():]
+
+    return edit
+
+
+def _chip_removed(record: str) -> Callable[[str], str]:
+    def edit(text: str) -> str:
+        found = element(text, "article", f'data-record="{record}"')
+        if found is None:
+            return text
+        return text.replace(found.group(0), re.sub(r'<span class="status [^"]*"[^>]*>[^<]*</span>', "", found.group(0), count=1))
+
+    return edit
+
+
+def _purpose_twice(text: str) -> str:
+    found = re.search(rf"<p\b[^>]*>{re.escape(PURPOSE_BODY)}</p>", text)
+    return text if found is None else text.replace(found.group(0), found.group(0) * 2, 1)
+
+
 def _runtime_node(*, twice: bool) -> Callable[[str], str]:
     """The runtime SVG's first source box, removed or drawn a second time."""
 
@@ -447,6 +514,20 @@ def sabotages(facts: dict[str, Any]) -> list[tuple[str, str, Callable[[str], str
          "content", "explanation", str(facts["explanation_id"])),
         ("a territory row re-marked", "concern-checklist.html", _remark("tr", "territory:T2", "applies"), "state", "territory", "T2"),
         ("a mark naming a record the store does not hold", "seams.html", _unheld_mark, "coverage", "seam", "SM-99"),
+        # Beyond the words: an operator, an import-only page, every printed state family, the thesis.
+        ("a narrative's operator changed, its words kept", "subsystems/b01-job-scheduler.html",
+         _operator_flipped(facts["narrative_id"]), "content", "narrative", str(facts["narrative_id"])),
+        ("an import-only page's body loses a paragraph", "onboarding-report.html",
+         _imported_paragraph_removed, "content", "imported-body", "onboarding-report.md"),
+        ("a subsystem page's own status changed", "subsystems/b01-job-scheduler.html",
+         _status_chip("subsystem:B-01", "scoping", "Scoped", "survey"), "state", "subsystem", "B-01"),
+        ("a disposition's verdict chip changed under its mark", f"subsystems/{disposition_page}",
+         _status_chip(f"disposition:{disposition}", "confirmed-bug" if facts["dispositions"][disposition] != "confirmed-bug" else "ruled-out",
+                      "Confirmed bug" if facts["dispositions"][disposition] != "confirmed-bug" else "Ruled out", "disposition"),
+         "state", "disposition", disposition),
+        ("a finding's status chip removed", "findings.html", _chip_removed(f"finding:{open_finding}"), "state", "finding", open_finding),
+        ("the project's purpose printed twice on the overview", "index.html", _purpose_twice,
+         "coverage", "explanation", str(facts["purpose_id"])),
     ]
 
 
@@ -555,6 +636,11 @@ def main() -> int:
                     return f"master-plan.html marks {sid} {len(tags)} times, not in its atlas item and its record"
                 if any(f'data-state="{status}"' not in tag for tag in tags):
                     return f"{sid} is not marked with its depth {status!r}"
+            for sid, status in facts["subsystems"].items():
+                name = {"B-01": "b01-job-scheduler", "B-02": "b02-auth-service", "F-01": "f01-web-ui"}[sid]
+                tags = start_tags((output / "subsystems" / f"{name}.html").read_text(), f'data-record="subsystem:{sid}"')
+                if len(tags) != 1 or f'data-state="{status}"' not in tags[0]:
+                    return f"{sid}'s own page does not mark its status line once with {status!r}"
             return None
 
         check("each subsystem's atlas item and record carry its mark and depth", subsystem_marks)
@@ -570,6 +656,9 @@ def main() -> int:
                 return "the narrative's body is not marked with its record and its disposition"
             if len(start_tags(page, f'data-record="imported-body:{SURVEY_PATH}"')) < 3:
                 return "the imported survey body's blocks are not marked"
+            for kind in ("onboarding-report", "entry-point", "concern-checklist"):
+                if not start_tags((output / f"{kind}.html").read_text(), f'data-record="imported-body:{kind}.md"'):
+                    return f"the import-only page {kind}.html does not mark its imported body"
             return None
 
         check("seams, narratives and imported bodies carry their marks", seam_and_prose_marks)
@@ -578,6 +667,9 @@ def main() -> int:
             page = (output / "subsystems" / "b02-auth-service.html").read_text()
             if len(start_tags(page, 'data-record="claim:B-02-token-check"')) != 1:
                 return "the claim on B-02 is not marked once on its page"
+            purpose = start_tags((output / "index.html").read_text(), f'data-record="explanation:{facts["purpose_id"]}"')
+            if not purpose or any('data-state="recorded"' not in tag for tag in purpose):
+                return "the overview's purpose is not marked with its row and its state"
             explanation = start_tags(page, f'data-record="explanation:{facts["explanation_id"]}"')
             if not explanation or any('data-state="recorded"' not in tag for tag in explanation):
                 return "B-02's purpose is not marked with its row and its state"
