@@ -33,6 +33,8 @@ Turns red when:
     with the right axis and object type: an arrow removed, an arrow added that no field
     joins, a box removed or re-pointed, a figure removed, a figure for a seam that records no
     field;
+  - a seam naming one subsystem as both parties draws fewer boxes than its model holds, or an
+    arrow of one half joins the other half's box;
   - the read-back of the publication is not green on every axis;
   - the golden corpus's `VERSION` is not SO24, or a golden page differs from the corpus this
     packet started from outside a seam-contract figure or sentence (or a figure or sentence of the
@@ -552,6 +554,48 @@ def main() -> int:
             return None
 
         check("a half is drawn from Structural up, and said not to be below", status_rule)
+
+        def self_seam() -> str | None:
+            # A seam may name one subsystem as both parties (the server allows it): both boxes are drawn,
+            # each half's arrows join its own box, and every model node is one drawn node.
+            db = sqlite3.connect(f"file:{store / 'memory.db'}?mode=ro", uri=True)
+            copy = sqlite3.connect(":memory:")
+            copy.row_factory = sqlite3.Row
+            try:
+                db.backup(copy)
+            finally:
+                db.close()
+            try:
+                copy.execute(
+                    "INSERT INTO seams (id, shared_object, party_a, party_b, a_writes, a_reads, b_writes, b_reads)"
+                    " VALUES ('SM-99', 'loopback buffer', 'B-01', 'B-01', 'frames', 'acks', 'acks', 'frames')"
+                )
+                copy.execute("UPDATE subsystems SET status = 'structural' WHERE id = 'B-01'")
+                model = diagrams.seam_contract_model(copy, "SM-99")
+            finally:
+                copy.close()
+            svg = diagrams.draw_svg(model)
+            groups = re.findall(r'<g\b[^>]*\bdata-node="([^"]*)"[^>]*>(.*?)</g>', svg, re.S)
+            if len(groups) != len(model.nodes) or len(model.nodes) != 3:
+                return f"the self-seam's model holds {len(model.nodes)} nodes and its SVG draws {len(groups)}"
+            centres = []
+            for _record, inner in groups:
+                rect = re.search(r'<rect\b[^>]*\bx="([\d.]+)"[^>]*\bwidth="([\d.]+)"', inner)
+                centres.append(float(rect.group(1)) + float(rect.group(2)) / 2 if rect else -1.0)
+            if len(set(centres)) != 3:
+                return f"the self-seam's boxes sit at {centres}, not three places"
+            party_a, shared, party_b = sorted(centres)
+            for record, tag in edge_paths(svg).items():
+                d = re.search(r'\bd="M ([\d.]+) [\d.]+ [LQ] (?:[\d.]+ [\d.]+ )?([\d.]+) [\d.]+"', tag)
+                if d is None:
+                    return f"{record}'s path has no start and end"
+                ends = (float(d.group(1)), float(d.group(2)))
+                party = party_a if record.rsplit(":", 1)[1].startswith("a_") else party_b
+                if not all(min(abs(x - party), abs(x - shared)) < 100 for x in ends):
+                    return f"{record} runs {ends}; its half joins the box at {party} and the shared object at {shared}"
+            return None
+
+        check("a seam whose two parties are one subsystem draws both boxes, each half on its own side", self_seam)
 
         def below() -> str | None:
             found = sentences(page)
