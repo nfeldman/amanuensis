@@ -562,6 +562,9 @@ jobs:
       - name: The Markdown intermediate is deleted
         working-directory: materializer
         run: python3 test-store-only-no-markdown.py
+      - name: The read-back checks record marks and drawn elements against the store
+        working-directory: materializer
+        run: python3 test-store-only-readback.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py

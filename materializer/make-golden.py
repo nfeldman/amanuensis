@@ -31,6 +31,13 @@ regeneration and cannot be rebuilt. The
 the ledger's source links are pinned too.
 
     python3 make-golden.py --packet SO11
+    python3 make-golden.py --packet SO20 --recorded
+
+`--recorded` reprints each fixture's HTML from the store it recorded, leaving its
+inputs, its store and every other file of the corpus as they are: for a packet
+that changes only what the HTML prints of the same store (SO20's attributes). The
+`lens` pages written against its git workspace, which the corpus does not carry,
+are kept as they are.
 
 Needs `node` and the server's `npm run build` output for the legacy fixtures.
 Never reads a real store.
@@ -335,10 +342,57 @@ def with_repository(seen: dict[str, Any], url: str) -> dict[str, Any]:
     return {**inputs, "models": seen["models"], "html": render_inputs(inputs, seen["models"])}
 
 
+#: Pages whose golden HTML was written against a git workspace the corpus does not carry.
+WORKSPACE_DEPENDENT = {("lens", "index.html"), ("lens", "not-yet-surveyed.html")}
+
+
+def reprint_recorded() -> None:
+    """Each store fixture's HTML, printed again from its recorded `memory.sql`."""
+
+    def write_pages(name: str, pages: dict[str, str]) -> None:
+        for path, text in pages.items():
+            if (name, path) in WORKSPACE_DEPENDENT:
+                continue
+            target = GOLDEN / name / "html" / path
+            if not target.is_file():
+                raise SystemExit(f"{name}: {path} is not in the corpus; regenerate it in full")
+            target.write_text(fold(text))
+
+    with tempfile.TemporaryDirectory(prefix="amanuensis-golden-") as tmp:
+        for name in ("materializer", "lens", "axiomdb-shaped", "self-shaped"):
+            storage = Path(tmp) / name / "storage"
+            storage.mkdir(parents=True)
+            db = sqlite3.connect(storage / "memory.db")
+            try:
+                db.executescript((GOLDEN / name / "memory.sql").read_text())
+                db.commit()
+            finally:
+                db.close()
+            if name == "materializer":
+                (storage / "workspace_path").write_text("/example/FictionalProject\n")
+            seen = capture_publish(storage, [])
+            write_pages(name, seen["html"])
+            if name == "materializer":
+                write_pages(
+                    "materializer-github",
+                    with_repository(seen, "https://github.com/acme/fictional")["html"],
+                )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--packet", required=True, help="The packet writing the corpus (PLAN §3.2).")
+    parser.add_argument(
+        "--recorded",
+        action="store_true",
+        help="Reprint only the HTML, from each fixture's recorded store.",
+    )
     args = parser.parse_args()
+    if args.recorded:
+        reprint_recorded()
+        (GOLDEN / "VERSION").write_text(f"{args.packet}\n")
+        print(f"golden HTML reprinted by {args.packet} under {GOLDEN.relative_to(REPO)}")
+        return 0
     with tempfile.TemporaryDirectory(prefix="amanuensis-golden-") as tmp:
         root = Path(tmp)
         # The `hooks` fixture was written Markdown; its parser is gone, so it is kept, not rebuilt.
