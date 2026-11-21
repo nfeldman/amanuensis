@@ -474,6 +474,11 @@ def start_corpus(into: Path) -> Path | None:
     return corpus if unpacked.returncode == 0 and corpus.is_dir() else None
 
 
+# SO20's record marks (`data-record`, `data-state`, `data-node`, `data-edge`) are not this
+# packet's addition; the slice-S4 fix added more of them after it landed (F3-F5), so a page is
+# compared with them taken out on both sides.
+_SO20_MARKS = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
+
 def golden_additions_only(previous: Path | None) -> str | None:
     version = GOLDEN / "VERSION"
     if not version.is_file() or version.read_text().strip() != PACKET:
@@ -486,7 +491,7 @@ def golden_additions_only(previous: Path | None) -> str | None:
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     gained = 0
     for rel in sorted(after):
-        new, old = after[rel].read_text(), before[rel].read_text()
+        new, old = _SO20_MARKS.sub("", after[rel].read_text()), _SO20_MARKS.sub("", before[rel].read_text())
         if _without_additions(new) != _EMPTY_FLOW.sub("", _EARLIER.sub("", old)).replace("\n", ""):
             return f"{rel} differs from the start's corpus outside a flow-strip figure or sentence, or the slice's earlier diagrams"
         gained += bool(_ADDED.search(new))

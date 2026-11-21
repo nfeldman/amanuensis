@@ -415,6 +415,11 @@ def start_corpus(into: Path) -> Path | None:
     return corpus if unpacked.returncode == 0 and corpus.is_dir() else None
 
 
+# SO20's record marks (`data-record`, `data-state`, `data-node`, `data-edge`) are not this
+# packet's addition; the slice-S4 fix added more of them after it landed (F3-F5), so a page is
+# compared with them taken out on both sides.
+_SO20_MARKS = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
+
 def golden_additions_only(previous: Path | None) -> str | None:
     version = GOLDEN / "VERSION"
     if not version.is_file() or version.read_text().strip() not in (PACKET, "SO24", "SO25"):
@@ -427,7 +432,7 @@ def golden_additions_only(previous: Path | None) -> str | None:
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     gained = 0
     for rel in sorted(after):
-        new, old = _EARLIER.sub("", after[rel].read_text()), _EARLIER.sub("", before[rel].read_text())
+        new, old = (_EARLIER.sub("", _SO20_MARKS.sub("", p.read_text())) for p in (after[rel], before[rel]))
         # Blocks are joined by a newline, so taking one out can leave a newline behind; only that is let go.
         if _EMPTY_FLOW.sub("", _ADDED.sub("", new)).replace("\n", "") != old.replace("\n", ""):
             return f"{rel} differs from the start's corpus outside a coverage figure, a sentence, a badge or its note, or the slice's earlier diagrams"

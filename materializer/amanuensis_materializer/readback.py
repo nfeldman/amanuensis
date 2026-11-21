@@ -2337,6 +2337,7 @@ class ProjectionVerifier:
         from .diagrams import runtime_boundary_rows, runtime_edge_record  # noqa: PLC0415
         from .html_projection import (  # noqa: PLC0415 — it imports this module
             DISPLAY_STATUS,
+            STATUS_AXIS,
             _HtmlWriter,
         )
         from .legacy_prose import (  # noqa: PLC0415
@@ -2498,16 +2499,23 @@ class ProjectionVerifier:
                     if state is not None and occurrence.states != {state}:
                         marked = ", ".join(sorted(str(s) for s in occurrence.states))
                         report("state", record, f"{page} marks it {marked}; the store holds {state}")
-                    if state is not None and kind in families:
-                        # Every occurrence prints its state as a chip of its family, and
-                        # only the store's value: a missing chip or an unknown value is red.
+                    if state is not None and kind in families and state in families[kind][1]:
+                        # Every occurrence prints its state as a chip, and only the store's
+                        # value: a missing chip or an unknown value is red. A chip is the
+                        # record's when it carries its family's class or one of its enum's
+                        # values (a value two enums share takes the earlier one's class).
                         family, values = families[kind]
                         wanted = DISPLAY_STATUS.get(state, state.replace("-", " ").title())
-                        chips = [(c, label) for c, label in occurrence.chips if f"status-{family}" in c]
+                        chips = [
+                            (c, label)
+                            for c, label in occurrence.chips
+                            if f"status-{family}" in c or {x.removeprefix("status-") for x in c} & values
+                        ]
                         if not chips:
                             report("state", record, f"{page} prints no {family} status for it; the store holds {state} ({wanted!r})")
                         for classes, label in chips:
-                            keys = {c.removeprefix("status-") for c in classes if c.startswith("status-")} - {family}
+                            keys = {c.removeprefix("status-") for c in classes if c.startswith("status-")}
+                            keys -= {family, STATUS_AXIS.get(state, family)}
                             if keys != {state} or label != wanted:
                                 unknown = "" if keys <= values else "; the schema holds no such value"
                                 report(

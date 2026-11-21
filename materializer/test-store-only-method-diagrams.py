@@ -485,6 +485,11 @@ def start_corpus(into: Path) -> Path | None:
     return corpus if unpacked.returncode == 0 and corpus.is_dir() else None
 
 
+# SO20's record marks (`data-record`, `data-state`, `data-node`, `data-edge`) are not this
+# packet's addition; the slice-S4 fix added more of them after it landed (F3-F5), so a page is
+# compared with them taken out on both sides.
+_SO20_MARKS = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
+
 def golden_figures_only(previous: Path | None) -> str | None:
     version = GOLDEN / "VERSION"
     if not version.is_file() or version.read_text().strip() not in (PACKET, "SO23", "SO24", "SO25"):
@@ -497,7 +502,7 @@ def golden_figures_only(previous: Path | None) -> str | None:
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     gained = 0
     for rel in sorted(after):
-        new, old = after[rel].read_text(), before[rel].read_text()
+        new, old = _SO20_MARKS.sub("", after[rel].read_text()), _SO20_MARKS.sub("", before[rel].read_text())
         if _EMPTY_FLOW.sub("", _FIGURE_BLOCK.sub("", new)) != old:
             return f"{rel} differs from the start's corpus outside its <figure data-diagram> blocks"
         gained += new != old
@@ -828,7 +833,8 @@ def main() -> int:
             ("a checkpoint removed from B1", GUIDE, drop("checkpoint:mapped"), "content", "survey-workflow-diagram-node", "checkpoint:mapped"),
             ("a rung re-marked on the guide's ladder", GUIDE, retarget("status:concerns", "status:mapped"), "content", "status-ladder-diagram-node", "status:"),
             ("a recorded move removed from B-01's ladder", b01, drop(f"transition:{first_move}", "edge"), "content", "status-ladder-diagram-edge", f"transition:{first_move}"),
-            ("B-01's marker moved to B-02", b01, retarget("subsystem:B-01", "subsystem:B-02"), "content", "status-ladder-diagram-node", "subsystem:"),
+            # The ladder's marker, by its attribute: the page's status line carries the same record.
+            ("B-01's marker moved to B-02", b01, lambda text: text.replace('data-node="subsystem:B-01"', 'data-node="subsystem:B-02"', 1), "content", "status-ladder-diagram-node", "subsystem:"),
             ("an unmarked edge added to B-02's ladder", SUBSYSTEM_PAGES["B-02"], unmarked_edge, "content", "status-ladder-diagram-edge", ""),
             ("F-01's ladder removed", SUBSYSTEM_PAGES["F-01"], remove_figure("status-ladder"), "coverage", "status-ladder-diagram", "F-01"),
             ("B1 removed from the guide", GUIDE, remove_figure("survey-workflow"), "coverage", "survey-workflow-diagram", ""),
