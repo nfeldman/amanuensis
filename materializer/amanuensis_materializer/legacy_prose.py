@@ -32,6 +32,7 @@ from __future__ import annotations
 import html
 import re
 import sqlite3
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
@@ -115,6 +116,30 @@ def nest_headings(text: str, under: int) -> str:
     return "\n".join(out)
 
 
+#: The bodies one publication has read, by `(text, under, section, path)`, so the
+#: read-back that follows the render compares a page with the blocks the page was
+#: printed from rather than reading the body a second time (store-only PLAN §3.5).
+#: A run sets it; outside a run each body is read when asked for.
+RENDERED_BODIES: ContextVar[dict[tuple[str, int, str, str], tuple[Block, ...]] | None] = ContextVar(
+    "rendered_bodies", default=None
+)
+
+
+def body_blocks(text: str, *, under: int, sections: tuple[str, ...], path: str) -> tuple[Block, ...]:
+    """An imported body's blocks as this run read them under one of `sections`, else read now.
+
+    The section names only its tables' captions, so any of the sections a page
+    may print the body under gives the same words.
+    """
+
+    read = RENDERED_BODIES.get() or {}
+    for section in sections:
+        blocks = read.get((text, under, section, path))
+        if blocks is not None:
+            return blocks
+    return render_body(text, under=under, section=sections[0], path=path)
+
+
 def render_body(text: str, *, under: int, section: str, path: str) -> tuple[Block, ...]:
     """An imported body as page blocks, its headings moved `under` levels down.
 
@@ -129,6 +154,10 @@ def render_body(text: str, *, under: int, section: str, path: str) -> tuple[Bloc
 
     if under < 2:
         raise ValueError("an imported body's headings must move beneath the section's own")
+    read = RENDERED_BODIES.get()
+    key = (text, under, section, path)
+    if read is not None and key in read:
+        return read[key]
     body = nest_headings(text.strip(), under)
     if not body.strip():
         return ()
@@ -141,6 +170,8 @@ def render_body(text: str, *, under: int, section: str, path: str) -> tuple[Bloc
     # reading. Its content stays on the page, under the section it was written in.
     for later in page.blocks[1:]:
         out += later.blocks if isinstance(later, Section) else (later,)
+    if read is not None:
+        read[key] = tuple(out)
     return tuple(out)
 
 

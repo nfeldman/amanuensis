@@ -62,6 +62,16 @@ REPO = ROOT.parent
 GOLDEN = ROOT / "fixtures" / "store-only-golden"
 CI_FILE = REPO / ".github" / "workflows" / "test.yml"
 START_SHA = "65d2a403bc09b853e47d2e18ad9bff5dba157b4a"
+
+# SO20 marks every rendered record and drawn node or edge with these four attributes
+# (PLAN §3.5). The start tree predates them, so the current page is compared with
+# them removed; SO20's own gate checks their values.
+_SO20_MARKS = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
+
+
+def unmarked(text: str) -> str:
+    return _SO20_MARKS.sub("", text)
+
 # The tree SO19 started from: it still held the text pass and the parser the xref check compares with.
 SO19_START_SHA = "d4fd052932cc64fb083228ba81ce1ed206fdab51"
 FAMILY = ("index", "architecture", "master-plan", "how-to-read")
@@ -326,7 +336,7 @@ def main() -> int:
                     return "the tree this packet started from did not publish the lens fixture"
                 _s, output, _summary, _calls = runs["lens"]
                 for page in FAMILY:
-                    if (output / f"{page}.html").read_text() != (before / f"{page}.html").read_text():
+                    if unmarked((output / f"{page}.html").read_text()) != (before / f"{page}.html").read_text():
                         return f"lens/{page}.html differs from the page the start tree printed for the same store"
             return None
 

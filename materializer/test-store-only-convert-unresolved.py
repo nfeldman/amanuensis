@@ -58,6 +58,16 @@ REPO = ROOT.parent
 GOLDEN = ROOT / "fixtures" / "store-only-golden"
 CI_FILE = REPO / ".github" / "workflows" / "test.yml"
 START_SHA = "63db3a2dea3206f4feca3f4aa478f50c35c41d4c"
+
+# SO20 marks every rendered record and drawn node or edge with these four attributes
+# (PLAN §3.5). The start tree predates them, so the current page is compared with
+# them removed; SO20's own gate checks their values.
+_SO20_MARKS = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
+
+
+def unmarked(text: str) -> str:
+    return _SO20_MARKS.sub("", text)
+
 FAMILY = ("findings", "disagreements", "open-questions", "field-notes", "stale", "hot-spots")
 STORES = ("materializer", "axiomdb-shaped", "self-shaped", "lens")
 
@@ -525,8 +535,8 @@ def main() -> int:
                         a, b = after / name, before / name
                         if not a.is_file() or not b.is_file():
                             return f"{store}/{name} is published by only one of the two trees"
-                        if a.read_text() != b.read_text():
-                            return f"{store}/{name} {differs(a.read_text(), b.read_text())}"
+                        if unmarked(a.read_text()) != b.read_text():
+                            return f"{store}/{name} {differs(unmarked(a.read_text()), b.read_text())}"
             return None
 
         check("the lens, rich, bare and leaf stores print what the packet's start tree prints for them", start_equal)

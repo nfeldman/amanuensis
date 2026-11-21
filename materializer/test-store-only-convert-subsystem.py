@@ -60,6 +60,16 @@ GOLDEN = ROOT / "fixtures" / "store-only-golden"
 SCHEMA = REPO / "mcp-server" / "src" / "schema.sql"
 CI_FILE = REPO / ".github" / "workflows" / "test.yml"
 START_SHA = "9e55fe1f2777d2b27ff2afc3be31aa0ed6260519"
+
+# SO20 marks every rendered record and drawn node or edge with these four attributes
+# (PLAN §3.5). The start tree predates them, so the current page is compared with
+# them removed; SO20's own gate checks their values.
+_SO20_MARKS = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
+
+
+def unmarked(text: str) -> str:
+    return _SO20_MARKS.sub("", text)
+
 STORES = ("materializer", "axiomdb-shaped", "self-shaped", "lens")
 LEGACY = "amanuensis_materializer.legacy_prose"
 
@@ -563,8 +573,8 @@ def main() -> int:
                     a, b = after / name, before / name
                     if not a.is_file() or not b.is_file():
                         return f"{name} is published by only one of the two trees"
-                    if a.read_text() != b.read_text():
-                        return f"{name} {differs(a.read_text(), b.read_text())}"
+                    if unmarked(a.read_text()) != b.read_text():
+                        return f"{name} {differs(unmarked(a.read_text()), b.read_text())}"
             return None
 
         check("the rich store's pages equal what the packet's start tree prints for it", rich_equal)

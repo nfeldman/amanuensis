@@ -27,8 +27,9 @@ Turns red when:
   - the reader's guide still mentions a Markdown view, or a page carries the
     command-line render notice anywhere but its page head;
   - any local link in any page (or in the golden corpus) targets a `.md`;
-  - the golden corpus's `VERSION` is not SO13, it holds a different page set,
-    or its HTML differs from SO11's anywhere but the removed Markdown links, the
+  - the golden corpus's `VERSION` is not SO13 (or SO20, which only adds the
+    record attributes of §3.5; they are removed before comparing), it holds a
+    different page set, or its HTML differs from SO11's anywhere but the removed Markdown links, the
     guide's views paragraph, and the clock and commit values a re-seeded store
     carries (PLAN §3.2's update rule), or one of those values differs where the
     fixture's recorded inputs still hold the old one, for a value of another kind,
@@ -71,6 +72,9 @@ REPO = ROOT.parent
 GOLDEN = ROOT / "fixtures" / "store-only-golden"
 CI_FILE = REPO / ".github" / "workflows" / "test.yml"
 PACKET = "SO13"
+# Later writers of the corpus under PLAN §3.2's rule whose changes this gate can
+# remove: SO20 adds only `data-record`, `data-state`, `data-node` and `data-edge`.
+LATER_WRITERS = {"SO20": re.compile(r' data-(?:record|state|node|edge)="[^"]*"')}
 # The commit this packet started from; its golden corpus is the one SO11 wrote.
 START_SHA = "67db121aea4482be8fbfaa3990d47f67c3557fa9"
 GOLDEN_FIXTURES = ("materializer", "materializer-github", "lens", "axiomdb-shaped", "self-shaped", "hooks")
@@ -620,8 +624,10 @@ def main() -> int:
 
         def golden_regenerated() -> str | None:
             version = GOLDEN / "VERSION"
-            if not version.is_file() or version.read_text().strip() != PACKET:
-                return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET}"
+            written_by = version.read_text().strip() if version.is_file() else ""
+            if written_by != PACKET and written_by not in LATER_WRITERS:
+                return f"the golden corpus's VERSION is {written_by or 'absent'!r}, not {PACKET}"
+            later = LATER_WRITERS.get(written_by)
             if previous is None:
                 return f"SO11's golden corpus cannot be read from git at {START_SHA[:12]}"
             compared = 0
@@ -633,6 +639,8 @@ def main() -> int:
                 if not after or sorted(after) != sorted(before):
                     return f"the golden fixture {name} holds {len(after)} pages for SO11's {len(before)}"
                 for rel, new in after.items():
+                    if later is not None:
+                        new = later.sub("", new)
                     if md_targets(new):
                         return f"golden {name}/{rel} links {md_targets(new)[:3]}"
                     if masked(before[rel]) != masked(new):

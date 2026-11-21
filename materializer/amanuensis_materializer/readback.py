@@ -2284,10 +2284,10 @@ class ProjectionVerifier:
         """
 
         from .diagrams import runtime_boundary_rows, runtime_edge_record  # noqa: PLC0415
-        from .html_projection import DISPLAY_STATUS, write_html  # noqa: PLC0415 — it imports this module
-        from .legacy_prose import imported_bodies  # noqa: PLC0415
-        from .page import Page  # noqa: PLC0415
-        from .renderers import imported_body_blocks, narrative_body  # noqa: PLC0415
+        from .html_projection import DISPLAY_STATUS, _HtmlWriter  # noqa: PLC0415 — it imports this module
+        from .legacy_prose import body_blocks, imported_bodies  # noqa: PLC0415
+        from .page import Marked, Page  # noqa: PLC0415
+        from .renderers import AS_WRITTEN_HEADING, narrative_body  # noqa: PLC0415
 
         names, named, concerns = _resolver_names(conn)
         owed: dict[str, tuple[dict[str, int], str | None, Any]] = {}
@@ -2324,19 +2324,17 @@ class ProjectionVerifier:
         for body in imported_bodies(conn):
             if not body.body.strip():
                 continue
+            # Read lazily: a body is read again only if its page is compared.
             if body.kind == SURVEY_KIND and body.subsystem_id in names:
                 page = subsystem_page(str(body.subsystem_id), names[str(body.subsystem_id)])
                 owed[f"imported-body:{body.path}"] = (
                     {page: 1},
                     None,
-                    (imported_body_blocks(body, 3, "Structure", page), page),
+                    (body.body, 3, ("Structure", "Survey record"), page),
                 )
             else:
                 page = f"{body.kind}.html"
-                allowed[f"imported-body:{body.path}"] = (
-                    page,
-                    (imported_body_blocks(body, 2, "Structure", page), page),
-                )
+                allowed[f"imported-body:{body.path}"] = (page, (body.body, 2, (AS_WRITTEN_HEADING,), page))
 
         found: dict[str, dict[str, list[_Occurrence]]] = {}
         for rel, text in projection.items():
@@ -2374,9 +2372,13 @@ class ProjectionVerifier:
             for page in sorted(set(printed) - set(pages)):
                 report("coverage", record, f"{page} prints the record, and the page plan does not put it there")
             expected_words = None
-            if prose is not None:
-                blocks, page = prose
-                expected_words = _fragment_words(write_html(Page("", page, blocks.blocks)))
+            if prose is not None and printed:
+                if isinstance(prose[0], Marked):
+                    blocks, page = prose[0].blocks, prose[1]
+                else:
+                    text, under, sections, page = prose
+                    blocks = body_blocks(text, under=under, sections=sections, path=page)
+                expected_words = _fragment_words(_HtmlWriter({}, page).write(Page("", page, blocks)))
             kind = record.partition(":")[0]
             for page, occurrences in sorted(printed.items()):
                 for occurrence in occurrences:

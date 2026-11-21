@@ -1084,7 +1084,8 @@ def _imported_blocks(
     out: list[Block] = []
     for body in bodies:
         out.append(_paragraph(body.label()))
-        out.append(imported_body_blocks(body, under, section, path))
+        # Its blocks carry its mark, so the read-back can find the body on the page (§3.5).
+        out.append(Marked(f"imported-body:{body.path}", "", render_body(body.body, under=under, section=section, path=path)))
     return out
 
 
@@ -1106,12 +1107,6 @@ def narrative_body(record: Mapping[str, Any], level: int = 3) -> Marked:
         )
         return Marked(mark, "declined", tuple(render_prose(sentence)))
     return Marked(mark, "recorded", tuple(render_prose(text.strip(), under=level)))
-
-
-def imported_body_blocks(body: ImportedBody, under: int, section: str, path: str) -> Marked:
-    """An imported body as the blocks that carry its mark (§3.5)."""
-
-    return Marked(f"imported-body:{body.path}", "", render_body(body.body, under=under, section=section, path=path))
 
 
 def _narrative_blocks(

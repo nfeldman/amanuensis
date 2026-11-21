@@ -42,6 +42,7 @@ from .html_projection import (
     render_html_projection,
     terms_line,
 )
+from .legacy_prose import RENDERED_BODIES
 from .manifest import (
     MATERIALIZER_VERSION,
     Manifest,
@@ -271,6 +272,15 @@ class Materializer:
 
     # ---------------------------------------------------------------------
     def materialize(self) -> dict[str, Any]:
+        # A run reads each imported body once: the read-back after the render
+        # compares the page with the blocks it was printed from (§3.5).
+        token = RENDERED_BODIES.set({})
+        try:
+            return self._materialize()
+        finally:
+            RENDERED_BODIES.reset(token)
+
+    def _materialize(self) -> dict[str, Any]:
         conn = open_ro(self.storage / "memory.db")
         try:
             # The reader-lens views are created by the MCP server's schema
