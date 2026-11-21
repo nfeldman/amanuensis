@@ -62,9 +62,17 @@ class Strong:
 
 @dataclass(frozen=True)
 class Link:
+    """`label` is the link's plain text; `children`, when present, are what prints for it."""
+
     href: str
     label: str
     external: bool = False
+    children: tuple[Inline, ...] = ()
+
+    def __repr__(self) -> str:
+        # A plain label's link reads as it did before it could hold children.
+        rich = f", children={self.children!r}" if self.children else ""
+        return f"Link(href={self.href!r}, label={self.label!r}, external={self.external!r}{rich})"
 
 
 @dataclass(frozen=True)

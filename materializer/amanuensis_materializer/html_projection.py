@@ -1437,7 +1437,12 @@ def _inline_html(node: Inline) -> str:
         return f"<em>{''.join(_inline_html(child) for child in node.children)}</em>"
     if isinstance(node, Link):
         attrs = ' rel="noreferrer"' if node.external else ""
-        return f'<a href="{html.escape(node.href, quote=True)}"{attrs}>{html.escape(node.label)}</a>'
+        # A label's own words are escaped as the start tree's link printer escaped them.
+        label = "".join(
+            html.escape(child.text) if isinstance(child, Text) else _inline_html(child)
+            for child in node.children or (Text(node.label),)
+        )
+        return f'<a href="{html.escape(node.href, quote=True)}"{attrs}>{label}</a>'
     if isinstance(node, Abbr):
         return f'<abbr title="{html.escape(node.title, quote=True)}">{html.escape(node.text)}</abbr>'
     if isinstance(node, InlineAnchor):

@@ -215,8 +215,20 @@ def parse_inlines(text: str) -> Inlines:
     text = re.sub(r"`([^`]+)`", lambda m: keep(_code_inline(m.group(1))), text)
 
     def link(match: re.Match[str]) -> str:
+        # A code span in the label was stashed before the link was read; it
+        # prints inside the link, and the label's plain text holds its words.
         href = _html_href(match.group(2).strip())
-        return keep(Link(href, _plain(match.group(1)), href.startswith(("http://", "https://"))))
+        parts = re.split(r"\x00(\d+)\x00", _plain(match.group(1)))
+        children = tuple(
+            stash[int(part)] if number % 2 else Text(part)
+            for number, part in enumerate(parts)
+            if number % 2 or part
+        )
+        label = "".join(
+            node.value if isinstance(node, Chip) else getattr(node, "text", "") for node in children
+        )
+        external = href.startswith(("http://", "https://"))
+        return keep(Link(href, label, external, children if len(parts) > 1 else ()))
 
     text = re.sub(r"\[([^]]+)\]\(([^)]+)\)", link, text)
     text = re.sub(

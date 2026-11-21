@@ -298,7 +298,8 @@ class _Walk:
                 elif isinstance(node, Link):
                     label = node.label.strip("*")
                     if concern_label(label, base):
-                        node = replace(node, label="concern " + node.label)
+                        children = (Text("concern "), *node.children) if node.children else ()
+                        node = replace(node, label="concern " + node.label, children=children)
                     if label in index.names:
                         suffix = name_after(label, base, base + width)
                     else:
