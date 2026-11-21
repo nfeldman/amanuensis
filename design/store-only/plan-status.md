@@ -30,7 +30,7 @@
 | SO11 | Split the parser: Markdown → page model → HTML | done (1 attempt) | SO9 | `materializer/test-store-only-model.py` | §8 SO11, §3.1, §3.2 |
 | SO12 | Move the tests to HTML while Markdown is still written | done (1 attempt) | SO11 | `dev/test-store-only-test-views.mjs` | §8 SO12, §3.2, §11 |
 | SO13 | HTML-only output | done (1 attempt) | SO12 | `materializer/test-store-only-html-only.py` | §8 SO13, §3.2, §3.5, §6 |
-| SO14 | Renderers build the model: overview, architecture, subsystem map, guide | ready (1 attempt) | SO13 | `materializer/test-store-only-convert-overview.py` | §8 SO14–SO18, §3.4 |
+| SO14 | Renderers build the model: overview, architecture, subsystem map, guide | done (1 attempt) | SO13 | `materializer/test-store-only-convert-overview.py` | §8 SO14–SO18, §3.4 |
 | SO15 | Renderers build the model: subsystem pages | ready | SO14 | `materializer/test-store-only-convert-subsystem.py` | §8 SO14–SO18, §3.4, §5.4 |
 | SO16 | Renderers build the model: Unresolved pages | ready | SO15 | `materializer/test-store-only-convert-unresolved.py` | §8 SO14–SO18 |
 | SO17 | Renderers build the model: History pages | ready | SO16 | `materializer/test-store-only-convert-history.py` | §8 SO14–SO18 |
