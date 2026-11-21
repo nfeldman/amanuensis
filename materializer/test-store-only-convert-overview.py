@@ -516,6 +516,46 @@ def main() -> int:
 
     check("resolve_model links, names and prefixes as the start tree's text pass then parser did", model_xref)
 
+    # The text pass built its ID pattern once per index (`XrefIndex.pattern`); building
+    # the alternation of every ID for every line made a 2,000-ID store's resolution
+    # twelve times slower (slice-S3 review F4). Counted, not timed, so it cannot flake.
+    def patterns_once() -> str | None:
+        if xref is None or page_mod is None:
+            return xref_error or page_error
+        pm = page_mod
+        ids = [f"B-{n:04d}" for n in range(300)]
+        index = xref.XrefIndex(
+            entries={i: (i, f"subsystems/{i.lower()}.md", f"Sub {i}") for i in ids},
+            names={i: f"Sub {i}" for i in ids},
+            kinds={i: "subsystem" for i in ids},
+            protected=("Use it when B-0001 changes.",),
+        )
+        built = 0
+        real = xref.identifier_alternation
+
+        def counted(keys: Any) -> str:
+            nonlocal built
+            built += 1
+            return real(keys)
+
+        lines = [f"Line {n} names {ids[n]} and {ids[(n * 7) % 300]}." for n in range(200)]
+        xref.identifier_alternation = counted
+        try:
+            for path in ("index.md", "architecture.md"):
+                page = pm.Page("T", path.replace(".md", ".html"), tuple(
+                    pm.Paragraph(pm.Inlines((pm.Text(line),), line)) for line in lines
+                ))
+                resolved = xref.resolve_model(page, path, index)
+        finally:
+            xref.identifier_alternation = real
+        if not any(isinstance(node, pm.Link) for node in resolved.blocks[0].text.nodes):
+            return "the counted resolution linked nothing, so the count is blind"
+        if built > 3:
+            return f"two 200-line pages built the ID alternation {built} times; one index builds it at most 3"
+        return None
+
+    check("resolve_model builds an index's ID patterns once, not once per line", patterns_once)
+
     # ------------------------------------------------------------------ CI
     def in_ci() -> str | None:
         text = CI_FILE.read_text() if CI_FILE.is_file() else ""
