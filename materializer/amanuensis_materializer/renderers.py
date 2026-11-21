@@ -72,6 +72,9 @@ from .readback import (
     effective_explanations,
     effective_narratives,
     effective_territory_dispositions,
+    escaped_cell,
+    territory_label,
+    territory_row,
     explanation_rows,
     finding_marker,
     finding_page,
@@ -973,7 +976,8 @@ def _checklist_lines(
             where = ", ".join(f"**{sid}**" for sid in c["subsystems"]) or "—"
             out.append(
                 f"| **{c['code']}** | {_table_cell(c['category'] or '—')}"
-                f" | {_table_cell(c['territory'] or '—')} | {_table_cell(c['probe'] or '—')} | {where} |"
+                f" | {escaped_cell(territory_label(c['territory']) or '—')}"
+                f" | {escaped_cell(c['probe'] or '—')} | {where} |"
             )
         out.append("")
     if territories:
@@ -986,11 +990,7 @@ def _checklist_lines(
             "| Territory | Disposition | Condition |",
             "|---|---|---|",
         ]
-        for t in territories:
-            out.append(
-                f"| {_table_cell(t['territory'])} | {t['disposition']}"
-                f" | {_table_cell(t['condition'] or '—')} |"
-            )
+        out += [territory_row(dict(t)) for t in territories]
         out.append("")
     return out
 
@@ -2216,9 +2216,12 @@ def render_subsystem(
         out.append("")
     else:
         out += ["No concern has been dispositioned in this subsystem.", ""]
-    out += _narrative_lines(
-        by_section["concern-reasoning"], 4, workspace, bound, checked_head, warn
-    )
+    if by_section["concern-reasoning"]:
+        out += [
+            "The survey's reasoning about the concerns it reviewed here is on"
+            f" [Review coverage]({'../'}concerns.md#concern-reasoning), under this subsystem.",
+            "",
+        ]
     if by_section["challenge"]:
         out += [f"### {CHALLENGE_HEADING}", ""]
         out += _narrative_lines(by_section["challenge"], 4, workspace, bound, checked_head, warn)
@@ -2765,6 +2768,30 @@ def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     out = ["# Concerns", "", "## Coverage overview", "", concern_coverage_heatmap(conn), ""]
     active = [c for c in cs if c["status"] == "active"]
     retired = [c for c in cs if c["status"] in ("retired", "merged")]
+    # Each subsystem's concern reasoning, the survey's account of why its
+    # concerns apply where they do (store-only PLAN §8 SO9).
+    reasoning = [r for r in effective_narratives(conn, storage) if r["section"] == "concern-reasoning"]
+    if reasoning:
+        workspace = resolve_workspace(storage)
+        bound = workspace_is_bound(workspace)
+        head = str(
+            (row(conn, "SELECT last_checked_sha FROM git_state WHERE repo_id='default'") or {}).get(
+                "last_checked_sha"
+            )
+            or ""
+        )
+        names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
+        out += [
+            "## Concern reasoning",
+            "",
+            "Why each subsystem's concerns apply where they do, in the survey's words.",
+            "",
+        ]
+        for sid in dict.fromkeys(str(r["subject_id"]) for r in reasoning):
+            out += [f"### {sid} — {_one_line(names.get(sid, sid))}", ""]
+            out += _narrative_lines(
+                [r for r in reasoning if r["subject_id"] == sid], 4, workspace, bound, head, None
+            )
     if active:
         out += ["## Active concerns", "", "| Code | Category | Origin | Discovered in | Notes |", "|---|---|---|---|---|"]
         for c in active:
@@ -2780,7 +2807,9 @@ def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         out.append("")
     return "\n".join(out) + "\n", _db_source("concerns:all", cs) | _db_source(
         "concerns:disp", rows(conn, "SELECT * FROM dispositions")
-    ) | _db_source("concerns:subs", rows(conn, "SELECT id FROM subsystems"))
+    ) | _db_source("concerns:subs", rows(conn, "SELECT id FROM subsystems")) | _db_source(
+        "concerns:reasoning", reasoning
+    )
 
 
 def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:

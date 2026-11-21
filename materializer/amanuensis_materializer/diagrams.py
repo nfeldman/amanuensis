@@ -340,7 +340,9 @@ RUNTIME_BOUNDARY_ABSENT = "No structured runtime boundary map is recorded yet."
 
 
 def _table_cells(line: str) -> list[str]:
-    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+    """A table row's cells, split on unescaped pipes; an escaped `\\|` is a pipe in its cell."""
+    cells = re.split(r"(?<!\\)\|", line.strip().strip("|"))
+    return [cell.strip().replace("\\|", "|") for cell in cells]
 
 
 def _runtime_boundary_table(markdown: str) -> str | None:
@@ -382,6 +384,12 @@ def _cell(value: object) -> str:
     """One table cell: a row's text on one line, with no pipe to split it."""
 
     return " ".join(str(value or "").replace("|", "/").split())
+
+
+def _table_text(value: object) -> str:
+    """One table cell whose pipes stay pipes, escaped as `\\|` (F2/codex, slice S2)."""
+
+    return " ".join(str(value or "").split()).replace("|", "\\|")
 
 
 def runtime_boundary_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
@@ -447,7 +455,7 @@ def _recorded_runtime_table(conn: sqlite3.Connection) -> str | None:
             edge["mechanism"],
             edge["notes"],
         )
-        lines.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
+        lines.append("| " + " | ".join(_table_text(cell) for cell in cells) + " |")
     return "\n".join(lines)
 
 

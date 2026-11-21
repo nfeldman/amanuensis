@@ -519,6 +519,9 @@ PROJECT_NARRATIVE_PAGES: dict[str, str] = {
     "start-here": "entry-point.md",
 }
 CHECKLIST_PAGE = "concern-checklist.md"
+#: Review coverage: a subsystem's concern reasoning prints here, under the
+#: subsystem's name (store-only PLAN §8 SO9; F8/codex, slice S2).
+COVERAGE_PAGE = "concerns.md"
 ARCHITECTURE_PAGE = "architecture.md"
 NARRATIVE_LABELS = labels("narrative_section")
 
@@ -551,11 +554,13 @@ def effective_narratives(
 ) -> list[dict[str, Any]]:
     """The recorded or declined narrative in force for each `(subject, section, topic)`.
 
-    The newest row wins, as for explanations (`select_explanation`): with a bound
-    workspace only a row whose revision resolves is a candidate. A row whose
-    newest version is `withdrawn` is absent. Rows come back in the order their
-    topic was first written, so a correction does not move a topic. The page and
-    the read-back both ask this function which rows are in force.
+    The newest row per key wins, as `readNarratives` (`invariants.ts`) decides
+    it. A key whose newest row is `withdrawn` is absent, and so is one whose
+    newest row is recorded at a revision a bound workspace cannot resolve: an
+    older row is never brought back in its place, since the server has already
+    replaced or withdrawn it (F1/codex, slice S2). Rows come back in the order
+    their topic was first written, so a correction does not move a topic. The
+    page and the read-back both ask this function which rows are in force.
     """
 
     stored = [
@@ -582,10 +587,9 @@ def effective_narratives(
         grouped.setdefault(key, []).append(record)
     effective: list[dict[str, Any]] = []
     for candidates in grouped.values():
-        pool = [c for c in candidates if resolvable is None or str(c["ref_sha"]) in resolvable]
-        if not pool:
+        newest = max(candidates, key=lambda c: int(c["id"]))
+        if resolvable is not None and str(newest["ref_sha"]) not in resolvable:
             continue
-        newest = max(pool, key=lambda c: int(c["id"]))
         if str(newest["disposition"]) in {"recorded", "declined"}:
             effective.append({**newest, "first_id": min(int(c["id"]) for c in candidates)})
     return sorted(effective, key=lambda r: int(r["first_id"]))
@@ -596,6 +600,8 @@ def narrative_page(record: dict[str, Any], names: dict[str, str]) -> str | None:
 
     if str(record["subject_type"]) == "project":
         return PROJECT_NARRATIVE_PAGES.get(str(record["section"]))
+    if str(record["section"]) == "concern-reasoning":
+        return COVERAGE_PAGE
     sid = str(record["subject_id"])
     return subsystem_page(sid, names[sid]) if sid in names else None
 
@@ -622,6 +628,52 @@ def narrative_text(record: dict[str, Any]) -> tuple[str, bool]:
     if orientation_violations(body):
         return explanation_refusal(NARRATIVE_LABELS.get(str(record["section"]), "narrative").lower() + " narrative"), False
     return body, True
+
+
+#: Each territory of the skill's `references/concern-territories.md`, by the id
+#: `record_territory_disposition` takes, so a page never prints a bare `T7`
+#: (F6/codex, slice S2). The SO9 gate checks these against the catalog's headings.
+TERRITORY_NAMES = {
+    "T1": "Scope-Context Identity Conflation",
+    "T2": "Cache Coherence Failure",
+    "T3": "Temporal Bound Violation",
+    "T4": "Exceptional Path Invariant Asymmetry",
+    "T5": "Aliasing and Ownership Violation",
+    "T6": "Incremental/Full Path Divergence",
+    "T7": "Atomicity Violation",
+    "T8": "Concurrency Race Windows",
+    "T9": "Resource Lifecycle Asymmetry",
+    "T10": "Trust Boundary Elision",
+    "T11": "Seam Contract Violations",
+}
+
+
+def territory_label(territory: Any) -> str:
+    """A territory id with its name beside it, or the stored text when it names none."""
+
+    text = str(territory or "").strip()
+    name = TERRITORY_NAMES.get(text)
+    return f"{text} ({name})" if name else text
+
+
+def escaped_cell(text: Any) -> str:
+    """An authored value as one table cell whose pipes stay pipes.
+
+    A pipe is written `\\|`, which a table reader (`_split_table_row`) turns back
+    into `|`, so a condition such as "A | B" prints as written in both views
+    (F2/codex, slice S2).
+    """
+
+    return " ".join(str(text).split()).replace("|", "\\|")
+
+
+def territory_row(record: dict[str, Any]) -> str:
+    """The Territories table row for one effective disposition: the page prints it, the census owes it."""
+
+    return (
+        f"| {escaped_cell(territory_label(record['territory']))} | {record['disposition']}"
+        f" | {escaped_cell(record['condition'] or '—')} |"
+    )
 
 
 def effective_territory_dispositions(conn: Any) -> list[dict[str, Any]]:
@@ -2020,8 +2072,8 @@ class ProjectionVerifier:
         (`effective_narratives`, `effective_territory_dispositions`,
         `runtime_boundary_rows`), so the page and its check cannot name different
         rows. A narrative is owed its topic and its body (or the refusal sentence
-        in its place), a territory its name and, when it is ruled out, the
-        condition, a runtime boundary its runtimes, mechanism and notes. The
+        in its place), a territory its whole row (its id and name, its
+        disposition and its condition), a runtime boundary its runtimes, mechanism and notes. The
         Markdown and HTML views are each checked, and a page's hash is not what is
         trusted here: a page edited with its receipt rewritten still fails.
         """
@@ -2078,9 +2130,9 @@ class ProjectionVerifier:
                 f"the {record['disposition']} {record['section']} narrative (row {record['id']})",
             )
         for territory in effective_territory_dispositions(conn):
-            owed = [str(territory["territory"])]
-            if str(territory["disposition"]) == "disqualified":
-                owed.append(str(territory["condition"] or ""))
+            # The whole row, so the verdict is owed beside its territory and a
+            # ruled-out territory printed as applying is a mismatch (F11/codex).
+            owed = [territory_row(territory)]
             absent(
                 "territory",
                 str(territory["territory"]),
@@ -2091,9 +2143,10 @@ class ProjectionVerifier:
         edges = runtime_boundary_rows(conn)
         label = imported_runtime_line(edges)
         for edge in edges:
-            owed = [str(edge["from_runtime"]), str(edge["to_runtime"]), str(edge["mechanism"])]
+            # As the table cells print them: a pipe is escaped, not replaced.
+            owed = [escaped_cell(edge[key]) for key in ("from_runtime", "to_runtime", "mechanism")]
             if edge["notes"]:
-                owed.append(" ".join(str(edge["notes"]).split()))
+                owed.append(escaped_cell(edge["notes"]))
             if str(edge["origin"]) == "imported" and label:
                 owed.append(label)
             absent(

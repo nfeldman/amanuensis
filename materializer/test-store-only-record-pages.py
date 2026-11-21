@@ -179,6 +179,7 @@ RUNTIME_RECORDED = ("RuntimeAlphaPi", "Rust", "RuntimePeerRho", "unix socket", "
 RUNTIME_IMPORTED = ("RuntimeImportedTau", "Go", "RuntimeImportedPeerUpsilon", "pipe", "RUNTIMEIMPNOTE")
 RUNTIME_SUPERSEDED_MECH = "MECHSUPERSEDEDPHI"
 RUNTIME_WITHDRAWN = "RuntimeWithdrawnChi"
+RUNTIME_PIPE = ("RuntimePipeKappa", "Rust", "RuntimePipePeer", "pipe", "NOTEPIPE reads | writes")
 
 ENTRY_BODY = "# Where to begin\n\n## Reading order\n\nIMPORTEDENTRYPSI start at the reader.\n"
 HASH = "0123456789abcdef0123456789abcdef"
@@ -340,6 +341,7 @@ class Seed:
             self.narrative("project", "project", section, "", body, cites=cites)
         self.runtime(RUNTIME_RECORDED)
         self.runtime(RUNTIME_IMPORTED, origin="imported")
+        self.runtime(RUNTIME_PIPE)
         self.runtime(
             ("RuntimeSupersededOmega", "Rust", "RuntimeSupersededPeer", RUNTIME_SUPERSEDED_MECH, "OLDNOTE")
         )
@@ -820,6 +822,8 @@ def run(work: Path) -> int:
             for needle in (*RUNTIME_RECORDED[:4], RUNTIME_RECORDED[4], *RUNTIME_IMPORTED[:3], "NEWNOTEOMEGA"):
                 if needle and needle not in page:
                     return f"{needle!r} is missing from the architecture page ({view})"
+            if RUNTIME_PIPE[4] not in page.replace("\\|", "|"):
+                return f"the runtime note {RUNTIME_PIPE[4]!r} is not printed as written ({view})"
             for needle in ("OLDNOTE", RUNTIME_WITHDRAWN, "WITHDRAWNNOTE"):
                 if needle in page:
                     return f"{needle!r} renders on the architecture page although it is superseded or withdrawn ({view})"
