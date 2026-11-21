@@ -840,7 +840,7 @@ def main() -> int:
                 pages = json.loads(read(docs_of("good") / ".manifest.json")).get("pages", [])
             except json.JSONDecodeError:
                 return "the manifest could not be read"
-            for rel in ("architecture.md", "master-plan.md"):
+            for rel in ("architecture.html", "master-plan.html"):
                 entries = [p for p in pages if p.get("path") == rel]
                 if not entries:
                     return f"the manifest has no {rel}"

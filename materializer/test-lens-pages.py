@@ -1114,7 +1114,7 @@ def main() -> int:
                     plan = super()._plan(conn)
                     plan.append(
                         plan_cls(
-                            "rogue.md",
+                            "rogue.html",
                             lambda: ("# Rogue\n", {}),
                             title="Rogue page",
                             label="Rogue page",

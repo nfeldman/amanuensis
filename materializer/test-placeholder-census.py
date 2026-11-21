@@ -206,8 +206,8 @@ NO_PURPOSE_PATTERN = re.compile(re.escape(NO_PURPOSE_STEM) + r"[.;]")
 NOT_SLOTS = ("No seams recorded yet", "No dependency edges are recorded")
 ROW_FIELDS = {"slot", "page", "subject", "state", "discharge"}
 # The page ids a census row names. The materializer still keys its pages by these ids.
-INDEX_PAGE = "index.md"
-ARCHITECTURE_PAGE = "architecture.md"
+INDEX_PAGE = "index.html"
+ARCHITECTURE_PAGE = "architecture.html"
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -391,7 +391,7 @@ class Fixture:
         found = sorted((self.docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))
         if not found:
             return "", ""
-        return f"subsystems/{found[0].stem}.md", visible(article_of(read(found[0])))
+        return f"subsystems/{found[0].stem}.html", visible(article_of(read(found[0])))
 
     def subsystem_h2s(self, sid: str) -> list[str]:
         found = sorted((self.docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))

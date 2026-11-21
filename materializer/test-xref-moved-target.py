@@ -83,7 +83,7 @@ def rendered_at(docs: Path, set_to: str | None = None) -> str | None:
     path = docs / ".manifest.json"
     manifest = json.loads(path.read_text())
     for page in manifest.get("pages", []):
-        if page.get("path") == "field-notes.md":
+        if page.get("path") == "field-notes.html":
             if set_to is not None:
                 page["rendered_at"] = set_to
                 path.write_text(json.dumps(manifest))

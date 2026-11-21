@@ -137,18 +137,11 @@ const ALLOWED = [
   { file: "materializer/test-lens-pages.py", re: /^(README|docs\/guide)\.md$/, count: 2, why: "tracked repository paths in the fixture ledger" },
   { file: "materializer/test-search-index.py", re: /^(README|docs\/guide)\.md$/, count: 2, why: "seeded scope_gaps repository paths" },
   { file: "materializer/test-unmeasured-coverage.py", re: /^docs\/guide\.md$/, count: 3, why: "a tracked repository path in the fixture ledger" },
-  // Plan and manifest page ids the code under test still emits; they lose the suffix in SO19.
-  { file: "materializer/test-lens-pages.py", re: /^rogue\.md$/, count: 1, why: "a PagePlan id, a plan input" },
-  { file: "materializer/test-explanation-orientation.py", re: /^(architecture|master-plan)\.md$/, count: 2, why: "manifest path ids" },
-  { file: "materializer/test-xref-moved-target.py", re: /^field-notes\.md$/, count: 1, why: "manifest page id" },
-  { file: "materializer/test-placeholder-census.py", re: /^(index|architecture)\.md$|^subsystems\/\{found\[0\]\.stem\}\.md$/, count: 3, why: "census rows name plan page ids" },
   // Source documents the tests read: repository design documents and the skill's references.
   { file: "materializer/test-ledger-grouping.py", re: /reporting-style\.md/, count: 2, why: "the skill's reporting-style reference" },
   { file: "materializer/test-prose-retention.py", re: /reporting-style\.md/, count: 2, why: "the skill's reporting-style reference" },
   { file: "materializer/test-orientation-guide.py", re: /spec\.md|PLAN\.md/, count: 4, why: "design documents the guide must point to" },
   { file: "materializer/test-placeholder-census.py", re: /^(onboarding|phase-5-packaging)\.md|^\*\.md$|^(onboarding|phase-5-packaging)\.md /, count: 14, why: "the skill's onboarding and packaging references" },
-  // test-orientation-ids: `xref.resolve_text` takes and returns Markdown, which stays until SO19.
-  { file: "materializer/test-orientation-ids.py", re: /\.md/, count: 29, why: "unit tests of the Markdown xref resolver, which reads no generated page" },
 ];
 
 // Markdown-only assertions deleted because the HTML view has no equivalent:
