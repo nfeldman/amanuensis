@@ -374,13 +374,18 @@ def wanted_badges(storage: Path, hot: dict[str, dict[str, int]]) -> dict[tuple[s
 # ---------------------------------------------------------------------------
 
 _ADDED = re.compile(
-    r'<figure\b[^>]*data-diagram="coverage-bars"[^>]*>.*?</figure>\n?'
-    r'|<p class="diagram-below"[^>]*data-diagram="coverage-bars"[^>]*>.*?</p>\n?'
+    r'<figure\b[^>]*data-diagram="(?:coverage-bars|seam-contract)"[^>]*>.*?</figure>\n?'
+    r'|<p class="diagram-below"[^>]*data-diagram="(?:coverage-bars|seam-contract)"[^>]*>.*?</p>\n?'
     r'|<div class="atlas-badges"[^>]*>.*?</div>'
     r'|<g class="boundary-svg-badge"[^>]*>.*?</g>'
     r'|<p class="finding-badge-note"[^>]*>.*?</p>\n?',
     re.S,
 )
+
+
+# SO24 adds seam contracts to the System boundaries page (PLAN §3.2's update rule); taking them out
+# can leave the wrapper that held a run of paragraphs empty.
+_EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 
 
 def start_corpus(into: Path) -> Path | None:
@@ -396,8 +401,8 @@ def start_corpus(into: Path) -> Path | None:
 
 def golden_additions_only(previous: Path | None) -> str | None:
     version = GOLDEN / "VERSION"
-    if not version.is_file() or version.read_text().strip() != PACKET:
-        return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET}"
+    if not version.is_file() or version.read_text().strip() not in (PACKET, "SO24", "SO25"):
+        return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET} or a later diagram packet"
     if previous is None:
         return f"the golden corpus cannot be read from git at {START_SHA[:12]}"
     before = {str(p.relative_to(previous)): p for p in previous.rglob("*.html") if "/html/" in str(p)}
@@ -408,7 +413,7 @@ def golden_additions_only(previous: Path | None) -> str | None:
     for rel in sorted(after):
         new, old = after[rel].read_text(), before[rel].read_text()
         # Blocks are joined by a newline, so taking one out can leave a newline behind; only that is let go.
-        if _ADDED.sub("", new).replace("\n", "") != old.replace("\n", ""):
+        if _EMPTY_FLOW.sub("", _ADDED.sub("", new)).replace("\n", "") != old.replace("\n", ""):
             return f"{rel} differs from the start's corpus outside a coverage figure, a sentence, a badge or its note"
         gained += new != old
     for asset in (previous / "assets").iterdir():
@@ -730,7 +735,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="amanuensis-so23-golden-") as tmp:
         previous = start_corpus(Path(tmp))
-        check("the golden corpus is SO23's and differs from the start's only where this packet adds",
+        check("the golden corpus is SO23's or a later diagram packet's and differs from the start's only where this packet adds",
               lambda: golden_additions_only(previous))
 
     def in_ci() -> str | None:

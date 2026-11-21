@@ -422,6 +422,11 @@ _FIGURE_BLOCK = re.compile(
 )
 
 
+# SO24 adds sentences and figures to the System boundaries page; taking them out can leave the
+# wrapper that held a run of paragraphs empty (PLAN §3.2's update rule).
+_EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
+
+
 def start_corpus(into: Path) -> Path | None:
     archive = subprocess.run(["git", "-C", str(REPO), "archive", START_SHA, GOLDEN_REL], capture_output=True)
     if archive.returncode != 0 or not archive.stdout:
@@ -446,7 +451,7 @@ def golden_figures_only(previous: Path | None) -> str | None:
     gained = 0
     for rel in sorted(after):
         new, old = after[rel].read_text(), before[rel].read_text()
-        if _FIGURE_BLOCK.sub("", new) != old:
+        if _EMPTY_FLOW.sub("", _FIGURE_BLOCK.sub("", new)) != old:
             return f"{rel} differs from the start's corpus outside its <figure data-diagram> blocks"
         gained += new != old
     for asset in (previous / "assets").iterdir():

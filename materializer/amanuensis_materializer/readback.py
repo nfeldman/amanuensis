@@ -2586,6 +2586,7 @@ class ProjectionVerifier:
 
         from .diagrams import (  # noqa: PLC0415 — it imports this module
             coverage_bars_model,
+            seam_contract_model,
             status_ladder_model,
             survey_workflow_model,
         )
@@ -2595,6 +2596,11 @@ class ProjectionVerifier:
             models["how-to-read.html"] = [(("survey-workflow", ""), survey_workflow_model()), (("status-ladder", ""), status_ladder_model())]
         if "files.html" in projection:
             models["files.html"] = [(("coverage-bars", ""), coverage_bars_model(conn))]
+        if "seams.html" in projection:
+            models["seams.html"] = [
+                (("seam-contract", str(seam["id"])), seam_contract_model(conn, str(seam["id"])))
+                for seam in rows(conn, "SELECT id FROM seams ORDER BY id")
+            ]
         for sub in rows(conn, "SELECT id, name FROM subsystems ORDER BY id"):
             page = subsystem_page(str(sub["id"]), str(sub["name"]))
             if page in projection:

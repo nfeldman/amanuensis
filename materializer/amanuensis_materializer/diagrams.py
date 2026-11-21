@@ -832,6 +832,7 @@ def badge_note(conn: sqlite3.Connection, badges: dict[str, tuple[Badge, ...]]) -
 # ---------------------------------------------------------------------------
 
 VIEW_WIDTH = 960
+KIND_SEAM = "seam-contract"
 #: Marks a diagram needs before it is worth drawing (Appendix B rule 11).
 MIN_PASSES = 2
 MIN_RUNGS = 2
@@ -1198,6 +1199,111 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
             )
     return Diagram("coverage-bars", subject, title, caption, tuple(lanes), tuple(nodes), (), tuple(account), tuple(items), read_at=read_at)
 
+# -- A2: the seam contract ----------------------------------------------------
+
+#: The four fields a seam records, in the order its arrows are listed: whose side, and write or read.
+_SEAM_FIELDS = (("a", "writes"), ("a", "reads"), ("b", "writes"), ("b", "reads"))
+_SEAM_ASSUMPTIONS = (
+    ("ordering_assumption", "Ordering"),
+    ("cardinality", "Cardinality"),
+    ("staleness_tolerance", "Staleness tolerance"),
+    ("schema_owner", "Schema owner"),
+)
+#: Appendix B rule 2: a subsystem's half of a seam is drawn from `structural` up; below it the box stands alone.
+SEAM_HALVES_FROM = ("structural", "concerns", "adversarial", "mapped")
+SEAM_NOT_RECORDED = "not recorded"
+
+
+def _recorded(value: object) -> str:
+    return str(value).strip() if value is not None else ""
+
+
+def seam_contract_model(conn: sqlite3.Connection, seam_id: str) -> Diagram:
+    """A2: one seam as party A, the shared object and party B, joined by the four recorded fields.
+
+    A write is an arrow into the shared object and a read an arrow out of it. A field nobody
+    recorded is drawn dashed and labelled "not recorded", which differs from a recorded "none".
+    A party's half is drawn only from `structural` up (Appendix B rule 2). A seam that records
+    none of its four fields is a sentence. The seam's assumptions are the drawing's caption.
+    """
+
+    seam = row(conn, "SELECT * FROM seams WHERE id = ?", (seam_id,))
+    caption_for = f"What does each side of {seam_id} write to and read from what they share, and what do they assume?"
+    if seam is None:
+        return Diagram(KIND_SEAM, seam_id, f"Seam {seam_id}", caption_for, below=f"No seam {seam_id} is recorded, so no contract is drawn.")
+    sides = {"a": str(seam["party_a"]), "b": str(seam["party_b"])}
+    names = {str(r["id"]): (str(r["name"]), str(r["status"] or "unmapped")) for r in rows(conn, "SELECT id, name, status FROM subsystems")}
+    shared = str(seam["shared_object"])
+    title = f"Seam {seam_id}: {shared}"
+    caption = f"What does each side of {seam_id} write to and read from {shared}, and what do they assume?"
+    values = {(side, verb): _recorded(seam[f"{side}_{verb}"]) for side, verb in _SEAM_FIELDS}
+    assumed = [(label, _recorded(seam[column])) for column, label in _SEAM_ASSUMPTIONS]
+    day = str(seam["updated_at"] or "")[:10]
+    read_at = (
+        f"Read from the seams table, last updated {day}. A seam records no revision, so none is printed."
+        if day else "Read from the seams table. A seam records no revision, so none is printed."
+    )
+    if not any(values.values()):
+        recorded = [f"{label}: {value}" for label, value in assumed if value]
+        kept = f" It does record: {'; '.join(recorded)}." if recorded else " It records no assumption either."
+        return Diagram(
+            KIND_SEAM, seam_id, title, caption,
+            below=(
+                f"{seam_id} ({shared}) records none of what {sides['a']} and {sides['b']} write or read through it,"
+                f" so no contract is drawn. That differs from a recorded \"none\": nobody has recorded these fields.{kept}"
+            ),
+            read_at=read_at,
+        )
+    depth_of = {side: names.get(sides[side], ("", "unmapped"))[1] for side in sides}
+    hidden = sorted({sides[side] for side in sides if depth_of[side] not in SEAM_HALVES_FROM})
+    nodes = [
+        DiagramNode(f"subsystem:{sides['a']}", sides["a"], 0, 0, _seam_party_detail(names, sides["a"], depth_of["a"]), href=subsystem_page(sides["a"], names.get(sides["a"], ("", ""))[0])),
+        DiagramNode(f"seam:{seam_id}", shared, 0, 1, str(seam["shared_object_kind"] or "kind not recorded"), href=f"#{seam_id.lower()}"),
+        DiagramNode(f"subsystem:{sides['b']}", sides["b"], 0, 2, _seam_party_detail(names, sides["b"], depth_of["b"]), href=subsystem_page(sides["b"], names.get(sides["b"], ("", ""))[0])),
+    ]
+    edges: list[DiagramEdge] = []
+    items: list[tuple[str, str]] = []
+    for side, verb in _SEAM_FIELDS:
+        value = values[(side, verb)]
+        party = sides[side]
+        drawn = depth_of[side] in SEAM_HALVES_FROM
+        record = f"seam-field:{seam_id}:{side}_{verb}"
+        if drawn:
+            source, target = (f"subsystem:{party}", f"seam:{seam_id}") if verb == "writes" else (f"seam:{seam_id}", f"subsystem:{party}")
+            edges.append(DiagramEdge(record, source, target, value or SEAM_NOT_RECORDED, "solid" if value else "dashed"))
+        anchor = f"seam-contract-{_id_part(seam_id)}-{side}-{verb}"
+        line = f"{party} {verb}: {value or SEAM_NOT_RECORDED}."
+        items.append((anchor, line if drawn else f"{line[:-1]} (not drawn)."))
+    notes = tuple(f"{label}: {value or SEAM_NOT_RECORDED}" for label, value in assumed)
+    for index, (label, value) in enumerate(assumed):
+        items.append((f"seam-contract-{_id_part(seam_id)}-assumption-{index}", f"{label}: {value or SEAM_NOT_RECORDED}."))
+    absent_fields = sum(1 for v in values.values() if not v)
+    absent_assumptions = sum(1 for _, v in assumed if not v)
+    account = [
+        f"{sides['a']} is party A and {sides['b']} is party B, as the seam records them, and they meet at {shared}."
+        " Each arrow is one recorded field of the seam:"
+        " a write goes into the shared object and a read comes out of it. A dashed arrow labelled"
+        f" \"{SEAM_NOT_RECORDED}\" is a field nobody recorded; that differs from a recorded \"none\".",
+        f"{absent_fields} of 4 fields have no recorded value. {absent_assumptions} of 4 assumptions"
+        f" {'has' if absent_assumptions == 1 else 'have'} no recorded value.",
+    ]
+    for party in hidden:
+        shown = _DEPTH_LABELS.get(names.get(party, ("", "unmapped"))[1], names.get(party, ("", "unmapped"))[1])
+        account.append(
+            f"{party} is at {shown}, so its half of this seam is not drawn: a seam half is drawn from Structural up."
+            " Its fields are listed below."
+        )
+    if seam["notes"]:
+        account.append(f"Notes on the seam: {_recorded(seam['notes'])}")
+    return Diagram(KIND_SEAM, seam_id, title, caption, (), tuple(nodes), tuple(edges), tuple(account), tuple(items), read_at=read_at, notes=notes)
+
+
+def _seam_party_detail(names: dict[str, tuple[str, str]], sid: str, depth: str) -> str:
+    name = names.get(sid, (sid, depth))[0]
+    shown = _DEPTH_LABELS.get(depth, depth)
+    return f"{name}\n{shown}" + ("" if depth in SEAM_HALVES_FROM else "\nhalf not drawn")
+
+
 # -- drawing ----------------------------------------------------------------
 
 _GRID: dict[str, tuple[float, float, float, float, float, float]] = {
@@ -1293,6 +1399,8 @@ def draw_svg(diagram: Diagram) -> str:
 
     if diagram.kind == "coverage-bars":
         return _draw_bars(diagram)
+    if diagram.kind == KIND_SEAM:
+        return _draw_seam(diagram)
     left, top, colw, rowh, boxw, boxh = _GRID.get(diagram.kind, _GRID["status-ladder"])
     centres: dict[str, tuple[float, float]] = {}
     for node in diagram.nodes:
@@ -1400,6 +1508,75 @@ def _draw_bars(diagram: Diagram) -> str:
     height = legend_top + legend_rows * 20 + 6
     segments = len(diagram.nodes)
     description = f"{segments} {'segment' if segments == 1 else 'segments'} in {len(diagram.lanes)} {'bar' if len(diagram.lanes) == 1 else 'bars'}: {diagram.caption}"
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
+        f'width="{VIEW_WIDTH}" role="img" aria-labelledby="{title_id} {desc_id}">'
+        f'<title id="{title_id}">{escape(diagram.title, quote=False)}</title>'
+        f'<desc id="{desc_id}">{escape(description, quote=False)}</desc>'
+        + "".join(body)
+        + "</svg>"
+    )
+
+
+#: Where the seam contract's boxes sit: centres of party A, the shared object and party B, their size, and the arrows' rows.
+_SEAM_X = (120.0, 480.0, 840.0)
+_SEAM_BOX = (176.0, 96.0)
+_SEAM_Y = 140.0
+_SEAM_WRITE_Y, _SEAM_READ_Y = 112.0, 168.0
+
+
+def _seam_label(text: str, width: int = 27, limit: int = 3) -> list[str]:
+    lines = _wrap(text, width)
+    if len(lines) > limit:
+        lines = lines[:limit]
+        lines[-1] = lines[-1][: max(width - 1, 1)].rstrip() + "…"
+    return lines
+
+
+def _draw_seam(diagram: Diagram) -> str:
+    """A seam contract as one inline SVG: party A, the shared object and party B in a row, a pair of arrows each side."""
+
+    title_id, desc_id = svg_ids(diagram)
+    boxw, boxh = _SEAM_BOX
+    by_record = {n.record: n for n in diagram.nodes}
+    centre = {n.record: (_SEAM_X[n.column], _SEAM_Y) for n in diagram.nodes}
+    body: list[str] = [f'<rect x="0" y="0" width="{VIEW_WIDTH}" height="{_n(_SEAM_Y * 2 - 20)}" fill="var(--canvas-subtle)" opacity="0.7"/>']
+    for edge in diagram.edges:
+        source, target = centre[edge.source], centre[edge.target]
+        y = _SEAM_WRITE_Y if edge.record.endswith("writes") else _SEAM_READ_Y
+        facing = 1 if target[0] > source[0] else -1
+        start = (source[0] + facing * (boxw / 2 + 2), y)
+        end = (target[0] - facing * (boxw / 2 + 2), y)
+        body.append(svg_arrow(edge.record, start, ((start[0] + end[0]) / 2, y), end, style=edge.style))
+        lines = _seam_label(edge.label)
+        mid = (start[0] + end[0]) / 2
+        absent = edge.label == SEAM_NOT_RECORDED
+        fill = "var(--text-muted)" if absent else "var(--text)"
+        if y == _SEAM_WRITE_Y:
+            body.append(svg_text(lines, mid, y - 10 - (len(lines) - 1) * 7.5 - 7, size=11, fill=fill))
+        else:
+            body.append(svg_text(lines, mid, y + 10 + (len(lines) - 1) * 7.5 + 7, size=11, fill=fill))
+    for record, node in by_record.items():
+        cx, cy = centre[record]
+        head = _wrap(node.label, 24)[:2]
+        detail = [line for part in node.detail.split("\n") for line in _wrap(part, 28)[:1]][:3]
+        total = len(head) + len(detail)
+        first = cy - (total - 1) * 7.5
+        text = svg_text(head, cx, first + (len(head) - 1) * 7.5, size=12, weight="600")
+        if detail:
+            text += svg_text(detail, cx, first + len(head) * 15 + (len(detail) - 1) * 7.5, size=11, fill="var(--text-muted)")
+        inner = svg_box(cx - boxw / 2, cy - boxh / 2, boxw, boxh, style=node.style) + text
+        if node.href:
+            inner = f'<a href="{escape(node.href, quote=True)}">{inner}</a>'
+        body.append(f'<g data-node="{escape(record, quote=True)}">{inner}</g>')
+    caption_top = _SEAM_Y * 2 - 4
+    height = caption_top + 10
+    if diagram.notes:
+        wrapped = _wrap("Assumes — " + "  ·  ".join(diagram.notes), 118)
+        body.append(svg_text(wrapped, 480, caption_top + 8 + (len(wrapped) - 1) * 7.5, size=11, fill="var(--text-muted)"))
+        height = caption_top + 8 + len(wrapped) * 14 + 10
+    boxes, arrows = len(diagram.nodes), len(diagram.edges)
+    description = f"{boxes} {'box' if boxes == 1 else 'boxes'} and {arrows} {'arrow' if arrows == 1 else 'arrows'}: {diagram.caption}"
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
         f'width="{VIEW_WIDTH}" role="img" aria-labelledby="{title_id} {desc_id}">'

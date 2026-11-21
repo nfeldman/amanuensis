@@ -83,9 +83,13 @@ _SO22_FIGURES = re.compile(
     re.S,
 )
 
+# SO24 adds sentences and figures to the System boundaries page; taking them out can leave the
+# wrapper that held a run of paragraphs empty (PLAN §3.2's update rule).
+_EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
+
 
 def unmarked(text: str) -> str:
-    return _SO20_MARKS.sub("", _SO22_FIGURES.sub("", text))
+    return _EMPTY_FLOW.sub("", _SO20_MARKS.sub("", _SO22_FIGURES.sub("", text)))
 
 # The tree SO19 started from: it still held the text pass and the parser the xref check compares with.
 SO19_START_SHA = "d4fd052932cc64fb083228ba81ce1ed206fdab51"

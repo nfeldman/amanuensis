@@ -447,6 +447,9 @@ FIGURE_BLOCK = re.compile(
     r'|<g class="boundary-svg-badge"[^>]*>.*?</g>',
     re.S,
 )
+# SO24 adds sentences and figures to the System boundaries page; taking them out can leave the
+# wrapper that held a run of paragraphs empty (PLAN §3.2's update rule).
+EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 CORPUS_VERSIONS = ("SO20", "SO22", "SO23", "SO24", "SO25")
 
 
@@ -473,7 +476,7 @@ def golden_attributes_only(previous: Path | None) -> str | None:
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     marked = 0
     for rel in sorted(after):
-        new, old = FIGURE_BLOCK.sub("", after[rel].read_text()), before[rel].read_text()
+        new, old = EMPTY_FLOW.sub("", FIGURE_BLOCK.sub("", after[rel].read_text())), before[rel].read_text()
         if MARK_ATTRIBUTE.sub("", new) != old:
             return f"{rel} differs from the start's corpus by more than the record attributes"
         if new != old:

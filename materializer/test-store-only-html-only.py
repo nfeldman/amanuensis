@@ -87,6 +87,9 @@ _FIGURES = (
     r'|<div class="atlas-badges"[^>]*>.*?</div>'
     r'|<g class="boundary-svg-badge"[^>]*>.*?</g>'
 )
+# SO24 adds sentences and figures to the System boundaries page; taking them out can leave the
+# wrapper that held a run of paragraphs empty (PLAN §3.2's update rule).
+_EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 LATER_WRITERS = {
     "SO20": re.compile(_RECORD_MARKS),
     **{packet: re.compile(f"{_FIGURES}|{_RECORD_MARKS}", re.S) for packet in ("SO22", "SO23", "SO24", "SO25")},
@@ -674,7 +677,7 @@ def main() -> int:
                     return f"the golden fixture {name} holds {len(after)} pages for SO11's {len(before)}"
                 for rel, new in after.items():
                     if later is not None:
-                        new = later.sub("", new)
+                        new = _EMPTY_FLOW.sub("", later.sub("", new))
                     if md_targets(new):
                         return f"golden {name}/{rel} links {md_targets(new)[:3]}"
                     if masked(before[rel]) != masked(new):

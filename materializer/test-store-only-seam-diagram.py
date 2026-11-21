@@ -303,10 +303,15 @@ def wanted(storage: Path) -> dict[str, dict[str, Any]]:
 
 _ADDED = re.compile(
     rf'<figure\b[^>]*data-diagram="{KIND}"[^>]*>.*?</figure>\n?'
-    rf'|<p class="diagram-below"[^>]*data-diagram="{KIND}"[^>]*>.*?</p>\n?'
-    r'|<p class="diagram-order"[^>]*>.*?</p>\n?',
+    rf'|<p class="diagram-below"[^>]*data-diagram="{KIND}"[^>]*>.*?</p>\n?',
     re.S,
 )
+# Consecutive paragraphs share a wrapper; taking the figures out can leave it empty.
+_EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
+
+
+def _without_additions(text: str) -> str:
+    return _EMPTY_FLOW.sub("", _ADDED.sub("", text)).replace("\n", "")
 
 
 def start_corpus(into: Path) -> Path | None:
@@ -333,7 +338,7 @@ def golden_additions_only(previous: Path | None) -> str | None:
     gained = 0
     for rel in sorted(after):
         new, old = after[rel].read_text(), before[rel].read_text()
-        if _ADDED.sub("", new).replace("\n", "") != old.replace("\n", ""):
+        if _without_additions(new) != _EMPTY_FLOW.sub("", old).replace("\n", ""):
             return f"{rel} differs from the start's corpus outside a seam-contract figure or sentence"
         gained += new != old
     for asset in (previous / "assets").iterdir():
@@ -498,8 +503,9 @@ def main() -> int:
             if w["hidden"] != ["F-01"]:
                 return f"the fixture's SM-04 should hide F-01's half, hides {w['hidden']}"
             text = account_of(figure_of(page, "SM-04") or "")
-            if not re.search(r"F-01[^.]*Scoping[^.]*not drawn|F-01[^.]*not drawn[^.]*Scoping", text):
-                return f"the account does not say F-01's half is not drawn because it is at Scoping: {text[:300]!r}"
+            shown = diagrams._DEPTH_LABELS.get("scoping", "Scoped")
+            if not re.search(rf"F-01[^.]*{shown}[^.]*not drawn|F-01[^.]*not drawn[^.]*{shown}", text):
+                return f"the account does not say F-01's half is not drawn because it is at {shown}: {text[:300]!r}"
             db = sqlite3.connect(f"file:{store / 'memory.db'}?mode=ro", uri=True)
             db.row_factory = sqlite3.Row
             try:

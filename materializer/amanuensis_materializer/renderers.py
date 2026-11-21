@@ -38,6 +38,7 @@ from .diagrams import (
     runtime_boundary_rows,
     runtime_boundary_state,
     seam_blocks,
+    seam_contract_model,
     staleness_blocks,
     status_ladder_model,
     survey_workflow_model,
@@ -3254,6 +3255,7 @@ def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     if not seams:
         blocks.append(_paragraph("_No seams recorded yet._"))
     else:
+        blocks.extend(seam_contract_model(conn, str(s["id"])) for s in seams)
         records: list[Record] = []
         for number, s in enumerate(seams, start=1):
             a = asmap.get(s["id"], {})

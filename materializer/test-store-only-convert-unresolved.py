@@ -79,9 +79,13 @@ _SO22_FIGURES = re.compile(
     re.S,
 )
 
+# SO24 adds sentences and figures to the System boundaries page; taking them out can leave the
+# wrapper that held a run of paragraphs empty (PLAN §3.2's update rule).
+_EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
+
 
 def unmarked(text: str) -> str:
-    return _SO20_MARKS.sub("", _SO22_FIGURES.sub("", text))
+    return _EMPTY_FLOW.sub("", _SO20_MARKS.sub("", _SO22_FIGURES.sub("", text)))
 
 FAMILY = ("findings", "disagreements", "open-questions", "field-notes", "stale", "hot-spots")
 STORES = ("materializer", "axiomdb-shaped", "self-shaped", "lens")

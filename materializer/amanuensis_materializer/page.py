@@ -551,6 +551,8 @@ class Diagram:
     # What the diagram was read from or at.
     read_at: str = ""
     below: str = ""
+    # Lines printed beneath the drawing, inside it, as its caption (a seam's assumptions).
+    notes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
