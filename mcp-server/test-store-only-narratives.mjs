@@ -781,8 +781,8 @@ async function main(mods) {
   // newest row per (subject, section, topic) and does not resolve its revision
   // again on read; the contract said "the newest row that resolves" (F8/codex,
   // slice-S1). A newest row whose revision no longer resolves stays effective.
-  check("S3 the effective rule the contract states is the one readNarratives applies", () => {
-    const ctx = world("s3");
+  check("S4 the effective rule the contract states is the one readNarratives applies", () => {
+    const ctx = world("s4-contract-rule");
     seedSubsystem(ctx, "S-01", "mapped");
     const ev = evidence(ctx);
     const first = refusal(() => record(ctx, { evidence_ids: [ev], body: bodyFor("structure", 1) }));
