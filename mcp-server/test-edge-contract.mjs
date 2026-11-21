@@ -723,7 +723,7 @@ check("a subsystem with no recorded edge is given none", () => {
 // 4. The projection renders recorded rows and nothing else (§9.2)
 // ---------------------------------------------------------------------------
 emit("");
-emit("architecture.md — topology from recorded rows only");
+emit("the architecture page — topology from recorded rows only");
 
 const SCHEMA_ABS = join(REPO, SCHEMA_REL);
 

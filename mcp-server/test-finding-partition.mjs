@@ -12,8 +12,8 @@
 //     that carries no resolution event;
 //   - the duplicated `COALESCE(<alias>.resolution_state, CASE … f.status …)`
 //     fallback survives anywhere outside the view;
-//   - a resolved finding renders on `findings.md`, an open one on
-//     `resolved-findings.md`, or either page carries a finding's opaque
+//   - a resolved finding renders on `findings.html`, an open one on
+//     `resolved-findings.html`, or either page carries a finding's opaque
 //     marker more than once per corpus;
 //   - a finding referenced from a subsystem page does not resolve to the page
 //     its resolution state selects, so the coverage axis would break;
@@ -24,7 +24,7 @@
 //   - the gate does not run in CI.
 //
 // False green it cannot exclude: a *consistent* wrong assignment. If the lens
-// tuples themselves were rewritten — every state assigned to `findings.md`,
+// tuples themselves were rewritten — every state assigned to `findings.html`,
 // say — the census would still see one membership per row and each marker on
 // its expected page. That is why the fixture assertions below name the pages
 // literally instead of deriving them from the same constant the renderer uses.
@@ -62,8 +62,8 @@ const CI_REL = ".github/workflows/test.yml";
 // §6.1 assigns each resolution state to exactly one lens page. Written out
 // here rather than imported so that rewriting the implementation's constant
 // cannot also rewrite what this gate expects.
-const OPEN_PAGE = "findings.md";
-const RESOLVED_PAGE = "resolved-findings.md";
+const OPEN_PAGE = "findings.html";
+const RESOLVED_PAGE = "resolved-findings.html";
 const EXPECTED_PAGE = {
   open: OPEN_PAGE,
   "fixed-pending-verification": OPEN_PAGE,
@@ -139,6 +139,28 @@ function readText(absPath) {
 function findingMarker(findingId) {
   const token = createHash("sha256").update(findingId, "utf8").digest("hex");
   return `<!-- amanuensis:finding:${token} -->`;
+}
+
+// The page's own content: the navigation above it carries <h2> group titles too.
+function contentOf(html) {
+  const start = html.indexOf('<article class="content');
+  const end = html.indexOf('<footer class="page-foot"', start);
+  return start < 0 ? html : html.slice(start, end < 0 ? undefined : end);
+}
+
+function plainText(fragment) {
+  return fragment
+    .replace(/<[^>]*>/g, "")
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+// A link as the HTML prints it: `<a href="…">`.
+function hrefTo(target) {
+  return `href="${target}"`;
 }
 
 function walk(dir, suffixes) {
@@ -719,7 +741,7 @@ function needDocs() {
 
 check("the projection publishes with every read-back axis green", () => needDocs());
 
-check("a verified-fixed CRITICAL renders only on resolved-findings.md", () => {
+check("a verified-fixed CRITICAL renders only on resolved-findings.html", () => {
   const blocked = needDocs();
   if (blocked) return blocked;
   const open = readText(join(docs, OPEN_PAGE));
@@ -732,12 +754,12 @@ check("a verified-fixed CRITICAL renders only on resolved-findings.md", () => {
   if (open.includes(marker))
     return `the verified-fixed CRITICAL marker appears on ${OPEN_PAGE} as well`;
   if (!/B01-1/.test(resolved)) return `${RESOLVED_PAGE} does not name the record`;
-  if (!resolved.includes("verified-fixed"))
+  if (!/verified[- ]fixed/i.test(plainText(contentOf(resolved))))
     return `${RESOLVED_PAGE} does not state the resolution state it renders`;
   return null;
 });
 
-check("findings.md renders only open and fixed-pending-verification records", () => {
+check("findings.html renders only open and fixed-pending-verification records", () => {
   const blocked = needDocs();
   if (blocked) return blocked;
   const open = readText(join(docs, OPEN_PAGE));
@@ -766,7 +788,7 @@ check("findings.md renders only open and fixed-pending-verification records", ()
 // The fixture crosses the two axes — B01-2 is LOW and open, B01-4 is HIGH and
 // awaiting verification — so an ordering that got severity and state the wrong
 // way round cannot come out looking right by accident.
-check("findings.md orders every open record before every awaiting-verification one", () => {
+check("findings.html orders every open record before every awaiting-verification one", () => {
   const blocked = needDocs();
   if (blocked) return blocked;
   const open = readText(join(docs, OPEN_PAGE));
@@ -781,18 +803,24 @@ check("findings.md orders every open record before every awaiting-verification o
   return null;
 });
 
-check("findings.md separates the two unresolved states by heading", () => {
+check("findings.html separates the two unresolved states by heading", () => {
   const blocked = needDocs();
   if (blocked) return blocked;
   const open = readText(join(docs, OPEN_PAGE));
   if (open === null) return `${OPEN_PAGE} was not rendered`;
-  const headings = [...open.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+  const body = contentOf(open);
+  const sections = [...body.matchAll(/<h2[ >][\s\S]*?<\/h2>/g)].map((m) => ({
+    at: m.index,
+    text: plainText(m[0]).replace(/^§/, "").trim(),
+  }));
+  const headings = sections.map((section) => section.text);
   if (headings.length < 2)
     return `${OPEN_PAGE} carries ${headings.length} top-level section(s): ${headings.join(", ") || "none"}`;
   // The reader must be able to see which group a record is in without reading
   // the row, so the state grouping is a heading, not a column.
-  const at = (id) => open.indexOf(findingMarker(id));
-  const boundary = open.search(/^## .*(verification|verified)/gim);
+  const at = (id) => body.indexOf(findingMarker(id));
+  const awaiting = sections.find((section) => /verification|verified/i.test(section.text));
+  const boundary = awaiting ? awaiting.at : -1;
   if (boundary < 0) return `${OPEN_PAGE} has no awaiting-verification section: ${headings.join(", ")}`;
   if (at("B01-2") > boundary) return "an open record renders under the awaiting-verification heading";
   if (at("B01-4") < boundary) return "an awaiting-verification record renders above its own heading";
@@ -808,7 +836,7 @@ check(
       .prepare("SELECT finding_id, resolution_state FROM finding_state_current ORDER BY finding_id")
       .all();
     const bad = [];
-    for (const suffix of [".md", ".html"]) {
+    for (const suffix of [".html"]) {
       const files = walk(docs, [suffix]);
       for (const { finding_id, resolution_state } of states) {
         const marker = findingMarker(finding_id);
@@ -825,7 +853,7 @@ check(
           );
           continue;
         }
-        const expected = String(EXPECTED_PAGE[resolution_state] ?? "").replace(/\.md$/, suffix);
+        const expected = String(EXPECTED_PAGE[resolution_state] ?? "");
         if (!pages[0].startsWith(`${expected}×`))
           bad.push(
             `${finding_id} (${resolution_state}) renders on ${pages[0]}, expected ${expected}`,
@@ -847,15 +875,15 @@ check(
 check("the subsystem page collapses resolved defects into a count linking to the page", () => {
   const blocked = needDocs();
   if (blocked) return blocked;
-  const pages = walk(join(docs, "subsystems"), [".md"]);
+  const pages = walk(join(docs, "subsystems"), [".html"]);
   if (pages.length === 0) return "no subsystem page was rendered";
   const text = pages.map((p) => readText(p) ?? "").join("\n");
   const bad = [];
-  if (!text.includes(`](../${RESOLVED_PAGE})`))
+  if (!text.includes(hrefTo(`../${RESOLVED_PAGE}`)))
     bad.push(`no subsystem page carries the collapsed link to ../${RESOLVED_PAGE}`);
   // The open ones stay per-finding links to the open page.
   for (const id of ["B01-2", "B01-4"]) {
-    if (!text.includes(`](../${OPEN_PAGE}#${id.toLowerCase()})`))
+    if (!text.includes(hrefTo(`../${OPEN_PAGE}#${id.toLowerCase()}`)))
       bad.push(`${id} is not linked from a subsystem page to ../${OPEN_PAGE}`);
   }
   // A resolved finding must not be rendered here as a full marked record.
@@ -869,12 +897,12 @@ check("the subsystem page collapses resolved defects into a count linking to the
 // The P2 acceptance the check above cannot carry: `_build_xref_index` routes a
 // finding id by `finding_state_current.resolution_state`. A `[[B01-1]]`
 // reference in the subsystem's recorded prose is the surface that exercises
-// it — a resolved id must resolve to resolved-findings.md, an open one to
-// findings.md, and neither may resolve to the other page's anchor.
+// it — a resolved id must resolve to resolved-findings.html, an open one to
+// findings.html, and neither may resolve to the other page's anchor.
 check("a [[finding]] reference in subsystem prose routes by resolution state", () => {
   const blocked = needDocs();
   if (blocked) return blocked;
-  const pages = walk(join(docs, "subsystems"), [".md"]);
+  const pages = walk(join(docs, "subsystems"), [".html"]);
   if (pages.length === 0) return "no subsystem page was rendered";
   const text = pages.map((p) => readText(p) ?? "").join("\n");
   const bad = [];
@@ -882,9 +910,9 @@ check("a [[finding]] reference in subsystem prose routes by resolution state", (
     ["B01-1", RESOLVED_PAGE],
     ["B01-2", OPEN_PAGE],
   ]) {
-    const wanted = `](../${page}#${id.toLowerCase()})`;
+    const wanted = hrefTo(`../${page}#${id.toLowerCase()}`);
     if (!text.includes(wanted)) bad.push(`the [[${id}]] reference did not resolve to ${wanted}`);
-    const other = `](../${page === RESOLVED_PAGE ? OPEN_PAGE : RESOLVED_PAGE}#${id.toLowerCase()})`;
+    const other = hrefTo(`../${page === RESOLVED_PAGE ? OPEN_PAGE : RESOLVED_PAGE}#${id.toLowerCase()}`);
     if (text.includes(other)) bad.push(`the [[${id}]] reference resolved to ${other}`);
   }
   if (text.includes("[[B01-1]]") || text.includes("[[B01-2]]"))
@@ -973,11 +1001,14 @@ partitionArm(
 check("the coverage axis turns red when a finding link is routed to the wrong page", () => {
   const blocked = needDocs();
   if (blocked) return blocked;
-  const pages = walk(join(docs, "subsystems"), [".md"]);
-  const page = pages.find((p) => (readText(p) ?? "").includes(`](../${RESOLVED_PAGE}#b01-1)`));
+  const pages = walk(join(docs, "subsystems"), [".html"]);
+  const page = pages.find((p) => (readText(p) ?? "").includes(hrefTo(`../${RESOLVED_PAGE}#b01-1`)));
   if (!page) return `no subsystem page links to ../${RESOLVED_PAGE}#b01-1`;
   const original = readText(page);
-  writeFileSync(page, original.replace(`](../${RESOLVED_PAGE}#b01-1)`, `](../${OPEN_PAGE}#b01-1)`));
+  writeFileSync(
+    page,
+    original.replace(hrefTo(`../${RESOLVED_PAGE}#b01-1`), hrefTo(`../${OPEN_PAGE}#b01-1`)),
+  );
   let verdict = null;
   try {
     const { status, summary } = readbackWith(join(REPO), fixture.project.storagePath);
