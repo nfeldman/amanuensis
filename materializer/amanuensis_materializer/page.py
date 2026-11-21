@@ -478,6 +478,62 @@ class DiagramSource:
 
 
 @dataclass(frozen=True)
+class DiagramNode:
+    """A box a diagram draws: the record it stands for, its place on the grid and what it says."""
+
+    record: str
+    label: str
+    # Lanes or levels are rows, steps or rungs are columns; both count from 0.
+    row: int
+    column: int
+    detail: str = ""
+    # `solid`, `dashed` or `dotted`: how sure the record is, or that it sits apart.
+    style: str = "solid"
+    # Where the box links, or empty.
+    href: str = ""
+    # The box marks where the subject stands now.
+    marker: bool = False
+
+
+@dataclass(frozen=True)
+class DiagramEdge:
+    """An arrow a diagram draws, from one node's record to another's, and the record that joins them."""
+
+    record: str
+    source: str
+    target: str
+    label: str = ""
+    style: str = "solid"
+    # How far a line bows from the straight one, so two between the same boxes stay apart.
+    bow: int = 0
+
+
+@dataclass(frozen=True)
+class Diagram:
+    """A drawn figure and the account beside it (PLAN §7, Appendix B).
+
+    The model holds the records; `diagrams.draw_svg` lays them out. Below its minimum
+    a diagram holds no nodes and says why in `below`, and the writer prints that sentence.
+    """
+
+    kind: str
+    # Who or what the diagram is about, when it is about one subject; empty otherwise.
+    subject: str
+    title: str
+    # The one question it answers, in the reader's words.
+    caption: str
+    lanes: tuple[str, ...] = ()
+    nodes: tuple[DiagramNode, ...] = ()
+    edges: tuple[DiagramEdge, ...] = ()
+    # Paragraphs of the account, then a list of items, each with the anchor its box links to.
+    account: tuple[str, ...] = ()
+    items: tuple[tuple[str, str], ...] = ()
+    # What the diagram was read from or at.
+    read_at: str = ""
+    below: str = ""
+
+
+@dataclass(frozen=True)
 class Facets:
     """A filterable page's scope and the values each facet takes, in first-appearance order."""
 
@@ -489,7 +545,7 @@ Block = (
     Heading | Paragraph | List | Code | Quote | Anchor | RecordMarker | Section | Marked | Details
     | Table | EnumTable | LifecycleTable | RecordList | SummaryList | Atlas | Topology
     | RuntimeDiagram | BoundaryDiagram | CoverageIndex | ConcernChecklist
-    | RelationshipTrace | StalenessBars | DiagramSource
+    | RelationshipTrace | StalenessBars | DiagramSource | Diagram
 )
 
 

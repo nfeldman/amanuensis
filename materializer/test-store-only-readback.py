@@ -36,9 +36,11 @@ Turns red when:
         `claim`), an explanation altered (content, `explanation`), a territory row
         re-marked (state, `territory`), and a mark naming a record the store does
         not hold (coverage);
-  - the golden corpus's `VERSION` is not SO20, or a golden page differs from the
-    corpus this packet started from by anything but `data-record`, `data-state`,
-    `data-node` and `data-edge` attributes, or no golden page gained one;
+  - the golden corpus's `VERSION` is not SO20 or a later packet the update rule names
+    (SO22–SO25, which add `<figure data-diagram>` blocks), or a golden page differs
+    from the corpus this packet started from by anything but `data-record`,
+    `data-state`, `data-node` and `data-edge` attributes and those figure blocks, or
+    no golden page gained one;
   - the gate has no step in `.github/workflows/test.yml`.
 
 Output protocol: exactly one status line, last, on stdout.
@@ -432,6 +434,10 @@ def sabotages(facts: dict[str, Any]) -> list[tuple[str, str, Callable[[str], str
 # ---------------------------------------------------------------------------
 
 MARK_ATTRIBUTE = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
+# Packets SO22–SO25 add diagrams to the corpus (PLAN §3.2's update rule); a figure is
+# their whole addition, so a page is compared without them.
+FIGURE_BLOCK = re.compile(r'<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>\n?', re.S)
+CORPUS_VERSIONS = ("SO20", "SO22", "SO23", "SO24", "SO25")
 
 
 def start_corpus(into: Path) -> Path | None:
@@ -447,8 +453,8 @@ def start_corpus(into: Path) -> Path | None:
 
 def golden_attributes_only(previous: Path | None) -> str | None:
     version = GOLDEN / "VERSION"
-    if not version.is_file() or version.read_text().strip() != PACKET:
-        return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET}"
+    if not version.is_file() or version.read_text().strip() not in CORPUS_VERSIONS:
+        return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not one of {CORPUS_VERSIONS}"
     if previous is None:
         return f"the golden corpus cannot be read from git at {START_SHA[:12]}"
     before = {str(p.relative_to(previous)): p for p in previous.rglob("*.html") if "/html/" in str(p)}
@@ -457,7 +463,7 @@ def golden_attributes_only(previous: Path | None) -> str | None:
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     marked = 0
     for rel in sorted(after):
-        new, old = after[rel].read_text(), before[rel].read_text()
+        new, old = FIGURE_BLOCK.sub("", after[rel].read_text()), before[rel].read_text()
         if MARK_ATTRIBUTE.sub("", new) != old:
             return f"{rel} differs from the start's corpus by more than the record attributes"
         if new != old:
@@ -613,7 +619,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="amanuensis-so20-golden-") as tmp:
         previous = start_corpus(Path(tmp))
-        check("the golden corpus is SO20's and differs from the start's only in record attributes",
+        check("the golden corpus is SO20's or a later diagram packet's and differs from the start's only in record attributes and diagram figures",
               lambda: golden_attributes_only(previous))
 
     def in_ci() -> str | None:

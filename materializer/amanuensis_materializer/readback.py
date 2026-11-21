@@ -1269,6 +1269,8 @@ class _MarkInventory(HTMLParser):
         values = {name: value or "" for name, value in attrs}
         classes = set(values.get("class", "").split())
         svg = next((DRAWN_DIAGRAMS[c] for c in classes if tag == "svg" and c in DRAWN_DIAGRAMS), None)
+        if svg is None and tag == "figure" and "data-diagram" in values:
+            svg = f"figure:{values['data-diagram']}:{values.get('data-subject', '')}"
         within = svg or self._svg()
         if within is not None:
             if tag in ("line", "path"):
@@ -1466,6 +1468,7 @@ class ProjectionVerifier:
             mismatches.extend(self._record_page_census(conn, projection))
             mismatches.extend(self._record_mark_census(conn, projection))
             mismatches.extend(self._drawn_element_census(conn, projection))
+            mismatches.extend(self._figure_census(conn, projection))
         finally:
             conn.close()
         # Every finding carries exactly one authoritative marker across the
@@ -2518,6 +2521,68 @@ class ProjectionVerifier:
                         ),
                     }
                 )
+        return mismatches
+
+    def _figure_census(self, conn: Any, projection: dict[str, str]) -> list[dict[str, str]]:
+        """The survey workflow and the status ladders, figure by figure, against their models (§3.5, §7.3).
+
+        Each model is recomputed from the contract and the store. The figures a page
+        carries must be the ones the models say it should (a missing or extra one is a
+        coverage mismatch), and the nodes and edges their SVGs draw, read from the
+        elements, must be the models' records (a content mismatch).
+        """
+
+        from .diagrams import status_ladder_model, survey_workflow_model  # noqa: PLC0415 — it imports this module
+
+        models: dict[str, list[tuple[tuple[str, str], Any]]] = {}
+        if "how-to-read.html" in projection:
+            models["how-to-read.html"] = [(("survey-workflow", ""), survey_workflow_model()), (("status-ladder", ""), status_ladder_model())]
+        for sub in rows(conn, "SELECT id, name FROM subsystems ORDER BY id"):
+            page = subsystem_page(str(sub["id"]), str(sub["name"]))
+            if page in projection:
+                models[page] = [(("status-ladder", str(sub["id"])), status_ladder_model(conn, str(sub["id"])))]
+        mismatches: list[dict[str, str]] = []
+        for rel, text in sorted(projection.items()):
+            if Path(rel).suffix not in HTML_SUFFIXES or (rel not in models and 'data-diagram="' not in text):
+                continue
+            wanted_figures = Counter(key for key, model in models.get(rel, []) if model.nodes)
+            found_figures = Counter(
+                (kind, re.search(r'data-subject="([^"]*)"', attrs).group(1) if 'data-subject="' in attrs else "")  # type: ignore[union-attr]
+                for kind, attrs in re.findall(r'<figure\b[^>]*?data-diagram="([^"]*)"([^>]*)>', text)
+            )
+            for key in sorted(set(wanted_figures) | set(found_figures)):
+                if wanted_figures[key] != found_figures[key]:
+                    mismatches.append(
+                        {
+                            "axis": "coverage",
+                            "object_type": f"{key[0]}-diagram",
+                            "object_id": key[1] or rel,
+                            "detail": f"{rel} carries {found_figures[key]} {key[0]} figure(s) for {key[1] or 'the page'}; the store's rows draw {wanted_figures[key]}",
+                        }
+                    )
+            drawn = _record_occurrences(text)[1]
+            for (kind, subject), model in models.get(rel, []):
+                if not model.nodes:
+                    continue
+                wanted: Counter[tuple[str, str, str]] = Counter(
+                    [*(("node", "g", n.record) for n in model.nodes), *(("edge", "path", e.record) for e in model.edges)]
+                )
+                got = Counter(drawn.get(f"figure:{kind}:{subject}", []))
+                for element, tag, record in sorted(set(wanted) | set(got)):
+                    if got[(element, tag, record)] == wanted[(element, tag, record)]:
+                        continue
+                    named_as = record or f"(an unmarked <{tag}>)"
+                    mismatches.append(
+                        {
+                            "axis": "content",
+                            "object_type": f"{kind}-diagram-{element}",
+                            "object_id": record or subject,
+                            "detail": (
+                                f"the {kind} SVG{' of ' + subject if subject else ''} draws {named_as} as <{tag}>"
+                                f" {got[(element, tag, record)]} time(s); the store's rows draw it {wanted[(element, tag, record)]}"
+                            ),
+                        }
+                    )
         return mismatches
 
     def _coverage_measurement_census(

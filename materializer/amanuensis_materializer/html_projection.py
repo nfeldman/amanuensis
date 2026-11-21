@@ -26,6 +26,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import quote
 
+from .diagrams import draw_svg
 from .manifest import sha256_bytes
 from .page import (
     COVERAGE_STATES,
@@ -41,6 +42,7 @@ from .page import (
     ConcernChecklist,
     CoverageIndex,
     Details,
+    Diagram,
     DiagramSource,
     Emph,
     EnumTable,
@@ -1971,6 +1973,34 @@ class _HtmlWriter:
         )
 
     @staticmethod
+    def _diagram(block: Diagram) -> str:
+        """A drawn figure with the account beside it, or the sentence that says why none is drawn (§7, Appendix B)."""
+
+        if not block.nodes:
+            return f"<p>{html.escape(block.below, quote=False)}</p>"
+        subject = f' data-subject="{html.escape(block.subject, quote=True)}"' if block.subject else ""
+
+        def text(value: str) -> str:
+            return html.escape(value, quote=False)
+
+        items = "".join(
+            f'<li id="{html.escape(anchor, quote=True)}">{text(line)}</li>' for anchor, line in block.items
+        )
+        account = (
+            '<div class="diagram-account">'
+            + "".join(f"<p>{text(paragraph)}</p>" for paragraph in block.account)
+            + (f'<ol class="diagram-items">{items}</ol>' if items else "")
+            + f'<p class="diagram-read-at">{text(block.read_at)}</p>'
+            + "</div>"
+        )
+        return (
+            f'<figure class="diagram" data-diagram="{html.escape(block.kind, quote=True)}"{subject}>'
+            f'<figcaption><strong>{text(block.title)}</strong> <span>{text(block.caption)}</span></figcaption>'
+            f'<div class="diagram-frame" style="max-width:100%;overflow-x:auto">{draw_svg(block)}</div>'
+            f"{account}</figure>"
+        )
+
+    @staticmethod
     def _boundary_diagram(block: BoundaryDiagram) -> str:
         """Draw the recorded-boundary table as inline SVG (§2.5 item 2).
 
@@ -2533,6 +2563,8 @@ class _HtmlWriter:
             return self._relationship_trace(block)
         if isinstance(block, StalenessBars):
             return self._staleness_bars(block)
+        if isinstance(block, Diagram):
+            return self._diagram(block)
         if isinstance(block, DiagramSource):
             return f'<figure class="figure"><figcaption class="figure-label">Diagram source</figcaption><pre class="diagram-source">{html.escape(block.source)}</pre></figure>'
         raise TypeError(f"not a block kind: {type(block).__name__}")

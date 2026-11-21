@@ -569,6 +569,13 @@ jobs:
       - name: The read-back checks record marks and drawn elements against the store
         working-directory: materializer
         run: python3 test-store-only-readback.py
+      # GATE SO22 (design/store-only/PLAN.md §7.3, §8 SO22). Seeds its own store in a temporary
+      # directory: the survey workflow (B1) and the status ladder (B2) draw the contract's and the
+      # store's records, the rung prerequisites agree with enforcePhasePrerequisites, and the
+      # read-back catches each resealed sabotage.
+      - name: The survey workflow and the status ladder are drawn from the records (GATE SO22)
+        working-directory: materializer
+        run: python3 test-store-only-method-diagrams.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py

@@ -1927,6 +1927,8 @@ SURVEY_PASSES: tuple[dict[str, object], ...] = (
         "does": "Lists the subsystem's files and the terms it uses.",
         "status": "scoping",
         "set_when": "end",
+        "actor": "agent",
+        "checkpoint": "",
     },
     {
         "pass": "Structure",
@@ -1934,6 +1936,8 @@ SURVEY_PASSES: tuple[dict[str, object], ...] = (
         "does": "Reads the files; records types, state, data flows, concurrency, and claims.",
         "status": "structural",
         "set_when": "end",
+        "actor": "agent",
+        "checkpoint": "",
     },
     {
         "pass": "Concern review",
@@ -1941,6 +1945,8 @@ SURVEY_PASSES: tuple[dict[str, object], ...] = (
         "does": "Gives every checklist item a verdict with evidence. Confirmed defects become findings.",
         "status": "concerns",
         "set_when": "start",
+        "actor": "agent",
+        "checkpoint": "",
     },
     {
         "pass": "Challenge",
@@ -1948,6 +1954,8 @@ SURVEY_PASSES: tuple[dict[str, object], ...] = (
         "does": "Tries to prove each claim and finding wrong.",
         "status": "adversarial",
         "set_when": "start",
+        "actor": "agent",
+        "checkpoint": "",
     },
     {
         "pass": "Packaging",
@@ -1955,6 +1963,29 @@ SURVEY_PASSES: tuple[dict[str, object], ...] = (
         "does": "Writes the subsystem's purpose and account, updates the site.",
         "status": "mapped",
         "set_when": "end",
+        "actor": "agent",
+        "checkpoint": "A summary of the subsystem is posted in your chat.",
+    },
+)
+
+# What the server checks before each rung of the ladder; checked_by names what
+# enforcePhasePrerequisites calls or reads, and a gate holds the two in step.
+STATUS_PREREQUISITES: tuple[dict[str, object], ...] = (
+    {
+        "status": "structural",
+        "requires": ({"what": "The file ledger lists at least one file.", "checked_by": "file_ledger"}, {"what": "At least one current structural claim is recorded for the subsystem.", "checked_by": "requireStructuralClaim"}, {"what": "A term the scope pass found is defined, or its definition is declined with a reason.", "checked_by": "requireVocabularyDischarge"}),
+    },
+    {
+        "status": "concerns",
+        "requires": ({"what": "A structure narrative is recorded or declined, or an imported survey body is kept.", "checked_by": "hasStructureNarrative"}, {"what": "Every concern disposition the subsystem holds has evidence attached whose revision resolves.", "checked_by": "requireAttachedEvidence"}),
+    },
+    {
+        "status": "adversarial",
+        "requires": ({"what": "At least one concern disposition is recorded.", "checked_by": "dispositions"}, {"what": "Every concern disposition the subsystem holds has evidence attached whose revision resolves.", "checked_by": "requireAttachedEvidence"}),
+    },
+    {
+        "status": "mapped",
+        "requires": ({"what": "Every current claim of the subsystem has a recorded challenge outcome.", "checked_by": "requireChallengedClaims"}, {"what": "Every file that carries the survey obligation has been examined or deferred with a reason.", "checked_by": "requireExaminedScope"}, {"what": "The whole store has been reconciled against the repository at its head.", "checked_by": "requireReconciledStore"}, {"what": "Every concern disposition the subsystem holds has evidence attached whose revision resolves.", "checked_by": "requireAttachedEvidence"}),
     },
 )
 

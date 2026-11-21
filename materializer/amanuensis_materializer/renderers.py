@@ -34,6 +34,8 @@ from .diagrams import (
     runtime_boundary_state,
     seam_blocks,
     staleness_blocks,
+    status_ladder_model,
+    survey_workflow_model,
 )
 from .legacy_prose import (
     ImportedBody,
@@ -2479,6 +2481,7 @@ def render_subsystem(
     }
     assessable_seams = sum(1 for sm in seams if int(sm["assessable"] or 0))
     status = str(s["status"] or "unmapped")
+    ladder = status_ladder_model(conn, str(sid), guide_href="../how-to-read.html")
     # What the ladder status authorizes and what it cannot justify, from the one
     # enum source (§10). A count without that sentence beside it reads as
     # coverage; it is an upper bound on what may be claimed.
@@ -2502,6 +2505,7 @@ def render_subsystem(
                 f" {SUBSYSTEM_STATUS_MEANINGS.get(status, 'no meaning is recorded for this status.')}"
                 f" It cannot justify {SUBSYSTEM_STATUS_LIMITS.get(status, 'more than it records')}."
             ),
+            ladder,
             _summary(
                 _caption("Standing"),
                 [
@@ -2592,6 +2596,7 @@ def render_subsystem(
         | _db_source(f"subsystem:{sid}:seams", seams)
         | _db_source(f"subsystem:{sid}:concerns", active_concerns)
         | _db_source(f"subsystem:{sid}:standing", standing)
+        | _db_source(f"subsystem:{sid}:ladder", ladder)
         | _db_source(f"subsystem:{sid}:claims", claims)
         | imports_source(f"subsystem:{sid}:imports", surveys)
         | _db_source(f"subsystem:{sid}:explanations", {"head": checked_head, "rows": explanations})
@@ -4223,6 +4228,8 @@ def _survey_passes_section() -> Section:
             passes,
         ),
         _paragraph(SURVEY_IN_PROGRESS.format(labels=" or ".join(under_way))),
+        survey_workflow_model(),
+        status_ladder_model(),
         _paragraph(SURVEY_REFRESH),
         _heading(3, EXPECTS_HEADING),
         _bullets([item.removeprefix("- ") for item in SURVEY_EXPECTS]),

@@ -1941,42 +1941,119 @@
       "links_to": "Decisions needed"
     }
   ],
-  "survey_passes_note": "The five passes of a subsystem survey, in order (PLAN.md §2.3, Appendix C). status is the subsystem_status value the pass sets; set_when says whether it sets it as the pass starts or when it is done (D4). Statuses follow the subsystem_status ladder. The skill's gate reads the same rows.",
+  "survey_passes_note": "The five passes of a subsystem survey, in order (PLAN.md §2.3, Appendix C). status is the subsystem_status value the pass sets; set_when says whether it sets it as the pass starts or when it is done (D4). actor is who does the pass; checkpoint is the sentence the reader is told after it, empty when the reader is told nothing. Statuses follow the subsystem_status ladder. The skill's gate reads the same rows.",
   "survey_passes": [
     {
       "pass": "Scope",
       "phase": 1,
       "does": "Lists the subsystem's files and the terms it uses.",
       "status": "scoping",
-      "set_when": "end"
+      "set_when": "end",
+      "actor": "agent",
+      "checkpoint": ""
     },
     {
       "pass": "Structure",
       "phase": 2,
       "does": "Reads the files; records types, state, data flows, concurrency, and claims.",
       "status": "structural",
-      "set_when": "end"
+      "set_when": "end",
+      "actor": "agent",
+      "checkpoint": ""
     },
     {
       "pass": "Concern review",
       "phase": 3,
       "does": "Gives every checklist item a verdict with evidence. Confirmed defects become findings.",
       "status": "concerns",
-      "set_when": "start"
+      "set_when": "start",
+      "actor": "agent",
+      "checkpoint": ""
     },
     {
       "pass": "Challenge",
       "phase": 4,
       "does": "Tries to prove each claim and finding wrong.",
       "status": "adversarial",
-      "set_when": "start"
+      "set_when": "start",
+      "actor": "agent",
+      "checkpoint": ""
     },
     {
       "pass": "Packaging",
       "phase": 5,
       "does": "Writes the subsystem's purpose and account, updates the site.",
       "status": "mapped",
-      "set_when": "end"
+      "set_when": "end",
+      "actor": "agent",
+      "checkpoint": "A summary of the subsystem is posted in your chat."
+    }
+  ],
+  "status_prerequisites_note": "What the server checks before it lets a subsystem reach each rung of the subsystem_status ladder; the rungs not listed ask nothing. checked_by names what enforcePhasePrerequisites in mcp-server/src/invariants.ts calls or reads for the check, and a gate holds the two in step (PLAN.md §7.1 question 2).",
+  "status_prerequisites": [
+    {
+      "status": "structural",
+      "requires": [
+        {
+          "what": "The file ledger lists at least one file.",
+          "checked_by": "file_ledger"
+        },
+        {
+          "what": "At least one current structural claim is recorded for the subsystem.",
+          "checked_by": "requireStructuralClaim"
+        },
+        {
+          "what": "A term the scope pass found is defined, or its definition is declined with a reason.",
+          "checked_by": "requireVocabularyDischarge"
+        }
+      ]
+    },
+    {
+      "status": "concerns",
+      "requires": [
+        {
+          "what": "A structure narrative is recorded or declined, or an imported survey body is kept.",
+          "checked_by": "hasStructureNarrative"
+        },
+        {
+          "what": "Every concern disposition the subsystem holds has evidence attached whose revision resolves.",
+          "checked_by": "requireAttachedEvidence"
+        }
+      ]
+    },
+    {
+      "status": "adversarial",
+      "requires": [
+        {
+          "what": "At least one concern disposition is recorded.",
+          "checked_by": "dispositions"
+        },
+        {
+          "what": "Every concern disposition the subsystem holds has evidence attached whose revision resolves.",
+          "checked_by": "requireAttachedEvidence"
+        }
+      ]
+    },
+    {
+      "status": "mapped",
+      "requires": [
+        {
+          "what": "Every current claim of the subsystem has a recorded challenge outcome.",
+          "checked_by": "requireChallengedClaims"
+        },
+        {
+          "what": "Every file that carries the survey obligation has been examined or deferred with a reason.",
+          "checked_by": "requireExaminedScope"
+        },
+        {
+          "what": "The whole store has been reconciled against the repository at its head.",
+          "checked_by": "requireReconciledStore"
+        },
+        {
+          "what": "Every concern disposition the subsystem holds has evidence attached whose revision resolves.",
+          "checked_by": "requireAttachedEvidence"
+        }
+      ]
     }
   ]
 }
