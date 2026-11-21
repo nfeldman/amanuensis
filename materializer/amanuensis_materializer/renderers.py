@@ -3216,9 +3216,11 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
                 "page": "index.md",
                 "subject": "project",
                 "state": state,
+                # Only a recorded purpose discharges it: the server refuses to
+                # decline the project's purpose (`explanations.ts`; F4/codex).
                 "discharge": (
-                    "call record_explanation with subject_type project and slot purpose,"
-                    " or decline_explanation with the reason there is none"
+                    "call record_explanation with subject_type project and slot purpose;"
+                    " the project's purpose cannot be declined"
                 ),
             }
         )
