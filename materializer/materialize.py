@@ -3,8 +3,9 @@
 
 Reads `memory.db` from a project storage directory (and its binding files,
 to find the checkout) and renders a navigable HTML site under `<storage>/docs/`:
-one `.html` per page, `search-index.js`, `.manifest.json` and
-`.projection-contract.json`, and nothing else (store-only PLAN §3.2 step 3).
+one `.html` per page, `search-index.js`, `.manifest.json`,
+`.projection-contract.json` and a content-free `README.md` that points at
+`index.html`, and nothing else (store-only PLAN §3.2 step 3, §6).
 
 Diff-aware: per-page source hashes are tracked in `docs/.manifest.json`, and a
 page whose bytes are unchanged is not rewritten. Cross-references (B-01, CC-1,

@@ -17,8 +17,9 @@ The orchestrator:
   6. Saves the manifest and the publication receipt, and reads the
      publication back against the store.
 
-No `.md` is written (store-only PLAN §3.2 step 3). `.md` pages a manifest
-from before then claims are deleted.
+No `.md` page is written (store-only PLAN §3.2 step 3). `.md` pages a manifest
+from before then claims are deleted. The one `.md` a publication holds is the
+README that points at `index.html` (D10, `README_TEXT`).
 """
 from __future__ import annotations
 

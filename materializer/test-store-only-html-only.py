@@ -180,8 +180,12 @@ def files_under(root: Path) -> list[str]:
     return sorted(str(p.relative_to(root)) for p in root.rglob("*") if p.is_file())
 
 
+# The one `.md` a publication holds (PLAN §6, D10, SO21): a README that points at index.html.
+README = "README.md"
+
+
 def md_files(root: Path) -> list[str]:
-    return [rel for rel in files_under(root) if rel.endswith(".md")]
+    return [rel for rel in files_under(root) if rel.endswith(".md") and rel != README]
 
 
 def axes_green(summary: dict[str, Any] | None) -> str | None:
@@ -407,7 +411,7 @@ def main() -> int:
                 rel
                 for rel in files_under(docs)
                 if not rel.endswith(".html")
-                and rel not in {"search-index.js", ".manifest.json", ".projection-contract.json"}
+                and rel not in {"search-index.js", ".manifest.json", ".projection-contract.json", README}
             ]
             if extra:
                 return f"the publication holds files beyond HTML, the index and the two contract files: {extra[:5]}"
@@ -415,12 +419,26 @@ def main() -> int:
 
         check("an in-place publish writes no .md, only HTML, search-index.js and the two contract files", no_md_in_place)
 
+        def readme_only() -> str | None:
+            if not first:
+                return "no publication"
+            from amanuensis_materializer.html_projection import README_TEXT  # noqa: PLC0415
+
+            target = docs / README
+            if not target.is_file():
+                return "the publication has no README.md"
+            if target.read_text() != README_TEXT:
+                return "the README is not the generated pointer text"
+            return None
+
+        check("the one .md is the generated README that points at index.html (SO21, D10)", readme_only)
+
         def contract_over_html() -> str | None:
             if not first:
                 return "no publication"
             contract = json.loads((docs / ".projection-contract.json").read_text())
             listed = [str(page["path"]) for page in contract.get("pages", [])]
-            md = [rel for rel in listed if rel.endswith(".md")]
+            md = [rel for rel in listed if rel.endswith(".md") and rel != README]
             if md:
                 return f"the receipt lists {len(md)} .md page(s): {md[:5]}"
             if "index.html" not in listed or "search-index.js" not in listed:
@@ -433,7 +451,7 @@ def main() -> int:
                 return f"the receipt records links to .md targets: {links[:3]}"
             manifest = json.loads((docs / ".manifest.json").read_text())
             files = [str(item["path"]) for item in manifest.get("projection_files", [])]
-            if any(rel.endswith(".md") for rel in files) or "index.html" not in files:
+            if any(rel.endswith(".md") and rel != README for rel in files) or "index.html" not in files:
                 return f"the manifest's projection files are not the HTML and the index: {files[:5]}"
             return None
 

@@ -483,7 +483,8 @@ def main() -> int:
                     link = re.search(r'(?:href|src)="[^"]*\.md(?:#[^"]*)?"', html_file.read_text())
                     if link:
                         return f"{store}: {html_file.relative_to(output)} links {link.group(0)}"
-                if list(output.rglob("*.md")):
+                # The one `.md` is the README that points at index.html (PLAN §6, D10).
+                if [p for p in output.rglob("*.md") if p.relative_to(output).as_posix() != "README.md"]:
                     return f"{store}: the output holds a .md file"
             return None
 
