@@ -1403,6 +1403,30 @@ def _flow_marks(conn: sqlite3.Connection, flow_key: str) -> list[dict[str, Any]]
     return marks
 
 
+def _stale_citations(conn: sqlite3.Connection, claim_ids: Sequence[str]) -> dict[str, list[tuple[str, str]]]:
+    """Each claim's cited files the ledger holds as changed since they were examined, with the revision examined at."""
+
+    if not claim_ids or not all(table_exists(conn, t) for t in ("claim_evidence", "evidence", "file_ledger")):
+        return {}
+    if not any(column["name"] == "stale" for column in rows(conn, "PRAGMA table_info(file_ledger)")):
+        return {}
+    marks = ",".join("?" * len(claim_ids))
+    out: dict[str, list[tuple[str, str]]] = {}
+    for cited in rows(
+        conn,
+        "SELECT DISTINCT ce.claim_id, e.file_path, l.ref_sha FROM claim_evidence ce"
+        " JOIN evidence e ON e.id = ce.evidence_id JOIN file_ledger l ON l.file_path = e.file_path"
+        f" WHERE l.stale = 1 AND ce.claim_id IN ({marks}) ORDER BY e.file_path, l.ref_sha",
+        tuple(claim_ids),
+    ):
+        out.setdefault(str(cited["claim_id"]), []).append((str(cited["file_path"]), str(cited["ref_sha"] or "")))
+    return out
+
+
+def _changed_since(path: str, sha: str) -> str:
+    return f"Cited file changed since {sha[:8]}: {path}." if sha else f"Cited file changed since it was examined: {path}."
+
+
 def _flow_declination(conn: sqlite3.Connection, flow_key: str) -> str:
     if not table_exists(conn, "claim_mark_declinations"):
         return ""
@@ -1524,17 +1548,25 @@ def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
         if mark["kind"] == "exit":
             exits_at[mark["step"]] = exits_at.get(mark["step"], 0) + 1
     column_of = {s["step"]: i for i, s in enumerate(steps)}
+    # Appendix B rule 3: a step whose cited file changed since it was examined is hatched.
+    stale = _stale_citations(conn, [str(s["claim_id"]) for s in steps])
     nodes: list[DiagramNode] = []
     edges: list[DiagramEdge] = []
     items: list[tuple[str, str]] = []
     for index, s in enumerate(steps):
         kind = str(s["epistemic_kind"] or "")
         anchor = f"flow-strip-{slug_id}-{s['step']}"
+        changed = stale.get(str(s["claim_id"]), [])
         nodes.append(DiagramNode(
             f"flow-step:{s['claim_id']}", str(s["step"]), index // FLOW_BAND, index % FLOW_BAND, " ".join(str(s["statement"]).split()),
             _STEP_STYLE.get(kind, "solid"), f"#{anchor}",
+            hatch=", ".join(sorted({sha[:8] for _, sha in changed if sha})) or ("not recorded" if changed else ""),
         ))
-        items.append((anchor, f"Step {s['step']}: {' '.join(str(s['statement']).split())} ({_STEP_KIND_PHRASE.get(kind, kind or 'kind not recorded')})."))
+        items.append((
+            anchor,
+            f"Step {s['step']}: {' '.join(str(s['statement']).split())} ({_STEP_KIND_PHRASE.get(kind, kind or 'kind not recorded')})."
+            + "".join(f" {_changed_since(path, sha)}" for path, sha in changed),
+        ))
         if index and index // FLOW_BAND == (index - 1) // FLOW_BAND:
             before = steps[index - 1]
             edges.append(DiagramEdge(f"flow-next:{before['claim_id']}:{s['claim_id']}", f"flow-step:{before['claim_id']}", f"flow-step:{s['claim_id']}"))
@@ -1568,6 +1600,12 @@ def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
         }
         account.append(f"{_count(len(marks), 'mark')} recorded: " + "; ".join(key[k] for k in kinds_present) + ".")
     account.append(f"{bare} of {n} steps {'has' if bare == 1 else 'have'} no recorded mark.")
+    hatched = sum(1 for s in steps if stale.get(str(s["claim_id"])))
+    if hatched:
+        account.append(
+            f"{hatched} of {n} steps {'cites a file' if hatched == 1 else 'cite files'} the repository changed after"
+            f" {'it was' if hatched == 1 else 'they were'} examined; {'its box is' if hatched == 1 else 'their boxes are'} hatched."
+        )
     account.extend(_flow_marks_note(marks, declination))
     for step in crowded:
         account.append(
@@ -1943,6 +1981,12 @@ def _draw_flow(diagram: Diagram) -> str:
         cursor = box_top[-1] + _FLOW_BOX_H + tall_below * _FLOW_SLOT + _FLOW_FOOT
     height = cursor
     body: list[str] = []
+    hatch_id = f"{title_id.removesuffix('-title')}-hatch"
+    if any(n.hatch for n in steps):
+        body.append(
+            f'<defs><pattern id="{hatch_id}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+            '<rect width="1.5" height="6" fill="var(--rule-strong)"/></pattern></defs>'
+        )
     centre = {n.record: (_FLOW_LEFT + n.column * colw + colw / 2, box_top[n.row] + _FLOW_BOX_H / 2) for n in steps}
     for edge in diagram.edges:
         (sx, sy), (tx, ty) = centre[edge.source], centre[edge.target]
@@ -1953,8 +1997,12 @@ def _draw_flow(diagram: Diagram) -> str:
         text = svg_text([node.label], cx, cy - 14 if lines else cy, size=12, weight="600")
         if lines:
             text += svg_text(lines, cx, cy + 9, size=11, fill="var(--text-muted)")
-        inner = svg_box(cx - boxw / 2, cy - _FLOW_BOX_H / 2, boxw, _FLOW_BOX_H, style=node.style) + text
-        name = escape(f"Step {node.label}: {node.detail}", quote=True)
+        inner = svg_box(cx - boxw / 2, cy - _FLOW_BOX_H / 2, boxw, _FLOW_BOX_H, style=node.style)
+        if node.hatch:
+            inner += f'<rect x="{_n(cx - boxw / 2)}" y="{_n(cy - _FLOW_BOX_H / 2)}" width="{_n(boxw)}" height="{_n(_FLOW_BOX_H)}" rx="4" fill="url(#{hatch_id})" opacity="0.5"/>'
+        inner += text
+        said = f"Step {node.label}: {node.detail}" + (f"; cited file changed since {node.hatch}" if node.hatch else "")
+        name = escape(said, quote=True)
         body.append(f'<g data-node="{escape(node.record, quote=True)}"><a href="{escape(node.href, quote=True)}" aria-label="{name}">{inner}</a></g>')
     for (band, column), group in sorted(above.items()):
         cx = _FLOW_LEFT + column * colw + colw / 2

@@ -513,6 +513,8 @@ class DiagramNode:
     # A bar segment's size, and the colour token it is filled with; zero and empty elsewhere.
     count: int = 0
     tone: str = ""
+    # The revision(s) a cited file was examined at, when it has changed since: the box is hatched.
+    hatch: str = ""
 
 
 @dataclass(frozen=True)
