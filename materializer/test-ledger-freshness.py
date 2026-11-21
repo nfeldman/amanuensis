@@ -51,6 +51,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from store_only_seed import import_onboarding
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 SCHEMA = REPO / "mcp-server" / "src" / "schema.sql"
@@ -245,10 +247,12 @@ def seed(storage: Path, *, ledger: bool = True) -> None:
         " 'verified', 1, '2026-09-10T12:00:00Z', 'fixture')",
         [(f"B-01-legacy-{n}",) for n in range(ENTRIES_STALE)],
     )
+    # The pages read the imports the store holds, never a file in storage.
+    import_onboarding(
+        db, session_id="p4", entry_point=ENTRY_POINT, onboarding_report=ONBOARDING_REPORT
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text(ENTRY_POINT)
-    (storage / "onboarding-report.md").write_text(ONBOARDING_REPORT)
 
 
 def seeded(root: Path, name: str, *, ledger: bool = True) -> tuple[Path, str | None]:

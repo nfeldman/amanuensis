@@ -88,6 +88,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
+from store_only_seed import import_onboarding
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 SCHEMA = REPO / "mcp-server" / "src" / "schema.sql"
@@ -391,10 +393,12 @@ def seed(storage: Path) -> None:
         f" VALUES ('row buffer', 'the shared page the writer fills', 'B-01',"
         f" 'src/reader.ts', '{SHA_A}')"
     )
+    # The pages read the imports the store holds, never a file in storage.
+    import_onboarding(
+        db, session_id="p10", entry_point=ENTRY_POINT, onboarding_report=ONBOARDING_REPORT
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text(ENTRY_POINT)
-    (storage / "onboarding-report.md").write_text(ONBOARDING_REPORT)
 
 
 def publish(storage: Path, *args: str) -> dict[str, Any]:

@@ -66,6 +66,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from store_only_seed import import_onboarding
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 SCHEMA = REPO / "mcp-server" / "src" / "schema.sql"
@@ -454,7 +456,6 @@ def seed_empty(storage: Path) -> None:
     )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text(ENTRY_POINT)
 
 
 def seed(storage: Path) -> None:
@@ -684,11 +685,16 @@ def seed(storage: Path) -> None:
         "INSERT INTO xrefs (from_id, to_id, relationship, strength, context)"
         " VALUES ('B-01', 'B-02', 'depends-on', 'confirmed', 'the reader drains the buffer')"
     )
+    # The pages read the imports the store holds, never a file in storage.
+    import_onboarding(
+        db,
+        session_id=SESSIONS[0][0],
+        entry_point=ENTRY_POINT,
+        onboarding_report=ONBOARDING_REPORT,
+        concern_checklist=CONCERN_CHECKLIST,
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text(ENTRY_POINT)
-    (storage / "onboarding-report.md").write_text(ONBOARDING_REPORT)
-    (storage / "concern-checklist.md").write_text(CONCERN_CHECKLIST)
 
 
 def record_access(storage: Path) -> None:

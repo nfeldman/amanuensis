@@ -46,6 +46,7 @@ from pathlib import Path
 from typing import Any
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -136,11 +137,16 @@ def seed(storage: Path) -> None:
         " VALUES (?, ?, ?, ?, ?, ?, ?)",
         list(SUBSYSTEMS),
     )
+    # The pages read the imports the store holds, never a file in storage.
+    import_onboarding(
+        db,
+        session_id="o14",
+        entry_point="# Where to begin\n\nStart at the reader.\n",
+        onboarding_report="# Onboarding\n\nOne repository.\n",
+        concern_checklist="# Checklist\n\n## Active concerns\n\n- none\n",
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text("# Where to begin\n\nStart at the reader.\n")
-    (storage / "onboarding-report.md").write_text("# Onboarding\n\nOne repository.\n")
-    (storage / "concern-checklist.md").write_text("# Checklist\n\n## Active concerns\n\n- none\n")
 
 
 def publish(storage: Path) -> dict[str, Any]:

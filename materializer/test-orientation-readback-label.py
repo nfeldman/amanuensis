@@ -45,6 +45,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -138,9 +139,11 @@ def seed(storage: Path, runs: tuple[tuple[int, int, int], tuple[int, int, int]] 
                 ("run-newer", SHA, *newer, int(all(newer)), f"{NEWER_DATE}T18:30:00Z"),
             ],
         )
+    # The pages read the imports the store holds, never a file in storage.
+    db.execute("INSERT INTO sessions (session_id, intent) VALUES ('o14', 'fixture')")
+    import_onboarding(db, session_id="o14", entry_point="# Where to begin\n\nStart at the reader.\n")
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text("# Where to begin\n\nStart at the reader.\n")
 
 
 def publish(storage: Path) -> str | None:

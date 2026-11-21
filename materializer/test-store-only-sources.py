@@ -16,7 +16,9 @@ the materializer opens:
                          storage. Five subsystems cover the placements: structure
                          narrative, inventory fallback, survey record, a withdrawn
                          import, and none.
-  C  binding name        No profile row; `initialization.json` names the project.
+  C  binding name        No profile, purpose, runtime row or import, beside storage
+                         files that could fill each; `initialization.json` names the
+                         project.
 
 Turns red when:
 
@@ -41,7 +43,8 @@ Turns red when:
     incremental publish leaves the body on its page;
   - the master plan, which is held and never rendered, appears on any page;
   - a runtime edge withdrawn by a later row renders, or a superseded row's notes do;
-  - store C does not name the project from its binding;
+  - store C does not name the project from its binding, or prints text from a
+    storage file in a slot its store leaves empty;
   - the publish or its read-back is not green in any store;
   - the gate does not run in CI.
 
@@ -369,6 +372,12 @@ def seed_b(root: Path) -> Path:
 def seed_c(root: Path) -> Path:
     storage, db = new_store(root, "c")
     add_subsystem(db, "B-01", "Read path")
+    # No purpose, no profile, no runtime row and no import: every slot a file
+    # could fill is empty, and the files that could fill them are all there.
+    register_file(db, storage, "entry-point.md", "entry-point", FILE_ENTRY)
+    register_file(db, storage, "onboarding-report.md", "onboarding-report", FILE_ONBOARDING)
+    register_file(db, storage, "concern-checklist.md", "concern-checklist", FILE_CHECKLIST)
+    register_file(db, storage, "B-01-survey.md", "subsystem-survey", FILE_SURVEY)
     db.commit()
     db.close()
     (storage / "initialization.json").write_text(
@@ -808,6 +817,13 @@ def run(work: Path) -> int:
         index = page_pair(c / "docs", "index")
         if "bindrepo" not in index["html"]:
             return "the project is not named from its binding when no profile is recorded"
+        for name, text in all_pages(c / "docs").items():
+            if FILE_MARKER.search(text):
+                return f"a storage file filled a slot the store leaves empty, on {name}"
+        if "No thesis section is recorded" not in index["md"]:
+            return "with no purpose recorded the overview does not say so"
+        if "No structured runtime boundary map is recorded yet" not in page_pair(c / "docs", "architecture")["md"]:
+            return "with no runtime boundary recorded the architecture page does not say so"
         stray = opened_under_storage(c, log_c)
         if stray:
             return f"files under storage were opened: {stray}"

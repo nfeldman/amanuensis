@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Amanuensis materializer.
 
-Reads `memory.db` + prose artifacts from a project storage directory
-and renders a navigable documentation site under `<storage>/docs/`.
+Reads `memory.db` from a project storage directory (and its binding files,
+to find the checkout) and renders a navigable documentation site under `<storage>/docs/`.
 
 Diff-aware: per-page source hashes are tracked in `docs/.manifest.json`;
-on subsequent runs only pages whose DB or prose sources changed are
+on subsequent runs only pages whose database sources changed are
 re-rendered. Cross-references (B-01, CC-1, SM-3, B01-1, etc.) are
 resolved to working relative links in a global post-processing pass.
 
@@ -72,11 +72,11 @@ def main() -> int:
     # old output away and the new one in would leave no published directory.
     # As an exception it reaches the handler below, which puts the old one back.
     signal.signal(signal.SIGTERM, _raise_terminated)
-    parser = argparse.ArgumentParser(description="Render Amanuensis docs from memory.db + prose.")
+    parser = argparse.ArgumentParser(description="Render Amanuensis docs from memory.db.")
     parser.add_argument(
         "--storage",
         required=True,
-        help="Project storage directory (contains memory.db and prose artifacts).",
+        help="Project storage directory (contains memory.db).",
     )
     parser.add_argument(
         "--workspace",

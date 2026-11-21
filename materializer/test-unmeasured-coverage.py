@@ -68,6 +68,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from store_only_seed import import_onboarding
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 SCHEMA = REPO / "mcp-server" / "src" / "schema.sql"
@@ -527,12 +529,14 @@ def seed(
                     head,
                 ),
             )
+    # The pages read the imports the store holds, never a file in storage.
+    import_onboarding(
+        db, session_id=SESSION, entry_point=ENTRY_POINT, onboarding_report=ONBOARDING_REPORT
+    )
     db.commit()
     db.close()
     bound = workspace if workspace_path is None else workspace_path
     (storage / "workspace_path").write_text(f"{bound}\n")
-    (storage / "entry-point.md").write_text(ENTRY_POINT)
-    (storage / "onboarding-report.md").write_text(ONBOARDING_REPORT)
 
 
 def publish(storage: Path, *args: str) -> dict[str, Any]:
