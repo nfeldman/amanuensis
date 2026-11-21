@@ -427,7 +427,18 @@ def read_thesis(storage: Path) -> Thesis:
     """
 
     path = storage / THESIS_SOURCE
-    body = _thesis_body(path.read_text()) if path.is_file() else ""
+    return thesis_from_prose(path.read_text() if path.is_file() else "")
+
+
+def thesis_from_prose(prose: str) -> Thesis:
+    """`read_thesis` over the entry point's text, wherever that text is held.
+
+    The import (`legacy_extract`) reads the thesis from the bytes it imported,
+    not from the file on disk, which may have changed since (F3/codex,
+    slice-S1); both go through this one rule.
+    """
+
+    body = _thesis_body(prose)
     if not body:
         return Thesis(THESIS_ABSENT, recorded=False, state="absent")
     violations = tuple(orientation_violations(body))
@@ -567,7 +578,13 @@ def recorded_project_name(storage: Path) -> str | None:
     report = storage / "onboarding-report.md"
     if not report.is_file():
         return None
-    for line in report.read_text().splitlines():
+    return project_name_from_report(report.read_text())
+
+
+def project_name_from_report(text: str) -> str | None:
+    """`recorded_project_name` over the onboarding report's text."""
+
+    for line in text.splitlines():
         if line.startswith("**Codebase**:"):
             recorded = line.partition(":")[2].strip().split(" — ", 1)[0].strip()
             return recorded or None

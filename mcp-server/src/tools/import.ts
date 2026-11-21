@@ -96,12 +96,18 @@ function readBody(storagePath: string, row: RegisteredRow): Body | { reason: str
 }
 
 /**
- * Run the materializer's `legacy_extract` over the storage directory, as
+ * Run the materializer's `legacy_extract` over the imported texts, as
  * `orientation-lint.ts` runs the lint: the thesis, the name and the runtime
  * table are read by the functions that print them, so there is one copy of
- * each rule. Returns the reading, or why it could not be taken.
+ * each rule. The texts are the bodies the store holds, handed over on stdin,
+ * never the files on disk: a retry after the files changed must extract from
+ * what was imported (F3/codex, slice-S1). Returns the reading, or why it could
+ * not be taken.
  */
-function extract(storagePath: string): Extraction | { reason: string } {
+function extract(texts: {
+  entry_point: string | null;
+  onboarding_report: string | null;
+}): Extraction | { reason: string } {
   const script = findMaterializer();
   if (!script) return { reason: "the materializer was not found beside the server" };
   const python = process.env.AMANUENSIS_PYTHON ?? "python3";
@@ -117,11 +123,16 @@ function extract(storagePath: string): Extraction | { reason: string } {
         "raise SystemExit(main(sys.argv[2:]))",
       ].join("\n"),
       dirname(script),
-      storagePath,
+      "-",
     ],
     // SIGKILL: the extraction holds no state, and an interpreter that ignored
     // SIGTERM would keep the server blocked past the bound.
-    { encoding: "utf8", timeout: 60_000, killSignal: "SIGKILL" },
+    {
+      encoding: "utf8",
+      input: JSON.stringify(texts),
+      timeout: 60_000,
+      killSignal: "SIGKILL",
+    },
   );
   if (result.error || result.status !== 0) {
     const why = result.error?.message ?? (result.stderr.trim() || `exit ${result.status}`);
@@ -195,23 +206,31 @@ export const importTools: ToolDefinition[] = [
         ).map((r) => r.kind),
       );
       for (const body of bodies) importedKinds.add(body.row.kind);
-      const sourceOf = (kind: string) =>
-        bodies.find((b) => b.row.kind === kind)?.row.path ??
-        (
-          ctx.db
-            .prepare("SELECT path FROM imported_artifacts WHERE kind = ? ORDER BY id LIMIT 1")
-            .get(kind) as { path: string } | undefined
-        )?.path ??
-        null;
-      const entryPoint = importedKinds.has("entry-point") ? sourceOf("entry-point") : null;
-      const onboarding = importedKinds.has("onboarding-report")
+      // The source of a kind is its imported body: one about to be imported, or
+      // the one a previous run imported, whatever the file says now.
+      const sourceOf = (kind: string) => {
+        const fresh = bodies.find((b) => b.row.kind === kind);
+        if (fresh) return { path: fresh.row.path, body: fresh.body };
+        return (
+          (ctx.db
+            .prepare("SELECT path, body FROM imported_artifacts WHERE kind = ? ORDER BY id LIMIT 1")
+            .get(kind) as { path: string; body: string } | undefined) ?? null
+        );
+      };
+      const entrySource = importedKinds.has("entry-point") ? sourceOf("entry-point") : null;
+      const onboardingSource = importedKinds.has("onboarding-report")
         ? sourceOf("onboarding-report")
         : null;
+      const entryPoint = entrySource?.path ?? null;
+      const onboarding = onboardingSource?.path ?? null;
 
       const extraction: { ran: boolean; reason?: string } = { ran: false };
       let reading: Extraction | null = null;
       if (entryPoint || onboarding) {
-        const result = extract(ctx.project.storagePath);
+        const result = extract({
+          entry_point: entrySource?.body ?? null,
+          onboarding_report: onboardingSource?.body ?? null,
+        });
         if ("reason" in result) {
           extraction.reason = `${result.reason}. Run the import again once it can.`;
         } else {

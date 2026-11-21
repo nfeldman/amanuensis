@@ -13,10 +13,15 @@ one copy of each rule:
 - the runtime rows are the table `_runtime_boundary_table` finds, split into
   cells as the page splits them.
 
-Nothing else is parsed. The module reads the storage directory and writes
-nothing; it prints one JSON object on stdout:
+Nothing else is parsed. The module writes nothing; it prints one JSON object
+on stdout. Given a storage directory it reads the two files there; given `-`
+it reads `{"entry_point": text|null, "onboarding_report": text|null}` on
+stdin, which is how the import hands it the bodies it imported, so a retry
+extracts from what the store holds rather than from a file changed since
+(F3/codex, slice-S1):
 
     python -I -c "...; from amanuensis_materializer.legacy_extract import main; main([storage])"
+    python -I -c "...; from amanuensis_materializer.legacy_extract import main; main(['-'])" < texts.json
 """
 
 from __future__ import annotations
@@ -28,9 +33,10 @@ from pathlib import Path
 from typing import Any
 
 from .diagrams import RUNTIME_BOUNDARY_COLUMNS, _runtime_boundary_table, _table_cells
-from .renderers import read_thesis, recorded_project_name
+from .renderers import project_name_from_report, thesis_from_prose
 
 ONBOARDING_REPORT = "onboarding-report.md"
+ENTRY_POINT = "entry-point.md"
 
 
 def runtime_rows(table: str | None) -> tuple[list[dict[str, str | None]], list[str]]:
@@ -69,9 +75,18 @@ def runtime_rows(table: str | None) -> tuple[list[dict[str, str | None]], list[s
 def extract(storage: Path) -> dict[str, Any]:
     """The thesis, project name and runtime rows the storage directory's files carry."""
 
-    thesis = read_thesis(storage)
-    report = storage / ONBOARDING_REPORT
-    table = _runtime_boundary_table(report.read_text() if report.is_file() else "")
+    def text(name: str) -> str | None:
+        path = storage / name
+        return path.read_text() if path.is_file() else None
+
+    return extract_texts(text(ENTRY_POINT), text(ONBOARDING_REPORT))
+
+
+def extract_texts(entry_point: str | None, onboarding_report: str | None) -> dict[str, Any]:
+    """The thesis, project name and runtime rows two texts carry, by the pages' rules."""
+
+    thesis = thesis_from_prose(entry_point or "")
+    table = _runtime_boundary_table(onboarding_report or "")
     rows, skipped = runtime_rows(table)
     return {
         "thesis": {
@@ -79,7 +94,7 @@ def extract(storage: Path) -> dict[str, Any]:
             "text": thesis.text if thesis.state == "filled" else None,
             "violations": list(thesis.violations),
         },
-        "project_name": recorded_project_name(storage),
+        "project_name": project_name_from_report(onboarding_report or ""),
         "runtime_boundaries": rows,
         "runtime_boundaries_skipped": skipped,
     }
@@ -87,8 +102,21 @@ def extract(storage: Path) -> dict[str, Any]:
 
 def main(argv: Sequence[str]) -> int:
     if len(argv) != 1:
-        print("usage: legacy_extract <storage directory>", file=sys.stderr)
+        print("usage: legacy_extract <storage directory> | -", file=sys.stderr)
         return 2
+    if argv[0] == "-":
+        try:
+            texts = json.loads(sys.stdin.read())
+        except json.JSONDecodeError as exc:
+            print(f"legacy_extract: stdin is not JSON: {exc}", file=sys.stderr)
+            return 2
+        print(
+            json.dumps(
+                extract_texts(texts.get("entry_point"), texts.get("onboarding_report")),
+                ensure_ascii=False,
+            )
+        )
+        return 0
     storage = Path(argv[0])
     if not storage.is_dir():
         print(f"legacy_extract: {storage} is not a directory", file=sys.stderr)
