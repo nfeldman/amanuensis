@@ -550,6 +550,12 @@ jobs:
       - name: The History pages are built as page models
         working-directory: materializer
         run: python3 test-store-only-convert-history.py
+      # SO18: Method and the remaining pages (review coverage, review checklist, competing explanations,
+      # matrices, onboarding record, where to begin, files, not yet surveyed, system boundaries, glossary)
+      # are page models; the HTML equals the golden pages and the start tree's.
+      - name: Method and the remaining pages are built as page models
+        working-directory: materializer
+        run: python3 test-store-only-convert-method.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py
