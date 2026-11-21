@@ -1452,13 +1452,13 @@
     {
       "needs_mcp": false,
       "status": "ready",
-      "attempts": 2,
+      "attempts": 1,
       "start_sha": "7ef7a30671b0f3ec09f6f38f00df1fd8b1ad5c12",
       "red_sha": "12d361a",
       "green_sha": "993e39d",
       "verified_by_launcher": false,
-      "blocked_reason": "plan.json SO21.regression lists node dev/test-explanations-published.mjs (EX14) and node dev/test-receipt-gates-restored.mjs (EX8), and the launcher requires each to exit 0, but both run dev/test-survey-depth-acceptance.mjs (P11) as a sub-gate (SUB_GATES in each file), and P11 is red at baseline by owner decision (its receipt binds 690 ledgered paths vs 1093 tracked; re-recording needs the live store and MCP, which this lane forbids). PLAN.md §8 SO21 says the six readers are 'judged by FAIL lines against its own baseline', which the exit-code check cannot express. Owner decision needed: drop EX14/EX8 from SO21.regression, or judge them by FAIL-line diff.",
-      "notes": "attempt 2 advanced the progress measure and stopped short: plan.json SO21.regression lists node dev/test-explanations-published.mjs (EX14) and node dev/test-receipt-gates-restored.mjs (EX8), and the launcher requires each to exit 0, but both run dev/test-survey-depth-acceptance.mjs (P11) as a sub-gate (SUB_GATES in each file), and P11 is red at baseline by owner decision (its receipt binds 690 ledgered paths vs 1093 tracked; re-recording needs the live store and MCP, which this lane forbids). PLAN.md §8 SO21 says the six readers are 'judged by FAIL lines against its own baseline', which the exit-code check cannot express. Owner decision needed: drop EX14/EX8 from SO21.regression, or judge them by FAIL-line diff.",
+      "blocked_reason": "",
+      "notes": "Attempt 2 stopped on EX14/EX8 in the regression list, which run P11 (red at baseline). Owner, 2026-11-21: drop both (PLAN §9 D17). The next attempt continues from attempt 2's commits.",
       "id": "SO21",
       "slice": "S4",
       "title": "Publication chain and copies are HTML-only",
@@ -1493,12 +1493,10 @@
         "cd materializer && python3 test-store-only-readback.py",
         "node dev/test-reader-lenses-dogfood.mjs",
         "node dev/test-rebuild-readback.mjs",
-        "node dev/test-explanations-published.mjs",
-        "node dev/test-republish-chain.mjs",
-        "node dev/test-receipt-gates-restored.mjs"
+        "node dev/test-republish-chain.mjs"
       ],
       "acceptance": [
-        "PLAN §8 SO21: no republish; the six dev readers read HTML and are judged by FAIL lines against their own baseline; the content-free README is written (D10 decided)."
+        "PLAN §8 SO21: no republish; the six dev readers read HTML; four run as regressions and exit 0, EX14 and EX8 are not regressions (D17, owner 2026-11-21); the content-free README is written (D10 decided)."
       ],
       "budget_minutes": 150
     },

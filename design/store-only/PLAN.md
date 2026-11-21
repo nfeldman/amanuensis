@@ -834,7 +834,10 @@ content-free README. **No republish.** Gate
 copies or expects a `.md`; the read-back at the destination is not run or not green; a stray file in
 the destination is not refused; any of the six readers still opens a `.md` page; the README is missing or
 carries any survey content. The six read the tracked `docs/`, which stays Markdown until the owner
-republishes (D15); each is judged by FAIL lines against its own baseline and run as a regression.
+republishes (D15). Four of them run as regressions and must exit 0. `test-explanations-published.mjs`
+(EX14) and `test-receipt-gates-restored.mjs` (EX8) are converted like the others but are not
+regressions: each runs P11 (`dev/test-survey-depth-acceptance.mjs`) as a sub-gate, and P11 is red at
+baseline by owner decision, so neither can exit 0 in this lane (D17).
 
 ### Slice S5 · Diagrams
 
@@ -923,6 +926,13 @@ does not need protecting. The alternatives are kept for the record.
   the fault is fixed. It is a rollback point for the lanes, not an archive, and can be deleted once
   a nightly run has succeeded on the migrated store. No backup is taken now: one taken before the
   merge would be stale by the time it was needed.
+
+- **D17. SO21's P11-dependent regressions: decided 2026-11-21.** SO21 was exhausted after two
+  attempts because its regression list held EX14 and EX8, which run P11 as a sub-gate; P11 is red
+  at baseline by owner decision, and re-recording its receipt needs the live store and the MCP
+  tools, which this lane forbids. The owner's ruling: "Drop the two tests." Both are removed from
+  SO21's regression list; SO21's gate still checks that neither opens a `.md` page. No other packet
+  lists either test or anything else that runs P11.
 
 Listed, not decided here: catalog questions 3 (commit order for B4) and 4 (seam assessment, N2).
 
