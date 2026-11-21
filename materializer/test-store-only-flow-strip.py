@@ -34,7 +34,7 @@ Turns red when:
     states a font size under 11, uses a literal colour, runs a script, is not 960 wide, or a
     mark has no `data-node` or `data-edge`; a figure has no readable account listing every
     step and every mark, no statement of the revision it was read at (a sentence in place of a
-    strip included), or a link that reaches
+    strip included) and each revision a drawn mark was recorded at, or a link that reaches
     no anchor, or an account anchor is not unique;
   - two publications of one store print different figures;
   - a sabotage that edits the subsystem page and reseals `.projection-contract.json` is not
@@ -139,6 +139,9 @@ def load(name: str) -> tuple[Any, str | None]:
 # ---------------------------------------------------------------------------
 
 SHA = "deadbeef"
+# One mark is recorded at a later revision than its flow's steps; the strip must print both.
+MARK_SHA = "cafebabe"
+MARK_SHA_LABEL = "locked out"
 # (subsystem, slug, step count, {step: epistemic kind} where not an observation)
 FLOWS = (
     ("B-02", "login", 5, {"01": "inference", "03": "hypothesis"}),
@@ -203,7 +206,7 @@ def build_store(root: Path) -> Path:
         for flow, step, kind, label, target in (*MARKS, WITHDRAWN):
             db.execute(
                 "INSERT INTO claim_marks (claim_id, kind, label, target, evidence_id, ref_sha, session_id) VALUES (?,?,?,?,?,?,?)",
-                (f"{flow}/{step}", kind, label, target, 1, SHA, "s1"),
+                (f"{flow}/{step}", kind, label, target, 1, MARK_SHA if label == MARK_SHA_LABEL else SHA, "s1"),
             )
         withdrawn_id = db.execute("SELECT id FROM claim_marks WHERE label = ?", (WITHDRAWN[3],)).fetchone()[0]
         db.execute("INSERT INTO claim_mark_withdrawals (mark_id, reason, session_id) VALUES (?,?,?)", (withdrawn_id, "mistaken", "s1"))
@@ -772,6 +775,9 @@ def main() -> int:
                 said = re.search(r'<p class="diagram-read-at"[^>]*>(.*?)</p>', figure, re.S)
                 if said is None or SHA not in plain(said.group(1)):
                     return f"{flow} does not print the revision it was read at ({SHA}): {plain(said.group(1)) if said else None!r}"
+                for sha in sorted({str(m["ref_sha"])[:8] for m in w["marks"]}):
+                    if sha not in plain(said.group(1)):
+                        return f"{flow} does not print the revision {sha} a mark was recorded at: {plain(said.group(1))!r}"
                 caption = figure.split("<svg", 1)[0]
                 if flow.split("/")[-1] not in plain(caption):
                     return f"{flow}'s caption does not name the flow"
