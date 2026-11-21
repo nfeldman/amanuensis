@@ -277,8 +277,12 @@ export const narrativeTools: ToolDefinition[] = [
       if (reason.trim() === "") throw new ToolError("missing required string: reason");
       if (byteLength(reason) > REASON_CAP) throw new ToolError(DECLINE_REFUSALS.reasonTooLong());
       if (!isOneParagraph(reason)) throw new ToolError(DECLINE_REFUSALS.reasonOneParagraph());
-      const violations = orientationViolations(reason);
-      if (violations?.length) throw new ToolError(DECLINE_REFUSALS.orientation(violations));
+      // The topic prints as a subheading over the reason, so the lint reads it too.
+      const violations = [
+        ...(orientationViolations(reason) ?? []),
+        ...(subject.topic === "" ? [] : (orientationViolations(subject.topic) ?? [])),
+      ];
+      if (violations.length > 0) throw new ToolError(DECLINE_REFUSALS.orientation(violations));
 
       const refSha = resolveRevision(ctx, "decline_narrative", args);
       const result = ctx.db

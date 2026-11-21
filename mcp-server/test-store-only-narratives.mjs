@@ -640,7 +640,7 @@ async function main(mods) {
     seedSubsystem(ctx, "S-01", "mapped");
     for (const [label, topic] of [
       ["a count fraction", "12/35 callers"],
-      ["survey-status language", "fully surveyed dispatch"],
+      ["survey-status language", "The conspectus is fully surveyed"],
     ]) {
       const recorded = refusesWith(ctx, RECORD, () => record(ctx, { topic }), `a topic with ${label}`);
       if (recorded) return recorded;
