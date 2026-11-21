@@ -43,7 +43,11 @@ const OUTCOME = {
   13: [/grammar/],
   14: [/illustration/, /overview/],
   15: [/after the lane lands/],
-  16: [/amended/, /backup/],
+  // D16's backup is a consistent snapshot (`VACUUM INTO`, PLAN §8 and §9), not a
+  // copy of the database beside its WAL, taken just before `dist` is rebuilt,
+  // while the lanes run on: "amended" and "backup" alone held for `cp memory.db`
+  // (F9/codex, slice-S1).
+  16: [/amended/, /backup/, /VACUUM INTO/, /before `?dist`? is rebuilt/, /not paused/],
 };
 
 function check() {
