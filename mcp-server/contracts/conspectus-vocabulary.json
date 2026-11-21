@@ -1399,7 +1399,7 @@
           "column": "disposition"
         }
       ],
-      "note": "What a stored narrative row says. Earlier rows are kept and never rendered as current; the newest row that resolves is the effective one.",
+      "note": "What a stored narrative row says. Earlier rows are kept and never rendered as current; the newest row per subject, section and topic is the effective one (readNarratives), and a withdrawn one leaves none. Its revision is resolved when it is written, not again when it is read.",
       "values": [
         {
           "value": "recorded",
