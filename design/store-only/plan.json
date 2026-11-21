@@ -16,10 +16,10 @@
         "SO7"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "fcef5573e990ca68602c42ff064f0ac9fca2c39b",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "c9dd55578172542985a2caf07c58c42af59f80a7",
+        "findings": 15
       }
     },
     {
