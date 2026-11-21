@@ -504,6 +504,44 @@ async function main(mods) {
     ["an unknown ref_sha", () => mark(w, "S1/flow/boot/02", "commit-point", { ref_sha: "0000000000000000000000000000000000000000" })],
   ]);
 
+  // A mark's revision resolves, but its evidence was read at a commit that is
+  // not that revision or an ancestor of it. R8's unresolvable revision cannot
+  // tell the ancestry refusal from the resolution one: deleting the ancestry
+  // refusal stayed green (F13/codex, slice-S1).
+  check("R8b evidence read at a descendant or a sibling of the mark's revision is refused", () => {
+    const w = world("r8b");
+    const ws = w.ctx.project.workspacePath;
+    const commit = (file, message) => {
+      writeFileSync(join(ws, file), `${message}\n`);
+      git(ws, "add", file);
+      gitCommit(ws, message);
+      return git(ws, "rev-parse", "HEAD");
+    };
+    const readAt = (sha) =>
+      call("add_evidence", { file_path: "src/a.ts", symbol: "Unit", line_range: "1-1", ref_sha: sha, kind: "code-verified" }, w.ctx).id;
+    const later = commit("later.txt", "later");
+    git(ws, "checkout", "-q", "-b", "side", w.head);
+    const side = commit("side.txt", "side");
+    if (!later || !side || later === side || later === w.head) return "the fixture could not make two commits";
+    const wrong = [];
+    // Each case marks its own step, so no refusal can be a duplicate's.
+    for (const [what, step, evidenceAt, markAt] of [
+      ["evidence at a descendant of the mark's revision", "S1/flow/boot/01", later, w.head],
+      ["evidence on a sibling branch of the mark's revision", "S1/flow/boot/02", side, later],
+    ]) {
+      const evidenceId = readAt(evidenceAt);
+      const before = count(w.ctx, "claim_marks");
+      const said = refusal(() => mark(w, step, "commit-point", { evidence_id: evidenceId, ref_sha: markAt }));
+      if (!said) wrong.push(`${what} was accepted`);
+      else if (!stems(MARK, said) || !said.includes(markAt)) wrong.push(`${what}: refused with "${said.slice(0, 160)}"`);
+      if (count(w.ctx, "claim_marks") !== before) wrong.push(`${what}: ${NO_ROW}`);
+    }
+    // Control: evidence at an ancestor of the mark's revision is accepted.
+    const ancestor = refusal(() => mark(w, "S1/flow/boot/03", "commit-point", { evidence_id: w.evidence.a, ref_sha: side }));
+    if (ancestor) wrong.push(`evidence at an ancestor was refused: ${ancestor.slice(0, 110)}`);
+    return wrong.length === 0 ? null : wrong.join("; ");
+  });
+
   check("R9 each tool needs an active session", () => {
     const w = world("r9");
     const none = { ...w.ctx, sessionId: null };
