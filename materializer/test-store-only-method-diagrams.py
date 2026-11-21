@@ -27,7 +27,8 @@ Turns red when:
     `data-edge`, or an SVG line carries no record;
   - a counted node draws nothing: its `<g data-node>` holds no visible shape, lacks the
     words its record gives it (a pass's name, a rung's contract label, "Here" and the
-    subject), or, other than the marker, links to nothing;
+    subject), or links to nothing (the marker included);
+  - an arrow is not a link a keyboard can reach;
   - an SVG lacks `role="img"`, a `<title>`, or a `<desc>` that counts its boxes and arrows,
     states a font size under 11, uses a colour that is not a CSS token, runs a script,
     or has a width other than the 960 viewBox;
@@ -398,10 +399,21 @@ def node_faults(figure: str, doc: dict[str, Any]) -> str | None:
         for words in node_words(doc, record):
             if " ".join(words.split()) not in said:
                 return f"the node {record} does not say {words!r}; it says {said[:120]!r}"
-        if not record.startswith("subsystem:") and not re.search(r'<a\b[^>]*\bhref="[^"]+"', inner):
+        if not re.search(r'<a\b[^>]*\bhref="[^"]+"', inner):
             return f"the node {record} links to nothing"
     return None
 
+
+def unlinked_marks(figure: str) -> str | None:
+    """Appendix B rules 1 and 8: every arrow and every box is a link a keyboard can reach."""
+
+    for record in re.findall(r'<path\b[^>]*\bdata-edge="([^"]*)"', figure):
+        if not re.search(rf'<a\b[^>]*\bhref="[^"]+"[^>]*>\s*<path\b[^>]*\bdata-edge="{re.escape(record)}"', figure):
+            return f"the arrow {record} is not a link"
+    for record, inner in re.findall(r'<g\b[^>]*\bdata-node="([^"]*)"[^>]*>(.*?)</g>', figure, re.S):
+        if not re.search(r'<a\b[^>]*\bhref="[^"]+"', inner):
+            return f"the box {record} is not a link"
+    return None
 
 def svg_faults(figure: str, nodes: int, edges: int) -> str | None:
     svg = re.search(r"<svg\b[^>]*>.*?</svg>", figure, re.S)
@@ -761,6 +773,17 @@ def main() -> int:
             return None
 
         check("every diagram link reaches an anchor", links_resolve)
+
+        def marks_linked() -> str | None:
+            for rel in (GUIDE, *SUBSYSTEM_PAGES.values()):
+                text = (output / rel).read_text()
+                for kind in ("survey-workflow", "status-ladder"):
+                    for figure in figures(text, kind):
+                        if (fault := unlinked_marks(figure)) is not None:
+                            return f"{rel}: {kind}: {fault}"
+            return None
+
+        check("every arrow and every box is a link", marks_linked)
 
         def second_publication() -> str | None:
             again = root / "second"

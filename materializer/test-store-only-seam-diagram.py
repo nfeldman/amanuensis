@@ -33,6 +33,7 @@ Turns red when:
     with the right axis and object type: an arrow removed, an arrow added that no field
     joins, a box removed or re-pointed, a figure removed, a figure for a seam that records no
     field;
+  - an arrow or a box of a seam figure is not a link a keyboard can reach (rules 1 and 8);
   - a seam's account does not quote what each party's depth authorizes and cannot justify
     (Appendix B rule 2);
   - a seam naming one subsystem as both parties draws fewer boxes than its model holds, or an
@@ -246,6 +247,17 @@ def account_of(figure: str) -> str:
     match = re.search(r'<div class="diagram-account"[^>]*>(.*?)</div>', figure, re.S)
     return plain(match.group(1)) if match else ""
 
+
+def unlinked_marks(figure: str) -> str | None:
+    """Appendix B rules 1 and 8: every arrow and every box is a link a keyboard can reach."""
+
+    for record in re.findall(r'<path\b[^>]*\bdata-edge="([^"]*)"', figure):
+        if not re.search(rf'<a\b[^>]*\bhref="[^"]+"[^>]*>\s*<path\b[^>]*\bdata-edge="{re.escape(record)}"', figure):
+            return f"the arrow {record} is not a link"
+    for record, inner in re.findall(r'<g\b[^>]*\bdata-node="([^"]*)"[^>]*>(.*?)</g>', figure, re.S):
+        if not re.search(r'<a\b[^>]*\bhref="[^"]+"', inner):
+            return f"the box {record} is not a link"
+    return None
 
 def svg_faults(figure: str, boxes: int, arrows: int) -> str | None:
     svg = re.search(r"<svg\b[^>]*>.*?</svg>", figure, re.S)
@@ -704,6 +716,14 @@ def main() -> int:
             return None
 
         check("every link of a seam figure reaches an anchor, and account anchors are unique", links_resolve)
+
+        def marks_linked() -> str | None:
+            for figure in figures(page):
+                if (fault := unlinked_marks(figure)) is not None:
+                    return fault
+            return None
+
+        check("every arrow and every box of a seam figure is a link", marks_linked)
 
         # -- sabotage, resealed ----------------------------------------------
         def sabotage(label: str, edit: Callable[[str], str], axis: str, object_type: str, object_id: str) -> None:

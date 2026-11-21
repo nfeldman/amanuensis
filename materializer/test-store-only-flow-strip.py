@@ -27,6 +27,7 @@ Turns red when:
     not link the seam on System boundaries, or a step with more than two exits draws any of
     them or does not list them all in the account, or an exit's box or account line names a
     target other than its stored one (a step it unwinds to, or `leaves-flow`);
+  - an arrow or a box of a strip is not a link a keyboard can reach (rules 1 and 8);
   - a step whose cited file the ledger holds as stale is not hatched, or its box and account do
     not say "cited file changed since <the revision it was examined at>", or a step citing only
     an unchanged file is hatched (Appendix B rule 3);
@@ -345,6 +346,17 @@ def account_of(figure: str) -> str:
     match = re.search(r'<div class="diagram-account"[^>]*>(.*?)</div>', figure, re.S)
     return plain(match.group(1)) if match else ""
 
+
+def unlinked_marks(figure: str) -> str | None:
+    """Appendix B rules 1 and 8: every arrow and every box is a link a keyboard can reach."""
+
+    for record in re.findall(r'<path\b[^>]*\bdata-edge="([^"]*)"', figure):
+        if not re.search(rf'<a\b[^>]*\bhref="[^"]+"[^>]*>\s*<path\b[^>]*\bdata-edge="{re.escape(record)}"', figure):
+            return f"the arrow {record} is not a link"
+    for record, inner in re.findall(r'<g\b[^>]*\bdata-node="([^"]*)"[^>]*>(.*?)</g>', figure, re.S):
+        if not re.search(r'<a\b[^>]*\bhref="[^"]+"', inner):
+            return f"the box {record} is not a link"
+    return None
 
 def svg_faults(figure: str, boxes: int, arrows: int) -> str | None:
     svg = re.search(r"<svg\b[^>]*>.*?</svg>", figure, re.S)
@@ -1024,6 +1036,14 @@ def main() -> int:
             return None
 
         check("every box links an anchor that exists, and account anchors are unique", links_resolve)
+
+        def marks_linked() -> str | None:
+            for flow, w in want.items():
+                if w["figure"] and (fault := unlinked_marks(figure_of(text_of(w["sid"]), flow) or "")) is not None:
+                    return f"{flow}: {fault}"
+            return None
+
+        check("every arrow and every box of a strip is a link", marks_linked)
 
         # -- sabotage, resealed ----------------------------------------------
         def sabotage(label: str, sid: str, edit: Callable[[str], str], axis: str, object_type: str, object_id: str) -> None:
