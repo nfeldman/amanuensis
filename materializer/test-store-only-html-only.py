@@ -2,9 +2,9 @@
 """Gate for store-only packet SO13 — HTML is the only output
 (design/store-only/PLAN.md §3.2 step 3, §3.5, §6, §8 SO13).
 
-The run keeps each page's Markdown in memory between its renderer and
-`parse_markdown`, resolves cross-references on that text, and writes HTML,
-`search-index.js` and the two contract files. Nothing else.
+The run builds each page as a model, resolves cross-references on it, and writes HTML,
+`search-index.js` and the two contract files. Nothing else. (When it was written the
+run held each page's Markdown in memory and parsed it; SO19 deleted that parser.)
 
 Turns red when:
 
@@ -27,15 +27,17 @@ Turns red when:
   - the reader's guide still mentions a Markdown view, or a page carries the
     command-line render notice anywhere but its page head;
   - any local link in any page (or in the golden corpus) targets a `.md`;
-  - SO11's recorded golden inputs (read from git at the packet's start
-    commit), printed through today's HTML stage from memory, differ from SO11's
-    golden HTML anywhere but the two removed Markdown links, or the stage
-    writes a `.md`;
   - the golden corpus's `VERSION` is not SO13, it holds a different page set,
     or its HTML differs from SO11's anywhere but the removed Markdown links, the
     guide's views paragraph, and the clock and commit values a re-seeded store
     carries (PLAN §3.2's update rule);
   - the gate does not run in CI.
+
+Retired by SO19: the check that SO11's recorded Markdown inputs, printed through the HTML
+stage, equal SO11's golden HTML but for the two Markdown links. It needed the parser. What
+it carried is held by `test-store-only-model.py` and `test-store-only-no-markdown.py` (the
+four store fixtures rebuilt and published equal today's golden HTML) and by the golden
+check below (today's golden HTML equals SO11's but for the removed links).
 
 False green it cannot exclude: the sabotage covers the finding marker census
 only; the other censuses are exercised by their own suites, which run on HTML
@@ -319,35 +321,6 @@ def html_pages(corpus: Path, name: str) -> dict[str, str]:
     } if base.is_dir() else {}
 
 
-def print_recorded(corpus: Path, name: str) -> dict[str, str]:
-    """Print one fixture's recorded inputs through today's HTML stage, in memory."""
-
-    sys.path.insert(0, str(ROOT))
-    from amanuensis_materializer import html_projection as hp  # noqa: PLC0415
-
-    base = corpus / name
-    inputs = json.loads((base / "inputs.json").read_text())
-    markdown = {p.relative_to(base / "md").as_posix(): p.read_text() for p in sorted((base / "md").rglob("*.md"))}
-    pages = [
-        hp.SitePage(**{**page, "terms": tuple(tuple(term) for term in page["terms"])})
-        for page in inputs["pages"]
-    ]
-    with tempfile.TemporaryDirectory(prefix="amanuensis-so13-print-") as tmp:
-        output = Path(tmp)
-        hp.render_html_projection(
-            output,
-            pages,
-            inputs["context"],
-            locus_index=inputs["locus_index"],
-            notice=inputs["notice"],
-            markdown=markdown,
-        )
-        written = [p.relative_to(output).as_posix() for p in output.rglob("*") if p.is_file()]
-        if any(rel.endswith(".md") for rel in written):
-            raise RuntimeError(f"the HTML stage wrote a .md for {name}")
-        return {page.html_path: (output / page.html_path).read_text() for page in pages if (output / page.html_path).is_file()}
-
-
 def main() -> int:
     emit(f"GATE {PACKET} — HTML is the only output")
     with tempfile.TemporaryDirectory(prefix="amanuensis-so13-") as tmp:
@@ -603,26 +576,6 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="amanuensis-so13-golden-") as tmp:
         previous = so11_corpus(Path(tmp))
 
-        def html_stage_confined() -> str | None:
-            if previous is None:
-                return f"SO11's golden corpus cannot be read from git at {START_SHA[:12]}"
-            compared = 0
-            for name in GOLDEN_FIXTURES:
-                before = html_pages(previous, name)
-                printed = print_recorded(previous, name)
-                if sorted(printed) != sorted(before):
-                    return f"{name}: today's HTML stage prints {len(printed)} pages for SO11's {len(before)}"
-                for rel, old in before.items():
-                    if printed[rel] != without_md_links(old):
-                        return f"{name}/{rel}: SO11's recorded inputs print differently today, beyond the removed Markdown links"
-                    compared += 1
-            return None if compared >= 140 else f"only {compared} pages were compared"
-
-        check(
-            "SO11's recorded inputs print through today's HTML stage byte for byte but for the two Markdown links",
-            html_stage_confined,
-        )
-
         def golden_regenerated() -> str | None:
             version = GOLDEN / "VERSION"
             if not version.is_file() or version.read_text().strip() != PACKET:
@@ -635,9 +588,6 @@ def main() -> int:
                 after = html_pages(GOLDEN, name)
                 if not after or sorted(after) != sorted(before):
                     return f"the golden fixture {name} holds {len(after)} pages for SO11's {len(before)}"
-                md_now = sorted(p.relative_to(GOLDEN / name / "md").as_posix() for p in (GOLDEN / name / "md").rglob("*.md"))
-                if len(md_now) != len(after):
-                    return f"the golden fixture {name} records {len(md_now)} in-memory Markdown texts for {len(after)} pages"
                 for rel, new in after.items():
                     if md_targets(new):
                         return f"golden {name}/{rel} links {md_targets(new)[:3]}"

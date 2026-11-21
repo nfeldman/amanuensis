@@ -481,21 +481,23 @@ def main() -> None:
         # A nodes-only dependency source must fail closed into a linked layer
         # atlas rather than exposing raw Mermaid or implying edges.
         from amanuensis_materializer.core import _compact_definition
-        from amanuensis_materializer.diagrams import subsystem_dependency_graph
-        from amanuensis_materializer.html_projection import MarkdownRenderer
+        from amanuensis_materializer.diagrams import dependency_blocks
+        from amanuensis_materializer.html_projection import write_html
+        from amanuensis_materializer.legacy_prose import render_body
+        from amanuensis_materializer.page import Page, Paragraph, Section
+        from amanuensis_materializer.prose import parse_inlines
 
         assert _compact_definition(
             "Atomicity", "T7, and an internal documentation contradiction."
         ) == "Atomicity: An internal documentation contradiction."
 
         atlas_db = sqlite3.connect(storage / "memory.db")
+        atlas_db.row_factory = sqlite3.Row
         atlas_db.execute("DELETE FROM xrefs")
-        atlas_markdown = subsystem_dependency_graph(atlas_db)
+        atlas_blocks = dependency_blocks(atlas_db, "subsystem atlas")
         atlas_db.rollback()
         atlas_db.close()
-        _, atlas_body = MarkdownRenderer({}, "architecture.html").render(
-            "# Architecture\n\n## Subsystem atlas\n\n" + atlas_markdown
-        )
+        atlas_body = write_html(Page("Architecture", "architecture.html", (Section("subsystem-atlas", atlas_blocks),)))
         assert 'class="subsystem-atlas"' in atlas_body
         assert "not an inferred dependency graph" in atlas_body
         assert "<table" not in atlas_body and "Diagram source" not in atlas_body
@@ -503,27 +505,38 @@ def main() -> None:
         assert ".atlas-regions { display: grid;" in html_architecture
         assert "align-items: start; border-left: 1px solid var(--rule);" in html_architecture
 
-        _, github_ledger = MarkdownRenderer(
-            {}, "entry-point.html", repository_url="https://github.com/acme/fictional"
-        ).render(
-            "# Files\n\n## File ledger\n\n"
+        # A file ledger table in an imported body prints as records, and its paths link to
+        # the repository at the revision the row names.
+        ledger = render_body(
             "| Path | Classification | Why in scope | Ref SHA |\n"
             "|---|---|---|---|\n"
-            "| `scheduler/main.ts` | examined | Owns dispatch. | `deadbeef` |\n"
+            "| `scheduler/main.ts` | examined | Owns dispatch. | `deadbeef` |\n",
+            under=2,
+            section="File ledger",
+            path="entry-point.html",
+        )
+        github_ledger = write_html(
+            Page("Files", "entry-point.html", (Section("file-ledger", ledger),)),
+            {},
+            repository_url="https://github.com/acme/fictional",
         )
         assert 'href="https://github.com/acme/fictional/blob/deadbeef/scheduler/main.ts"' in github_ledger
         long_paragraph = "A precise architectural account remains readable when its evidence and limits stay adjacent. " * 10
-        _, column_prose = MarkdownRenderer({}, "entry-point.html").render(
-            "# Reading field\n\n## Account\n\n"
-            + long_paragraph
-            + "\n\n"
-            + long_paragraph
+        column_prose = write_html(
+            Page(
+                "Reading field",
+                "entry-point.html",
+                (Section("account", (Paragraph(parse_inlines(long_paragraph.strip())), Paragraph(parse_inlines(long_paragraph.strip())))),),
+            )
         )
         assert '<div class="prose-flow">' in column_prose
         assert column_prose.index(long_paragraph.strip()) < column_prose.rindex(long_paragraph.strip())
-        _, humanized_prose = MarkdownRenderer({}, "entry-point.html").render(
-            "# Record\n\n## History\n\n"
-            "**Concern dispositions** were recorded after **Jump-in reading**."
+        humanized_prose = write_html(
+            Page(
+                "Record",
+                "entry-point.html",
+                (Section("history", (Paragraph(parse_inlines("**Concern dispositions** were recorded after **Jump-in reading**.")),)),),
+            )
         )
         assert "Concern review" in humanized_prose and "Start here" in humanized_prose
         assert "Concern dispositions" not in humanized_prose and "Jump-in reading" not in humanized_prose

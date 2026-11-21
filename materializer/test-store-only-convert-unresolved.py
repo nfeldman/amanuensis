@@ -312,19 +312,19 @@ def seed_leaf(storage: Path) -> None:
 def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], list[str]]:
     """Publish in this process, recording the page path of each Markdown parse."""
 
-    hp, error = load("html_projection")
+    hp, error = load("legacy_prose")
     if hp is None:
         raise RuntimeError(error)
     import materialize  # noqa: PLC0415 — the CLI module, run in this process
 
     calls: list[str] = []
-    real = hp._MarkdownParser.parse
+    real = hp._LegacyParser.parse
 
     def counting(self: Any, markdown: str) -> Any:
         calls.append(self.current_html_path)
         return real(self, markdown)
 
-    hp._MarkdownParser.parse = counting
+    hp._LegacyParser.parse = counting
     saved = sys.argv
     sys.argv = ["materialize.py", "--storage", str(storage), "--output", str(output), "--allow-external-output"]
     buffer = io.StringIO()
@@ -333,7 +333,7 @@ def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], l
             code = materialize.main()
     finally:
         sys.argv = saved
-        hp._MarkdownParser.parse = real
+        hp._LegacyParser.parse = real
     lines = [line for line in buffer.getvalue().splitlines() if line.strip()]
     summary = json.loads(lines[-1]) if lines else {}
     summary["exit"] = code

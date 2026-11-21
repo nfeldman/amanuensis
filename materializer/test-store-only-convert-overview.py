@@ -4,7 +4,7 @@ the subsystem map and the reader's guide build the page model themselves
 (design/store-only/PLAN.md §3.1, §3.2 step 4, §3.4, §8 SO14).
 
 Each store fixture of the golden corpus is rebuilt from its recorded SQL dump into
-a temporary store and published in this process with `parse_markdown` instrumented.
+a temporary store and published in this process with the Markdown parser instrumented.
 The family is `index`, `architecture`, `master-plan` and `how-to-read`.
 
 Turns red when:
@@ -15,7 +15,7 @@ Turns red when:
     HTML (the `lens` fixture's pages are compared with the tree this packet started
     from instead, run over the same store, because its golden pages carry the
     revision of a git workspace this gate cannot recreate);
-  - `parse_markdown` is called while a family page is built (counted per page by
+  - the Markdown parser is called while a family page is built (counted per page by
     instrumenting the module), or is never called for any other page, so the
     counter would be blind;
   - a family renderer does not return a `Page` for the page's content, or the
@@ -25,16 +25,17 @@ Turns red when:
     blocks and inlines the Markdown parser gave them, or reads a heading or a table
     row as structure;
   - `xref.resolve_model` does not give a model the links, the first-mention names,
-    the concern prefix and the self-reference emphasis that `resolve_text` followed by
-    `parse_markdown` gives the same text: bare IDs, IDs inside code spans, inside
+    the concern prefix and the self-reference emphasis that the Markdown text pass
+    followed by the Markdown parser gave the same text (read from the tree SO19 started
+    from, `d4fd052`, which still held both): bare IDs, IDs inside code spans, inside
     emphasis, in headings, in table rows beside their name, and in a link already
     written;
   - the gate does not run in CI.
 
 False green it cannot exclude: byte identity is proved on four stores and on the
-sampled texts; an input shape none of them holds could print differently. The
-parser stays in the tree until SO19, which is what makes the xref comparison
-possible.
+sampled texts; an input shape none of them holds could print differently. SO19
+deleted the text pass and the parser; the xref comparison now runs the tree it started
+from in a subprocess.
 
 Output protocol: exactly one status line, last, on stdout. Every message is
 scrubbed, so a missing deliverable reports as an assertion failure and not as a
@@ -61,6 +62,8 @@ REPO = ROOT.parent
 GOLDEN = ROOT / "fixtures" / "store-only-golden"
 CI_FILE = REPO / ".github" / "workflows" / "test.yml"
 START_SHA = "65d2a403bc09b853e47d2e18ad9bff5dba157b4a"
+# The tree SO19 started from: it still held the text pass and the parser the xref check compares with.
+SO19_START_SHA = "d4fd052932cc64fb083228ba81ce1ed206fdab51"
 FAMILY = ("index", "architecture", "master-plan", "how-to-read")
 STORES = ("materializer", "axiomdb-shaped", "self-shaped", "lens")
 
@@ -154,23 +157,23 @@ def rebuild(store: str, root: Path) -> Path:
 def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], dict[str, int]]:
     """Publish in this process, counting the Markdown parser's runs by page.
 
-    The parser is counted where it reads (`_MarkdownParser.parse`, which `parse_markdown`
-    calls), because once every page is a model its only readers are the imported bodies.
+    The parser is counted where it reads (`_LegacyParser.parse`, in `legacy_prose.py`),
+    because once every page is a model its only readers are the imported bodies.
     """
 
-    hp, error = load("html_projection")
+    hp, error = load("legacy_prose")
     if hp is None:
         raise RuntimeError(error)
     import materialize  # noqa: PLC0415 — the CLI module, run in this process
 
     calls: dict[str, int] = {}
-    real = hp._MarkdownParser.parse
+    real = hp._LegacyParser.parse
 
     def counting(self: Any, markdown: str) -> Any:
         calls[self.current_html_path] = calls.get(self.current_html_path, 0) + 1
         return real(self, markdown)
 
-    hp._MarkdownParser.parse = counting
+    hp._LegacyParser.parse = counting
     saved = sys.argv
     sys.argv = ["materialize.py", "--storage", str(storage), "--output", str(output), "--allow-external-output"]
     buffer = io.StringIO()
@@ -179,7 +182,7 @@ def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], d
             code = materialize.main()
     finally:
         sys.argv = saved
-        hp._MarkdownParser.parse = real
+        hp._LegacyParser.parse = real
     lines = [line for line in buffer.getvalue().splitlines() if line.strip()]
     summary = json.loads(lines[-1]) if lines else {}
     summary["exit"] = code
@@ -196,11 +199,11 @@ def axes_green(summary: dict[str, Any]) -> str | None:
     return None
 
 
-def start_tree(into: Path) -> Path | None:
-    """The materializer as it was when this packet started, extracted from git."""
+def start_tree(into: Path, sha: str = START_SHA) -> Path | None:
+    """The materializer as it was at `sha` (by default when this packet started), extracted from git."""
 
     archive = subprocess.run(
-        ["git", "-C", str(REPO), "archive", START_SHA, "materializer"], capture_output=True
+        ["git", "-C", str(REPO), "archive", sha, "materializer"], capture_output=True
     )
     if archive.returncode != 0 or not archive.stdout:
         return None
@@ -281,14 +284,14 @@ def main() -> int:
             for store, (_storage, _output, _summary, calls) in runs.items():
                 called = [page for page in FAMILY if calls.get(f"{page}.html")]
                 if called:
-                    return f"{store}: parse_markdown was called while building {called}"
+                    return f"{store}: the Markdown parser was called while building {called}"
                 others += sum(count for path, count in calls.items() if path[:-5] not in FAMILY)
             # Every page is a model by SO18; what the parser still reads is the imported bodies.
             if others < 5:
                 return f"the counter saw {others} parse calls for the other pages, so it is not counting"
             return None
 
-        check("no family page is built by parse_markdown, and the counter counts the others", no_parse)
+        check("no family page is built by the Markdown parser, and the counter counts the others", no_parse)
 
         def golden_equal() -> str | None:
             if len(runs) != len(STORES):
@@ -437,27 +440,57 @@ def main() -> int:
                 "- item naming B-01 beside Auth\n"
                 "- an auth word and the id auth, plus SM-01\n"
                 "- [B-02](subsystems/b-02-jobs.md) already linked, and [the B-01 thing](x.md)\n\n"
-                "| Value | Label | What it means | What it cannot justify |\n|---|---|---|---|\n| `mapped` | Mapped | B-01 is mapped. | CC-1 |\n\n"
+                "| Value | Label | What it means |\n|---|---|---|\n| `mapped` | Mapped | B-01 is mapped, beside CC-1. |\n\n"
                 "| Metric | Value |\n|---|---|\n| Checked B-02 | 3 of B-01 |\n"
             ),
             "subsystems/b-01-auth.md": (
                 "# Auth\n\nB-01 is this page, B-02 is another, and **B-01** again.\n\n"
-                "| Seam | Party A | Shared object | Party B |\n|---|---|---|---|\n"
+                "| Seam | Party A | Object | Party B |\n|---|---|---|---|\n"
                 "| SM-01 | **[B-01](subsystems/b-01-auth.md)** Auth | queue | **[B-02](subsystems/b-02-jobs.md)** Job queue |\n"
             ),
         }
+        lp, lp_error = load("legacy_prose")
+        if lp is None:
+            return lp_error
+        with tempfile.TemporaryDirectory(prefix="amanuensis-so14-xref-") as tmp:
+            tree = start_tree(Path(tmp), SO19_START_SHA)
+            if tree is None:
+                return f"the tree at {SO19_START_SHA[:12]} cannot be extracted from git"
+            script = (
+                "import json, sys\n"
+                "from amanuensis_materializer import html_projection as hp, xref\n"
+                "spec = json.load(sys.stdin)\n"
+                "index = xref.XrefIndex(entries={k: tuple(v) for k, v in spec['entries'].items()},"
+                " names=spec['names'], kinds=spec['kinds'])\n"
+                "out = {}\n"
+                "for path, markdown in spec['samples'].items():\n"
+                "    page = hp.parse_markdown(xref.resolve_text(markdown, path, index), path.replace('.md', '.html'))\n"
+                "    out[path] = repr(page)\n"
+                "json.dump(out, sys.stdout)\n"
+            )
+            spec = {
+                "entries": index.entries,
+                "names": index.names,
+                "kinds": index.kinds,
+                "samples": samples,
+            }
+            done = subprocess.run(
+                [sys.executable, "-c", script], input=json.dumps(spec), capture_output=True, text=True, cwd=tree
+            )
+            if done.returncode != 0:
+                return f"the start tree's text pass could not be run: {scrub(done.stderr)[-200:]}"
+            expected = json.loads(done.stdout)
         for path, markdown in samples.items():
-            expected = hp.parse_markdown(xref.resolve_text(markdown, path, index), path.replace(".md", ".html"))
-            got = xref.resolve_model(hp.parse_markdown(markdown, path.replace(".md", ".html")), path, index)
-            if got != expected:
-                wanted_blocks, got_blocks = list(expected.blocks), list(got.blocks)
-                for number, (a, b) in enumerate(zip(wanted_blocks, got_blocks, strict=False)):
-                    if a != b:
-                        return f"{path}: block {number} differs: {str(b)[:240]} for {str(a)[:240]}"
-                return f"{path}: the resolved model differs from resolve_text then parse_markdown"
+            html_path = path.replace(".md", ".html")
+            got = xref.resolve_model(lp._LegacyParser(html_path).parse(markdown), path, index)
+            if repr(got) != expected[path]:
+                at = next(
+                    (i for i, (a, b) in enumerate(zip(repr(got), expected[path], strict=False)) if a != b), 0
+                )
+                return f"{path}: the resolved model differs from the text pass then the parser at {at}: {repr(got)[at:at + 160]} for {expected[path][at:at + 160]}"
         return None
 
-    check("resolve_model links, names and prefixes as resolve_text then parse_markdown does", model_xref)
+    check("resolve_model links, names and prefixes as the start tree's text pass then parser did", model_xref)
 
     # ------------------------------------------------------------------ CI
     def in_ci() -> str | None:

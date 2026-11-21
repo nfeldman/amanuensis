@@ -519,56 +519,70 @@ def account_checks(storage: Path) -> None:
     check("accounts: an author-written name deleted from the page is reported missing", authored_name_owed)
 
 
+def resolve_html(xref: Any, markdown: str, page: str, index: Any, passes: int = 1) -> str:
+    """The HTML of a page the resolver has walked `passes` times, read from an imported body's Markdown."""
+
+    from amanuensis_materializer import html_projection, legacy_prose  # noqa: PLC0415
+
+    model = legacy_prose._LegacyParser(page).parse(markdown)
+    for _ in range(passes):
+        model = xref.resolve_model(model, page, index)
+    return html_projection.write_html(model)
+
+
 def resolver_reads_visible_text() -> str | None:
     sys.path.insert(0, str(ROOT))
     from amanuensis_materializer import xref  # noqa: PLC0415
 
     index = xref.XrefIndex(
         entries={
-            "auth": ("auth", "subsystems/auth-login.md", "login"),
-            "RC-2": ("RC-2", "concerns.md#rc-2", "Concurrency"),
+            "auth": ("auth", "subsystems/auth-login.html", "login"),
+            "RC-2": ("RC-2", "concerns.html#rc-2", "Concurrency"),
         },
         names={"auth": "login"},
         kinds={"auth": "subsystem", "RC-2": "concern"},
     )
-    text = xref.resolve_text("See [auth](subsystems/auth-login.md). Then auth.\n", "index.md", index)
-    if "[auth](subsystems/auth-login.md) (login). Then [auth]" not in text:
-        return f"a name inside a link destination counted as shown; the first auth gained no name: {text!r}"
-    linked = xref.resolve_text("See [RC-2](concerns.md#rc-2).\n", "index.md", index)
-    if "[concern RC-2](concerns.md#rc-2)" not in linked:
-        return f"an existing link to RC-2 kept a bare label: {linked!r}"
-    keyed = xref.resolve_text("| Concern | Classification |\n|---|---|\n| RC-2 | ruled-out |\n", "subsystems/x.md", index)
-    if "| [concern RC-2](../concerns.md#rc-2) | ruled-out |" not in keyed:
-        return f"a concern code in a row's key cell kept a bare label: {keyed!r}"
-    if "concern" in keyed.splitlines()[0].lower().replace("| concern |", ""):
-        return f"a table header gained a prefix: {keyed.splitlines()[0]!r}"
-    for once in (text, linked, keyed):
-        again = xref.resolve_text(once, "subsystems/x.md" if once is keyed else "index.md", index)
-        if again != once:
-            return f"a second pass changed {once!r} to {again!r}"
+    cases = {
+        "text": ("See [auth](subsystems/auth-login.html). Then auth.\n", "index.html"),
+        "linked": ("See [RC-2](concerns.html#rc-2).\n", "index.html"),
+        "keyed": ("| Concern | Classification |\n|---|---|\n| RC-2 | ruled-out |\n", "subsystems/x.html"),
+        "labelled": ("See [the auth subsystem](subsystems/auth-login.html) for tokens.\n", "index.html"),
+        "elsewhere": ("auth is slow; the login team knows.\n", "index.html"),
+        "beside": ("auth \u2014 login handles tokens.\n", "index.html"),
+        "heading": ("## RC-2 Race on the cache\n", "findings.html"),
+        "own": ("- **RC-2** race on a cache\n", "concerns.html"),
+    }
+    out = {name: resolve_html(xref, md, page, index) for name, (md, page) in cases.items()}
+    if '<a href="subsystems/auth-login.html">auth</a> (login). Then <a href="subsystems/auth-login.html">auth</a>' not in out["text"]:
+        return f"a name inside a link destination counted as shown; the first auth gained no name: {out['text']!r}"
+    if '<a href="concerns.html#rc-2">concern RC-2</a>' not in out["linked"]:
+        return f"an existing link to RC-2 kept a bare label: {out['linked']!r}"
+    if '<td data-label="Concern"><a href="../concerns.html#rc-2">concern RC-2</a></td>' not in out["keyed"]:
+        return f"a concern code in a row's key cell kept a bare label: {out['keyed']!r}"
+    if '<th scope="col">Concern</th>' not in out["keyed"]:
+        return f"a table header gained a prefix: {out['keyed']!r}"
+    for name in ("text", "linked", "keyed"):
+        md, page = cases[name]
+        if resolve_html(xref, md, page, index, passes=2) != out[name]:
+            return f"a second pass changed the page of {name!r}"
     # §2.2 item 3: an ID inside a link's visible label is a mention too.
-    labelled = xref.resolve_text("See [the auth subsystem](subsystems/auth-login.md) for tokens.\n", "index.md", index)
-    if "[the auth subsystem](subsystems/auth-login.md) (login)" not in labelled:
-        return f"an ID inside a link label was not named on its first mention: {labelled!r}"
+    if '<a href="subsystems/auth-login.html">the auth subsystem</a> (login)' not in out["labelled"]:
+        return f"an ID inside a link label was not named on its first mention: {out['labelled']!r}"
     # The name counts as shown only beside the ID, not anywhere on the line.
-    elsewhere = xref.resolve_text("auth is slow; the login team knows.\n", "index.md", index)
-    if "[auth](subsystems/auth-login.md) (login)" not in elsewhere:
-        return f"a name elsewhere in the sentence suppressed the first mention's name: {elsewhere!r}"
-    beside = xref.resolve_text("auth — login handles tokens.\n", "index.md", index)
-    if "(login)" in beside:
-        return f"a name already beside the ID was printed again: {beside!r}"
+    if '<a href="subsystems/auth-login.html">auth</a> (login)' not in out["elsewhere"]:
+        return f"a name elsewhere in the sentence suppressed the first mention's name: {out['elsewhere']!r}"
+    if "(login)" in out["beside"]:
+        return f"a name already beside the ID was printed again: {out['beside']!r}"
     # §2.2 item 5: the matrix is the one exception; a heading and the code's own
     # page still say "concern".
-    heading = xref.resolve_text("## RC-2 Race on the cache\n", "findings.md", index)
-    if "[concern RC-2](concerns.md#rc-2)" not in heading:
-        return f"a concern code in a heading lacks the prefix: {heading!r}"
-    own = xref.resolve_text("- **RC-2** race on a cache\n", "concerns.md", index)
-    if "**concern RC-2**" not in own:
-        return f"a concern code on its own page lacks the prefix: {own!r}"
-    for once, page in ((labelled, "index.md"), (elsewhere, "index.md"), (heading, "findings.md"), (own, "concerns.md")):
-        again = xref.resolve_text(once, page, index)
-        if again != once:
-            return f"a second pass changed {once!r} to {again!r}"
+    if '<a href="concerns.html#rc-2">concern RC-2</a>' not in out["heading"]:
+        return f"a concern code in a heading lacks the prefix: {out['heading']!r}"
+    if "<strong>concern RC-2</strong>" not in out["own"]:
+        return f"a concern code on its own page lacks the prefix: {out['own']!r}"
+    for name in ("labelled", "elsewhere", "heading", "own"):
+        md, page = cases[name]
+        if resolve_html(xref, md, page, index, passes=2) != out[name]:
+            return f"a second pass changed the page of {name!r}"
     return None
 
 
@@ -576,14 +590,14 @@ def resolvers_use_index_keys() -> str | None:
     sys.path.insert(0, str(ROOT))
     from amanuensis_materializer import html_projection, xref  # noqa: PLC0415
 
-    index = xref.XrefIndex(entries={"core": ("core", "subsystems/core.md", "Core"), "B04-R6": ("B04-R6", "findings.md#b04-r6", "Finding")})
-    text = xref.resolve_text("See core and B04-R6, not ZZ-9.\n", "findings.md", index)
-    if "[core](subsystems/core.md)" not in text:
-        return f"xref.resolve_text left a lowercase key unlinked: {text!r}"
-    if "**B04-R6**" not in text:
-        return f"xref.resolve_text did not resolve B04-R6 as a self-reference: {text!r}"
-    if "[ZZ-9]" in text:
-        return "xref.resolve_text linked an ID the index does not hold"
+    index = xref.XrefIndex(entries={"core": ("core", "subsystems/core.html", "Core"), "B04-R6": ("B04-R6", "findings.html#b04-r6", "Finding")})
+    text = resolve_html(xref, "See core and B04-R6, not ZZ-9.\n", "findings.html", index)
+    if '<a href="subsystems/core.html">core</a>' not in text:
+        return f"xref.resolve_model left a lowercase key unlinked: {text!r}"
+    if "<strong>B04-R6</strong>" not in text:
+        return f"xref.resolve_model did not resolve B04-R6 as a self-reference: {text!r}"
+    if "ZZ-9</a>" in text:
+        return "xref.resolve_model linked an ID the index does not hold"
     markup = html_projection._identifier_markup("<p>core B04-R6 XY-1</p>", {"core": "Core", "B04-R6": "Finding"})
     if markup.count('class="identifier-definition"') != 2:
         return f"the HTML markup did not define both index keys: {markup!r}"

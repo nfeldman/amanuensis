@@ -343,20 +343,20 @@ def publish_instrumented(
 ) -> tuple[dict[str, Any], list[tuple[str, str]]]:
     """Publish in this process, recording each parser run as (page path, calling module)."""
 
-    hp, error = load("html_projection")
+    hp, error = load("legacy_prose")
     if hp is None:
         raise RuntimeError(error)
     import materialize  # noqa: PLC0415 — the CLI module, run in this process
 
     calls: list[tuple[str, str]] = []
-    real = hp._MarkdownParser.parse
+    real = hp._LegacyParser.parse
 
     def counting(self: Any, markdown: str) -> Any:
         caller = sys._getframe(1).f_globals.get("__name__", "")
         calls.append((self.current_html_path, caller))
         return real(self, markdown)
 
-    hp._MarkdownParser.parse = counting
+    hp._LegacyParser.parse = counting
     saved = sys.argv
     sys.argv = ["materialize.py", "--storage", str(storage), "--output", str(output), "--allow-external-output"]
     buffer = io.StringIO()
@@ -365,7 +365,7 @@ def publish_instrumented(
             code = materialize.main()
     finally:
         sys.argv = saved
-        hp._MarkdownParser.parse = real
+        hp._LegacyParser.parse = real
     lines = [line for line in buffer.getvalue().splitlines() if line.strip()]
     summary = json.loads(lines[-1]) if lines else {}
     summary["exit"] = code
@@ -441,7 +441,7 @@ def subsystem_paths(storage: Path) -> dict[str, str]:
     db = sqlite3.connect(storage / "memory.db")
     try:
         return {
-            str(sid): slugs.subsystem_page(str(sid), str(name))[:-3] + ".html"
+            str(sid): slugs.subsystem_page(str(sid), str(name))
             for sid, name in db.execute("SELECT id, name FROM subsystems")
         }
     finally:

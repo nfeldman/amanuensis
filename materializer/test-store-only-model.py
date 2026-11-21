@@ -1,55 +1,52 @@
 #!/usr/bin/env python3
-"""Gate for store-only packet SO11 — the parser split: Markdown → page model → HTML
-(design/store-only/PLAN.md §3.1, §3.2, §8 SO11).
+"""Gate for store-only packet SO11 — the page model between a renderer and the HTML
+(design/store-only/PLAN.md §3.1, §3.2, §8 SO11), as it stands after SO19 deleted the
+Markdown parser.
 
-The golden corpus under `fixtures/store-only-golden/` was written by
-`make-golden.py` from the tree before the split. It holds, per fixture, what
-the HTML stage was given (page plan, context, locus index, notice, each page's
-finished Markdown) and the HTML it printed. This gate prints the same inputs
-again through today's HTML stage and compares bytes.
+SO11 split `MarkdownRenderer` into `parse_markdown` and `write_html`. SO19 deleted the
+parser, so the half of this gate that fed recorded Markdown through it is retired with
+it (the recorded Markdown stays in the corpus as history): the corpus is now compared by
+rebuilding each store fixture from its recorded SQL dump and publishing it. The
+`hooks` fixture, written Markdown with no store behind it, and `materializer-github`, a
+second printing of the `materializer` store, cannot be rebuilt that way; their golden
+HTML stays in the corpus and is not compared here.
 
 Turns red when:
 
-  - the golden corpus is absent, lacks a `VERSION` naming the packet that wrote
-    it, lacks one of its six fixtures, or holds fewer pages than it was written
-    with (so a deleted fixture cannot pass as an identical one);
-  - the HTML for any golden page differs from the golden HTML by one byte;
-  - `render_html_projection` does not build each page by `parse_markdown` and
-    then `write_html` (each called once per page, counted by instrumenting the
-    module), or `MarkdownRenderer` still parses inside the render;
-  - `page.py` is absent, has no `HOOKS` table, or `HOOKS` misses any
-    `_*_PROJECTION(S)` constant of the base tree or of today's
-    `html_projection.py`, or either Mermaid shape (`graph`, `pie showData`);
-  - a `HOOKS` entry is not a block kind defined in `page.py`, `EnumTable` is
-    not the guide's enum table's kind, or `parse_markdown` does not resolve a
-    table carrying each hook's header signature (every signature of the
-    dict- and set-valued constants), or each Mermaid shape, to that kind;
-  - `write_html`, or any function or method it reaches in its module, calls or
-    imports `parse_markdown` or another function the parser reaches, or names a
-    recognition constant (a `_*_PROJECTION(S)`, the marker or list pattern);
-  - `write_html` handles Markdown: given a page model whose text holds
-    emphasis, a link, a code span, an emoji status and a table whose headers
-    are the subsystem atlas's signature, it prints any of them as anything but
-    escaped literal text in an ordinary table;
+  - the golden corpus is absent, lacks a `VERSION` naming the packet that last wrote
+    it, lacks one of its six fixtures, or holds fewer pages than it was written with
+    (so a deleted fixture cannot pass as an identical one);
+  - the HTML a rebuilt store fixture publishes differs from the golden HTML by one
+    byte, or prints a page the corpus does not hold, or `write_html` does not run
+    exactly once for each page (counted by instrumenting the module);
+  - `page.py` lacks a block kind for any shape a page prints (the kinds the recognition
+    hooks resolved to), or still carries a `HOOKS` table of the parser's;
+  - `write_html`, or any function or method it reaches in its module, imports the
+    Markdown reader or names a recognition constant (a `_*_PROJECTION(S)`, the marker
+    or list pattern);
+  - `write_html` handles Markdown: given a page model whose text holds emphasis, a
+    link, a code span, an emoji status and a table whose headers are the subsystem
+    atlas's signature, it prints any of them as anything but escaped literal text in
+    an ordinary table;
   - the gate does not run in CI.
 
-False green it cannot exclude: byte identity is proved on the corpus only.
-The corpus reaches every recognition hook at least once (the `hooks` fixture
-exists for those no store fixture prints), but an input shape none of its pages
-carry could still print differently after the split.
+False green it cannot exclude: byte identity is proved on the four store fixtures; an
+input shape none of their pages carry could still print differently.
 
-Output protocol: exactly one status line, last, on stdout. Every message is
-scrubbed, so a missing deliverable reports as an assertion failure and not as
-a crash.
+Output protocol: exactly one status line, last, on stdout. Every message is scrubbed, so
+a missing deliverable reports as an assertion failure and not as a crash.
 """
 
 from __future__ import annotations
 
 import ast
+import contextlib
 import dataclasses
 import importlib
+import io
 import json
 import re
+import sqlite3
 import sys
 import tempfile
 from collections.abc import Callable
@@ -67,27 +64,15 @@ FIXTURES = ("materializer", "materializer-github", "lens", "axiomdb-shaped", "se
 # Pages the corpus held when SO11 wrote it; a smaller corpus has lost fixtures.
 MIN_PAGES = 140
 
-# The recognition constants `rg '_[A-Z_]+_PROJECTIONS?\b'` finds in
-# html_projection.py on the base tree (32ad430) and at SO11's start (528199f,
-# which added the recorded checklist's signature in SO9). Written out so that
-# deleting a constant cannot also delete what this gate expects.
-BASE_TREE_HOOKS = (
-    "_BOUNDARY_PROJECTION",
-    "_CONCERN_CHECKLIST_PROJECTION",
-    "_DEPENDENCY_TOPOLOGY_PROJECTION",
-    "_ENUM_TABLE_PROJECTION",
-    "_LIFECYCLE_TABLE_PROJECTIONS",
-    "_RECORDED_CHECKLIST_PROJECTION",
-    "_RECORD_PROJECTIONS",
-    "_RUNTIME_BOUNDARY_PROJECTION",
-    "_SEAM_TOPOLOGY_PROJECTION",
-    "_SUBSYSTEM_ATLAS_PROJECTION",
-    "_SUMMARY_LIST_PROJECTIONS",
+# The block kinds the recognition hooks resolved to (SO11's HOOKS table); each must stay a kind.
+BLOCK_KINDS = (
+    "Atlas", "EnumTable", "Topology", "BoundaryDiagram", "RuntimeDiagram", "ConcernChecklist", "RecordList",
+    "SummaryList", "LifecycleTable", "CoverageIndex", "Table", "Facets", "RelationshipTrace", "StalenessBars",
+    "DiagramSource", "Heading", "Section", "Details", "Paragraph", "List", "Code", "Quote", "Anchor", "RecordMarker",
 )
-MERMAID_HOOKS = {
-    "mermaid graph": 'graph LR\n    A["B-01<br>Reader"]\n    A -->|"drains"| B',
-    "mermaid pie showData": 'pie showData\n    "a" : 1',
-}
+STORES = ("materializer", "axiomdb-shaped", "self-shaped", "lens")
+# Pages whose golden HTML was written against a git workspace the corpus does not carry.
+WORKSPACE_DEPENDENT = {("lens", "index.html"), ("lens", "not-yet-surveyed.html")}
 # Constants that exist only to recognise Markdown; the writer may name none.
 RECOGNITION_PATTERNS = ("_MARKER_RE", "_LIST_ITEM")
 
@@ -157,40 +142,52 @@ def unfold(text: str) -> str:
     )
 
 
-def fixture_inputs(name: str) -> tuple[dict[str, Any], dict[str, str], dict[str, str]]:
-    base = GOLDEN / name
-    inputs = json.loads((base / "inputs.json").read_text())
-    md = {str(p.relative_to(base / "md")): p.read_text() for p in sorted((base / "md").rglob("*.md"))}
-    golden = {
-        str(p.relative_to(base / "html")): unfold(p.read_text())
-        for p in sorted((base / "html").rglob("*.html"))
-    }
-    return inputs, md, golden
+def fixture_pages(name: str) -> dict[str, str]:
+    base = GOLDEN / name / "html"
+    return {str(p.relative_to(base)): unfold(p.read_text()) for p in sorted(base.rglob("*.html"))}
 
 
-def render(hp: Any, inputs: dict[str, Any], md: dict[str, str]) -> dict[str, str]:
-    pages = [
-        hp.SitePage(**{**page, "terms": tuple(tuple(term) for term in page["terms"])})
-        for page in inputs["pages"]
-    ]
-    with tempfile.TemporaryDirectory(prefix="amanuensis-so11-") as tmp:
-        output = Path(tmp)
-        for path, text in md.items():
-            target = output / path
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(text)
-        hp.render_html_projection(
-            output,
-            pages,
-            inputs["context"],
-            locus_index=inputs["locus_index"],
-            notice=inputs["notice"],
-        )
-        return {
-            page.html_path: (output / page.html_path).read_text()
-            for page in pages
-            if (output / page.html_path).is_file()
-        }
+def rebuild(store: str, root: Path) -> Path:
+    """A storage directory holding the fixture's recorded database."""
+
+    storage = root / store / "storage"
+    storage.mkdir(parents=True)
+    db = sqlite3.connect(storage / "memory.db")
+    try:
+        db.executescript((GOLDEN / store / "memory.sql").read_text())
+        db.commit()
+    finally:
+        db.close()
+    if store == "materializer":
+        (storage / "workspace_path").write_text("/example/FictionalProject\n")
+    return storage
+
+
+def publish(hp: Any, storage: Path, output: Path) -> tuple[int, int, int]:
+    """Publish in this process: the CLI's exit code and how many times `write_html` ran for how many pages."""
+
+    import materialize  # noqa: PLC0415 — the CLI module, run in this process
+
+    counts = [0]
+    real = hp.write_html
+
+    def counted(*args: Any, **kwargs: Any) -> Any:
+        counts[0] += 1
+        return real(*args, **kwargs)
+
+    hp.write_html = counted
+    saved = sys.argv
+    sys.argv = ["materialize.py", "--storage", str(storage), "--output", str(output), "--allow-external-output"]
+    buffer = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buffer):
+            code = materialize.main()
+    finally:
+        sys.argv = saved
+        hp.write_html = real
+    lines = [line for line in buffer.getvalue().splitlines() if line.strip()]
+    summary = json.loads(lines[-1]) if lines else {}
+    return code, counts[0], int(summary.get("html_pages_total", -1))
 
 
 def first_difference(left: str, right: str) -> str:
@@ -265,29 +262,12 @@ def walk_model(value: Any) -> list[Any]:
     return found
 
 
-def signatures(value: Any) -> list[tuple[str, ...]]:
-    if isinstance(value, dict):
-        return [tuple(key) for key in value]
-    if isinstance(value, set | frozenset):
-        return sorted(tuple(item) for item in value)
-    return [tuple(value)]
-
-
-def table(signature: tuple[str, ...]) -> str:
-    header = "| " + " | ".join(signature) + " |"
-    rule = "|" + "---|" * len(signature)
-    row = "| " + " | ".join(f"cell {i}" for i in range(len(signature))) + " |"
-    return f"{header}\n{rule}\n{row}\n"
-
-
 def main() -> int:
-    emit(f"GATE {PACKET} — Markdown → page model → HTML, byte for byte on the golden corpus")
+    emit(f"GATE {PACKET} — the page model between a renderer and the HTML, byte for byte on the golden corpus")
     hp, hp_error = load("html_projection")
     page, page_error = load("page")
 
     # ------------------------------------------------------------- the corpus
-    corpus: dict[str, tuple[dict[str, Any], dict[str, str], dict[str, str]]] = {}
-
     def corpus_present() -> str | None:
         version = GOLDEN / "VERSION"
         if not version.is_file():
@@ -297,9 +277,7 @@ def main() -> int:
         missing = [name for name in FIXTURES if not (GOLDEN / name / "inputs.json").is_file()]
         if missing:
             return f"fixture(s) absent from the corpus: {missing}"
-        for name in FIXTURES:
-            corpus[name] = fixture_inputs(name)
-        total = sum(len(golden) for _inputs, _md, golden in corpus.values())
+        total = sum(len(fixture_pages(name)) for name in FIXTURES)
         if total < MIN_PAGES:
             return f"the corpus holds {total} pages, fewer than the {MIN_PAGES} it was written with"
         return None
@@ -309,128 +287,56 @@ def main() -> int:
     def byte_identical() -> str | None:
         if hp is None:
             return hp_error
-        if not corpus:
-            return "no corpus to compare"
         compared = 0
-        for name, (inputs, md, golden) in corpus.items():
-            printed = render(hp, inputs, md)
-            for path, expected in golden.items():
-                actual = printed.get(path)
-                if actual is None:
-                    return f"{name}/{path} was not printed"
-                if actual != expected:
-                    return f"{name}/{path} differs {first_difference(expected, actual)}"
-                compared += 1
-            extra = sorted(set(printed) - set(golden))
-            if extra:
-                return f"{name} printed pages the corpus does not hold: {extra[:3]}"
+        with tempfile.TemporaryDirectory(prefix="amanuensis-so11-") as tmp:
+            for name in STORES:
+                if not (GOLDEN / name / "memory.sql").is_file():
+                    return f"{name}: the corpus has no memory.sql"
+                golden = fixture_pages(name)
+                output = Path(tmp) / name / "docs"
+                code, writes, planned = publish(hp, rebuild(name, Path(tmp)), output)
+                if code != 0:
+                    return f"{name} did not publish (exit {code})"
+                if writes != planned:
+                    return f"{name}: write_html ran {writes} times for {planned} pages; each must run once per page"
+                for path, expected in golden.items():
+                    if (name, path) in WORKSPACE_DEPENDENT:
+                        continue
+                    target = output / path
+                    if not target.is_file():
+                        return f"{name}/{path} was not printed"
+                    actual = target.read_text()
+                    if actual != expected:
+                        return f"{name}/{path} differs {first_difference(expected, actual)}"
+                    compared += 1
+                extra = sorted(
+                    str(p.relative_to(output)) for p in output.rglob("*.html") if str(p.relative_to(output)) not in golden
+                )
+                if extra:
+                    return f"{name} printed pages the corpus does not hold: {extra[:3]}"
         emit(f"       {compared} golden pages compared byte for byte")
-        return None
+        return None if compared >= 100 else f"only {compared} golden pages were compared"
 
-    check("C2 HTML for every golden page is byte-identical", byte_identical)
+    check("C2 HTML for every golden page of a rebuilt store is byte-identical, one write_html per page", byte_identical)
 
-    # ------------------------------------------------- the route of a render
-    def routed() -> str | None:
-        if hp is None:
-            return hp_error
-        for name in ("parse_markdown", "write_html"):
-            if not callable(getattr(hp, name, None)):
-                return f"html_projection.{name} is absent"
-        if "hooks" not in corpus:
-            return "no corpus to render"
-        inputs, md, _golden = corpus["hooks"]
-        counts = {"parse_markdown": 0, "write_html": 0}
-        originals = {name: getattr(hp, name) for name in counts}
-
-        def counted(name: str) -> Callable[..., Any]:
-            def wrapper(*args: Any, **kwargs: Any) -> Any:
-                counts[name] += 1
-                return originals[name](*args, **kwargs)
-
-            return wrapper
-
-        legacy = getattr(hp, "MarkdownRenderer", None)
-        legacy_render = getattr(legacy, "render", None) if legacy else None
-        legacy_calls = [0]
-        if legacy_render is not None:
-            def counted_legacy(self: Any, *args: Any, **kwargs: Any) -> Any:
-                legacy_calls[0] += 1
-                return legacy_render(self, *args, **kwargs)
-
-            legacy.render = counted_legacy
-        try:
-            for name in counts:
-                setattr(hp, name, counted(name))
-            render(hp, inputs, md)
-        finally:
-            for name, original in originals.items():
-                setattr(hp, name, original)
-            if legacy_render is not None:
-                legacy.render = legacy_render
-        pages = len(inputs["pages"])
-        if counts != {"parse_markdown": pages, "write_html": pages}:
-            return f"for {pages} pages the render called {counts}; each must run once per page"
-        if legacy_calls[0]:
-            return f"the render still calls MarkdownRenderer.render ({legacy_calls[0]} times)"
-        return None
-
-    check("C3 the render builds each page by parse_markdown then write_html", routed)
-
-    # ---------------------------------------------------------- the HOOKS table
-    def hooks_table() -> str | None:
+    # ---------------------------------------------------- the block kinds
+    def block_kinds() -> str | None:
         if page is None:
             return page_error
-        hooks = getattr(page, "HOOKS", None)
-        if not isinstance(hooks, dict):
-            return "page.py has no HOOKS table"
-        source = PROJECTION_SOURCE.read_text()
-        required = set(BASE_TREE_HOOKS) | set(re.findall(r"\b(_[A-Z_]+_PROJECTIONS?)\b", source)) | set(MERMAID_HOOKS)
-        missing = sorted(required - set(hooks))
-        if missing:
-            return f"HOOKS lacks {missing}"
-        not_kinds = sorted(
+        absent = [
             name
-            for name, kind in hooks.items()
-            if not (isinstance(kind, type) and dataclasses.is_dataclass(kind) and kind.__module__ == page.__name__)
-        )
-        if not_kinds:
-            return f"HOOKS entries that are not block kinds defined in page.py: {not_kinds}"
-        if hooks["_ENUM_TABLE_PROJECTION"].__name__ != "EnumTable":
-            return f"the guide's enum tables resolve to {hooks['_ENUM_TABLE_PROJECTION'].__name__}, not EnumTable"
+            for name in BLOCK_KINDS
+            if not (
+                isinstance(getattr(page, name, None), type) and dataclasses.is_dataclass(getattr(page, name))
+            )
+        ]
+        if absent:
+            return f"page.py lacks block kinds {absent}"
+        if hasattr(page, "HOOKS"):
+            return "page.py still carries the parser's HOOKS table"
         return None
 
-    check("C4 page.py's HOOKS names a block kind for every recognition hook", hooks_table)
-
-    def hooks_resolve() -> str | None:
-        if hp is None or page is None:
-            return hp_error or page_error
-        parse = getattr(hp, "parse_markdown", None)
-        hooks = getattr(page, "HOOKS", None)
-        if not callable(parse) or not isinstance(hooks, dict):
-            return "parse_markdown or HOOKS is absent"
-        failures: list[str] = []
-        exercised = 0
-        for name, kind in sorted(hooks.items()):
-            if name in MERMAID_HOOKS:
-                samples = [f"```mermaid\n{MERMAID_HOOKS[name]}\n```\n"]
-            elif name.startswith("_") and hasattr(hp, name):
-                samples = [table(signature) for signature in signatures(getattr(hp, name))]
-            elif name in BASE_TREE_HOOKS:
-                failures.append(f"{name} is no longer in html_projection.py to recognise")
-                continue
-            else:
-                continue
-            for sample in samples:
-                exercised += 1
-                model = parse(f"# Hook\n\n## Hooked section\n\n{sample}", "hook.html")
-                kinds = {type(item) for item in walk_model(model)}
-                if kind not in kinds:
-                    failures.append(f"{name} {sample.splitlines()[0][:60]!r} parsed to no {kind.__name__}")
-        if exercised < len(BASE_TREE_HOOKS) + len(MERMAID_HOOKS):
-            return f"only {exercised} hook samples were exercised"
-        return "; ".join(failures[:3]) if failures else None
-
-    check("C5 parse_markdown resolves each hook's signature to its block kind", hooks_resolve)
+    check("C3 page.py defines a block kind for every shape a page prints, and no parser table", block_kinds)
 
     # ---------------------------------------------------------- the writer
     def writer_reach() -> str | None:
@@ -438,13 +344,9 @@ def main() -> int:
             return hp_error
         tree = ast.parse(PROJECTION_SOURCE.read_text())
         defs = module_defs(tree)
-        if "write_html" not in defs or "parse_markdown" not in defs:
-            return "write_html or parse_markdown is not defined in html_projection.py"
+        if "write_html" not in defs:
+            return "write_html is not defined in html_projection.py"
         writer, writer_names, writer_imports = reach(defs, "write_html")
-        parser, _names, _imports = reach(defs, "parse_markdown")
-        shared = sorted(writer & parser)
-        if shared:
-            return f"write_html reaches parser code: {shared[:6]}"
         named = sorted(
             name
             for name in writer_names
@@ -452,15 +354,14 @@ def main() -> int:
         )
         if named:
             return f"write_html's code names recognition constants: {named}"
-        parser_imports = [item for item in writer_imports if "parse_markdown" in item or item.endswith("._inline")]
+        parser_imports = [item for item in writer_imports if "legacy_prose" in item or "parse_markdown" in item]
         if parser_imports:
-            return f"write_html's code imports the parser: {parser_imports}"
+            return f"write_html's code imports the Markdown reader: {parser_imports}"
         if len(writer) < 5:
             return f"write_html reaches only {sorted(writer)}; the builders are not its own"
         return None
 
-    check("C6 write_html neither calls, imports nor names the parser", writer_reach)
-
+    check("C4 write_html neither imports nor names the Markdown reader", writer_reach)
     def writer_is_literal() -> str | None:
         if hp is None or page is None:
             return hp_error or page_error
@@ -506,7 +407,7 @@ def main() -> int:
             problems.append("the table is not printed as an ordinary table")
         return f"write_html recognised Markdown: {sorted(set(problems))}" if problems else None
 
-    check("C7 write_html prints Markdown in a model as literal text", writer_is_literal)
+    check("C5 write_html prints Markdown in a model as literal text", writer_is_literal)
 
     def runs_in_ci() -> str | None:
         try:
@@ -515,7 +416,7 @@ def main() -> int:
             return ".github/workflows/test.yml is unreadable"
         return None if "python3 test-store-only-model.py" in workflow else "no CI step runs this gate"
 
-    check("C8 the gate runs in CI", runs_in_ci)
+    check("C6 the gate runs in CI", runs_in_ci)
 
     if FAILURES:
         emit(f"GATE {PACKET} RED: {FAILURES[0]}")

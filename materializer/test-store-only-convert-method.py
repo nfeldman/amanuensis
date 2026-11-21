@@ -550,13 +550,13 @@ def prepare(source: str, root: Path, name: str, seed: Callable[[Path, tuple[str,
 def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], list[tuple[str, str]]]:
     """Publish in this process, recording the page path and calling module of each Markdown parse."""
 
-    hp, error = load("html_projection")
+    hp, error = load("legacy_prose")
     if hp is None:
         raise RuntimeError(error)
     import materialize  # noqa: PLC0415 — the CLI module, run in this process
 
     calls: list[tuple[str, str]] = []
-    real = hp._MarkdownParser.parse
+    real = hp._LegacyParser.parse
 
     def counting(self: Any, markdown: str) -> Any:
         depth = 1
@@ -567,7 +567,7 @@ def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], l
         calls.append((self.current_html_path, caller))
         return real(self, markdown)
 
-    hp._MarkdownParser.parse = counting
+    hp._LegacyParser.parse = counting
     saved = sys.argv
     sys.argv = ["materialize.py", "--storage", str(storage), "--output", str(output), "--allow-external-output"]
     buffer = io.StringIO()
@@ -576,7 +576,7 @@ def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], l
             code = materialize.main()
     finally:
         sys.argv = saved
-        hp._MarkdownParser.parse = real
+        hp._LegacyParser.parse = real
     lines = [line for line in buffer.getvalue().splitlines() if line.strip()]
     summary = json.loads(lines[-1]) if lines else {}
     summary["exit"] = code
