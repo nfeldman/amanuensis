@@ -504,6 +504,11 @@ jobs:
       - name: Materializer reads the store — records over files, only database and binding files opened, imports labelled as written
         working-directory: materializer
         run: python3 test-store-only-sources.py
+      # GATE SO9 (design/store-only/PLAN.md §8 SO9). Seeds its own stores and a
+      # git repository; alters pages with the receipt resealed over the edit.
+      - name: Narratives, territory dispositions and runtime boundaries on their pages, censused by the read-back
+        working-directory: materializer
+        run: python3 test-store-only-record-pages.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py

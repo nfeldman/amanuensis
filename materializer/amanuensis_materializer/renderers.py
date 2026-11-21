@@ -34,7 +34,7 @@ from .diagrams import (
     staleness_map,
     subsystem_dependency_view,
 )
-from .legacy_prose import ImportedBody, imported_bodies, imports_source
+from .legacy_prose import ImportedBody, imported_bodies, imported_page, imports_source
 from .legacy_prose import nest_headings as _nest_prose
 from .lint import (
     THESIS_REFUSED,
@@ -53,6 +53,8 @@ from .readback import (
     EXPLANATION_ELIGIBLE_STATUSES,
     FINDING_LENS_PAGES,
     LEDGER_STALE_SECTIONS,
+    NARRATIVE_LABELS,
+    PROJECT_NARRATIVE_PAGES,
     UNMEASURED,
     WHY_NO_REVISION,
     WHY_NO_TREE,
@@ -66,13 +68,18 @@ from .readback import (
     carried_page,
     carried_records,
     carry_was_run,
+    checklist_concerns,
     effective_explanations,
+    effective_narratives,
+    effective_territory_dispositions,
     explanation_rows,
     finding_marker,
     finding_page,
     git_paths,
     ledger_stale_anchor,
     ledger_stale_marker,
+    narrative_heading,
+    narrative_text,
     project_purpose_text,
     reconciliation_standing,
     resolve_workspace,
@@ -206,6 +213,17 @@ AGEING_CHANGED = "{k} of the {n} file(s) it cites changed since: {paths}."
 AGEING_NOT_MEASURED = "Whether the files it cites have changed since is not measured here."
 AGEING_PATH_LIMIT = 5
 NARRATIVE_IN_RECORD = "The survey artifact is rendered below, under Survey record."
+
+# Stored narratives (store-only PLAN §2.1): each prints under its topic with the
+# date and revision it was recorded at, and how far its cited files have moved.
+NARRATIVE_PROVENANCE = "*Recorded on {date} at revision `{sha}` from {n} evidence row(s). {ageing}*"
+NARRATIVE_NO_FILES = "*Recorded on {date} at revision `{sha}`. It cites no file.*"
+NARRATIVE_DECLINED = "A survey session {declined} to write this at `{sha}` on {date}. {reason}"
+NARRATIVE_NO_CLAIMS = "No structural claim is recorded for this subsystem."
+CHALLENGE_HEADING = "Challenge"
+AS_WRITTEN_HEADING = "As written at onboarding"
+CHECKLIST_TITLE = "Calibrated review checklist"
+CHECKLIST_HEADERS = ("Code", "Category", "Territory", "Probe", "Primary subsystems")
 
 # §9.1's five structural categories, as the `claim_key` segment that names each
 # and the heading it groups under.  Any other segment a survey recorded is its
@@ -837,6 +855,198 @@ def _imported_text(bodies: Sequence[ImportedBody], under: int) -> str:
     return "\n\n".join(
         f"{body.label()}\n\n{_nest_prose(body.body.strip(), under)}" for body in bodies
     )
+
+
+def _narrative_lines(
+    records: Sequence[Mapping[str, Any]],
+    level: int,
+    workspace: Path,
+    bound: bool,
+    head: str,
+    warn: Callable[[str], None] | None,
+    *,
+    untitled: bool = True,
+) -> list[str]:
+    """Stored narratives as Markdown, each under its topic at heading `level`.
+
+    A narrative with no topic prints under its section's label; with `untitled`
+    false it prints under whatever heading already names its section. The text
+    the orientation lint refuses is replaced by the refusal sentence and
+    reported through `warn`, as for an explanation.
+    """
+
+    out: list[str] = []
+    for record in records:
+        text, is_body = narrative_text(record)
+        if not is_body and warn is not None:
+            warn(
+                f"{record['subject_id']}: the recorded {record['section']} narrative was not"
+                " published because it carries survey-status vocabulary or a count fraction"
+            )
+        if untitled or str(record["topic"]).strip():
+            out += ["#" * level + " " + _one_line(narrative_heading(record)), ""]
+        date = _stored_date(record["recorded_at"])
+        sha = str(record["ref_sha"])[:8]
+        if str(record["disposition"]) == "declined":
+            out += [
+                NARRATIVE_DECLINED.format(declined=_DECLINED, sha=sha, date=date, reason=text.strip()),
+                "",
+            ]
+            continue
+        out += [_nest_prose(text.strip(), level), ""]
+        if not is_body:
+            continue
+        files = record.get("cited_files") or []
+        out += [
+            (
+                NARRATIVE_PROVENANCE.format(
+                    date=date,
+                    sha=sha,
+                    n=len(files),
+                    ageing=_ageing_sentence(workspace, bound, record, head),
+                )
+                if files
+                else NARRATIVE_NO_FILES.format(date=date, sha=sha)
+            ),
+            "",
+        ]
+    return out
+
+
+def _narrative_source(name: str, head: str, records: Sequence[Mapping[str, Any]]) -> dict[str, str]:
+    """The manifest source for the narratives a page printed.
+
+    The effective rows with their cited files, and the checked revision their
+    ageing line is measured against, so a new row, a withdrawal or a moved
+    head re-renders the page.
+    """
+
+    return _db_source(name, {"head": head, "rows": list(records)})
+
+
+def _record_page_sources(conn: sqlite3.Connection, kind: str) -> dict[str, Any]:
+    """What the generated part of one of the three project pages reads."""
+
+    if kind == "concern-checklist":
+        return {
+            "concerns": checklist_concerns(conn),
+            "territories": effective_territory_dispositions(conn),
+        }
+    return {}
+
+
+def _project_narratives(
+    conn: sqlite3.Connection, storage: Path, kind: str
+) -> list[dict[str, Any]]:
+    """The project narratives the page for `kind` prints, in the contract's section order."""
+
+    page = {
+        "onboarding-report": "onboarding-report.md",
+        "entry-point": "entry-point.md",
+    }.get(kind)
+    if page is None:
+        return []
+    order = list(NARRATIVE_LABELS)
+    chosen = [
+        record
+        for record in effective_narratives(conn, storage, "project")
+        if record["subject_type"] == "project" and PROJECT_NARRATIVE_PAGES.get(record["section"]) == page
+    ]
+    return sorted(chosen, key=lambda r: (order.index(str(r["section"])), int(r["first_id"])))
+
+
+def _checklist_lines(
+    concerns: Sequence[Mapping[str, Any]], territories: Sequence[Mapping[str, Any]]
+) -> list[str]:
+    out: list[str] = []
+    if concerns:
+        out += [
+            "## Concerns",
+            "",
+            "Each concern the survey checks, the kind of territory it came from, and"
+            " the probe that tests it in this codebase.",
+            "",
+            "| " + " | ".join(CHECKLIST_HEADERS) + " |",
+            "|" + "---|" * len(CHECKLIST_HEADERS),
+        ]
+        for c in concerns:
+            where = ", ".join(f"**{sid}**" for sid in c["subsystems"]) or "—"
+            out.append(
+                f"| **{c['code']}** | {_table_cell(c['category'] or '—')}"
+                f" | {_table_cell(c['territory'] or '—')} | {_table_cell(c['probe'] or '—')} | {where} |"
+            )
+        out.append("")
+    if territories:
+        out += [
+            "## Territories",
+            "",
+            "Whether each kind of territory applies to this project. A territory that"
+            " does not apply names the condition that rules it out.",
+            "",
+            "| Territory | Disposition | Condition |",
+            "|---|---|---|",
+        ]
+        for t in territories:
+            out.append(
+                f"| {_table_cell(t['territory'])} | {t['disposition']}"
+                f" | {_table_cell(t['condition'] or '—')} |"
+            )
+        out.append("")
+    return out
+
+
+def record_page_exists(conn: sqlite3.Connection, storage: Path, kind: str) -> bool:
+    """Whether the page for `kind` has anything to print: a record or an unwithdrawn import."""
+
+    if imported_bodies(conn, kind=kind):
+        return True
+    if kind == "concern-checklist":
+        return bool(checklist_concerns(conn) or effective_territory_dispositions(conn))
+    return bool(_project_narratives(conn, storage, kind))
+
+
+def record_page(
+    conn: sqlite3.Connection,
+    storage: Path,
+    kind: str,
+    title: str,
+    warn: Callable[[str], None] | None = None,
+) -> RenderResult | None:
+    """Onboarding record, Review checklist or Where to begin, from the store.
+
+    The records come first, each section under its own heading; what an earlier
+    version wrote by hand follows under "As written at onboarding" with its label
+    (D1). A store with only an import prints that page as `imported_page` does,
+    so an import-only publication is unchanged.
+    """
+
+    bodies = imported_bodies(conn, kind=kind)
+    narratives = _project_narratives(conn, storage, kind)
+    extra = _record_page_sources(conn, kind)
+    concerns, territories = extra.get("concerns", []), extra.get("territories", [])
+    if not (narratives or concerns or territories):
+        return imported_page(conn, kind, title)
+    workspace = resolve_workspace(storage)
+    bound = workspace_is_bound(workspace)
+    head = _checked_head(conn)
+    out = [f"# {title}", ""]
+    section = None
+    for record in narratives:
+        if record["section"] != section:
+            section = str(record["section"])
+            out += [f"## {NARRATIVE_LABELS.get(section, section)}", ""]
+        out += _narrative_lines([record], 3, workspace, bound, head, warn, untitled=False)
+    out += _checklist_lines(concerns, territories)
+    if bodies:
+        out += [f"## {AS_WRITTEN_HEADING}", ""]
+        for body in bodies:
+            out += [body.label(), "", _nest_prose(body.body.strip(), 2), ""]
+    sources = (
+        _narrative_source(f"narratives:{kind}", head, narratives)
+        | _db_source(f"checklist:{kind}", extra)
+        | imports_source(f"imports:{kind}", bodies)
+    )
+    return "\n".join(out).rstrip() + "\n", sources
 
 
 def _survey_notes_line(artifact: Mapping[str, Any], account: Mapping[str, Any]) -> str:
@@ -1628,6 +1838,14 @@ def render_subsystem(
     workspace = resolve_workspace(storage)
     bound = workspace_is_bound(workspace)
 
+    # The survey's stored prose for this subsystem (store-only PLAN §2.1): one
+    # row in force per section and topic, read by the function the read-back reads.
+    narratives = effective_narratives(conn, storage, str(sid))
+    by_section = {
+        section: [r for r in narratives if r["section"] == section]
+        for section in ("structure", "concern-reasoning", "challenge")
+    }
+
     out = [
         f"# {sid} — {s['name']}",
         "",
@@ -1743,6 +1961,9 @@ def render_subsystem(
                     f" · {_evidence_text(claim_evidence.get(str(c['claim_id']), []))}",
                 ]
             out.append("")
+        out += _narrative_lines(
+            by_section["structure"], 3, workspace, bound, checked_head, warn
+        )
         if placement == "structure-narrative":
             out += [
                 f"### {SURVEY_NARRATIVE}",
@@ -1752,6 +1973,22 @@ def render_subsystem(
                 survey_text,
                 "",
             ]
+    elif by_section["structure"]:
+        # A recorded narrative is the reading here: it leads, bound to its
+        # revision, and the imported body follows as the earlier account.
+        out += ["### " + NO_STRUCTURAL_CLAIMS, "", NARRATIVE_NO_CLAIMS, ""]
+        out += _narrative_lines(by_section["structure"], 3, workspace, bound, checked_head, warn)
+        if placement == "inventory-fallback":
+            out += [
+                f"### {SURVEY_NARRATIVE}",
+                "",
+                f"*{NARRATIVE_LABEL}.*" + (f" Its source is {provenance}." if provenance else ""),
+                "",
+                survey_text,
+                "",
+            ]
+        elif placement == "survey-record":
+            out += [NARRATIVE_IN_RECORD + (f" Its source is {provenance}." if provenance else ""), ""]
     else:
         out += ["### " + NO_STRUCTURAL_CLAIMS, ""]
         if placement == "inventory-fallback":
@@ -1979,6 +2216,12 @@ def render_subsystem(
         out.append("")
     else:
         out += ["No concern has been dispositioned in this subsystem.", ""]
+    out += _narrative_lines(
+        by_section["concern-reasoning"], 4, workspace, bound, checked_head, warn
+    )
+    if by_section["challenge"]:
+        out += [f"### {CHALLENGE_HEADING}", ""]
+        out += _narrative_lines(by_section["challenge"], 4, workspace, bound, checked_head, warn)
 
     if survey_prose and placement in ("survey-record", "none"):
         out += ["### Survey artifact", ""]
@@ -2025,6 +2268,7 @@ def render_subsystem(
         | _db_source(f"subsystem:{sid}:claims", claims)
         | imports_source(f"subsystem:{sid}:imports", surveys)
         | _db_source(f"subsystem:{sid}:explanations", {"head": checked_head, "rows": explanations})
+        | _narrative_source(f"subsystem:{sid}:narratives", checked_head, narratives)
     )
     return text, sources
 

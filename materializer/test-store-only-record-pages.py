@@ -734,16 +734,20 @@ def run(work: Path) -> int:
     check("recorded runtime boundaries are on the page and in the drawing", runtime_boundaries)
 
     def imported_rows_labelled() -> str | None:
+        label = "Imported from the onboarding report"
         md = squash(read(docs_a / "architecture.md"))
         text = html_words(read(docs_a / "architecture.html"))
         for view, page in (("Markdown", md), ("HTML", text)):
-            at = page.find(RUNTIME_IMPORTED[0])
-            row = page[at : at + 400] if at >= 0 else ""
-            if "imported" not in row.lower():
+            at = page.find(label)
+            if at < 0:
                 return f"the imported runtime row is not labelled as imported ({view})"
-            recorded = page[page.find(RUNTIME_RECORDED[0]) : page.find(RUNTIME_RECORDED[0]) + 120]
-            if "imported" in recorded.lower():
-                return f"a recorded runtime row is labelled as imported ({view})"
+            sentence = page[at : at + 260]
+            if RUNTIME_IMPORTED[0] not in sentence or RUNTIME_IMPORTED[2] not in sentence:
+                return f"the imported label does not name the imported edge ({view})"
+            if RUNTIME_RECORDED[0] in sentence or RUNTIME_RECORDED[2] in sentence:
+                return f"a recorded runtime edge is labelled as imported ({view})"
+            if page.count(label) != 1:
+                return f"the imported label is printed {page.count(label)} times ({view})"
         return None
 
     check("an imported runtime row is labelled, a recorded one is not", imported_rows_labelled)
@@ -764,7 +768,7 @@ def run(work: Path) -> int:
         original = target.read_text()
         if needle not in original:
             return f"{rel} does not carry {needle!r} to alter"
-        target.write_text(original.replace(needle, replacement, 1))
+        target.write_text(original.replace(needle, replacement))
         reseal(docs_a, rel)
         try:
             outcome = run_materializer(a, repo, "--readback-only", "--output", str(docs_a))

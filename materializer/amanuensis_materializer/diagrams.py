@@ -407,6 +407,28 @@ def runtime_boundary_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     ]
 
 
+#: What the page says of the rows the import copied from the onboarding report:
+#: they are as written, and no evidence ties them to the code (store-only PLAN §8 SO9).
+IMPORTED_RUNTIME_LABEL = "Imported from the onboarding report and not tied to evidence:"
+
+
+def imported_runtime_line(edges: list[dict[str, Any]]) -> str | None:
+    """The sentence that labels the imported rows of the table, or None when there are none.
+
+    The rows keep the cells they were recorded with, so the label names the edges
+    instead of changing a cell: the drawing and the table stay what the store holds.
+    """
+
+    imported = [edge for edge in edges if str(edge["origin"]) == "imported"]
+    if not imported:
+        return None
+    named = "; ".join(
+        f"{_cell(edge['from_runtime'])} → {_cell(edge['to_runtime'])} by {_cell(edge['mechanism'])}"
+        for edge in imported
+    )
+    return f"{IMPORTED_RUNTIME_LABEL} {named}."
+
+
 def _recorded_runtime_table(conn: sqlite3.Connection) -> str | None:
     """The effective boundaries as the five-column table the HTML draws, or None."""
 
@@ -439,11 +461,13 @@ def runtime_boundary_map(conn: sqlite3.Connection) -> str:
     table = _recorded_runtime_table(conn)
     if table is None:
         return f"_{RUNTIME_BOUNDARY_ABSENT}_"
+    label = imported_runtime_line(runtime_boundary_rows(conn))
     return "\n\n".join(
         [
             "_Projected from the recorded runtime boundaries; mechanisms and targets"
             " are preserved as recorded._",
             table,
+            *([label] if label else []),
         ]
     )
 

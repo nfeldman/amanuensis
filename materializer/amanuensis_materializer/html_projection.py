@@ -1827,6 +1827,10 @@ _CONCERN_CHECKLIST_PROJECTION = (
     "primary subsystems",
 )
 
+# A checklist the store records prints the probe in full, so its column is not
+# "abbreviated" (store-only PLAN §8 SO9). Removed with the Markdown parser (SO19).
+_RECORDED_CHECKLIST_PROJECTION = ("code", "category", "territory", "probe", "primary subsystems")
+
 _COVERAGE_STATES = {
     "🔴": ("confirmed-bug", "Confirmed defect", "!"),
     "🟡": ("confirmed-acceptable", "Accepted behavior", "✓"),
@@ -2144,7 +2148,7 @@ class MarkdownRenderer:
                 code_text = _plain(code_raw) or f"Concern {row_number}"
                 record_id = self._heading_slug(f"concern-checklist-{code_text}")
                 primary_subsystems = record.get("primary subsystems", "")
-                probe = record.get("codebase-specific probe (abbreviated)", "")
+                probe = record.get("codebase-specific probe (abbreviated)") or record.get("probe", "")
                 facts = ""
                 if _plain(primary_subsystems):
                     facts = (
@@ -2958,7 +2962,7 @@ class MarkdownRenderer:
             return self._runtime_boundary_diagram(rows, caption)
         if signature == _BOUNDARY_PROJECTION:
             return self._boundary_diagram(rows, caption)
-        if signature == _CONCERN_CHECKLIST_PROJECTION:
+        if signature in (_CONCERN_CHECKLIST_PROJECTION, _RECORDED_CHECKLIST_PROJECTION):
             return self._concern_checklist(headers, rows, caption)
         if (
             len(signature) > 1

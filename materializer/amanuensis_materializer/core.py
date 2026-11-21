@@ -44,7 +44,6 @@ from .html_projection import (
     render_html_projection,
     terms_line,
 )
-from .legacy_prose import imported_bodies, imported_page
 from .manifest import (
     MATERIALIZER_VERSION,
     Manifest,
@@ -514,19 +513,20 @@ class Materializer:
         def imported(
             rel_src: str, kind: str, title: str, label: str, hint: str, use_when: str
         ) -> PagePlan | None:
-            """One of the three pages an earlier version wrote by hand, from its import.
+            """One of the three pages an earlier version wrote by hand, from the store.
 
             Planned inline rather than in a trailing loop so the rail's order
             inside Method is §7.1's table order, not "every generated page,
-            then whatever imports happened to exist". A store with no unwithdrawn
-            import of the kind has no such page (store-only PLAN §3.3, §5.4).
+            then whatever imports happened to exist". A store with no record
+            for the page and no unwithdrawn import of its kind has no such page
+            (store-only PLAN §3.3, §5.4).
             """
 
-            if not imported_bodies(conn, kind=kind):
+            if not renderers.record_page_exists(conn, storage, kind):
                 return None
             return PagePlan(
                 rel_src,
-                (lambda t=title, k=kind: imported_page(conn, k, t) or ("", {})),
+                (lambda t=title, k=kind: renderers.record_page(conn, storage, k, t, warn=self._warn) or ("", {})),
                 title=title,
                 label=label,
                 hint=hint,

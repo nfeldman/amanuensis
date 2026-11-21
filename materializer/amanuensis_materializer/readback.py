@@ -40,6 +40,7 @@ from .vocabulary import (
     OBLIGATION_BEARING_CLASSIFICATIONS,
     OBLIGATION_BEARING_SQL,
     VOCABULARY,
+    labels,
     values_of,
 )
 
@@ -501,6 +502,164 @@ def effective_explanations(
             admits_imported=subject_type == "project" and slot == "purpose",
         )
     return readings
+
+
+# ---------------------------------------------------------------------------
+# The records the survey keeps beside its explanations (store-only PLAN §2.1, §2.2)
+# ---------------------------------------------------------------------------
+
+#: The page a project narrative's section is printed on. A subsystem's
+#: narratives are printed on the subsystem's own page.
+PROJECT_NARRATIVE_PAGES: dict[str, str] = {
+    "repository-shape": "onboarding-report.md",
+    "runtime": "onboarding-report.md",
+    "stateful-entities": "onboarding-report.md",
+    "concern-calibration": "onboarding-report.md",
+    "survey-plan": "onboarding-report.md",
+    "start-here": "entry-point.md",
+}
+CHECKLIST_PAGE = "concern-checklist.md"
+ARCHITECTURE_PAGE = "architecture.md"
+NARRATIVE_LABELS = labels("narrative_section")
+
+
+def narrative_rows(conn: Any) -> list[dict[str, Any]]:
+    """Every stored narrative row, oldest first, with the files its evidence cites."""
+
+    if not table_exists(conn, "narratives"):
+        return []
+    cited: dict[int, list[str]] = {}
+    if table_exists(conn, "narrative_evidence"):
+        for link in rows(
+            conn,
+            "SELECT x.narrative_id, e.file_path FROM narrative_evidence x"
+            " JOIN evidence e ON e.id = x.evidence_id ORDER BY e.id",
+        ):
+            cited.setdefault(int(link["narrative_id"]), []).append(str(link["file_path"]))
+    stored = rows(
+        conn,
+        "SELECT id, subject_type, subject_id, section, topic, disposition, body, ref_sha,"
+        " session_id, recorded_at FROM narratives ORDER BY id",
+    )
+    for record in stored:
+        record["cited_files"] = cited.get(int(record["id"]), [])
+    return stored
+
+
+def effective_narratives(
+    conn: Any, storage: Path, subject_id: str | None = None
+) -> list[dict[str, Any]]:
+    """The recorded or declined narrative in force for each `(subject, section, topic)`.
+
+    The newest row wins, as for explanations (`select_explanation`): with a bound
+    workspace only a row whose revision resolves is a candidate. A row whose
+    newest version is `withdrawn` is absent. Rows come back in the order their
+    topic was first written, so a correction does not move a topic. The page and
+    the read-back both ask this function which rows are in force.
+    """
+
+    stored = [
+        record
+        for record in narrative_rows(conn)
+        if subject_id is None or record["subject_id"] == subject_id
+    ]
+    if not stored:
+        return []
+    workspace = resolve_workspace(storage)
+    resolvable: set[str] | None = None
+    if workspace_is_bound(workspace):
+        resolvable = {
+            sha for sha in {str(r["ref_sha"]) for r in stored} if revision_resolves(workspace, sha)
+        }
+    grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = {}
+    for record in stored:
+        key = (
+            str(record["subject_type"]),
+            str(record["subject_id"]),
+            str(record["section"]),
+            str(record["topic"]),
+        )
+        grouped.setdefault(key, []).append(record)
+    effective: list[dict[str, Any]] = []
+    for candidates in grouped.values():
+        pool = [c for c in candidates if resolvable is None or str(c["ref_sha"]) in resolvable]
+        if not pool:
+            continue
+        newest = max(pool, key=lambda c: int(c["id"]))
+        if str(newest["disposition"]) in {"recorded", "declined"}:
+            effective.append({**newest, "first_id": min(int(c["id"]) for c in candidates)})
+    return sorted(effective, key=lambda r: int(r["first_id"]))
+
+
+def narrative_page(record: dict[str, Any], names: dict[str, str]) -> str | None:
+    """The page a narrative is printed on, or None when its subject has no page."""
+
+    if str(record["subject_type"]) == "project":
+        return PROJECT_NARRATIVE_PAGES.get(str(record["section"]))
+    sid = str(record["subject_id"])
+    return subsystem_page(sid, names[sid]) if sid in names else None
+
+
+def narrative_heading(record: dict[str, Any]) -> str:
+    """The subheading a narrative is printed under: its topic, else its section's label."""
+
+    topic = str(record["topic"]).strip()
+    if topic:
+        return topic
+    section = str(record["section"])
+    return NARRATIVE_LABELS.get(section, section)
+
+
+def narrative_text(record: dict[str, Any]) -> tuple[str, bool]:
+    """What a page prints for a narrative, and whether that is the body.
+
+    A body or declination reason the orientation lint refuses is replaced by the
+    refusal sentence, as for an explanation; the renderer and the census ask this
+    one function.
+    """
+
+    body = str(record["body"])
+    if orientation_violations(body):
+        return explanation_refusal(NARRATIVE_LABELS.get(str(record["section"]), "narrative").lower() + " narrative"), False
+    return body, True
+
+
+def effective_territory_dispositions(conn: Any) -> list[dict[str, Any]]:
+    """The newest disposition for each territory, in the order the territories were first recorded."""
+
+    if not table_exists(conn, "territory_dispositions"):
+        return []
+    newest: dict[str, dict[str, Any]] = {}
+    first: dict[str, int] = {}
+    for record in rows(conn, "SELECT * FROM territory_dispositions ORDER BY id"):
+        territory = str(record["territory"])
+        newest[territory] = record
+        first.setdefault(territory, int(record["id"]))
+    return [newest[t] for t in sorted(newest, key=lambda t: first[t])]
+
+
+def checklist_concerns(conn: Any) -> list[dict[str, Any]]:
+    """The active concerns that carry a territory or a probe, and the subsystems that dispositioned each."""
+
+    if not table_exists(conn, "concerns"):
+        return []
+    columns = {str(r["name"]) for r in rows(conn, "PRAGMA table_info(concerns)")}
+    if not {"territory", "probe"} <= columns:
+        return []
+    found = rows(
+        conn,
+        "SELECT code, category, territory, probe FROM concerns"
+        " WHERE status = 'active' AND (coalesce(territory, '') <> '' OR coalesce(probe, '') <> '')"
+        " ORDER BY category, territory, code",
+    )
+    where: dict[str, list[str]] = {}
+    for link in rows(
+        conn, "SELECT DISTINCT concern_code, subsystem_id FROM dispositions ORDER BY subsystem_id"
+    ):
+        where.setdefault(str(link["concern_code"]), []).append(str(link["subsystem_id"]))
+    for record in found:
+        record["subsystems"] = where.get(str(record["code"]), [])
+    return found
 
 
 def _flat(text: str) -> str:
@@ -1011,6 +1170,22 @@ def write_contract(output: Path, page_paths: list[str], notice: str = "") -> dic
     return contract
 
 
+def _resolver_names(conn: Any) -> tuple[dict[str, str], dict[str, str], set[str]]:
+    """The names the xref resolver adds beside an ID: `(all subsystems, the ones it names, concern codes)`.
+
+    The kinds the resolver acts on are those the xref index keeps: a later
+    family's ID overrides an earlier one's (`_build_xref_index`).
+    """
+
+    names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
+    later = {str(r["id"]) for r in rows(conn, "SELECT id FROM seams")}
+    later |= {str(r["finding_id"]) for r in rows(conn, "SELECT finding_id FROM findings")}
+    later |= {f"DM-{r['id']}" for r in rows(conn, "SELECT id FROM diagnosticity_sessions")}
+    concerns = {str(r["code"]) for r in rows(conn, "SELECT code FROM concerns")} - later
+    named = {i: n for i, n in names.items() if i not in concerns and i not in later}
+    return names, named, concerns
+
+
 class ProjectionVerifier:
     def __init__(
         self,
@@ -1077,6 +1252,7 @@ class ProjectionVerifier:
             mismatches.extend(self._carried_record_census(conn, projection))
             mismatches.extend(self._coverage_measurement_census(conn, projection))
             mismatches.extend(self._explanation_census(conn, projection))
+            mismatches.extend(self._record_page_census(conn, projection))
         finally:
             conn.close()
         # The Markdown and HTML views must each carry authoritative markers.
@@ -1787,14 +1963,7 @@ class ProjectionVerifier:
         """
 
         mismatches: list[dict[str, str]] = []
-        names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
-        # The kinds the resolver acts on, as the xref index keeps them: a later
-        # family's ID overrides an earlier one's (`_build_xref_index`).
-        later = {str(r["id"]) for r in rows(conn, "SELECT id FROM seams")}
-        later |= {str(r["finding_id"]) for r in rows(conn, "SELECT finding_id FROM findings")}
-        later |= {f"DM-{r['id']}" for r in rows(conn, "SELECT id FROM diagnosticity_sessions")}
-        concerns = {str(r["code"]) for r in rows(conn, "SELECT code FROM concerns")} - later
-        named = {i: n for i, n in names.items() if i not in concerns and i not in later}
+        names, named, concerns = _resolver_names(conn)
         readings = effective_explanations(conn, self.storage)
         for (subject_type, subject_id, slot), reading in sorted(readings.items()):
             if reading.state not in {"recorded", "declined"} or reading.row is None:
@@ -1840,6 +2009,100 @@ class ProjectionVerifier:
                         ),
                     }
                 )
+        return mismatches
+
+    def _record_page_census(
+        self, conn: Any, projection: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """Each narrative, territory disposition and runtime boundary is on its page, in both views.
+
+        The rows in force come from the functions the renderer reads
+        (`effective_narratives`, `effective_territory_dispositions`,
+        `runtime_boundary_rows`), so the page and its check cannot name different
+        rows. A narrative is owed its topic and its body (or the refusal sentence
+        in its place), a territory its name and, when it is ruled out, the
+        condition, a runtime boundary its runtimes, mechanism and notes. The
+        Markdown and HTML views are each checked, and a page's hash is not what is
+        trusted here: a page edited with its receipt rewritten still fails.
+        """
+
+        from .diagrams import imported_runtime_line, runtime_boundary_rows  # noqa: PLC0415
+
+        mismatches: list[dict[str, str]] = []
+        names, named, concerns = _resolver_names(conn)
+
+        def absent(kind: str, identifier: str, page: str, owed: list[str], label: str) -> None:
+            """Report each view of `page` that lacks any of the `owed` text."""
+
+            flat_page = _flat(projection.get(page, ""))
+            html_page = str(Path(page).with_suffix(".html"))
+            html_words = _html_words(projection.get(html_page, ""))
+            for text in owed:
+                if not _resolver_pattern(_flat(text), named, concerns).search(flat_page):
+                    mismatches.append(
+                        {
+                            "axis": "state",
+                            "object_type": kind,
+                            "object_id": identifier,
+                            "detail": f"{label} is not on {page}: {_flat(text)[:80]!r}",
+                        }
+                    )
+                    break
+            for text in owed:
+                lost = _missing_html_line(text, html_words, named, concerns)
+                if lost is not None:
+                    mismatches.append(
+                        {
+                            "axis": "state",
+                            "object_type": f"{kind}-html",
+                            "object_id": identifier,
+                            "detail": f"{label} is not on {html_page}: {lost.strip()[:80]!r}",
+                        }
+                    )
+                    break
+
+        for record in effective_narratives(conn, self.storage):
+            page = narrative_page(record, names)
+            if page is None:
+                continue
+            text, _is_body = narrative_text(record)
+            owed = [text]
+            topic = str(record["topic"]).strip()
+            if topic:
+                owed.insert(0, topic)
+            absent(
+                "narrative",
+                f"{record['subject_id']}:{record['section']}:{topic}",
+                page,
+                owed,
+                f"the {record['disposition']} {record['section']} narrative (row {record['id']})",
+            )
+        for territory in effective_territory_dispositions(conn):
+            owed = [str(territory["territory"])]
+            if str(territory["disposition"]) == "disqualified":
+                owed.append(str(territory["condition"] or ""))
+            absent(
+                "territory",
+                str(territory["territory"]),
+                CHECKLIST_PAGE,
+                owed,
+                f"the {territory['disposition']} territory (row {territory['id']})",
+            )
+        edges = runtime_boundary_rows(conn)
+        label = imported_runtime_line(edges)
+        for edge in edges:
+            owed = [str(edge["from_runtime"]), str(edge["to_runtime"]), str(edge["mechanism"])]
+            if edge["notes"]:
+                owed.append(" ".join(str(edge["notes"]).split()))
+            if str(edge["origin"]) == "imported" and label:
+                owed.append(label)
+            absent(
+                "runtime-boundary",
+                f"{edge['from_runtime']}>{edge['to_runtime']}:{edge['mechanism']}",
+                ARCHITECTURE_PAGE,
+                owed,
+                f"the runtime boundary (row {edge['id']})",
+            )
         return mismatches
 
     def _coverage_measurement_census(
