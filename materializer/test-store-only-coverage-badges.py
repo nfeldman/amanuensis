@@ -21,7 +21,8 @@ Turns red when:
     drawn for a subsystem at `unmapped` or `deferred` (tested where it holds ledger rows and a
     reconciliation is recorded, so only its depth can stop the bar), a state with a zero count is drawn, or the
     account omits a state's count, the denominator, the revision the bar was read at, or the
-    repository's tracked-path count from the latest reconciliation;
+    repository's tracked-path count from the latest reconciliation, or its sentence counts ledger
+    rows whose paths are gone among the tracked paths the ledger holds;
   - the Files page's repository bar differs from the latest `scope_reconciliations` row
     (unledgered, exempt, ledgered) or uses an earlier row;
   - a store with no reconciliation draws a coverage bar, or its page lacks "coverage not
@@ -659,6 +660,34 @@ def main() -> int:
             return None
 
         check("below its minimum, or at a depth that authorizes none, a bar is a sentence", depth_gate)
+
+        def absent_paths_counted() -> str | None:
+            # 10 tracked = (8 ledger rows - 2 for paths gone from the tree) + 4 with no row: the sentence
+            # must say 6 tracked paths are in the ledger, as the repository bar draws, and name the 2 gone.
+            db = sqlite3.connect(":memory:")
+            db.row_factory = sqlite3.Row
+            source = sqlite3.connect(f"file:{store_a / 'memory.db'}?mode=ro", uri=True)
+            try:
+                source.backup(db)
+                db.execute(
+                    "INSERT INTO scope_reconciliations (detected_sha, tree_digest, ledger_digest, tracked_paths, ledger_rows,"
+                    " unledgered, absent, exempt) VALUES ('feedface', 'tree', 'ledger', 10, 8, 4, 2, 0)"
+                )
+                model = diagrams.coverage_bars_model(db)
+            finally:
+                source.close()
+                db.close()
+            text = " ".join(" ".join(model.account).split())
+            repo = {n.record: n.count for n in model.nodes if n.record.startswith("coverage:repository:")}
+            if repo.get("coverage:repository:ledgered") != 6 or repo.get("coverage:repository:unledgered") != 4:
+                return f"the repository bar draws {repo}, not 6 in the ledger and 4 in none"
+            if not re.search(r"\b10 paths\b[^.]*\bholds 6 of them\b", text):
+                return f"the account does not say the ledger holds 6 of the 10 tracked paths: {text[-400:]!r}"
+            if not re.search(r"\b2\b[^.]*no longer", text):
+                return f"the account does not count the 2 ledger rows whose paths are gone: {text[-400:]!r}"
+            return None
+
+        check("the reconciliation sentence counts tracked paths in the ledger as the bar does, apart from absent ones", absent_paths_counted)
 
         def files_page() -> str | None:
             found = figures((out_a / FILES).read_text())
