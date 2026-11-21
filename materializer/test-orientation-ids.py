@@ -11,22 +11,21 @@ finding ID.
 Turns red when:
 
   - the guide has no "How IDs are formed" section between Terms and Status
-    values, in either view, or it lacks Appendix B's sentence or a row per
-    `id_kinds` entry with an example taken from this store, or any row's kind,
-    shape, names, chosen-by or links-to cell differs from the contract in
-    either view;
+    values, or it lacks Appendix B's sentence or a row per `id_kinds` entry
+    with an example taken from this store, or any row's kind, shape, names,
+    chosen-by or links-to cell differs from the contract;
   - the guide's letter sentence is wrong for either store: the one-to-one store
     must read "Here the letter is the layer: Q is Query, S is Storage.", the
     AxiomDB-like store must say the letters do not encode anything (§2.2 item 2);
-  - `B04-R6` or the lowercase ID `auth` in prose is not linked to its record in
-    Markdown, or carries no definition in HTML (§2.2 item 4);
+  - `B04-R6` or the lowercase ID `auth` in prose is not linked to its record,
+    or carries no definition (§2.2 item 4);
   - the first body mention of a subsystem ID on a page lacks its name beside it,
-    in either view, or a second mention on the same page gains one (§2.2 item 3);
+    or a second mention on the same page gains one (§2.2 item 3);
   - an ID in a table row that already holds the name (an adjacent Name column)
     gains it again;
   - a concern code in prose lacks the "concern" prefix in its link text, or the
     review-coverage matrix's column header gains one (§2.2 item 5);
-  - a second publish over the unchanged store changes any Markdown page (the
+  - a second publish over the unchanged store changes any HTML page (the
     resolver re-runs over its own output, so naming must be idempotent);
   - either resolver's pattern is a fixed shape rather than built from the xref
     index's keys (an ID outside the old shape stays plain);
@@ -46,7 +45,7 @@ Turns red when:
     ("Review RC-2 before …", printed "concern RC-2") or an ID followed by its
     name in other words ("R-06 — Rule evaluation stores …") is reported
     missing, or deleting an author-written "(Contract checks)" after C-01 from
-    both views is not reported;
+    the page is not reported;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -281,7 +280,7 @@ def read(path: Path) -> str:
 
 
 def snapshot(docs: Path) -> dict[str, str]:
-    return {str(p.relative_to(docs)): read(p) for p in sorted(docs.rglob("*.md"))}
+    return {str(p.relative_to(docs)): read(p) for p in sorted(docs.rglob("*.html"))}
 
 
 # ---------------------------------------------------------------------------
@@ -291,13 +290,14 @@ def html_text(fragment: str) -> str:
     return " ".join(htmllib.unescape(re.sub(r"<[^>]+>", "", fragment)).split())
 
 
-def md_section(text: str, title: str) -> str | None:
-    match = re.search(rf"^## {re.escape(title)}\n(.*?)(?=^## |\Z)", text, re.M | re.S)
-    return match.group(1) if match else None
+def html_h2(page: str) -> list[str]:
+    return [html_text(m).lstrip("§").strip() for m in re.findall(r"<h2\b[^>]*>(.*?)</h2>", page, re.S)]
 
 
-def md_h2(text: str) -> list[str]:
-    return [line[3:].strip() for line in text.splitlines() if line.startswith("## ")]
+def id_link(sid: str, target: str = '[^"]+') -> str:
+    """A pattern for an ID printed as a link to `target` around its definition markup."""
+
+    return rf'<a href="{target}"><abbr [^>]*>{re.escape(sid)}</abbr></a>'
 
 
 def html_section(page: str, title: str) -> str | None:
@@ -321,8 +321,8 @@ def line_with(text: str, needle: str) -> str | None:
 def published(summary: dict[str, Any], docs: Path) -> str | None:
     if not summary or summary.get("_returncode") != 0 or summary.get("ok") is False:
         return f"the materializer did not publish the fixture — {summary.get('_diagnostic', summary)}"
-    if not (docs / "how-to-read.md").is_file():
-        return "docs/how-to-read.md was not written"
+    if not (docs / "how-to-read.html").is_file():
+        return "docs/how-to-read.html was not written"
     return None
 
 
@@ -338,13 +338,12 @@ def one_cell(value: object) -> str:
 
 
 def guide_checks(name: str, docs: Path, letters: str, wrong: str, kinds: list[dict[str, Any]], examples: dict[str, str]) -> None:
-    md = read(docs / "how-to-read.md")
     page = article(read(docs / "how-to-read.html"))
 
     def placed() -> str | None:
-        found = md_h2(md)
+        found = html_h2(page)
         if IDS_HEADING not in found:
-            return f"no '## {IDS_HEADING}' section; the guide's H2s are {found}"
+            return f"no '{IDS_HEADING}' section; the guide's H2s are {found}"
         at = found.index(IDS_HEADING)
         if at == 0 or found[at - 1] != "Terms" or at + 1 >= len(found) or found[at + 1] != "Status values":
             return f"'{IDS_HEADING}' sits at {found}, not between Terms and Status values"
@@ -352,75 +351,58 @@ def guide_checks(name: str, docs: Path, letters: str, wrong: str, kinds: list[di
             return f"the HTML guide has no '{IDS_HEADING}' section"
         return None
 
-    check(f"{name}: the guide has '{IDS_HEADING}' between Terms and Status values, in both views", placed)
+    check(f"{name}: the guide has '{IDS_HEADING}' between Terms and Status values", placed)
 
     def lead_and_letters() -> str | None:
-        section = md_section(md, IDS_HEADING) or ""
-        flat = " ".join(section.split())
-        if IDS_LEAD not in flat:
-            return "the section lacks Appendix B's sentence"
-        if letters not in flat:
-            return f"the letter sentence is not {letters!r}; the section reads {flat[len(IDS_LEAD):][:200]!r}"
-        if wrong in flat:
-            return f"the section also says {wrong!r}, which is wrong for this store"
         body = html_text(html_section(page, IDS_HEADING) or "")
-        if letters not in body or IDS_LEAD not in body:
-            return "the HTML section lacks the lead or the letter sentence the Markdown has"
+        if IDS_LEAD not in body:
+            return "the section lacks Appendix B's sentence"
+        if letters not in body:
+            return f"the letter sentence is not {letters!r}; the section reads {body[len(IDS_LEAD):][:200]!r}"
         if wrong in body:
-            return f"the HTML section says {wrong!r}"
+            return f"the section also says {wrong!r}, which is wrong for this store"
         return None
 
     check(f"{name}: the guide states what this store's letters mean (§2.2 item 2)", lead_and_letters)
 
     def kinds_table() -> str | None:
-        section = md_section(md, IDS_HEADING) or ""
-        rows = [line for line in section.splitlines() if line.startswith("|")][2:]
         if not kinds:
             return "the contract carries no id_kinds"
-        if len(rows) != len(kinds):
-            return f"the table has {len(rows)} rows for {len(kinds)} id_kinds entries"
-        for row, kind in zip(rows, kinds, strict=True):
-            cells = [c.strip() for c in row.strip().strip("|").split("|")]
-            if cells[0] != kind["kind"]:
-                return f"a row starts {cells[0]!r}, expected {kind['kind']!r} in contract order"
-            if len(cells) != len(KIND_COLUMNS):
-                return f"the {kind['kind']} row has {len(cells)} cells, not {len(KIND_COLUMNS)}"
-            for column, (key, cell) in enumerate(zip(KIND_COLUMNS, cells, strict=True)):
-                if key and cell != one_cell(kind[key]):
-                    return f"the {kind['kind']} row's column {column + 1} is {cell!r}, not its {key} {kind[key]!r}"
-            want = examples.get(str(kind["kind"]))
-            if want and want not in cells[KIND_COLUMNS.index(None)]:
-                return f"the {kind['kind']} row does not give this store's example {want!r}"
         section_html = html_section(page, IDS_HEADING) or ""
         html_rows = [
             [html_text(cell) for cell in re.findall(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", tr, re.S)]
             for tr in re.findall(r"<tr\b[^>]*>(.*?)</tr>", section_html, re.S)
         ][1:]
         if len(html_rows) != len(kinds):
-            return f"the HTML table has {len(html_rows)} rows for {len(kinds)} id_kinds entries"
+            return f"the table has {len(html_rows)} rows for {len(kinds)} id_kinds entries"
         for cells, kind in zip(html_rows, kinds, strict=True):
+            if cells[0] != kind["kind"]:
+                return f"a row starts {cells[0]!r}, expected {kind['kind']!r} in contract order"
             if len(cells) != len(KIND_COLUMNS):
-                return f"the HTML {kind['kind']} row has {len(cells)} cells, not {len(KIND_COLUMNS)}"
+                return f"the {kind['kind']} row has {len(cells)} cells, not {len(KIND_COLUMNS)}"
             for column, (key, cell) in enumerate(zip(KIND_COLUMNS, cells, strict=True)):
                 if key and cell != html_text(one_cell(kind[key]).replace("`", "")):
-                    return f"the HTML {kind['kind']} row's column {column + 1} is {cell!r}, not its {key} {kind[key]!r}"
+                    return f"the {kind['kind']} row's column {column + 1} is {cell!r}, not its {key} {kind[key]!r}"
+            want = examples.get(str(kind["kind"]))
+            if want and want not in cells[KIND_COLUMNS.index(None)]:
+                return f"the {kind['kind']} row does not give this store's example {want!r}"
         return None
 
     check(f"{name}: one row per ID kind, each with an example from this store", kinds_table)
 
 
 def prose_checks(docs: Path) -> None:
-    leads = read(docs / "field-notes.md")
-    lead = line_with(leads, "calls") or ""
     leads_html = article(read(docs / "field-notes.html"))
+    lead_html = next((li for li in re.findall(r"<li\b[^>]*>.*?</li>", leads_html, re.S) if "calls" in html_text(li)), "")
+    lead = html_text(lead_html)
 
     def odd_ids_link() -> str | None:
-        if not lead:
-            return "the lead's line is not on field-notes.md"
-        if "[B04-R6](findings.md#b04-r6)" not in lead:
-            return f"B04-R6 is not linked to findings.md#b04-r6: {lead[:220]!r}"
-        if not re.search(r"\[auth\]\(subsystems/[^)]+\.md\)", lead):
-            return f"the lowercase ID auth is not linked to its subsystem page: {lead[:220]!r}"
+        if not lead_html:
+            return "the lead's line is not on field-notes.html"
+        if not re.search(id_link("B04-R6", r"findings\.html#b04-r6"), lead_html):
+            return f"B04-R6 is not linked to findings.html#b04-r6: {lead_html[:220]!r}"
+        if not re.search(id_link("auth", r"subsystems/[^\"]+\.html"), lead_html):
+            return f"the lowercase ID auth is not linked to its subsystem page: {lead_html[:220]!r}"
         if not re.search(r'<abbr class="identifier-definition" title="B04-R6 — [^"]+"', leads_html):
             return "the HTML gives B04-R6 no definition"
         if not re.search(r'<abbr class="identifier-definition" title="auth — Sign-in"', leads_html):
@@ -430,19 +412,19 @@ def prose_checks(docs: Path) -> None:
     check("B04-R6 and the lowercase auth link and carry a definition (§2.2 item 4)", odd_ids_link)
 
     def first_mention_named() -> str | None:
-        if not re.search(r"\[R-06\]\([^)]+\) \(Rule evaluation\) calls \[C-01\]\([^)]+\) \(Contract checks\) twice", lead):
-            return f"the first R-06 and C-01 on field-notes.md lack their names: {lead[:240]!r}"
-        if re.search(r"\[auth\]\([^)]+\) \(Sign-in\) retries", lead) is None:
-            return f"the first auth on field-notes.md lacks its name: {lead[:240]!r}"
-        entry = read(docs / "entry-point.md")
-        if not re.search(r"Start at \[R-06\]\([^)]+\) \(Rule evaluation\)\.", entry):
-            return f"the first R-06 on entry-point.md lacks its name: {line_with(entry, 'Start at')!r}"
-        visible = html_text(leads_html)
-        if "R-06 (Rule evaluation) calls C-01 (Contract checks) twice" not in visible:
+        named = id_link("R-06") + r" \(Rule evaluation\) calls " + id_link("C-01") + r" \(Contract checks\) twice"
+        if not re.search(named, lead_html):
+            return f"the first R-06 and C-01 on field-notes.html lack their names: {lead_html[:240]!r}"
+        if re.search(id_link("auth") + r" \(Sign-in\) retries", lead_html) is None:
+            return f"the first auth on field-notes.html lacks its name: {lead_html[:240]!r}"
+        entry = article(read(docs / "entry-point.html"))
+        if not re.search(r"Start at " + id_link("R-06") + r" \(Rule evaluation\)\.", entry):
+            return f"the first R-06 on entry-point.html lacks its name: {html_text(entry)!r}"
+        if "R-06 (Rule evaluation) calls C-01 (Contract checks) twice" not in lead:
             return "the HTML lead does not show the names beside the first R-06 and C-01"
-        sub = read(docs / "subsystems" / "r06-rule-evaluation.md")
-        seam_row = line_with(sub, "rule table")
-        if not seam_row or "Contract checks" not in seam_row:
+        sub = read(docs / "subsystems" / "r06-rule-evaluation.html")
+        seam_row = next((tr for tr in re.findall(r"<tr\b.*?</tr>", sub, re.S) if "rule table" in html_text(tr)), None)
+        if not seam_row or "Contract checks" not in html_text(seam_row):
             return f"the first C-01 on R-06's page, in a table with no name column, lacks its name: {seam_row!r}"
         return None
 
@@ -450,39 +432,46 @@ def prose_checks(docs: Path) -> None:
 
     def later_mentions_plain() -> str | None:
         if lead.count("(Rule evaluation)") != 1 or "R-06" not in lead.split("(Rule evaluation)", 1)[1]:
-            return f"the second R-06 on field-notes.md gains its name, or there is no second mention: {lead[:240]!r}"
-        entry = read(docs / "entry-point.md")
+            return f"the second R-06 on field-notes.html gains its name, or there is no second mention: {lead[:240]!r}"
+        entry = html_text(article(read(docs / "entry-point.html")))
         if entry.count("Rule evaluation") != 1:
-            return f"entry-point.md names R-06 {entry.count('Rule evaluation')} times, wanted once"
+            return f"entry-point.html names R-06 {entry.count('Rule evaluation')} times, wanted once"
+        leads = html_text(leads_html)
         if leads.count("Rule evaluation") != 1:
-            return f"field-notes.md prints 'Rule evaluation' {leads.count('Rule evaluation')} times, wanted once"
+            return f"field-notes.html prints 'Rule evaluation' {leads.count('Rule evaluation')} times, wanted once"
         return None
 
     check("a second mention on the same page gains no name", later_mentions_plain)
 
     def tables_with_names() -> str | None:
-        for page, needle in (("master-plan.md", "[R-06]"), ("hot-spots.md", "[R-06]"), ("architecture.md", "| Reasoning |")):
-            row = line_with(read(docs / page), needle)
+        rows = (
+            ("master-plan.html", r'<li class="atlas-item">.*?</li>'),
+            ("master-plan.html", r'<article class="record record-subsystem".*?</article>'),
+            ("hot-spots.html", r"<tr\b.*?</tr>"),
+            ("architecture.html", r'<li class="atlas-item">.*?</li>'),
+        )
+        for page, pattern in rows:
+            row = next((b for b in re.findall(pattern, read(docs / page), re.S) if "r06-rule-evaluation.html" in b), None)
             if row is None:
                 return f"{page} has no row for R-06"
-            if row.count("Rule evaluation") != 1:
-                return f"{page}'s R-06 row prints the name {row.count('Rule evaluation')} times: {row[:200]!r}"
+            if html_text(row).count("Rule evaluation") != 1:
+                return f"{page}'s R-06 row prints the name {html_text(row).count('Rule evaluation')} times: {html_text(row)[:200]!r}"
         return None
 
     check("an ID in a row that already holds its name gains nothing", tables_with_names)
 
     def concern_prefix() -> str | None:
-        if "[concern RC-2](concerns.md#rc-2) may apply" not in lead:
-            return f"RC-2 in prose is not linked as 'concern RC-2': {lead[:240]!r}"
+        if not re.search(r'<a href="concerns\.html#rc-2">concern <abbr [^>]*>RC-2</abbr></a> may apply', lead_html):
+            return f"RC-2 in prose is not linked as 'concern RC-2': {lead_html[:240]!r}"
         if "concern RC-2 may apply" not in html_text(leads_html):
             return "the HTML lead does not read 'concern RC-2'"
-        concerns = read(docs / "concerns.md")
-        header = next((line for line in concerns.splitlines() if line.startswith("| Subsystem |")), None)
+        concerns = read(docs / "concerns.html")
+        header = next((t for t in re.findall(r"<thead\b.*?</thead>", concerns, re.S) if '<th scope="col">Subsystem</th>' in t), None)
         if header is None:
-            return "concerns.md has no review-coverage matrix"
-        if "concern" in header.lower():
-            return f"the review-coverage matrix header gained a prefix: {header!r}"
-        if 'class="coverage-index"' not in read(docs / "concerns.html"):
+            return "concerns.html has no review-coverage matrix"
+        if "concern" in html_text(header).lower():
+            return f"the review-coverage matrix header gained a prefix: {html_text(header)!r}"
+        if 'class="coverage-index"' not in concerns:
             return "concerns.html lost its coverage index"
         return None
 
@@ -499,35 +488,35 @@ def account_checks(storage: Path) -> None:
             return f"the read-back reports faithfully published accounts missing: {missing}"
         if summary.get("_returncode") != 0 or summary.get("ok") is False:
             return f"the accounts fixture did not publish — {summary.get('_diagnostic', summary.get('mismatches'))}"
-        architecture = read(docs / "architecture.md")
-        if "[concern RC-2](concerns.md#rc-2) before updating the cache" not in architecture:
+        architecture = article(read(docs / "architecture.html"))
+        if not re.search(r'<a href="concerns\.html#rc-2">concern <abbr [^>]*>RC-2</abbr></a> before updating the cache', architecture):
             return "the project account's RC-2 is not printed as 'concern RC-2', so the case is not exercised"
         return None
 
     check("accounts: the read-back finds accounts the resolver prefixed or left unnamed", faithful_accounts_read_back)
 
     def authored_name_owed() -> str | None:
-        pages = [p for stem in ("c01-*.md", "c01-*.html") for p in sorted((docs / "subsystems").glob(stem))]
-        if len(pages) != 2:
-            return f"C-01's two views are not published: {[p.name for p in pages]}"
+        pages = sorted((docs / "subsystems").glob("c01-*.html"))
+        if len(pages) != 1:
+            return f"C-01's page is not published: {[p.name for p in pages]}"
         originals = {p: read(p) for p in pages}
         for p, text in originals.items():
             if AUTHORED_NAME not in text and "(Contract checks)" not in text:
                 return f"{p.name} does not carry the authored name to delete"
         try:
             for p, text in originals.items():
-                p.write_text(text.replace(AUTHORED_NAME, "", 1) if p.suffix == ".md" else text.replace(" (Contract checks).", ".", 1))
+                p.write_text(text.replace(" (Contract checks).", ".", 1))
             red = publish(storage, "--readback-only", "--output", str(docs))
         finally:
             for p, text in originals.items():
                 p.write_text(text)
         hits = explanation_mismatches(red)
-        for kind in ("explanation C-01:account", "explanation-html C-01:account"):
+        for kind in ("explanation-html C-01:account",):
             if kind not in hits:
-                return f"deleting the author's '(Contract checks)' from both views is not reported as {kind!r}: {hits}"
+                return f"deleting the author's '(Contract checks)' from the page is not reported as {kind!r}: {hits}"
         return None
 
-    check("accounts: an author-written name deleted from both views is reported missing", authored_name_owed)
+    check("accounts: an author-written name deleted from the page is reported missing", authored_name_owed)
 
 
 def resolver_reads_visible_text() -> str | None:
@@ -650,7 +639,7 @@ def main() -> int:
                         return f"a second publish changed {changed[:4]}"
                     return None
 
-                check("mixed: a second publish over the unchanged store changes no Markdown page", idempotent)
+                check("mixed: a second publish over the unchanged store changes no page", idempotent)
 
         accounts = Path(tmp) / "accounts"
         accounts.mkdir()

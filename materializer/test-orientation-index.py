@@ -5,17 +5,17 @@
 Turns red when:
 
   - `PagePlan` or `SitePage` carries no `use_when` field;
-  - a static page's Markdown does not open, directly under its H1, with an
-    italic paragraph holding its hint and then "Use it when <Appendix D text>";
-    in particular when a prose source opens with an H2 rather than an H1, or
-    when the overview's or the reader's guide's hint is still
-    empty or is not the Appendix D sentence, or a kept hint was replaced;
-  - a page's HTML head prints a different hint or `use_when` than its Markdown
-    prints, prints no `use_when` at all, or prints the Markdown's italic
-    paragraph a second time inside the article body, including when the xref pass
-    has bolded or linked an ID inside it (a subsystem named after its own ID);
+  - a static page's HTML head does not open, directly under its H1, with a hint
+    paragraph and then a `use_when` paragraph holding "Use it when <Appendix D
+    text>"; in particular when a prose source opens with an H2 rather than an
+    H1, or when the overview's or the reader's guide's hint is still empty or
+    is not the Appendix D sentence, or a kept hint was replaced;
+  - a page's HTML head prints no `use_when` at all, carries markup inside its
+    hint or `use_when`, or prints the same hint paragraph a second time inside
+    the article body, including when the xref pass has bolded or linked an ID
+    inside it (a subsystem named after its own ID);
   - the xref pass links or names an ID inside a static page's generated head
-    paragraph (the lowercase subsystem `code` in "the part of the code that
+    paragraphs (the lowercase subsystem `code` in "the part of the code that
     does something");
   - the reader's guide has no "Pages on this site" section, still has "What to
     look at first", or its tables are not headed Page / What it shows /
@@ -28,10 +28,10 @@ Turns red when:
     row per subgroup ("Subsystem pages", "Evidence tables"), or those rows do
     not route to a page that lists every page of the subgroup;
   - a subsystem page or an evidence matrix page prints no `use_when`;
-  - the HTML index differs from the Markdown index: its lens groups, the lens
-    meaning under each heading, its column headers, or any row's page label,
-    link, "What it shows" or "Use it when" (so an HTML index whose tables are
-    dropped is red even while the Markdown is whole);
+  - the HTML index's lens groups, the lens meaning under each heading, its
+    column headers, or any row's page label, link, "What it shows" or "Use it
+    when" differ from the planned pages (so an index whose tables are dropped
+    is red);
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -122,34 +122,34 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # path -> (label, group, use_when). The hint is checked separately where the
 # plan says it is new; "kept" hints are checked as non-empty and as a sentence.
 STATIC_PAGES: dict[str, tuple[str, str, str]] = {
-    "index.md": ("Overview", "Overview", "you arrive, or want the current counts."),
-    "architecture.md": ("Architecture", "Codebase", "you want the overall shape before reading any one part."),
-    "master-plan.md": ("Subsystems", "Codebase", "you are looking for the part of the code that does something."),
-    "files.md": ("Files", "Codebase", "you want to know whether a particular file was read."),
-    "not-yet-surveyed.md": ("Not yet surveyed", "Codebase", "you want to know what the survey has not covered."),
-    "seams.md": ("System boundaries", "Codebase", "you are changing something two subsystems share."),
-    "vocabulary.md": ("Codebase glossary", "Codebase", "a project-specific name is unfamiliar."),
-    "findings.md": ("Open findings", "Unresolved", "you want the defects still open."),
-    "disagreements.md": ("Disagreements", "Unresolved", "you want to know where the record contradicts itself."),
-    "open-questions.md": ("Decisions needed", "Unresolved", "you want to know what the agent needs from you."),
-    "field-notes.md": ("Leads", "Unresolved", "you want things noticed but not yet confirmed."),
-    "stale.md": ("Stale knowledge", "Unresolved", "you want to know what may be out of date since the code changed."),
-    "hot-spots.md": ("Hot spots", "Unresolved", "you want to know where open work concentrates."),
-    "resolved-findings.md": ("Resolved findings", "History", "you want to know what was fixed or ruled out, and on what basis."),
-    "resolution-history.md": ("Resolution history", "History", "you want to know how a record reached its state."),
-    "resolved-leads.md": ("Resolved leads and questions", "History", "you want to know how a question was answered."),
-    "sessions.md": ("Sessions and publications", "History", "you want to know when the survey ran."),
-    "contradictions.md": ("Conflicting evidence", "History", "you want to see how a disagreement was settled."),
-    "how-to-read.md": ("Reader's guide", "Method", "a word, an ID or a page is unfamiliar."),
-    "concerns.md": ("Review coverage", "Method", "you want to know which defect kinds were checked where."),
-    "concern-checklist.md": ("Review checklist", "Method", "you want the list of defect kinds and where it came from."),
-    "diagnosticity.md": ("Competing explanations", "Method", "you want to see how a symptom's cause was weighed."),
-    "onboarding-report.md": ("Onboarding record", "Method", "you want the first pass's decisions about scope and split."),
-    "entry-point.md": ("Where to begin", "Method", "you want the reading path an earlier session wrote."),
+    "index.html": ("Overview", "Overview", "you arrive, or want the current counts."),
+    "architecture.html": ("Architecture", "Codebase", "you want the overall shape before reading any one part."),
+    "master-plan.html": ("Subsystems", "Codebase", "you are looking for the part of the code that does something."),
+    "files.html": ("Files", "Codebase", "you want to know whether a particular file was read."),
+    "not-yet-surveyed.html": ("Not yet surveyed", "Codebase", "you want to know what the survey has not covered."),
+    "seams.html": ("System boundaries", "Codebase", "you are changing something two subsystems share."),
+    "vocabulary.html": ("Codebase glossary", "Codebase", "a project-specific name is unfamiliar."),
+    "findings.html": ("Open findings", "Unresolved", "you want the defects still open."),
+    "disagreements.html": ("Disagreements", "Unresolved", "you want to know where the record contradicts itself."),
+    "open-questions.html": ("Decisions needed", "Unresolved", "you want to know what the agent needs from you."),
+    "field-notes.html": ("Leads", "Unresolved", "you want things noticed but not yet confirmed."),
+    "stale.html": ("Stale knowledge", "Unresolved", "you want to know what may be out of date since the code changed."),
+    "hot-spots.html": ("Hot spots", "Unresolved", "you want to know where open work concentrates."),
+    "resolved-findings.html": ("Resolved findings", "History", "you want to know what was fixed or ruled out, and on what basis."),
+    "resolution-history.html": ("Resolution history", "History", "you want to know how a record reached its state."),
+    "resolved-leads.html": ("Resolved leads and questions", "History", "you want to know how a question was answered."),
+    "sessions.html": ("Sessions and publications", "History", "you want to know when the survey ran."),
+    "contradictions.html": ("Conflicting evidence", "History", "you want to see how a disagreement was settled."),
+    "how-to-read.html": ("Reader's guide", "Method", "a word, an ID or a page is unfamiliar."),
+    "concerns.html": ("Review coverage", "Method", "you want to know which defect kinds were checked where."),
+    "concern-checklist.html": ("Review checklist", "Method", "you want the list of defect kinds and where it came from."),
+    "diagnosticity.html": ("Competing explanations", "Method", "you want to see how a symptom's cause was weighed."),
+    "onboarding-report.html": ("Onboarding record", "Method", "you want the first pass's decisions about scope and split."),
+    "entry-point.html": ("Where to begin", "Method", "you want the reading path an earlier session wrote."),
 }
 NEW_HINTS: dict[str, str] = {
-    "index.md": "What the codebase is, and where the survey stands.",
-    "how-to-read.md": "What each page is for, the terms the site uses, and how a survey works.",
+    "index.html": "What the codebase is, and where the survey stands.",
+    "how-to-read.html": "What each page is for, the terms the site uses, and how a survey works.",
 }
 SUBSYSTEM_ROW = ("Subsystem pages", "you have picked a subsystem.")
 MATRIX_ROW = ("Evidence tables", "you followed a DM- link.")
@@ -243,99 +243,23 @@ def read(path: Path) -> str | None:
 # ---------------------------------------------------------------------------
 # Readers
 # ---------------------------------------------------------------------------
-def md_head(text: str) -> tuple[str, str] | None:
-    """(H1, the first paragraph under it) of a Markdown page, or None."""
+def head_of(text: str) -> tuple[str, str, str] | None:
+    """(H1, hint, use_when) of an HTML page, with the markup inside the paragraphs
+    kept, or None unless the page head holds an H1 directly followed by both."""
 
-    lines = text.splitlines()
-    index = next((i for i, line in enumerate(lines) if line.strip()), None)
-    if index is None or not lines[index].startswith("# "):
-        return None
-    rest = list(lines[index + 1 :])
-    start = next((i for i, line in enumerate(rest) if line.strip()), None)
-    if start is None:
-        return lines[index][2:].strip(), ""
-    end = start
-    while end < len(rest) and rest[end].strip():
-        end += 1
-    return lines[index][2:].strip(), " ".join(line.strip() for line in rest[start:end])
-
-
-def split_head(paragraph: str) -> tuple[str, str] | None:
-    """(hint, use_when sentence) from `*<hint> Use it when <x>*`, or None."""
-
-    if not (paragraph.startswith("*") and paragraph.endswith("*") and not paragraph.startswith("**")):
-        return None
-    inner = paragraph[1:-1].strip()
-    marker = "Use it when "
-    cut = inner.rfind(marker)
-    if cut < 0:
-        return None
-    return inner[:cut].strip(), inner[cut:].strip()
-
-
-def html_head(text: str) -> tuple[str, str]:
-    hint = re.search(r'<p class="page-hint">(.*?)</p>', text, re.S)
-    use = re.search(r'<p class="page-use-when">(.*?)</p>', text, re.S)
-    return (
-        htmllib.unescape(hint.group(1)).strip() if hint else "",
-        htmllib.unescape(use.group(1)).strip() if use else "",
+    match = re.search(
+        r'<h1\b[^>]*>(.*?)</h1>\s*<p class="page-hint">(.*?)</p>\s*<p class="page-use-when">(.*?)</p>',
+        text,
+        re.S,
     )
+    if not match:
+        return None
+    return html_text(match.group(1)), match.group(2), match.group(3)
 
 
 def article_of(text: str) -> str:
     match = re.search(r"<article\b.*?</article>", text, re.S)
     return match.group(0) if match else ""
-
-
-def section_lines(text: str, heading: str) -> list[str]:
-    out: list[str] = []
-    inside = False
-    for line in text.splitlines():
-        if line.startswith("## "):
-            if inside:
-                break
-            inside = line[3:].strip() == heading
-            continue
-        if inside:
-            out.append(line)
-    return out
-
-
-def groups_of(lines: list[str]) -> list[tuple[str, list[str]]]:
-    out: list[tuple[str, list[str]]] = []
-    for line in lines:
-        if line.startswith("### "):
-            out.append((line[4:].strip(), []))
-        elif out:
-            out[-1][1].append(line)
-    return out
-
-
-def table_rows(lines: list[str]) -> tuple[list[str], list[list[str]]]:
-    header: list[str] = []
-    rows: list[list[str]] = []
-    for line in lines:
-        stripped = line.strip()
-        if not stripped.startswith("|"):
-            continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-        if all(cell and set(cell) <= {"-", ":", " "} for cell in cells):
-            continue
-        if not header:
-            header = cells
-        else:
-            rows.append(cells)
-    return header, rows
-
-
-LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-
-
-def md_visible(text: str) -> str:
-    """What a reader sees of inline Markdown: link text, without bold or code marks."""
-
-    text = LINK.sub(r"\1", text)
-    return re.sub(r"\*\*(.+?)\*\*|`([^`]*)`", lambda m: m.group(1) or m.group(2) or "", text)
 
 
 def html_text(fragment: str) -> str:
@@ -423,13 +347,13 @@ def main() -> int:
         def published() -> str | None:
             if not summary or summary.get("_returncode") not in (0,) or summary.get("ok") is False:
                 return f"the materializer did not publish the fixture — {summary.get('_diagnostic', summary)}"
-            if not (docs / "how-to-read.md").is_file():
-                return "docs/how-to-read.md was not written"
+            if not (docs / "how-to-read.html").is_file():
+                return "docs/how-to-read.html was not written"
             return None
 
         check("the fixture publishes", published)
 
-        # -- every static page opens with hint + "Use it when" in Markdown ---
+        # -- every static page opens with hint + "Use it when" in its head ---
         parsed: dict[str, tuple[str, str]] = {}
 
         def static_pages_open_with_the_head() -> str | None:
@@ -437,15 +361,14 @@ def main() -> int:
                 text = read(docs / path)
                 if text is None:
                     return f"{path} ({label}) is not published"
-                head = md_head(text)
+                head = head_of(text)
                 if head is None:
-                    return f"{path} does not open with an H1"
-                if "](" in head[1] or re.search(r"\(Code gen\)", head[1]):
-                    return f"{path}: the generated head paragraph was linked or named by the xref pass ({head[1][:120]!r})"
-                split = split_head(head[1])
-                if split is None:
-                    return f"{path}: the paragraph under the H1 is not an italic hint plus 'Use it when' ({head[1][:80]!r})"
-                hint, use = split
+                    return f"{path} does not open with an H1 directly followed by a hint and a use_when"
+                if re.search(r"<a\b|<abbr\b|<strong\b", head[1] + head[2]) or re.search(r"\(Code gen\)", head[1] + head[2]):
+                    return f"{path}: the generated head paragraphs were linked or named by the xref pass ({head[1][:60]!r}, {head[2][:60]!r})"
+                hint, use = htmllib.unescape(head[1]).strip(), htmllib.unescape(head[2]).strip()
+                if not use.startswith("Use it when "):
+                    return f"{path}: the paragraph under the hint is not 'Use it when' ({use[:80]!r})"
                 if not hint:
                     return f"{path} ({label}) has an empty hint"
                 if use != f"Use it when {fragment}":
@@ -455,71 +378,67 @@ def main() -> int:
                 parsed[path] = (hint, use)
             return None
 
-        check("every static page's Markdown opens with its hint and Appendix D's 'Use it when'", static_pages_open_with_the_head)
+        check("every static page's HTML opens with its hint and Appendix D's 'Use it when'", static_pages_open_with_the_head)
 
         def dynamic_pages_carry_use_when() -> str | None:
-            subsystem_pages = sorted((docs / "subsystems").glob("*.md")) if (docs / "subsystems").is_dir() else []
-            matrix_pages = sorted((docs / "diagnosticity").glob("*.md")) if (docs / "diagnosticity").is_dir() else []
+            subsystem_pages = sorted((docs / "subsystems").glob("*.html")) if (docs / "subsystems").is_dir() else []
+            matrix_pages = sorted((docs / "diagnosticity").glob("*.html")) if (docs / "diagnosticity").is_dir() else []
             if len(subsystem_pages) != len(SUBSYSTEMS) or len(matrix_pages) != 1:
                 return f"fixture published {len(subsystem_pages)} subsystem pages and {len(matrix_pages)} matrix pages"
             for pages, (_label, fragment) in ((subsystem_pages, SUBSYSTEM_ROW), (matrix_pages, MATRIX_ROW)):
                 for page in pages:
-                    head = md_head(page.read_text())
-                    split = split_head(head[1]) if head else None
-                    if split is None or not split[0]:
-                        return f"{page.name} has no italic hint under its H1"
-                    if split[1] != f"Use it when {fragment}":
-                        return f"{page.name}: use_when reads {split[1]!r}, not 'Use it when {fragment}'"
+                    head = head_of(page.read_text())
+                    if head is None or not htmllib.unescape(head[1]).strip():
+                        return f"{page.name} has no hint under its H1"
+                    use = htmllib.unescape(head[2]).strip()
+                    if use != f"Use it when {fragment}":
+                        return f"{page.name}: use_when reads {use!r}, not 'Use it when {fragment}'"
             return None
 
         check("subsystem and matrix pages carry the subgroup's use_when once", dynamic_pages_carry_use_when)
 
-        # -- HTML says what Markdown says ----------------------------------
-        def html_agrees() -> str | None:
+        # -- the head is printed once, as plain text -------------------------
+        def head_printed_once() -> str | None:
             for path in list(STATIC_PAGES) + ["subsystems/*", "diagnosticity/*"]:
                 if "*" in path:
                     directory, _ = path.split("/")
-                    targets = sorted((docs / directory).glob("*.md")) if (docs / directory).is_dir() else []
+                    targets = sorted((docs / directory).glob("*.html")) if (docs / directory).is_dir() else []
                 else:
                     targets = [docs / path]
                 for target in targets:
                     rel = target.relative_to(docs)
-                    md = md_head(target.read_text()) if target.is_file() else None
-                    split = split_head(md[1]) if md else None
-                    if split is None:
-                        return f"{rel}: Markdown carries no hint and use_when to compare"
-                    page_html = read(target.with_suffix(".html"))
+                    page_html = read(target)
                     if page_html is None:
-                        return f"{rel.with_suffix('.html')} is not published"
-                    hint, use = html_head(page_html)
-                    md_hint, md_use = (md_visible(part) for part in split)
-                    if hint != md_hint:
-                        return f"{rel}: HTML hint {hint!r} differs from Markdown hint {md_hint!r}"
-                    if use != md_use:
-                        return f"{rel}: HTML use_when {use!r} differs from Markdown {md_use!r}"
+                        return f"{rel} is not published"
+                    head = head_of(page_html)
+                    if head is None:
+                        return f"{rel}: the HTML head carries no hint and use_when"
+                    if re.search(r"<[a-z]", head[1] + head[2]):
+                        return f"{rel}: the hint or use_when carries markup {head[1] + head[2]!r}"
+                    hint, use = htmllib.unescape(head[1]).strip(), htmllib.unescape(head[2]).strip()
                     body = article_of(page_html)
-                    if f"{md_hint} {md_use}" in htmllib.unescape(re.sub(r"<[^>]+>", "", body)):
-                        return f"{rel}: the italic hint paragraph is printed again inside the article body"
+                    if f"{hint} {use}" in htmllib.unescape(re.sub(r"<[^>]+>", "", body)):
+                        return f"{rel}: the hint paragraph is printed again inside the article body"
             return None
 
-        check("HTML prints the same hint and use_when as Markdown, once", html_agrees)
+        check("HTML prints the hint and use_when in the head, as plain text, once", head_printed_once)
 
         # -- the index ------------------------------------------------------
-        guide = read(docs / "how-to-read.md") or ""
-        index_lines = section_lines(guide, INDEX_HEADING)
+        guide = read(docs / "how-to-read.html") or ""
+        index_section = html_section(guide, INDEX_HEADING)
+        index_groups = html_index_groups(index_section) if index_section is not None else []
 
         def index_is_renamed() -> str | None:
-            if not index_lines:
+            if index_section is None:
                 return f"the reader's guide has no '{INDEX_HEADING}' section"
-            if "What to look at first" in guide:
+            if "What to look at first" in html_text(guide):
                 return "the guide still carries 'What to look at first'"
             return None
 
         check("the index is 'Pages on this site'", index_is_renamed)
 
         def index_is_grouped_by_lens() -> str | None:
-            grouped = groups_of(index_lines)
-            names = [name for name, _ in grouped]
+            names = [name for name, _p, _t in index_groups]
             if names != list(GROUP_ORDER):
                 return f"index groups are {names!r}, not {list(GROUP_ORDER)!r}"
             vocabulary = modules.get("vocabulary")
@@ -529,40 +448,32 @@ def main() -> int:
                 entry["value"]: entry["meaning"]
                 for entry in vocabulary.VOCABULARY["lens"]["values"]
             }
-            for name, body in grouped:
-                header, rows = table_rows(body)
+            for name, prose, tables in index_groups:
+                if len(tables) != 1:
+                    return f"{name}: the group has {len(tables)} index tables, not one"
+                header, rows = tables[0]
                 if header != INDEX_COLUMNS:
                     return f"{name}: table is headed {header!r}, not {INDEX_COLUMNS!r}"
                 if not rows:
                     return f"{name}: the table has no rows"
                 if name in LENS_OF_GROUP:
                     meaning = meanings[LENS_OF_GROUP[name]]
-                    prose = " ".join(line.strip() for line in body if line.strip() and not line.strip().startswith("|"))
+                    # `prose` is what sits between the heading and the table.
                     if meaning not in prose:
-                        return f"{name}: the heading is not followed by the lens's meaning {meaning!r}"
-                    first_table_line = next((i for i, line in enumerate(body) if line.strip().startswith("|")), len(body))
-                    meaning_line = next((i for i, line in enumerate(body) if meaning in line), len(body))
-                    if meaning_line > first_table_line:
-                        return f"{name}: the lens meaning comes after the table, not under the heading"
+                        return f"{name}: the heading is not followed by the lens's meaning {meaning!r} before the table"
             return None
 
         check("the index is grouped by lens, each lens with its meaning, three columns", index_is_grouped_by_lens)
 
         def index_rows_match_appendix() -> str | None:
             seen: dict[str, tuple[str, str, str]] = {}
-            all_rows: list[tuple[str, list[str]]] = []
-            for name, body in groups_of(index_lines):
-                for cells in table_rows(body)[1]:
-                    all_rows.append((name, cells))
-            for group, cells in all_rows:
-                if len(cells) != 3:
-                    return f"a row in {group} has {len(cells)} cells: {cells!r}"
-                match = LINK.search(cells[0])
-                if not match:
-                    return f"a row in {group} does not link its page: {cells[0]!r}"
-                if match.group(1) in (SUBGROUP_LABELS):
+            all_rows = [(name, row) for name, _p, tables in index_groups for _h, rows in tables for row in rows]
+            for group, (label, href, shows, use) in all_rows:
+                if not href:
+                    return f"a row in {group} does not link its page or lacks three cells: {label!r}"
+                if label in SUBGROUP_LABELS:
                     continue  # a subgroup row routes to a page that has a row of its own
-                seen[match.group(2)] = (group, cells[1], cells[2])
+                seen[href] = (group, shows, use)
             for path, (label, group, fragment) in STATIC_PAGES.items():
                 if path not in seen:
                     return f"{path} ({label}) is planned and has no row in the index"
@@ -581,7 +492,7 @@ def main() -> int:
         check("every planned top-level page has one row, with its hint and Appendix D's use_when", index_rows_match_appendix)
 
         def one_row_per_subgroup() -> str | None:
-            rows = [cells for _g, body in groups_of(index_lines) for cells in table_rows(body)[1]]
+            rows = [row for _g, _p, tables in index_groups for _h, table in tables for row in table]
             total_static = len(STATIC_PAGES)
             if len(rows) != total_static + 2:
                 return f"{len(rows)} rows; expected {total_static} pages plus one row each for subsystems and matrices"
@@ -595,8 +506,8 @@ def main() -> int:
                 hits = [cells for cells in rows if label in cells[0]]
                 if len(hits) != 1:
                     return f"{len(hits)} rows are named {label!r}, not exactly one"
-                if hits[0][2] != fragment:
-                    return f"{label!r}: 'Use it when' reads {hits[0][2]!r}, not {fragment!r}"
+                if hits[0][3] != fragment:
+                    return f"{label!r}: 'Use it when' reads {hits[0][3]!r}, not {fragment!r}"
             return None
 
         check("one row per subgroup, not one per subsystem or matrix", one_row_per_subgroup)
@@ -604,65 +515,51 @@ def main() -> int:
         def subgroup_rows_route_to_a_listing() -> str | None:
             targets = {SUBSYSTEM_ROW[0]: "subsystems/", MATRIX_ROW[0]: "diagnosticity/"}
             found: set[str] = set()
-            for _g, body in groups_of(index_lines):
-                for cells in table_rows(body)[1]:
-                    for label, directory in targets.items():
-                        if label in cells[0]:
-                            match = LINK.search(cells[0])
-                            if not match:
-                                return f"{label!r} row has no link"
-                            found.add(label)
-                            listing = read(docs / match.group(2)) or ""
-                            members = sorted((docs / directory).glob("*.md"))
-                            for member in members:
-                                if f"({directory}{member.name})" not in listing and f"({directory}{member.name}#" not in listing:
-                                    return f"{label!r} routes to {match.group(2)}, which does not list {directory}{member.name}"
+            for _g, _p, tables in index_groups:
+                for _h, rows in tables:
+                    for label_text, href, _shows, _use in rows:
+                        for label, directory in targets.items():
+                            if label in label_text:
+                                if not href:
+                                    return f"{label!r} row has no link"
+                                found.add(label)
+                                listing = read(docs / href) or ""
+                                members = sorted((docs / directory).glob("*.html"))
+                                for member in members:
+                                    if (
+                                        f'href="{directory}{member.name}"' not in listing
+                                        and f'href="{directory}{member.name}#' not in listing
+                                    ):
+                                        return f"{label!r} routes to {href}, which does not list {directory}{member.name}"
             if found != set(targets):
                 return f"the index has no row for {sorted(set(targets) - found)!r}"
             return None
 
         check("each subgroup row routes to a page that lists every member", subgroup_rows_route_to_a_listing)
 
-        # -- the HTML index carries what the Markdown index carries ----------
+        # -- the HTML index carries the planned pages ------------------------
         def html_index_agrees() -> str | None:
-            page_html = read(docs / "how-to-read.html")
-            if page_html is None:
-                return "how-to-read.html is not published"
-            section = html_section(page_html, INDEX_HEADING)
-            if section is None:
+            if index_section is None:
                 return f"how-to-read.html has no '{INDEX_HEADING}' section"
-            md_groups = groups_of(index_lines)
-            html_groups = html_index_groups(section)
-            if [name for name, _p, _t in html_groups] != [name for name, _ in md_groups]:
-                return (
-                    f"HTML index groups are {[name for name, _p, _t in html_groups]!r}, "
-                    f"Markdown's are {[name for name, _ in md_groups]!r}"
-                )
-            for (name, prose, tables), (_name, body) in zip(html_groups, md_groups, strict=True):
-                if len(tables) != 1:
-                    return f"{name}: the HTML group has {len(tables)} index tables, not one"
-                header, rows = tables[0]
+            subgroup_hrefs = {SUBSYSTEM_ROW[0]: "master-plan.html", MATRIX_ROW[0]: "diagnosticity.html"}
+            for name, _prose, tables in index_groups:
+                header, rows = tables[0] if tables else ([], [])
                 if header != INDEX_COLUMNS:
                     return f"{name}: HTML table is headed {header!r}, not {INDEX_COLUMNS!r}"
-                if name in LENS_OF_GROUP:
-                    md_prose = " ".join(
-                        line.strip() for line in body if line.strip() and not line.strip().startswith("|")
-                    )
-                    if not prose or prose not in md_prose:
-                        return f"{name}: the HTML lens meaning {prose!r} is not the Markdown's"
-                expected = []
-                for cells in table_rows(body)[1]:
-                    match = LINK.search(cells[0])
-                    if not match or len(cells) != 3:
-                        return f"{name}: a Markdown row cannot be compared: {cells!r}"
-                    expected.append(
-                        (match.group(1), re.sub(r"\.md(#|$)", r".html\1", match.group(2)), cells[1], cells[2])
-                    )
-                if rows != expected:
-                    return f"{name}: HTML rows {rows!r} differ from Markdown rows {expected!r}"
+                expected = [
+                    (label, path, parsed.get(path, ("", ""))[0], fragment)
+                    for path, (label, group, fragment) in STATIC_PAGES.items()
+                    if group == name
+                ]
+                static_rows = [row for row in rows if row[0] not in SUBGROUP_LABELS]
+                if static_rows != expected:
+                    return f"{name}: HTML rows {static_rows!r} differ from the planned pages {expected!r}"
+                for row in rows:
+                    if row[0] in SUBGROUP_LABELS and row[1] != subgroup_hrefs[row[0]]:
+                        return f"{name}: the {row[0]!r} row links {row[1]!r}, not {subgroup_hrefs[row[0]]!r}"
             return None
 
-        check("the HTML index has the Markdown index's groups, lens meanings, columns and rows", html_index_agrees)
+        check("the HTML index has the planned groups, columns and rows", html_index_agrees)
         check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
 
     def runs_in_ci() -> str | None:
