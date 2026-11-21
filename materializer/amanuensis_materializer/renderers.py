@@ -64,6 +64,7 @@ from .readback import (
     git_paths,
     ledger_stale_anchor,
     ledger_stale_marker,
+    project_purpose_text,
     reconciliation_standing,
     resolve_workspace,
     revision_resolves,
@@ -384,6 +385,8 @@ class Thesis:
     violations: tuple[str, ...] = ()
     #: `absent`, `refused` or `filled`: the state the census reads (§2.5).
     state: str = "filled"
+    #: Where the text came from, for the publish warning.
+    source: str = THESIS_SOURCE
 
 
 def _thesis_body(prose: str) -> str:
@@ -442,10 +445,49 @@ def read_thesis(storage: Path) -> Thesis:
     return Thesis(body, recorded=True)
 
 
-def thesis_state(storage: Path) -> str:
+PROJECT_PURPOSE_DECLINED = (
+    f"No thesis is recorded: a survey session {_DECLINED} to write one at"
+    " `{sha}`. {reason}"
+)
+
+
+def project_thesis(conn: sqlite3.Connection, storage: Path) -> Thesis:
+    """The overview's thesis: the effective project purpose, else `entry-point.md`.
+
+    Store-only PLAN §3.3 sources the thesis from the effective project-purpose
+    explanation, recorded or imported, and §2.2 requires a purpose recorded at
+    onboarding to render. What the slot holds for a stored purpose is decided by
+    `project_purpose_text`, the function the read-back's census owes it by, so
+    the page and the census cannot disagree (F1/codex, slice-S1). A store with
+    no effective purpose keeps today's reading of `entry-point.md` until SO8.
+    """
+
+    for (subject_type, _sid, slot), reading in effective_explanations(conn, storage).items():
+        if subject_type != "project" or slot != "purpose":
+            continue
+        owed = project_purpose_text(reading)
+        if owed is None or reading.row is None:
+            break
+        text, violations = owed
+        source = f"the project purpose (explanation row {reading.row['id']})"
+        if reading.state == "declined":
+            text = PROJECT_PURPOSE_DECLINED.format(
+                sha=str(reading.row["ref_sha"])[:8], reason=text.strip()
+            )
+        return Thesis(
+            text,
+            recorded=True,
+            violations=violations,
+            state="refused" if violations else "filled",
+            source=source,
+        )
+    return read_thesis(storage)
+
+
+def thesis_state(conn: sqlite3.Connection, storage: Path) -> str:
     """The thesis slot's state for the project: the overview prints by it too."""
 
-    return read_thesis(storage).state
+    return project_thesis(conn, storage).state
 
 
 #: What a page is titled when nothing in the record names the project. A
@@ -1019,10 +1061,10 @@ def render_index(
     """
 
     name = project_name(storage)
-    thesis = read_thesis(storage)
+    thesis = project_thesis(conn, storage)
     if thesis.violations and warn is not None:
         warn(
-            f"{THESIS_SOURCE}: the recorded thesis was not published because it "
+            f"{thesis.source}: the recorded thesis was not published because it "
             + "; ".join(thesis.violations)
         )
 
@@ -1099,7 +1141,8 @@ def render_index(
         "",
         OVERVIEW_IDENTITY.format(name=name, guide=GUIDE_TITLE),
         "",
-        # 2. Thesis — by heading, from entry-point.md, or the named instruction.
+        # 2. Thesis — the project purpose, else by heading from entry-point.md,
+        #    or the named instruction.
         "## What is this codebase?",
         "",
         thesis.text,
@@ -2908,7 +2951,7 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
     """
 
     census: list[dict[str, str]] = []
-    state = thesis_state(storage)
+    state = thesis_state(conn, storage)
     if state == "absent":
         census.append(
             {

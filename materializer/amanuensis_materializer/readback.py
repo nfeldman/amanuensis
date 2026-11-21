@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from .db import open_ro, row, rows, table_exists
-from .lint import explanation_refusal, orientation_violations
+from .lint import composite_index_violations, explanation_refusal, orientation_violations
 from .manifest import sha256_bytes
 from .slugs import subsystem_page
 from .vocabulary import (
@@ -319,6 +319,38 @@ def select_explanation(
     if disposition == "withdrawn":
         return ExplanationReading("not-recorded", None, checked)
     return ExplanationReading(disposition, effective, checked)
+
+
+# D2: an imported thesis is printed with this qualification until a recorded
+# purpose replaces it. The census owes it beside the body (F1/codex, slice-S1).
+IMPORTED_PURPOSE_LABEL = (
+    "This thesis was imported from the entry point, not tied to evidence;"
+    " a recorded purpose replaces it."
+)
+
+
+def project_purpose_text(reading: ExplanationReading) -> tuple[str, tuple[str, ...]] | None:
+    """What the overview owes for the project's purpose, and the lint's reasons.
+
+    The overview's thesis slot prints the effective project purpose (store-only
+    PLAN §2.2, §3.3), so the renderer and the read-back's census ask this one
+    function what the slot holds. A recorded or imported body that the
+    orientation lint or C32's composite rule refuses is replaced by the refusal
+    sentence; an imported body carries its label (D2); a declination is the
+    reason. `None` when the store holds no effective purpose.
+    """
+
+    if reading.state not in {"recorded", "declined"} or reading.row is None:
+        return None
+    body = str(reading.row["body"])
+    if reading.state == "declined":
+        return body, ()
+    violations = tuple(orientation_violations(body)) + tuple(composite_index_violations(body))
+    if violations:
+        return explanation_refusal("purpose"), violations
+    if str(reading.row["disposition"]) == "imported":
+        return f"{body}\n\n{IMPORTED_PURPOSE_LABEL}", ()
+    return body, ()
 
 
 def subject_explanation_eligible(
@@ -1760,13 +1792,18 @@ class ProjectionVerifier:
         for (subject_type, subject_id, slot), reading in sorted(readings.items()):
             if reading.state not in {"recorded", "declined"} or reading.row is None:
                 continue
+            body = str(reading.row["body"])
+            owed = explanation_refusal(slot) if orientation_violations(body) else body
             if subject_type == "subsystem":
                 page = subsystem_page(subject_id, names.get(subject_id, subject_id))
+            elif slot == "purpose":
+                # The project's purpose is the overview's thesis (store-only PLAN
+                # §3.3), with its imported label when it was imported (D2).
+                page = "index.md"
+                owed = (project_purpose_text(reading) or (owed, ()))[0]
             else:
                 # The project account is owed by the architecture page (§3.7).
                 page = "architecture.md"
-            body = str(reading.row["body"])
-            owed = explanation_refusal(slot) if orientation_violations(body) else body
             if not _resolver_pattern(_flat(owed), named, concerns).search(
                 _flat(projection.get(page, ""))
             ):
