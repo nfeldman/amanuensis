@@ -2045,9 +2045,11 @@ class _HtmlWriter:
 
         if not block.nodes:
             subject_attr = f' data-subject="{html.escape(block.subject, quote=True)}"' if block.subject else ""
+            # The sentence keeps the provenance a drawing would print (Appendix B rule 3).
+            read_at = f' <span class="diagram-read-at">{html.escape(block.read_at, quote=False)}</span>' if block.read_at else ""
             return (
                 f'<p class="diagram-below" data-diagram="{html.escape(block.kind, quote=True)}"{subject_attr}>'
-                f"{html.escape(block.below, quote=False)}</p>"
+                f"{html.escape(block.below, quote=False)}{read_at}</p>"
             )
         subject = f' data-subject="{html.escape(block.subject, quote=True)}"' if block.subject else ""
 
