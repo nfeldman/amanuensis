@@ -436,7 +436,17 @@ def sabotages(facts: dict[str, Any]) -> list[tuple[str, str, Callable[[str], str
 MARK_ATTRIBUTE = re.compile(r' data-(?:record|state|node|edge)="[^"]*"')
 # Packets SO22–SO25 add diagrams to the corpus (PLAN §3.2's update rule); a figure is
 # their whole addition, so a page is compared without them.
-FIGURE_BLOCK = re.compile(r'<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>\n?', re.S)
+FIGURE_BLOCK = re.compile(
+    # A figure that closes its container takes the newline before it.
+    r'\n<figure\b[^>]*data-diagram="[^"]*"[^>]*>(?:(?!</figure>).)*</figure>(?=</)'
+    r'|<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>\n?'
+    # SO23 adds a "not measured" sentence, finding badges and the note under them (PLAN §3.2's update rule).
+    r'|\n<p class="(?:diagram-below|finding-badge-note)"[^>]*>(?:(?!</p>).)*</p>(?=</)'
+    r'|<p class="(?:diagram-below|finding-badge-note)"[^>]*>(?:(?!</p>).)*</p>\n?'
+    r'|<div class="atlas-badges"[^>]*>.*?</div>'
+    r'|<g class="boundary-svg-badge"[^>]*>.*?</g>',
+    re.S,
+)
 CORPUS_VERSIONS = ("SO20", "SO22", "SO23", "SO24", "SO25")
 
 

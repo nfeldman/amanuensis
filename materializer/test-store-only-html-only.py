@@ -77,7 +77,16 @@ PACKET = "SO13"
 # SO22–SO25 add those on diagram nodes and edges inside figures.
 # SO22–SO25 add `<figure data-diagram>` blocks, which are removed whole.
 _RECORD_MARKS = r' data-(?:record|state|node|edge)="[^"]*"'
-_FIGURES = r'<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>\n?'
+_FIGURES = (
+    # A figure that closes its container takes the newline before it.
+    r'\n<figure\b[^>]*data-diagram="[^"]*"[^>]*>(?:(?!</figure>).)*</figure>(?=</)'
+    r'|<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>\n?'
+    # SO23 adds a "not measured" sentence, finding badges and the note under them.
+    r'|\n<p class="(?:diagram-below|finding-badge-note)"[^>]*>(?:(?!</p>).)*</p>(?=</)'
+    r'|<p class="(?:diagram-below|finding-badge-note)"[^>]*>(?:(?!</p>).)*</p>\n?'
+    r'|<div class="atlas-badges"[^>]*>.*?</div>'
+    r'|<g class="boundary-svg-badge"[^>]*>.*?</g>'
+)
 LATER_WRITERS = {
     "SO20": re.compile(_RECORD_MARKS),
     **{packet: re.compile(f"{_FIGURES}|{_RECORD_MARKS}", re.S) for packet in ("SO22", "SO23", "SO24", "SO25")},

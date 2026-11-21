@@ -409,7 +409,17 @@ def account_of(figure: str) -> str:
 # The golden corpus.
 # ---------------------------------------------------------------------------
 
-_FIGURE_BLOCK = re.compile(r'<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>\n?', re.S)
+_FIGURE_BLOCK = re.compile(
+    # A figure that closes its container takes the newline before it.
+    r'\n<figure\b[^>]*data-diagram="[^"]*"[^>]*>(?:(?!</figure>).)*</figure>(?=</)'
+    r'|<figure\b[^>]*data-diagram="[^"]*"[^>]*>.*?</figure>\n?'
+    # SO23 adds a "not measured" sentence, finding badges and the note under them (PLAN §3.2's update rule).
+    r'|\n<p class="(?:diagram-below|finding-badge-note)"[^>]*>(?:(?!</p>).)*</p>(?=</)'
+    r'|<p class="(?:diagram-below|finding-badge-note)"[^>]*>(?:(?!</p>).)*</p>\n?'
+    r'|<div class="atlas-badges"[^>]*>.*?</div>'
+    r'|<g class="boundary-svg-badge"[^>]*>.*?</g>',
+    re.S,
+)
 
 
 def start_corpus(into: Path) -> Path | None:
@@ -425,8 +435,8 @@ def start_corpus(into: Path) -> Path | None:
 
 def golden_figures_only(previous: Path | None) -> str | None:
     version = GOLDEN / "VERSION"
-    if not version.is_file() or version.read_text().strip() != PACKET:
-        return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET}"
+    if not version.is_file() or version.read_text().strip() not in (PACKET, "SO23", "SO24", "SO25"):
+        return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET} or a later diagram packet"
     if previous is None:
         return f"the golden corpus cannot be read from git at {START_SHA[:12]}"
     before = {str(p.relative_to(previous)): p for p in previous.rglob("*.html") if "/html/" in str(p)}
@@ -788,7 +798,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="amanuensis-so22-golden-") as tmp:
         previous = start_corpus(Path(tmp))
-        check("the golden corpus is SO22's and differs from the start's only inside diagram figures",
+        check("the golden corpus is SO22's or a later diagram packet's and differs from the start's only inside diagram figures",
               lambda: golden_figures_only(previous))
 
     def in_ci() -> str | None:
