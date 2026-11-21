@@ -429,8 +429,14 @@ def _chip_removed(record: str) -> Callable[[str], str]:
 
 
 def _purpose_twice(text: str) -> str:
+    """A second copy of the purpose, in the overview's next section (beside it, it would be one run)."""
+
     found = re.search(rf"<p\b[^>]*>{re.escape(PURPOSE_BODY)}</p>", text)
-    return text if found is None else text.replace(found.group(0), found.group(0) * 2, 1)
+    if found is None:
+        return text
+    close = text.find("</section>", found.end())
+    after = text.find("</section>", close + 1) if close >= 0 else -1
+    return text if after < 0 else text[:after] + found.group(0) + text[after:]
 
 
 def _runtime_node(*, twice: bool) -> Callable[[str], str]:

@@ -1362,6 +1362,10 @@ def _fragment_tokens(fragment: str) -> str:
     return _tokens_of(unescape(re.sub(r"<[^>]+>", " ", visible)))
 
 
+#: Tags an owed body whose page prints it as runs, each compared with its own (§3.5).
+_RUNS = object()
+
+
 @dataclass
 class _Occurrence:
     record: str
@@ -2335,20 +2339,29 @@ class ProjectionVerifier:
             DISPLAY_STATUS,
             _HtmlWriter,
         )
-        from .legacy_prose import body_blocks, imported_bodies  # noqa: PLC0415
+        from .legacy_prose import (  # noqa: PLC0415
+            IMPORTED_PAGES,
+            body_blocks,
+            imported_bodies,
+            imported_page_blocks,
+        )
         from .page import Marked, Page  # noqa: PLC0415
         from .renderers import (  # noqa: PLC0415
             AS_WRITTEN_HEADING,
             explanation_body,
             narrative_body,
+            project_thesis,
+            record_page_imports_only,
             subsystem_claims,
+            thesis_blocks,
         )
 
         names, named, concerns = _resolver_names(conn)
         owed: dict[str, tuple[dict[str, int], str | None, Any]] = {}
-        # Imported bodies of the three record pages: an import-only page prints them
-        # as one document, so they are checked where marked and not owed a mark.
-        allowed: dict[str, tuple[str, Any]] = {}
+        # An import-only page prints its bodies as one document, so a body may print
+        # as more than one run of marked elements: each page's runs, by record, as the
+        # page's own blocks print them.
+        import_only_runs: dict[str, dict[str, list[str]]] = {}
 
         if table_exists(conn, "finding_state_current"):
             for r in rows(conn, "SELECT finding_id, resolution_state FROM finding_state_current"):
@@ -2359,7 +2372,8 @@ class ProjectionVerifier:
             table_exists(conn, "xrefs") and rows(conn, "SELECT 1 FROM xrefs LIMIT 1")
         )
         for r in rows(conn, "SELECT id, status FROM subsystems ORDER BY id"):
-            pages = {MASTER_PLAN_PAGE: 2}
+            # The master plan's atlas item and record, and the subsystem page's status line.
+            pages = {MASTER_PLAN_PAGE: 2, subsystem_page(str(r["id"]), names[str(r["id"])]): 1}
             if atlas_on_architecture:
                 pages[ARCHITECTURE_PAGE] = 1
             owed[f"subsystem:{r['id']}"] = (pages, str(r["status"]), None)
@@ -2390,6 +2404,11 @@ class ProjectionVerifier:
                 continue
             page = ARCHITECTURE_PAGE if subject_type == "project" else subsystem_page(subject_id, names[subject_id])
             owed[f"explanation:{reading.row['id']}"] = ({page: 1}, reading.state, (printed[0], page))
+        # The project's purpose is the overview's thesis, printed there once.
+        thesis = project_thesis(conn, self.storage)
+        if thesis.record:
+            marked = thesis_blocks(thesis)[0]
+            owed[thesis.record] = ({OVERVIEW_PAGE_HTML: 1}, thesis.record_state, (marked, OVERVIEW_PAGE_HTML))
         for record in effective_narratives(conn, self.storage):
             page = narrative_page(record, names)
             if page is not None:
@@ -2409,9 +2428,22 @@ class ProjectionVerifier:
                     None,
                     (body.body, 3, ("Structure", "Survey record"), page),
                 )
-            else:
+            elif (f"{body.kind}.html", body.kind) in IMPORTED_PAGES:
+                # The other kinds are held, not printed (§5.4), and owed nowhere.
                 page = f"{body.kind}.html"
-                allowed[f"imported-body:{body.path}"] = (page, (body.body, 2, (AS_WRITTEN_HEADING,), page))
+                record = f"imported-body:{body.path}"
+                if not record_page_imports_only(conn, self.storage, body.kind):
+                    owed[record] = ({page: 1}, None, (body.body, 2, (AS_WRITTEN_HEADING,), page))
+                    continue
+                if page not in import_only_runs:
+                    fragment = _HtmlWriter({}, page).write(
+                        Page("", page, imported_page_blocks(conn, body.kind, page))
+                    )
+                    import_only_runs[page] = {}
+                    for run in _record_occurrences(fragment)[0]:
+                        import_only_runs[page].setdefault(run.record, []).append(run.text)
+                runs = import_only_runs[page].get(record, [])
+                owed[record] = ({page: len(runs)}, None, (_RUNS, runs))
 
         found: dict[str, dict[str, list[_Occurrence]]] = {}
         for rel, text in projection.items():
@@ -2438,9 +2470,6 @@ class ProjectionVerifier:
             printed = found.get(record, {})
             if record in owed:
                 pages, state, prose = owed[record]
-            elif record in allowed:
-                page, prose = allowed[record]
-                pages, state = {page: min(1, len(printed.get(page, [])))}, None
             else:
                 report("coverage", record, "the mark names no record the store holds")
                 continue
@@ -2451,7 +2480,10 @@ class ProjectionVerifier:
             for page in sorted(set(printed) - set(pages)):
                 report("coverage", record, f"{page} prints the record, and the page plan does not put it there")
             expected_words = None
-            if prose is not None and printed:
+            expected_runs: list[str] | None = None
+            if prose is not None and prose[0] is _RUNS:
+                expected_runs = prose[1]
+            elif prose is not None and printed:
                 if isinstance(prose[0], Marked):
                     blocks, page = prose[0].blocks, prose[1]
                 else:
@@ -2460,7 +2492,9 @@ class ProjectionVerifier:
                 expected_words = _fragment_tokens(_HtmlWriter({}, page).write(Page("", page, blocks)))
             kind = record.partition(":")[0]
             for page, occurrences in sorted(printed.items()):
-                for occurrence in occurrences:
+                for index, occurrence in enumerate(occurrences):
+                    if expected_runs is not None:
+                        expected_words = expected_runs[index] if index < len(expected_runs) else None
                     if state is not None and occurrence.states != {state}:
                         marked = ", ".join(sorted(str(s) for s in occurrence.states))
                         report("state", record, f"{page} marks it {marked}; the store holds {state}")

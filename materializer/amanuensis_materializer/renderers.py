@@ -576,6 +576,19 @@ class Thesis:
     state: str = "filled"
     #: Where the text came from, for the publish warning.
     source: str = THESIS_SOURCE
+    #: The explanation row it prints, as its mark, and that row's state (§3.5).
+    record: str = ""
+    record_state: str = ""
+
+
+def thesis_blocks(thesis: Thesis) -> tuple[Block, ...]:
+    """The thesis as the overview prints it: a stored purpose carries its row's mark.
+
+    The overview and the read-back both build it here (§3.5).
+    """
+
+    blocks = tuple(render_prose(thesis.text))
+    return (Marked(thesis.record, thesis.record_state, blocks),) if thesis.record else blocks
 
 
 def _thesis_body(prose: str) -> str:
@@ -685,6 +698,8 @@ def project_thesis(conn: sqlite3.Connection, storage: Path) -> Thesis:
             violations=violations,
             state="refused" if violations else "filled",
             source=source,
+            record=f"explanation:{reading.row['id']}",
+            record_state=reading.state,
         )
     return Thesis(THESIS_ABSENT, recorded=False, state="absent")
 
@@ -1303,6 +1318,15 @@ def record_page_exists(conn: sqlite3.Connection, storage: Path, kind: str) -> bo
     return bool(_project_narratives(conn, storage, kind))
 
 
+def record_page_imports_only(conn: sqlite3.Connection, storage: Path, kind: str) -> bool:
+    """Whether the record page of `kind` prints only its imports, as `imported_page` does."""
+
+    extra = _record_page_sources(conn, kind)
+    return not (
+        _project_narratives(conn, storage, kind) or extra.get("concerns") or extra.get("territories")
+    )
+
+
 def record_page(
     conn: sqlite3.Connection,
     storage: Path,
@@ -1798,7 +1822,7 @@ def render_index(
         _paragraph(OVERVIEW_IDENTITY.format(name=name, guide=GUIDE_TITLE)),
         # 2. Thesis — the project purpose, else by heading from entry-point.md,
         #    or the named instruction.
-        _section("What is this codebase?", *render_prose(thesis.text)),
+        _section("What is this codebase?", *thesis_blocks(thesis)),
         _section(
             "Where the record stands",
             _heading(3, "Source alignment"),
@@ -2209,7 +2233,12 @@ def render_subsystem(
 
     path = subsystem_page(str(sid), str(s["name"]))
     blocks: list[Block] = [
-        _paragraph(f"**Status**: {_badge(s['status'])} **Layer**: {s.get('layer') or '—'}"),
+        # The status line prints the subsystem's depth, so it carries the record's mark (§3.5).
+        Marked(
+            f"subsystem:{sid}",
+            str(s["status"]),
+            (_paragraph(f"**Status**: {_badge(s['status'])} **Layer**: {s.get('layer') or '—'}"),),
+        ),
     ]
 
     # 0. Purpose — only from an effective record, recorded or declined. A page

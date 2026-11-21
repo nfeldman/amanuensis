@@ -33,7 +33,7 @@ import html
 import re
 import sqlite3
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from .db import rows, table_exists
@@ -51,6 +51,7 @@ from .page import (
     Heading,
     Inlines,
     LifecycleTable,
+    Marked,
     Page,
     Paragraph,
     Quote,
@@ -311,7 +312,83 @@ def imported_page(
             out += [heading, "", body.label(), "", rest.strip(), ""]
         else:
             out += [f"# {title}", "", body.label(), "", text, ""]
-    return _LegacyParser(path).parse("\n".join(out)), imports_source(f"imports:{kind}", bodies)
+    page = _LegacyParser(path).parse("\n".join(out))
+    page = replace(page, blocks=_mark_bodies(page.blocks, bodies))
+    read = RENDERED_BODIES.get()
+    if read is not None:
+        read[_imported_page_key(bodies, path)] = page.blocks
+    return page, imports_source(f"imports:{kind}", bodies)
+
+
+def _imported_page_key(bodies: list[ImportedBody], path: str) -> tuple[str, int, str, str]:
+    """What a run's memo holds an import-only page's blocks under: its bodies, labels and path."""
+
+    return ("\0".join(f"{b.label()}\0{b.body}" for b in bodies), 0, "imported_page", path)
+
+
+def imported_page_blocks(conn: sqlite3.Connection, kind: str, path: str) -> tuple[Block, ...]:
+    """An import-only page's blocks as this run printed them, else read now (§3.5).
+
+    The read-back compares the page with them. The page's title is not among the
+    marked blocks, so a reading made here needs none.
+    """
+
+    bodies = imported_bodies(conn, kind=kind)
+    read = RENDERED_BODIES.get() or {}
+    held = read.get(_imported_page_key(bodies, path))
+    if held is not None:
+        return held
+    built = imported_page(conn, kind, "Imported", path)
+    return built[0].blocks if built is not None else ()
+
+
+def _mark_bodies(blocks: tuple[Block, ...], bodies: list[ImportedBody]) -> tuple[Block, ...]:
+    """Each body's blocks marked with its record (store-only PLAN §3.5), its label left unmarked.
+
+    The document is read as one, so a body is found by the label paragraph printed
+    before it, in order, and holds everything up to the next label. A second body's
+    headings sit beneath the first's, inside its last section: that section is
+    entered, its heading left outside the mark, since the cross-reference pass names
+    a section by its heading.
+    """
+
+    labels = [Paragraph(parse_inlines(b.label())) for b in bodies]
+    marks = [f"imported-body:{b.path}" for b in bodies]
+    state = {"next": 0, "record": ""}
+
+    def is_label(block: Block) -> bool:
+        return state["next"] < len(labels) and block == labels[int(state["next"])]
+
+    def holds_label(block: Block) -> bool:
+        return isinstance(block, Section) and any(is_label(b) or holds_label(b) for b in block.blocks)
+
+    def walk(items: tuple[Block, ...]) -> list[Block]:
+        out: list[Block] = []
+        run: list[Block] = []
+
+        def flush() -> None:
+            if run:
+                record = str(state["record"])
+                out.extend([Marked(record, "", tuple(run))] if record else run)
+                run.clear()
+
+        for block in items:
+            if is_label(block):
+                flush()
+                out.append(block)
+                state["record"] = marks[int(state["next"])]
+                state["next"] = int(state["next"]) + 1
+            elif holds_label(block):
+                assert isinstance(block, Section)
+                flush()
+                head = block.blocks[:1] if block.blocks and isinstance(block.blocks[0], Heading) else ()
+                out.append(replace(block, blocks=(*head, *walk(block.blocks[len(head) :]))))
+            else:
+                run.append(block)
+        flush()
+        return out
+
+    return tuple(walk(blocks))
 
 
 # ---------------------------------------------------------------------------

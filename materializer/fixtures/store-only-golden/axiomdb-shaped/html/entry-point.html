@@ -43,15 +43,15 @@
         </div>
       </header>
       <article class="content content-artifact"><p><em>As written at 2026-11-04, revision <code>c711feb7</code>; kept as written, not tied to evidence. It was edited after it was registered.</em></p>
-<p><strong>Canonical branch</strong>: main <strong>Onboarding SHA</strong>: c3b1492c0da8168c125930d03a8dc4a40dfcc7fe</p>
-<section class="section-what-is-this-codebase">
-<h2 id="what-is-this-codebase"><a class="heading-anchor" href="#what-is-this-codebase" aria-label="Link to What is this codebase?">§</a>What is this codebase?</h2>
-<p>Quadstore is an RDF quad store written in Rust. It answers SPARQL queries over named graphs, refusing at planning the algebra it does not support, and keeps the inferences its rules derive beside the asserted quads.</p>
-<p>Two ideas explain most of the design: visibility is metadata carried on each index entry, and every write passes one coordinator per graph.</p>
+<p data-record="imported-body:entry-point.md"><strong>Canonical branch</strong>: main <strong>Onboarding SHA</strong>: c3b1492c0da8168c125930d03a8dc4a40dfcc7fe</p>
+<section data-record="imported-body:entry-point.md" class="section-what-is-this-codebase">
+<h2 data-record="imported-body:entry-point.md" id="what-is-this-codebase"><a class="heading-anchor" href="#what-is-this-codebase" aria-label="Link to What is this codebase?">§</a>What is this codebase?</h2>
+<p data-record="imported-body:entry-point.md">Quadstore is an RDF quad store written in Rust. It answers SPARQL queries over named graphs, refusing at planning the algebra it does not support, and keeps the inferences its rules derive beside the asserted quads.</p>
+<p data-record="imported-body:entry-point.md">Two ideas explain most of the design: visibility is metadata carried on each index entry, and every write passes one coordinator per graph.</p>
 </section>
-<section class="section-directory-map">
-<h2 id="directory-map"><a class="heading-anchor" href="#directory-map" aria-label="Link to Directory map">§</a>Directory map</h2>
-<div class="table-wrap"><table><caption>directory map</caption><thead><tr><th scope="col">Path</th><th scope="col">Role</th></tr></thead><tbody><tr><td data-label="Path"><code>crates/quad-core/src/storage</code></td><td data-label="Role">Index permutations and the term dictionary</td></tr><tr><td data-label="Path"><code>crates/quad-core/src/write</code></td><td data-label="Role">The write coordinator and its fences</td></tr></tbody></table></div>
+<section data-record="imported-body:entry-point.md" class="section-directory-map">
+<h2 data-record="imported-body:entry-point.md" id="directory-map"><a class="heading-anchor" href="#directory-map" aria-label="Link to Directory map">§</a>Directory map</h2>
+<div data-record="imported-body:entry-point.md" class="table-wrap"><table><caption>directory map</caption><thead><tr><th scope="col">Path</th><th scope="col">Role</th></tr></thead><tbody><tr><td data-label="Path"><code>crates/quad-core/src/storage</code></td><td data-label="Role">Index permutations and the term dictionary</td></tr><tr><td data-label="Path"><code>crates/quad-core/src/write</code></td><td data-label="Role">The write coordinator and its fences</td></tr></tbody></table></div>
 </section></article>
     </div>
   </main>
