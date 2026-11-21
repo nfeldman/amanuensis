@@ -152,7 +152,11 @@ def rebuild(store: str, root: Path) -> Path:
 
 
 def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], dict[str, int]]:
-    """Publish in this process, counting `parse_markdown` calls by page."""
+    """Publish in this process, counting the Markdown parser's runs by page.
+
+    The parser is counted where it reads (`_MarkdownParser.parse`, which `parse_markdown`
+    calls), because once every page is a model its only readers are the imported bodies.
+    """
 
     hp, error = load("html_projection")
     if hp is None:
@@ -160,13 +164,13 @@ def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], d
     import materialize  # noqa: PLC0415 — the CLI module, run in this process
 
     calls: dict[str, int] = {}
-    real = hp.parse_markdown
+    real = hp._MarkdownParser.parse
 
-    def counting(markdown: str, current_html_path: str) -> Any:
-        calls[current_html_path] = calls.get(current_html_path, 0) + 1
-        return real(markdown, current_html_path)
+    def counting(self: Any, markdown: str) -> Any:
+        calls[self.current_html_path] = calls.get(self.current_html_path, 0) + 1
+        return real(self, markdown)
 
-    hp.parse_markdown = counting
+    hp._MarkdownParser.parse = counting
     saved = sys.argv
     sys.argv = ["materialize.py", "--storage", str(storage), "--output", str(output), "--allow-external-output"]
     buffer = io.StringIO()
@@ -175,7 +179,7 @@ def publish_instrumented(storage: Path, output: Path) -> tuple[dict[str, Any], d
             code = materialize.main()
     finally:
         sys.argv = saved
-        hp.parse_markdown = real
+        hp._MarkdownParser.parse = real
     lines = [line for line in buffer.getvalue().splitlines() if line.strip()]
     summary = json.loads(lines[-1]) if lines else {}
     summary["exit"] = code
@@ -273,13 +277,15 @@ def main() -> int:
         def no_parse() -> str | None:
             if len(runs) != len(STORES):
                 return "not every fixture was published"
+            others = 0
             for store, (_storage, _output, _summary, calls) in runs.items():
                 called = [page for page in FAMILY if calls.get(f"{page}.html")]
                 if called:
                     return f"{store}: parse_markdown was called while building {called}"
-                others = sum(count for path, count in calls.items() if path[:-5] not in FAMILY)
-                if others < 5:
-                    return f"{store}: the counter saw {others} parse calls for the other pages, so it is not counting"
+                others += sum(count for path, count in calls.items() if path[:-5] not in FAMILY)
+            # Every page is a model by SO18; what the parser still reads is the imported bodies.
+            if others < 5:
+                return f"the counter saw {others} parse calls for the other pages, so it is not counting"
             return None
 
         check("no family page is built by parse_markdown, and the counter counts the others", no_parse)

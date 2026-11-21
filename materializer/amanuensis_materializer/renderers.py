@@ -41,7 +41,6 @@ from .legacy_prose import (
     imported_bodies,
     imported_page,
     imports_source,
-    nest_headings,
     render_body,
 )
 from .lint import (
@@ -1089,62 +1088,6 @@ def _imported_blocks(
     return out
 
 
-def _narrative_lines(
-    records: Sequence[Mapping[str, Any]],
-    level: int,
-    workspace: Path,
-    bound: bool,
-    head: str,
-    warn: Callable[[str], None] | None,
-    *,
-    untitled: bool = True,
-) -> list[str]:
-    """Stored narratives as Markdown, each under its topic at heading `level`.
-
-    A narrative with no topic prints under its section's label; with `untitled`
-    false it prints under whatever heading already names its section. The text
-    the orientation lint refuses is replaced by the refusal sentence and
-    reported through `warn`, as for an explanation.
-    """
-
-    out: list[str] = []
-    for record in records:
-        text, is_body = narrative_text(record)
-        if not is_body and warn is not None:
-            warn(
-                f"{record['subject_id']}: the recorded {record['section']} narrative was not"
-                " published because it carries survey-status vocabulary or a count fraction"
-            )
-        if untitled or str(record["topic"]).strip():
-            out += ["#" * level + " " + _one_line(narrative_heading(record)), ""]
-        date = _stored_date(record["recorded_at"])
-        sha = str(record["ref_sha"])[:8]
-        if str(record["disposition"]) == "declined":
-            out += [
-                NARRATIVE_DECLINED.format(declined=_DECLINED, sha=sha, date=date, reason=text.strip()),
-                "",
-            ]
-            continue
-        out += [nest_headings(text.strip(), level), ""]
-        if not is_body:
-            continue
-        files = record.get("cited_files") or []
-        out += [
-            (
-                NARRATIVE_PROVENANCE.format(
-                    date=date,
-                    sha=sha,
-                    n=len(files),
-                    ageing=_ageing_sentence(workspace, bound, record, head),
-                )
-                if files
-                else NARRATIVE_NO_FILES.format(date=date, sha=sha)
-            ),
-            "",
-        ]
-    return out
-
-
 def _narrative_blocks(
     records: Sequence[Mapping[str, Any]],
     level: int,
@@ -1157,7 +1100,7 @@ def _narrative_blocks(
 ) -> list[Block]:
     """Stored narratives as blocks, each under its topic at heading `level`.
 
-    The same rules as `_narrative_lines`: a narrative with no topic prints under
+    A narrative with no topic prints under
     its section's label; with `untitled` false it prints under whatever heading
     already names its section. A text the orientation lint refuses is replaced by
     the refusal sentence and reported through `warn`. The body is stored prose,
