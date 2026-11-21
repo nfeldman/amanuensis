@@ -368,7 +368,18 @@ async function main(mods) {
     const said = refusal(() => purpose(ctx, { args: { body: pad(401) } }));
     if (!said) return "401 bytes was accepted";
     if (!stems(RECORD, said)) return `refused with "${said.slice(0, 120)}"`;
-    return count(ctx, "explanations") === before ? null : "the refusal left a row";
+    if (count(ctx, "explanations") !== before) return "the refusal left a row";
+    // The cap counts UTF-8 bytes, not characters: ASCII alone cannot tell the
+    // two apart, so a character count passed this check (F12/codex, slice-S1).
+    // "é" is two bytes: 199 of them and a full stop are 399 characters' worth
+    // of bytes in 200 characters.
+    const wide = (chars) => `${"é".repeat(chars - 1)}.`;
+    const wideEdge = refusal(() => purpose(ctx, { args: { body: `${wide(200)}a` } }));
+    if (wideEdge) return `400 bytes of two-byte characters was refused: ${wideEdge.slice(0, 120)}`;
+    const wideOver = refusal(() => purpose(ctx, { args: { body: `${wide(200)}ab` } }));
+    if (!wideOver) return "401 bytes in 202 characters was accepted";
+    if (!stems(RECORD, wideOver)) return `refused with "${wideOver.slice(0, 120)}"`;
+    return count(ctx, "explanations") === before + 1 ? null : "the multibyte refusal left a row";
   });
 
   check("P4 a purpose with no evidence, or evidence that does not exist, is refused with the tool's name", () => {
