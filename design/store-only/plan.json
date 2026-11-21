@@ -66,10 +66,10 @@
         "SO21"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "29eb0798b4b90d9e9081da226c93536e8e92d47f",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "1947e8dc1189a8590ae9385f47981a9e3297d6a5",
+        "findings": 9
       }
     },
     {

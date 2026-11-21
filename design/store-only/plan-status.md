@@ -37,7 +37,7 @@
 | SO18 | Renderers build the model: Method and remaining pages | done (1 attempt) | SO17 | `materializer/test-store-only-convert-method.py` | §8 SO14–SO18 |
 | SO19 | Delete the Markdown intermediate | done (1 attempt) | SO18 | `materializer/test-store-only-no-markdown.py` | §8 SO19, §3.2, §3.4 |
 
-## S4 · Read-back and publication (review: pending)
+## S4 · Read-back and publication (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
