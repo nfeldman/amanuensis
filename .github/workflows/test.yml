@@ -512,6 +512,11 @@ jobs:
       - name: Narratives, territory dispositions and runtime boundaries on their pages, censused by the read-back
         working-directory: materializer
         run: python3 test-store-only-record-pages.py
+      # GATE SO11 (design/store-only/PLAN.md §3.1, §3.2, §8 SO11). Prints the
+      # committed golden corpus's inputs again and compares the HTML byte for byte.
+      - name: Markdown → page model → HTML, byte-identical on the golden corpus
+        working-directory: materializer
+        run: python3 test-store-only-model.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py

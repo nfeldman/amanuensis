@@ -6,6 +6,11 @@ dependency-free HTML site with global navigation, reader hints, semantic
 status labels, and local-link integrity.  Every page embeds the same compact
 CSS and JavaScript so the projection works from ``file://`` as well as from a
 static web server.
+
+Each page goes Markdown → page model → HTML (store-only PLAN §3.1, §3.2):
+`parse_markdown` resolves the Markdown and every shape it once recognised into
+the blocks of `page.py`, and `write_html` prints those blocks without reading
+any Markdown.
 """
 
 from __future__ import annotations
@@ -23,6 +28,65 @@ from typing import Any
 from urllib.parse import quote, urlsplit, urlunsplit
 
 from .manifest import sha256_bytes
+from .page import (
+    COVERAGE_STATES,
+    Abbr,
+    Anchor,
+    Atlas,
+    AtlasItem,
+    AtlasRegion,
+    Block,
+    BoundaryDiagram,
+    BoundaryRow,
+    Break,
+    Chip,
+    Code,
+    CodeSpan,
+    ConcernChecklist,
+    ConcernFamily,
+    ConcernItem,
+    CoverageIndex,
+    CoverageReview,
+    CoverageRow,
+    Details,
+    DiagramSource,
+    Emph,
+    EnumTable,
+    Facets,
+    Fact,
+    Heading,
+    Inline,
+    InlineAnchor,
+    InlineMarker,
+    Inlines,
+    LifecycleTable,
+    Link,
+    List,
+    ListItem,
+    Page,
+    Paragraph,
+    Quote,
+    Record,
+    RecordList,
+    RecordMarker,
+    RelationshipTrace,
+    Row,
+    RowFilter,
+    RuntimeDiagram,
+    RuntimeRow,
+    Section,
+    StalenessBars,
+    Strong,
+    SummaryItem,
+    SummaryList,
+    Table,
+    Tag,
+    Text,
+    Topology,
+    TopologyEdge,
+    TraceEdge,
+    TraceNode,
+)
 from .readback import MARKER_KINDS
 from .slugs import slugify
 from .vocabulary import axes, labels, meanings
@@ -1446,6 +1510,14 @@ _JS = r"""
 """
 
 
+# ---------------------------------------------------------------------------
+# Markdown → page model. Everything below until the writer reads Markdown:
+# the inline subset, the block grammar, and every recognition hook (§1.2),
+# each resolved to a block kind of `page.py`. Removed with the Markdown
+# intermediate (store-only PLAN §3.2, SO19).
+# ---------------------------------------------------------------------------
+
+
 def _plain(text: str) -> str:
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"\[([^]]+)\]\([^)]+\)", r"\1", text)
@@ -1473,11 +1545,6 @@ def _positive_count(value: str) -> bool:
     return bool(match) and int(match.group(1)) > 0
 
 
-def _rel_link(from_path: str, to_path: str) -> str:
-    base = posixpath.dirname(from_path) or "."
-    return posixpath.relpath(to_path, base)
-
-
 def _html_href(href: str) -> str:
     if href.startswith(("http://", "https://", "mailto:", "#")):
         return href
@@ -1490,43 +1557,27 @@ def _html_href(href: str) -> str:
     return urlunsplit(("", "", path, split.query, split.fragment))
 
 
-def _status_html(value: str, *, severity: bool = False, show_hint: bool = True) -> str:
-    raw = value.strip()
-    key = raw.lower()
-    if severity:
-        key = raw.upper()
-        label = key.title()
-        hint = SEVERITY_HINTS.get(key, "Finding impact level.")
-        hint_attr = f' title="{html.escape(hint, quote=True)}"' if show_hint else ""
-        return f'<span class="severity severity-{key.lower()}"{hint_attr}>{html.escape(label)}</span>'
-    hint = STATUS_HINTS.get(key, "Recorded workflow state.")
-    label = DISPLAY_STATUS.get(key, key.replace("-", " ").title())
-    axis = STATUS_AXIS.get(key, "workflow")
-    hint_attr = f' title="{html.escape(hint, quote=True)}"' if show_hint else ""
-    return f'<span class="status status-{axis} status-{html.escape(key)}"{hint_attr}>{html.escape(label)}</span>'
+def _code_inline(value: str) -> Inline:
+    """A code span: a stored status or evidence value prints as its chip."""
 
-
-def _code_html(value: str) -> str:
     key = value.strip().lower()
     if key in STATUS_HINTS:
-        return _status_html(key)
+        return Chip("status", key)
     if key in EVIDENCE_HINTS:
-        label = DISPLAY_STATUS.get(key, key.replace("-", " ").title())
-        cls = f"evidence-label evidence-{key}"
-        return f'<span class="{cls}" title="{html.escape(EVIDENCE_HINTS[key], quote=True)}">{html.escape(label)}</span>'
+        return Chip("evidence", key)
     if value == "ACH":
-        return '<abbr title="Analysis of Competing Hypotheses">ACH</abbr>'
-    return f"<code>{html.escape(value)}</code>"
+        return Abbr("ACH", "Analysis of Competing Hypotheses")
+    return CodeSpan(value)
 
 
 _DEPTH_VALUE_BY_LABEL = {label.lower(): value for value, label in labels("subsystem_status").items()}
 
 
-def _atlas_depth(cell: str) -> str:
+def _atlas_depth(cell: str) -> Inlines:
     """An atlas depth cell, which carries the contract's label, as its status chip."""
 
     value = _DEPTH_VALUE_BY_LABEL.get(_plain(cell).lower())
-    return _status_html(value) if value else _inline(cell)
+    return Inlines((Chip("status", value),), _plain(cell)) if value else parse_inlines(cell)
 
 
 def _names_label(text: str) -> bool:
@@ -1540,67 +1591,120 @@ def _names_label(text: str) -> bool:
     return text == key or text == DISPLAY_STATUS.get(key, key.replace("-", " ").title())
 
 
-def _inline(text: str) -> str:
-    """Render the deliberately small inline subset emitted by Amanuensis."""
+# Emphasis, in the order it was always applied. Each pair is marked with two
+# private characters rather than tags, so that a pair the text leaves
+# misnested can still be told apart from a nested one.
+_STRONG_OPEN, _STRONG_CLOSE, _EM_OPEN, _EM_CLOSE = "\x01", "\x02", "\x03", "\x04"
+_EMPHASIS = (
+    (re.compile(r"\*\*(.+?)\*\*"), _STRONG_OPEN, _STRONG_CLOSE),
+    (re.compile(r"__(.+?)__"), _STRONG_OPEN, _STRONG_CLOSE),
+    (re.compile(r"(?<!\w)_(.+?)_(?!\w)"), _EM_OPEN, _EM_CLOSE),
+    (re.compile(r"(?<!\*)\*([^*]+)\*(?!\*)"), _EM_OPEN, _EM_CLOSE),
+)
+_INLINE_TOKEN = re.compile(r"(\x00\d+\x00|[\x01-\x04])")
+_DISPLAY_PHRASES = {
+    "concern dispositions": "concern review",
+    "evidence dispositions": "concern review",
+    "jump-in reading": "start here",
+}
 
+
+def _text_nodes(text: str) -> list[Inline]:
+    nodes: list[Inline] = []
+    for index, part in enumerate(text.split("  \n")):
+        if index:
+            nodes.append(Break())
+        if part:
+            nodes.append(Text(part))
+    return nodes
+
+
+def _inline_tree(tokens: list[str], stash: list[Inline]) -> tuple[Inline, ...] | None:
+    """Nest the emphasis marks; None when a pair crosses another."""
+
+    stack: list[tuple[str, list[Inline]]] = [("", [])]
+    for token in tokens:
+        if token in (_STRONG_OPEN, _EM_OPEN):
+            stack.append((token, []))
+        elif token in (_STRONG_CLOSE, _EM_CLOSE):
+            opener = _STRONG_OPEN if token == _STRONG_CLOSE else _EM_OPEN
+            if stack[-1][0] != opener:
+                return None
+            kind, children = stack.pop()
+            stack[-1][1].append(Strong(tuple(children)) if kind == _STRONG_OPEN else Emph(tuple(children)))
+        elif token.startswith("\x00"):
+            stack[-1][1].append(stash[int(token[1:-1])])
+        else:
+            stack[-1][1].extend(_text_nodes(token))
+    return tuple(stack[0][1]) if len(stack) == 1 else None
+
+
+def _inline_flat(tokens: list[str], stash: list[Inline]) -> tuple[Inline, ...]:
+    marks = {
+        _STRONG_OPEN: Tag("strong", False),
+        _STRONG_CLOSE: Tag("strong", True),
+        _EM_OPEN: Tag("em", False),
+        _EM_CLOSE: Tag("em", True),
+    }
+    nodes: list[Inline] = []
+    for token in tokens:
+        if token in marks:
+            nodes.append(marks[token])
+        elif token.startswith("\x00"):
+            nodes.append(stash[int(token[1:-1])])
+        else:
+            nodes.extend(_text_nodes(token))
+    return tuple(nodes)
+
+
+def parse_inlines(text: str) -> Inlines:
+    """Resolve the deliberately small inline subset emitted by Amanuensis."""
+
+    plain = _plain(text)
     stripped = text.strip()
     if stripped.lower() in STATUS_HINTS and _names_label(stripped):
-        return _status_html(stripped)
+        return Inlines((Chip("status", stripped),), plain)
     if stripped.lower() in EVIDENCE_HINTS and _names_label(stripped):
-        return _code_html(stripped)
+        return Inlines((_code_inline(stripped),), plain)
     if stripped.upper() in SEVERITY_HINTS:
-        return _status_html(stripped, severity=True)
+        return Inlines((Chip("severity", stripped),), plain)
 
-    placeholders: list[str] = []
+    stash: list[Inline] = []
 
-    def stash(rendered: str) -> str:
-        placeholders.append(rendered)
-        return f"\x00{len(placeholders) - 1}\x00"
+    def keep(node: Inline) -> str:
+        stash.append(node)
+        return f"\x00{len(stash) - 1}\x00"
 
     # Durable projection markers and explicit xref anchors are the only raw
-    # HTML accepted.  All record-authored prose is escaped below.
-    text = re.sub(
-        _MARKER_RE,
-        lambda m: stash(m.group(0)),
-        text,
-    )
+    # HTML accepted.  All record-authored prose is escaped by the writer.
+    text = re.sub(_MARKER_RE, lambda m: keep(InlineMarker(m.group(0))), text)
     text = re.sub(
         r'<a\s+id="([a-zA-Z0-9_.:-]+)"></a>',
-        lambda m: stash(f'<span id="{html.escape(m.group(1), quote=True)}" class="record-anchor"></span>'),
+        lambda m: keep(InlineAnchor(m.group(1))),
         text,
     )
-    text = re.sub(r"`([^`]+)`", lambda m: stash(_code_html(m.group(1))), text)
+    text = re.sub(r"`([^`]+)`", lambda m: keep(_code_inline(m.group(1))), text)
 
-    def link_repl(match: re.Match[str]) -> str:
-        label, href = match.group(1), _html_href(match.group(2).strip())
-        safe_href = html.escape(href, quote=True)
-        safe_label = html.escape(_plain(label))
-        external = href.startswith(("http://", "https://"))
-        attrs = ' rel="noreferrer"' if external else ""
-        return stash(f'<a href="{safe_href}"{attrs}>{safe_label}</a>')
+    def link(match: re.Match[str]) -> str:
+        href = _html_href(match.group(2).strip())
+        return keep(Link(href, _plain(match.group(1)), href.startswith(("http://", "https://"))))
 
-    text = re.sub(r"\[([^]]+)\]\(([^)]+)\)", link_repl, text)
-
+    text = re.sub(r"\[([^]]+)\]\(([^)]+)\)", link, text)
     text = re.sub(
         r"([🟢🟡🟠🔵⚪⚫])\s+(mapped|adversarial|concerns|structural|scoping|unmapped|deferred)",
-        lambda m: stash(_status_html(m.group(2))),
+        lambda m: keep(Chip("status", m.group(2))),
         text,
         flags=re.IGNORECASE,
     )
     text = re.sub(
         r"([🔴🟠🟡🔵])\s+(CRITICAL|HIGH|MEDIUM|LOW)",
-        lambda m: stash(_status_html(m.group(2), severity=True)),
+        lambda m: keep(Chip("severity", m.group(2))),
         text,
     )
 
     # Retained survey prose may use durable schema vocabulary. Translate it at
     # the human projection boundary without rewriting the Markdown record.
-    display_phrases = {
-        "concern dispositions": "concern review",
-        "evidence dispositions": "concern review",
-        "jump-in reading": "start here",
-    }
-    for source, replacement in display_phrases.items():
+    for source, replacement in _DISPLAY_PHRASES.items():
         text = re.sub(
             re.escape(source),
             lambda match, value=replacement: value.capitalize()
@@ -1610,16 +1714,11 @@ def _inline(text: str) -> str:
             flags=re.IGNORECASE,
         )
 
-    text = html.escape(text, quote=False)
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"__(.+?)__", r"<strong>\1</strong>", text)
-    text = re.sub(r"(?<!\w)_(.+?)_(?!\w)", r"<em>\1</em>", text)
-    text = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", text)
-    text = text.replace("  \n", "<br>\n")
-    for i in reversed(range(len(placeholders))):
-        rendered = placeholders[i]
-        text = text.replace(f"\x00{i}\x00", rendered)
-    return text
+    for pattern, opener, closer in _EMPHASIS:
+        text = pattern.sub(lambda m, o=opener, c=closer: f"{o}{m.group(1)}{c}", text)
+    tokens = [token for token in _INLINE_TOKEN.split(text) if token]
+    nodes = _inline_tree(tokens, stash)
+    return Inlines(nodes if nodes is not None else _inline_flat(tokens, stash), plain)
 
 
 # The shape of a concern code heading a review-coverage column. It only
@@ -1628,88 +1727,6 @@ def _inline(text: str) -> str:
 _IDENTIFIER_SHAPE = re.compile(
     r"(?<![\w-])([A-Z]{1,3}\d{0,3}-\d{1,3})(?![\w-])"
 )
-
-
-class _IdentifierMarkup(HTMLParser):
-    """Add semantic definitions to known opaque IDs in an HTML fragment."""
-
-    # An SVG renders no HTML element, so an <abbr> in its <text> would hide
-    # the ID it defines; the diagrams carry their own names.
-    _PROTECTED = frozenset({"abbr", "script", "style", "svg"})
-    _VOID = frozenset({
-        "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
-        "meta", "param", "source", "track", "wbr",
-    })
-
-    def __init__(self, definitions: dict[str, str]):
-        super().__init__(convert_charrefs=False)
-        self.definitions = definitions
-        self.pattern = identifier_pattern(definitions)
-        self.parts: list[str] = []
-        self.protected_depth = 0
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        self.parts.append(self.get_starttag_text())
-        is_contextual_definition = any(
-            name == "data-identifier-defined" for name, _ in attrs
-        )
-        if self.protected_depth:
-            if tag not in self._VOID:
-                self.protected_depth += 1
-        elif tag in self._PROTECTED or is_contextual_definition:
-            self.protected_depth = 1
-
-    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        del tag, attrs
-        self.parts.append(self.get_starttag_text())
-
-    def handle_endtag(self, tag: str) -> None:
-        self.parts.append(f"</{tag}>")
-        if self.protected_depth:
-            self.protected_depth -= 1
-
-    def handle_data(self, data: str) -> None:
-        if self.protected_depth or self.pattern is None:
-            self.parts.append(data)
-            return
-
-        def replace(match: re.Match[str]) -> str:
-            identifier = match.group(1)
-            definition = self.definitions.get(identifier)
-            if not definition:
-                return identifier
-            description = f"{identifier} — {definition}"
-            escaped = html.escape(description, quote=True)
-            return (
-                f'<abbr class="identifier-definition" title="{escaped}" '
-                f'aria-label="{escaped}">{html.escape(identifier)}</abbr>'
-            )
-
-        self.parts.append(self.pattern.sub(replace, data))
-
-    def handle_entityref(self, name: str) -> None:
-        self.parts.append(f"&{name};")
-
-    def handle_charref(self, name: str) -> None:
-        self.parts.append(f"&#{name};")
-
-    def handle_comment(self, data: str) -> None:
-        self.parts.append(f"<!--{data}-->")
-
-    def handle_decl(self, decl: str) -> None:
-        self.parts.append(f"<!{decl}>")
-
-    def handle_pi(self, data: str) -> None:
-        self.parts.append(f"<?{data}>")
-
-
-def _identifier_markup(fragment: str, definitions: dict[str, str]) -> str:
-    if not definitions:
-        return fragment
-    parser = _IdentifierMarkup(definitions)
-    parser.feed(fragment)
-    parser.close()
-    return "".join(parser.parts)
 
 
 def _split_table_row(line: str) -> list[str]:
@@ -1831,13 +1848,686 @@ _CONCERN_CHECKLIST_PROJECTION = (
 # "abbreviated" (store-only PLAN §8 SO9). Removed with the Markdown parser (SO19).
 _RECORDED_CHECKLIST_PROJECTION = ("code", "category", "territory", "probe", "primary subsystems")
 
-_COVERAGE_STATES = {
-    "🔴": ("confirmed-bug", "Confirmed defect", "!"),
-    "🟡": ("confirmed-acceptable", "Accepted behavior", "✓"),
-    "🟢": ("ruled-out", "Ruled out", "×"),
-    "⚪": ("out-of-scope", "Out of scope", "○"),
-    "⚠": ("unresolved-competition", "Competing explanations", "?"),
-}
+# The symbol a coverage cell carries for each outcome, in legend order.
+_COVERAGE_SYMBOLS = dict(zip(("🔴", "🟡", "🟢", "⚪", "⚠"), COVERAGE_STATES, strict=True))
+
+
+def _record_identifier(value: str) -> str:
+    """The record ID a cell names: its link's label, whatever the ID's shape.
+
+    The renderer links every record ID it prints, so the label is the exact
+    ID (`auth`, `B04-R6`); a cell with no link falls back to the first
+    letters-dash-number token, the shape the renderer once assumed.
+    """
+
+    link = re.search(r"\[([^\]]+)\]\([^)]*\)", value)
+    if link:
+        return _plain(link.group(1))
+    plain = _plain(value)
+    match = re.search(r"\b[A-Za-z][A-Za-z0-9]*-\d+\b", plain)
+    return match.group(0) if match else plain
+
+
+_LIST_ITEM = re.compile(r"^(\s*)([-*+] |\d+\. )(.*)$")
+
+
+def _parse_list(lines: list[str], start: int, nested: bool = False) -> tuple[List, int]:
+    """Parse the list whose first item is `lines[start]`; return it and the next line.
+
+    An item indented deeper than the list's first item is a child list of the
+    preceding item, one level at a time, so a claim's statement is its own item
+    and its coordinates a list inside it.  At the top level an item indented
+    less than the first is still a sibling, as it always was; a nested list ends
+    at the first item shallower than its own.
+    """
+
+    first = _LIST_ITEM.match(lines[start])
+    assert first is not None
+    base = len(first.group(1))
+    ordered = first.group(2)[0].isdigit()
+    items: list[ListItem] = []
+    i = start
+    while i < len(lines):
+        item = _LIST_ITEM.match(lines[i])
+        if not item:
+            break
+        indent = len(item.group(1))
+        if nested and indent < base:
+            break
+        if indent > base and items:
+            child, i = _parse_list(lines, i, nested=True)
+            items[-1] = ListItem(items[-1].text, (*items[-1].children, child))
+            continue
+        if item.group(2)[0].isdigit() != ordered:
+            break
+        value = item.group(3)
+        i += 1
+        continuation: list[str] = []
+        while i < len(lines) and lines[i].startswith(("  ", "    ")) and not _LIST_ITEM.match(lines[i]):
+            continuation.append(lines[i].strip())
+            i += 1
+        if continuation:
+            value += " " + " ".join(continuation)
+        items.append(ListItem(parse_inlines(value)))
+    return List(ordered, tuple(items)), i
+
+
+def _trace_name(record_id: str, label: str) -> str:
+    name = re.sub(r"<br\s*/?>", " ", label, flags=re.IGNORECASE)
+    name = html.unescape(name).strip()
+    if name.startswith(record_id):
+        name = name[len(record_id) :].strip()
+    return name
+
+
+def _parse_mermaid(source: str) -> Block:
+    lines = [line.strip() for line in source.splitlines() if line.strip()]
+    if lines and lines[0].startswith("graph "):
+        nodes: dict[str, tuple[str, str]] = {}
+        edges: list[tuple[str, str, str, str]] = []
+        for line in lines[1:]:
+            node = re.fullmatch(r'(\w+)\["(.+?)"\]', line)
+            if node:
+                label = node.group(2)
+                record = re.split(r"<br\s*/?>", label, flags=re.IGNORECASE)[0]
+                nodes[node.group(1)] = (record, label)
+                continue
+            edge = re.fullmatch(r'(\w+)\s+(-->|<-->)\|"?(.+?)"?\|\s+(\w+)', line)
+            if edge:
+                edges.append((edge.group(1), edge.group(2), edge.group(3), edge.group(4)))
+        if edges:
+            traced: list[TraceEdge] = []
+            for left, arrow, edge_label, right in edges:
+                left_id, left_label = nodes.get(left, (left, left))
+                right_id, right_label = nodes.get(right, (right, right))
+                traced.append(
+                    TraceEdge(
+                        TraceNode(left_id, _trace_name(left_id, left_label)),
+                        TraceNode(right_id, _trace_name(right_id, right_label)),
+                        re.sub(r"<br\s*/?>", " · ", edge_label, flags=re.IGNORECASE).strip('"'),
+                        arrow == "<-->",
+                    )
+                )
+            return RelationshipTrace(tuple(traced))
+    if lines and lines[0] == "pie showData":
+        values: list[tuple[str, float]] = []
+        for line in lines[1:]:
+            match = re.fullmatch(r'"(.+?)"\s*:\s*([0-9.]+)', line)
+            if match:
+                values.append((match.group(1), float(match.group(2))))
+        if values:
+            return StalenessBars(tuple(values))
+    return DiagramSource(source)
+
+
+class _MarkdownParser:
+    """One page's Markdown, resolved into the page model."""
+
+    def __init__(self, current_html_path: str) -> None:
+        self.current_html_path = current_html_path
+        # The heading a record currently sits under, by level. Both filterable
+        # pages group by exactly what the filter narrows on (§8.1.2), so the
+        # facets are read from the page's own hierarchy rather than restated.
+        self.headings: dict[int, str] = {}
+        self.facets: dict[str, list[str]] = {}
+        self.filter_scope = ""
+
+    def _remember_heading(self, level: int, raw: str) -> None:
+        self.headings[level] = _record_key_text(raw)
+        for deeper in [key for key in self.headings if key > level]:
+            del self.headings[deeper]
+
+    def _add_facet(self, key: str, value: str) -> str:
+        """Record one facet value in first-appearance order and return it."""
+
+        if value:
+            values = self.facets.setdefault(key, [])
+            if value not in values:
+                values.append(value)
+        return value
+
+    def _resolve_records(
+        self,
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+        projection: RecordProjection,
+    ) -> RecordList:
+        keys = [_header_key(header) for header in headers]
+        records: list[Record] = []
+        for row_number, (values, markers) in enumerate(rows, start=1):
+            record = dict(zip(keys, values, strict=True))
+            key_raw = record[projection.key]
+            key_text = _plain(key_raw) or f"Record {row_number}"
+            # The xref pass introduces a concern code as "concern RC-2" (PLAN
+            # §2.2 item 5); the anchor other pages link to is the code's.
+            anchor_text = (
+                re.sub(r"^concern\s+", "", key_text)
+                if projection.kind == "concern-disposition"
+                else key_text
+            )
+            facts: list[Fact] = []
+            if projection.kind == "file-ledger":
+                facts.append(Fact("path", parse_inlines(key_raw)))
+            for key in projection.metadata:
+                value = record.get(key, "")
+                if not _plain(value):
+                    continue
+                if projection.kind == "finding" and key == "status":
+                    facts.append(Fact(key, Inlines((Chip("status", _plain(value), show_hint=False),), _plain(value))))
+                else:
+                    facts.append(Fact(key, parse_inlines(value)))
+
+            lede: Inlines | None = None
+            fields: list[Fact] = []
+            if projection.kind == "finding":
+                parts = re.split(r"(?<=[.!?])\s+", record["symptom"], maxsplit=1)
+                lede = parse_inlines(parts[0])
+                if len(parts) == 2 and _plain(parts[1]):
+                    fields.append(Fact("observed behavior", parse_inlines(parts[1])))
+                if _plain(record.get("why it matters", "")):
+                    fields.append(Fact("why it matters", parse_inlines(record["why it matters"])))
+                fields.append(Fact("root cause", parse_inlines(record["root cause"])))
+            else:
+                for key in projection.content:
+                    value = record.get(key, "")
+                    if _plain(value):
+                        fields.append(Fact(key, parse_inlines(value)))
+
+            # The Unresolved lens's records are this page's filterable rows
+            # (§8.1.2). Subsystem and severity are the headings the record
+            # already sits under, so the filter narrows on the page's own
+            # grouping rather than on a second, restated classification.
+            row_filter: RowFilter | None = None
+            if self.current_html_path == "findings.html" and projection.kind == "finding":
+                self.filter_scope = "findings"
+                row_filter = RowFilter(
+                    self._add_facet("subsystem", self.headings.get(4, "")),
+                    self._add_facet(
+                        "severity",
+                        re.sub(r"\s+findings$", "", self.headings.get(3, ""), flags=re.IGNORECASE),
+                    ),
+                )
+            records.append(
+                Record(
+                    markers=tuple(markers),
+                    key=parse_inlines(key_raw),
+                    key_text=key_text,
+                    slug_text=_plain(f"{projection.kind}-{anchor_text}"),
+                    facts=tuple(facts),
+                    fields=tuple(fields),
+                    lede=lede,
+                    path=_plain(key_raw),
+                    revision=_plain(record.get("ref sha", "")),
+                    subsystem_id=_plain(record.get("id", "")),
+                    filter=row_filter,
+                )
+            )
+        return RecordList(projection.kind, caption, tuple(records))
+
+    @staticmethod
+    def _resolve_checklist(
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> ConcernChecklist:
+        """The calibrated concern table, grouped by category and territory."""
+
+        keys = [_header_key(header) for header in headers]
+        groups: dict[tuple[str, str], list[tuple[dict[str, str], list[str]]]] = {}
+        for values, markers in rows:
+            record = dict(zip(keys, values, strict=True))
+            group_key = (_plain(record["category"]), _plain(record["territory"]))
+            groups.setdefault(group_key, []).append((record, markers))
+
+        families: list[ConcernFamily] = []
+        for (category, territory), records in groups.items():
+            family_name = category.replace("-", " ").capitalize()
+            items: list[ConcernItem] = []
+            for row_number, (record, markers) in enumerate(records, start=1):
+                code_raw = record["code"]
+                code_text = _plain(code_raw) or f"Concern {row_number}"
+                probe = record.get("codebase-specific probe (abbreviated)") or record.get("probe", "")
+                items.append(
+                    ConcernItem(
+                        code=parse_inlines(code_raw),
+                        code_text=code_text,
+                        slug_text=_plain(f"concern-checklist-{code_text}"),
+                        primary_subsystems=parse_inlines(record.get("primary subsystems", "")),
+                        probe=parse_inlines(probe),
+                        markers=tuple(markers),
+                    )
+                )
+            families.append(
+                ConcernFamily(
+                    name=family_name,
+                    territory=territory,
+                    slug_text=_plain(f"{family_name} concerns"),
+                    items=tuple(items),
+                )
+            )
+        return ConcernChecklist(caption, tuple(families))
+
+    @staticmethod
+    def _resolve_coverage(
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+    ) -> CoverageIndex:
+        """The exact coverage matrix, each cell resolved to its recorded outcome."""
+
+        concern_codes = [_plain(header) for header in headers[1:]]
+
+        def outcome(code: str, value: str) -> CoverageReview | None:
+            plain = _plain(value)
+            if not plain or plain == "—":
+                return None
+            for symbol, (key, label, mark) in _COVERAGE_SYMBOLS.items():
+                if symbol in plain:
+                    return CoverageReview(code, key, label, mark, "🔗" in plain)
+            return CoverageReview(code, "unknown", "Recorded outcome", "?", "🔗" in plain)
+
+        resolved: list[CoverageRow] = []
+        for values, markers in rows:
+            identity = values[0]
+            link = re.search(r"\[([^]]+)\]\(([^)]+)\)", identity)
+            subsystem_id = _plain(link.group(1)) if link else _plain(identity).split(" ", 1)[0]
+            subsystem_name = _plain(identity)
+            if subsystem_name.startswith(subsystem_id):
+                subsystem_name = subsystem_name[len(subsystem_id) :].strip()
+            reviews = [
+                review
+                for code, value in zip(concern_codes, values[1:], strict=True)
+                if (review := outcome(code, value))
+            ]
+            resolved.append(
+                CoverageRow(
+                    subsystem_id=subsystem_id,
+                    name=subsystem_name or subsystem_id,
+                    href=_html_href(link.group(2)) if link else None,
+                    reviews=tuple(reviews),
+                    markers=tuple(markers),
+                )
+            )
+        return CoverageIndex(tuple(concern_codes), tuple(resolved))
+
+    @staticmethod
+    def _resolve_topology(
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+        kind: str,
+    ) -> Topology:
+        edges: list[TopologyEdge] = []
+        for values, markers in rows:
+            if kind == "seam":
+                key, left, detail, right = values[:4]
+                qualifier = ""
+            else:
+                left, key, right, qualifier, detail = values[:5]
+            edges.append(
+                TopologyEdge(
+                    key=parse_inlines(key),
+                    left_id=_record_identifier(left),
+                    left=parse_inlines(left),
+                    right_id=_record_identifier(right),
+                    right=parse_inlines(right),
+                    detail=parse_inlines(detail),
+                    qualifier=parse_inlines(qualifier),
+                    directed=kind != "seam",
+                    markers=tuple(markers),
+                )
+            )
+        return Topology(kind, caption, tuple(edges))
+
+    @staticmethod
+    def _resolve_boundaries(
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> BoundaryDiagram:
+        resolved: list[BoundaryRow] = []
+        for values, _markers in rows:
+            layer, subsystem, boundary, other = values[:4]
+            sid = _record_identifier(subsystem)
+            other_id = _record_identifier(other) if _plain(other) not in ("", "—") else ""
+            seam = "](seams.md#" in boundary
+            resolved.append(
+                BoundaryRow(
+                    layer=_plain(layer) or "unlayered",
+                    subsystem_id=sid,
+                    name=_plain(subsystem).removeprefix(sid).strip(),
+                    other_id=other_id,
+                    relation=_plain(boundary),
+                    seam=seam,
+                    seam_id=_record_identifier(boundary) if seam else "",
+                )
+            )
+        return BoundaryDiagram(caption, tuple(resolved))
+
+    def _resolve_table(
+        self,
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> Block:
+        signature = tuple(_header_key(header) for header in headers)
+        if signature == _SUBSYSTEM_ATLAS_PROJECTION:
+            regions: dict[str, list[AtlasItem]] = {}
+            for values, markers in rows:
+                region, subsystem, depth = values[:3]
+                regions.setdefault(_plain(region) or "Other", []).append(
+                    AtlasItem(parse_inlines(subsystem), _atlas_depth(depth), tuple(markers))
+                )
+            return Atlas(caption, tuple(AtlasRegion(name, tuple(items)) for name, items in regions.items()))
+        if signature == _DEPENDENCY_TOPOLOGY_PROJECTION:
+            return self._resolve_topology(rows, caption, "dependency")
+        if signature == _SEAM_TOPOLOGY_PROJECTION:
+            return self._resolve_topology(rows, caption, "seam")
+        if signature == _RUNTIME_BOUNDARY_PROJECTION:
+            return RuntimeDiagram(
+                caption,
+                tuple(
+                    RuntimeRow(*(parse_inlines(value) for value in values[:5]), markers=tuple(markers))
+                    for values, markers in rows
+                ),
+            )
+        if signature == _BOUNDARY_PROJECTION:
+            return self._resolve_boundaries(rows, caption)
+        if signature in (_CONCERN_CHECKLIST_PROJECTION, _RECORDED_CHECKLIST_PROJECTION):
+            return self._resolve_checklist(headers, rows, caption)
+        if (
+            len(signature) > 1
+            and signature[0] == "subsystem"
+            and all(_IDENTIFIER_SHAPE.fullmatch(header.upper()) for header in signature[1:])
+        ):
+            return self._resolve_coverage(headers, rows)
+        projection = _RECORD_PROJECTIONS.get(signature)
+        if projection:
+            return self._resolve_records(headers, rows, caption, projection)
+        if signature in _SUMMARY_LIST_PROJECTIONS:
+            return SummaryList(
+                caption,
+                tuple(
+                    SummaryItem(parse_inlines(values[0]), parse_inlines(values[1]), tuple(markers))
+                    for values, markers in rows
+                ),
+            )
+
+        lifecycle = signature in _LIFECYCLE_TABLE_PROJECTIONS
+        enum_table = signature == _ENUM_TABLE_PROJECTION
+        # `hot-spots.md`'s one measure table carries this page's filterable
+        # rows (§8.1.2). The severity facet is named by the band columns
+        # themselves: the table keeps critical+high and medium+low apart on
+        # purpose, and a filter that merged them into four severities would
+        # assert a resolution the columns do not record.
+        hot_spots = (
+            self.current_html_path == "hot-spots.html"
+            and signature[:1] == ("subsystem",)
+            and any(re.search(r"critical|medium", key) for key in signature)
+        )
+        severity_columns: list[tuple[int, str]] = []
+        if hot_spots:
+            self.filter_scope = "hot-spots"
+            for index, key in enumerate(signature):
+                if re.search(r"critical|medium", key):
+                    severity_columns.append((index, self._add_facet("severity", _plain(headers[index]))))
+        table_rows: list[Row] = []
+        for values, markers in rows:
+            cells: list[Inlines] = []
+            for index, value in enumerate(values):
+                literal = re.fullmatch(r"`([^`]+)`", value.strip()) if enum_table and index == 0 else None
+                cells.append(
+                    Inlines((CodeSpan(literal.group(1)),), _plain(value)) if literal else parse_inlines(value)
+                )
+            row_filter: RowFilter | None = None
+            if hot_spots:
+                row_filter = RowFilter(
+                    self._add_facet("subsystem", _record_key_text(values[0])),
+                    "|".join(
+                        label
+                        for index, label in severity_columns
+                        if index < len(values) and _positive_count(values[index])
+                    ),
+                )
+            table_rows.append(Row(tuple(cells), tuple(markers), row_filter))
+        kind = LifecycleTable if lifecycle else EnumTable if enum_table else Table
+        return kind(caption, tuple(parse_inlines(header) for header in headers), tuple(table_rows))
+
+    def parse(self, markdown: str) -> Page:
+        lines = markdown.splitlines()
+        title = "Conspectus"
+        root: list[Block] = []
+        section: tuple[str, list[Block]] | None = None
+        disclosure: list[Block] | None = None
+        disclose = False
+        current_section = ""
+
+        def target() -> list[Block]:
+            if disclosure is not None:
+                return disclosure
+            return section[1] if section is not None else root
+
+        def close_section() -> None:
+            nonlocal section, disclosure
+            if section is not None and disclosure is not None:
+                section[1].append(Details("Show the full vocabulary", tuple(disclosure)))
+            disclosure = None
+            if section is not None:
+                root.append(Section(section[0], tuple(section[1])))
+            section = None
+
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            if not line.strip():
+                i += 1
+                continue
+
+            if line.startswith("<!--") and line.rstrip().endswith("-->"):
+                target().append(RecordMarker(line))
+                i += 1
+                continue
+
+            if (
+                current_section in {"coverage-overview", "coverage-heatmap"}
+                and line.startswith("**Legend**:")
+            ):
+                i += 1
+                continue
+
+            anchor = re.fullmatch(r'<a\s+id="([a-zA-Z0-9_.:-]+)"></a>', line.strip())
+            if anchor:
+                target().append(Anchor(anchor.group(1)))
+                i += 1
+                continue
+
+            fence = re.match(r"^```\s*([\w-]*)\s*$", line)
+            if fence:
+                language = fence.group(1).lower()
+                code_lines: list[str] = []
+                i += 1
+                while i < len(lines) and not lines[i].startswith("```"):
+                    code_lines.append(lines[i])
+                    i += 1
+                i += 1 if i < len(lines) else 0
+                source = "\n".join(code_lines)
+                target().append(_parse_mermaid(source) if language == "mermaid" else Code(language, source))
+                continue
+
+            heading = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
+            if heading:
+                level = len(heading.group(1))
+                raw = heading.group(2)
+                if level == 1:
+                    title = _plain(raw)
+                    i += 1
+                    continue
+                display_raw = raw
+                if (
+                    self.current_html_path == "concern-checklist.html"
+                    and level == 2
+                    and re.fullmatch(r"Active concerns(?:\s+\(\d+\))?", _plain(raw), re.IGNORECASE)
+                ):
+                    display_raw = "Active concerns"
+                self._remember_heading(level, display_raw)
+                if level == 2:
+                    close_section()
+                    current_section = slugify(_plain(display_raw))
+                    section = (current_section, [])
+                    # The guide's last section holds the tables a reader never
+                    # meets as a label; it stays closed until asked for.
+                    disclose = self.current_html_path == "how-to-read.html" and current_section == "full-vocabulary"
+                # The Unresolved lens nests the subsystem under resolution
+                # state and severity, so its subsystem headings are one level
+                # deeper than the History lens's.
+                finding_group = (self.current_html_path == "findings.html" and level == 4) or (
+                    self.current_html_path == "resolved-findings.html" and level == 3
+                )
+                target().append(Heading(level, parse_inlines(display_raw), finding_group))
+                if level == 2 and disclose:
+                    disclosure = []
+                    disclose = False
+                i += 1
+                continue
+
+            if line.startswith("|") and i + 1 < len(lines) and _is_table_separator(lines[i + 1]):
+                headers = _split_table_row(line)
+                i += 2
+                rows: list[tuple[list[str], list[str]]] = []
+                pending_markers: list[str] = []
+                while i < len(lines):
+                    if lines[i].startswith("<!--") and lines[i].rstrip().endswith("-->"):
+                        pending_markers.append(lines[i])
+                        i += 1
+                        continue
+                    if not lines[i].startswith("|"):
+                        break
+                    rows.append((_split_table_row(lines[i]), pending_markers))
+                    pending_markers = []
+                    i += 1
+                # A table before the first `##` (the Files index is one) has no
+                # section to name it. The page's own title is a true caption;
+                # "Data" is furniture that tells a screen-reader user nothing.
+                caption = current_section.replace("-", " ") or title or "Data"
+                normalized_rows = []
+                for values, markers in rows:
+                    values += [""] * max(0, len(headers) - len(values))
+                    normalized_rows.append((values[: len(headers)], markers))
+                target().append(self._resolve_table(headers, normalized_rows, caption))
+                continue
+
+            if _LIST_ITEM.match(line):
+                parsed, i = _parse_list(lines, i)
+                target().append(parsed)
+                continue
+
+            if line.startswith(">"):
+                quoted: list[str] = []
+                while i < len(lines) and lines[i].startswith(">"):
+                    quoted.append(lines[i][1:].lstrip())
+                    i += 1
+                target().append(Quote(parse_inlines(" ".join(quoted))))
+                continue
+
+            paragraph = [line.strip()]
+            i += 1
+            while i < len(lines) and lines[i].strip():
+                candidate = lines[i]
+                if re.match(r"^(#{1,6})\s+", candidate) or candidate.startswith(("```", "|", ">", "<!--", '<a id="')) or re.match(r"^\s*([-*+] |\d+\. )", candidate):
+                    break
+                paragraph.append(candidate.strip())
+                i += 1
+            target().append(Paragraph(parse_inlines(" ".join(paragraph))))
+
+        close_section()
+        facets = (
+            Facets(self.filter_scope, tuple((key, tuple(values)) for key, values in self.facets.items()))
+            if self.filter_scope
+            else None
+        )
+        return Page(title, self.current_html_path, tuple(root), facets)
+
+
+def parse_markdown(markdown: str, current_html_path: str) -> Page:
+    """Resolve one page's finished Markdown into the page model (§3.1)."""
+
+    return _MarkdownParser(current_html_path).parse(markdown)
+
+
+# ---------------------------------------------------------------------------
+# Page model → HTML. Nothing below reads Markdown: every block already says
+# what it is, and every inline already says how it prints.
+# ---------------------------------------------------------------------------
+
+
+def _rel_link(from_path: str, to_path: str) -> str:
+    base = posixpath.dirname(from_path) or "."
+    return posixpath.relpath(to_path, base)
+
+
+def _status_html(value: str, *, severity: bool = False, show_hint: bool = True) -> str:
+    raw = value.strip()
+    key = raw.lower()
+    if severity:
+        key = raw.upper()
+        label = key.title()
+        hint = SEVERITY_HINTS.get(key, "Finding impact level.")
+        hint_attr = f' title="{html.escape(hint, quote=True)}"' if show_hint else ""
+        return f'<span class="severity severity-{key.lower()}"{hint_attr}>{html.escape(label)}</span>'
+    hint = STATUS_HINTS.get(key, "Recorded workflow state.")
+    label = DISPLAY_STATUS.get(key, key.replace("-", " ").title())
+    axis = STATUS_AXIS.get(key, "workflow")
+    hint_attr = f' title="{html.escape(hint, quote=True)}"' if show_hint else ""
+    return f'<span class="status status-{axis} status-{html.escape(key)}"{hint_attr}>{html.escape(label)}</span>'
+
+
+def _chip_html(chip: Chip) -> str:
+    if chip.enum == "severity":
+        return _status_html(chip.value, severity=True, show_hint=chip.show_hint)
+    if chip.enum == "evidence":
+        key = chip.value
+        label = DISPLAY_STATUS.get(key, key.replace("-", " ").title())
+        cls = f"evidence-label evidence-{key}"
+        return f'<span class="{cls}" title="{html.escape(EVIDENCE_HINTS[key], quote=True)}">{html.escape(label)}</span>'
+    return _status_html(chip.value, show_hint=chip.show_hint)
+
+
+def _inline_html(node: Inline) -> str:
+    if isinstance(node, Text):
+        return html.escape(node.text, quote=False)
+    if isinstance(node, CodeSpan):
+        return f"<code>{html.escape(node.text)}</code>"
+    if isinstance(node, Chip):
+        return _chip_html(node)
+    if isinstance(node, Strong):
+        return f"<strong>{''.join(_inline_html(child) for child in node.children)}</strong>"
+    if isinstance(node, Emph):
+        return f"<em>{''.join(_inline_html(child) for child in node.children)}</em>"
+    if isinstance(node, Link):
+        attrs = ' rel="noreferrer"' if node.external else ""
+        return f'<a href="{html.escape(node.href, quote=True)}"{attrs}>{html.escape(node.label)}</a>'
+    if isinstance(node, Abbr):
+        return f'<abbr title="{html.escape(node.title, quote=True)}">{html.escape(node.text)}</abbr>'
+    if isinstance(node, InlineAnchor):
+        return f'<span id="{html.escape(node.id, quote=True)}" class="record-anchor"></span>'
+    if isinstance(node, InlineMarker):
+        return node.raw
+    if isinstance(node, Break):
+        return "<br>\n"
+    if isinstance(node, Tag):
+        return f"<{'/' if node.closing else ''}{node.name}>"
+    raise TypeError(f"not an inline node: {node!r}")
+
+
+def _inlines_html(text: Inlines) -> str:
+    return "".join(_inline_html(node) for node in text.nodes)
+
+
+def _inline(text: str) -> str:
+    """Markdown inline text as HTML: `parse_inlines`, then the writer's inline printer.
+
+    Kept for the read-back, which compares a page's words with the store's.
+    """
+
+    return _inlines_html(parse_inlines(text))
 
 
 _DISPLAY_FIELD = {
@@ -1856,7 +2546,41 @@ _DISPLAY_FIELD = {
 }
 
 
-class MarkdownRenderer:
+def _compose_prose_runs(elements: list[str]) -> list[str]:
+    """Give finite runs of sustained prose an editorial multicolumn surface.
+
+    Source order remains ordinary paragraphs. Only adjacent top-level
+    paragraphs with enough text to form a useful reading field are wrapped;
+    headings, lists, records, tables, figures, and code always terminate a run.
+    """
+
+    composed: list[str] = []
+    run: list[str] = []
+
+    def flush() -> None:
+        if not run:
+            return
+        character_count = sum(len(re.sub(r"<[^>]+>", "", paragraph)) for paragraph in run)
+        use_columns = (len(run) >= 2 and character_count >= 700) or character_count >= 1300
+        if use_columns:
+            composed.append('<div class="prose-flow">' + "".join(run) + "</div>")
+        else:
+            composed.extend(run)
+        run.clear()
+
+    for element in elements:
+        if element.startswith("<p>") and element.endswith("</p>"):
+            run.append(element)
+            continue
+        flush()
+        composed.append(element)
+    flush()
+    return composed
+
+
+class _HtmlWriter:
+    """One page model, printed. Holds the slugs already used on the page."""
+
     def __init__(
         self,
         route_map: dict[str, str],
@@ -1867,29 +2591,9 @@ class MarkdownRenderer:
         self.current_html_path = current_html_path
         self.repository_url = repository_url.rstrip("/") if repository_url else None
         self.used_slugs: dict[str, int] = {}
-        # The heading a record currently sits under, by level. Both filterable
-        # pages group by exactly what the filter narrows on (§8.1.2), so the
-        # facets are read from the page's own hierarchy rather than restated.
-        self.headings: dict[int, str] = {}
-        self.facets: dict[str, list[str]] = {}
-        self.filter_scope = ""
 
-    def _note_heading(self, level: int, raw: str) -> None:
-        self.headings[level] = _record_key_text(raw)
-        for deeper in [key for key in self.headings if key > level]:
-            del self.headings[deeper]
-
-    def _facet(self, key: str, value: str) -> str:
-        """Record one facet value in first-appearance order and return it."""
-
-        if value:
-            values = self.facets.setdefault(key, [])
-            if value not in values:
-                values.append(value)
-        return value
-
-    def _heading_slug(self, title: str) -> str:
-        base = slugify(_plain(title))
+    def _unique_slug(self, plain_title: str) -> str:
+        base = slugify(plain_title)
         count = self.used_slugs.get(base, 0)
         self.used_slugs[base] = count + 1
         return base if count == 0 else f"{base}-{count + 1}"
@@ -1900,113 +2604,66 @@ class MarkdownRenderer:
             return None
         return _rel_link(self.current_html_path, target)
 
-    def _node(self, record_id: str, label: str) -> str:
-        name = re.sub(r"<br\s*/?>", " ", label, flags=re.IGNORECASE)
-        name = html.unescape(name).strip()
-        if name.startswith(record_id):
-            name = name[len(record_id) :].strip()
+    def _trace_node(self, node: TraceNode) -> str:
         body = (
-            f'<strong data-identifier-defined>{html.escape(record_id)}</strong>'
-            f'<span>{html.escape(name or record_id)}</span>'
+            f'<strong data-identifier-defined>{html.escape(node.record_id)}</strong>'
+            f'<span>{html.escape(node.name or node.record_id)}</span>'
         )
-        href = self._route(record_id)
+        href = self._route(node.record_id)
         if href:
             return f'<a class="relationship-node" href="{html.escape(href, quote=True)}">{body}</a>'
         return f'<span class="relationship-node">{body}</span>'
 
-    def _mermaid(self, source: str) -> str:
-        lines = [line.strip() for line in source.splitlines() if line.strip()]
-        if lines and lines[0].startswith("graph "):
-            nodes: dict[str, tuple[str, str]] = {}
-            edges: list[tuple[str, str, str, str]] = []
-            for line in lines[1:]:
-                node = re.fullmatch(r'(\w+)\["(.+?)"\]', line)
-                if node:
-                    label = node.group(2)
-                    record = re.split(r"<br\s*/?>", label, flags=re.IGNORECASE)[0]
-                    nodes[node.group(1)] = (record, label)
-                    continue
-                edge = re.fullmatch(r'(\w+)\s+(-->|<-->)\|"?(.+?)"?\|\s+(\w+)', line)
-                if edge:
-                    edges.append((edge.group(1), edge.group(2), edge.group(3), edge.group(4)))
-            if edges:
-                rendered = []
-                for left, arrow, edge_label, right in edges:
-                    left_id, left_label = nodes.get(left, (left, left))
-                    right_id, right_label = nodes.get(right, (right, right))
-                    clean_edge = re.sub(r"<br\s*/?>", " · ", edge_label, flags=re.IGNORECASE).strip('"')
-                    glyph = "↔" if arrow == "<-->" else "→"
-                    rendered.append(
-                        '<div class="relationship">'
-                        + self._node(left_id, left_label)
-                        + f'<div class="relationship-edge"><b aria-hidden="true">{glyph}</b>{html.escape(clean_edge)}</div>'
-                        + self._node(right_id, right_label)
-                        + "</div>"
-                    )
-                return '<figure class="figure"><figcaption class="figure-label">Relationship trace</figcaption><div class="relationship-map">' + "".join(rendered) + "</div></figure>"
-        if lines and lines[0] == "pie showData":
-            values: list[tuple[str, float]] = []
-            for line in lines[1:]:
-                match = re.fullmatch(r'"(.+?)"\s*:\s*([0-9.]+)', line)
-                if match:
-                    values.append((match.group(1), float(match.group(2))))
-            if values:
-                ceiling = max(value for _, value in values) or 1
-                bars = "".join(
-                    f'<div class="bar-row"><span class="bar-label">{html.escape(label)}</span><span class="bar-track"><span class="bar-fill" style="width:{value / ceiling * 100:.2f}%"></span></span><span class="bar-value">{value:g}</span></div>'
-                    for label, value in values
-                )
-                return f'<figure class="figure"><figcaption class="figure-label">Staleness distribution</figcaption><div class="bar-chart">{bars}</div></figure>'
-        return f'<figure class="figure"><figcaption class="figure-label">Diagram source</figcaption><pre class="diagram-source">{html.escape(source)}</pre></figure>'
+    def _relationship_trace(self, block: RelationshipTrace) -> str:
+        rendered = []
+        for edge in block.edges:
+            glyph = "↔" if edge.two_way else "→"
+            rendered.append(
+                '<div class="relationship">'
+                + self._trace_node(edge.left)
+                + f'<div class="relationship-edge"><b aria-hidden="true">{glyph}</b>{html.escape(edge.label)}</div>'
+                + self._trace_node(edge.right)
+                + "</div>"
+            )
+        return '<figure class="figure"><figcaption class="figure-label">Relationship trace</figcaption><div class="relationship-map">' + "".join(rendered) + "</div></figure>"
 
-    def _field_label(self, key: str, kind: str) -> str:
+    @staticmethod
+    def _staleness_bars(block: StalenessBars) -> str:
+        ceiling = max(value for _, value in block.values) or 1
+        bars = "".join(
+            f'<div class="bar-row"><span class="bar-label">{html.escape(label)}</span><span class="bar-track"><span class="bar-fill" style="width:{value / ceiling * 100:.2f}%"></span></span><span class="bar-value">{value:g}</span></div>'
+            for label, value in block.values
+        )
+        return f'<figure class="figure"><figcaption class="figure-label">Staleness distribution</figcaption><div class="bar-chart">{bars}</div></figure>'
+
+    @staticmethod
+    def _field_label(key: str, kind: str) -> str:
         if key == "classification" and kind == "file-ledger":
             return "Review"
         return _DISPLAY_FIELD.get(key, key.replace("-", " ").capitalize())
 
     def _github_file_url(self, path: str, revision: str) -> str | None:
-        clean_path = _plain(path)
-        clean_revision = _plain(revision)
-        parts = PurePosixPath(clean_path).parts
+        parts = PurePosixPath(path).parts
         if (
             not self.repository_url
             or not re.fullmatch(r"https://github\.com/[^/]+/[^/]+", self.repository_url)
-            or not re.fullmatch(r"[0-9a-fA-F]{7,40}", clean_revision)
+            or not re.fullmatch(r"[0-9a-fA-F]{7,40}", revision)
             or not parts
-            or clean_path.startswith("/")
+            or path.startswith("/")
             or ".." in parts
         ):
             return None
-        return f"{self.repository_url}/blob/{clean_revision}/{quote(clean_path, safe='/')}"
+        return f"{self.repository_url}/blob/{revision}/{quote(path, safe='/')}"
 
-    def _record_list(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-        projection: RecordProjection,
-    ) -> str:
-        keys = [_header_key(header) for header in headers]
+    def _record_list(self, block: RecordList) -> str:
+        kind = block.kind
         rendered: list[str] = []
-
-        for row_number, (values, markers) in enumerate(rows, start=1):
-            record = dict(zip(keys, values, strict=True))
-            key_raw = record[projection.key]
-            key_text = _plain(key_raw) or f"Record {row_number}"
-            # The xref pass introduces a concern code as "concern RC-2" (PLAN
-            # §2.2 item 5); the anchor other pages link to is the code's.
-            anchor_text = (
-                re.sub(r"^concern\s+", "", key_text)
-                if projection.kind == "concern-disposition"
-                else key_text
-            )
-            heading_id = self._heading_slug(f"{projection.kind}-{anchor_text}")
-
-            facts: list[tuple[str, str, str]] = []
-            if projection.kind == "file-ledger":
-                path = key_text
+        for record in block.records:
+            heading_id = self._unique_slug(record.slug_text)
+            if kind == "file-ledger":
+                path = record.key_text
                 basename = posixpath.basename(path) or path
-                file_url = self._github_file_url(key_raw, record.get("ref sha", ""))
+                file_url = self._github_file_url(record.path, record.revision)
                 filename = f"<code>{html.escape(basename)}</code>"
                 primary = (
                     f'<a class="file-source-link" href="{html.escape(file_url, quote=True)}" '
@@ -2014,157 +2671,94 @@ class MarkdownRenderer:
                     if file_url
                     else filename
                 )
-                facts.append(("path", "Path", key_raw))
-            elif projection.kind == "open-question":
-                primary = f"Question {html.escape(key_text)}"
-            elif projection.kind == "subsystem":
-                subsystem_id = _plain(record.get("id", ""))
-                route = self._route(subsystem_id)
-                label = _inline(key_raw)
+            elif kind == "open-question":
+                primary = f"Question {html.escape(record.key_text)}"
+            elif kind == "subsystem":
+                route = self._route(record.subsystem_id)
+                label = _inlines_html(record.key)
                 primary = (
                     f'<a class="record-primary-link" href="{html.escape(route, quote=True)}">{label}</a>'
                     if route
                     else label
                 )
             else:
-                primary = _inline(key_raw)
-
-            for key in projection.metadata:
-                value = record.get(key, "")
-                if not _plain(value):
-                    continue
-                facts.append((key, self._field_label(key, projection.kind), value))
+                primary = _inlines_html(record.key)
 
             fact_chunks: list[str] = []
-            for key, label, value in facts:
-                value_html = (
-                    _status_html(_plain(value), show_hint=False)
-                    if projection.kind == "finding" and key == "status"
-                    else _inline(value)
-                )
-                if projection.kind == "subsystem" and key == "id":
+            for fact in record.facts:
+                value_html = _inlines_html(fact.value)
+                if kind == "subsystem" and fact.key == "id":
                     value_html = f'<span data-identifier-defined>{value_html}</span>'
                 fact_chunks.append(
-                    f'<div class="record-fact record-fact-{html.escape(slugify(key), quote=True)}">'
-                    f'<dt>{html.escape(label)}</dt><dd>{value_html}</dd></div>'
+                    f'<div class="record-fact record-fact-{html.escape(slugify(fact.key), quote=True)}">'
+                    f'<dt>{html.escape(self._field_label(fact.key, kind))}</dt><dd>{value_html}</dd></div>'
                 )
             facts_html = "".join(fact_chunks)
-            heading_tag = "h4" if projection.kind == "finding" else "h3"
-            definition_context = " data-identifier-defined" if projection.kind == "finding" else ""
+            heading_tag = "h4" if kind == "finding" else "h3"
+            definition_context = " data-identifier-defined" if kind == "finding" else ""
             meta = (
                 f'<header class="record-meta"{definition_context}>'
                 f'<{heading_tag} class="record-primary" id="{html.escape(heading_id, quote=True)}">{primary}</{heading_tag}>'
                 + (f'<dl class="record-facts">{facts_html}</dl>' if facts_html else "")
                 + "</header>"
             )
-
-            if projection.kind == "finding":
-                symptom = record["symptom"]
-                parts = re.split(r"(?<=[.!?])\s+", symptom, maxsplit=1)
-                lede = f'<p class="record-lede">{_inline(parts[0])}</p>'
-                fields: list[str] = []
-                if len(parts) == 2 and _plain(parts[1]):
-                    fields.append(
-                        '<div class="record-field"><p class="record-label">Observed behavior</p>'
-                        f'<div class="record-copy">{_inline(parts[1])}</div></div>'
-                    )
-                if _plain(record.get("why it matters", "")):
-                    fields.append(
-                        '<div class="record-field"><p class="record-label">Why it matters</p>'
-                        f'<div class="record-copy">{_inline(record["why it matters"])}</div></div>'
-                    )
-                fields.append(
-                    '<div class="record-field"><p class="record-label">Root cause</p>'
-                    f'<div class="record-copy">{_inline(record["root cause"])}</div></div>'
-                )
-                content = f'<div class="record-body">{lede}<div class="record-fields">{"".join(fields)}</div></div>'
+            fields = "".join(
+                f'<div class="record-field"><p class="record-label">{html.escape(self._field_label(field.key, kind))}</p>'
+                f'<div class="record-copy">{_inlines_html(field.value)}</div></div>'
+                for field in record.fields
+            )
+            if record.lede is not None:
+                lede = f'<p class="record-lede">{_inlines_html(record.lede)}</p>'
+                content = f'<div class="record-body">{lede}<div class="record-fields">{fields}</div></div>'
             else:
-                fields = []
-                for key in projection.content:
-                    value = record.get(key, "")
-                    if not _plain(value):
-                        continue
-                    fields.append(
-                        f'<div class="record-field"><p class="record-label">{html.escape(self._field_label(key, projection.kind))}</p>'
-                        f'<div class="record-copy">{_inline(value)}</div></div>'
-                    )
-                content = f'<div class="record-fields">{"".join(fields)}</div>'
+                content = f'<div class="record-fields">{fields}</div>'
 
-            aria = html.escape(f"{projection.kind.replace('-', ' ')} {key_text}", quote=True)
-            # The Unresolved lens's records are this page's filterable rows
-            # (§8.1.2). Subsystem and severity are the headings the record
-            # already sits under, so the filter narrows on the page's own
-            # grouping rather than on a second, restated classification.
+            aria = html.escape(f"{kind.replace('-', ' ')} {record.key_text}", quote=True)
             filter_attrs = ""
-            if self.current_html_path == "findings.html" and projection.kind == "finding":
-                self.filter_scope = "findings"
-                subsystem = self._facet("subsystem", self.headings.get(4, ""))
-                severity = self._facet(
-                    "severity",
-                    re.sub(
-                        r"\s+findings$", "", self.headings.get(3, ""), flags=re.IGNORECASE
-                    ),
-                )
+            if record.filter is not None:
                 filter_attrs = (
                     " data-filter-row"
-                    f' data-filter-subsystem="{html.escape(subsystem, quote=True)}"'
-                    f' data-filter-severity="{html.escape(severity, quote=True)}"'
+                    f' data-filter-subsystem="{html.escape(record.filter.subsystem, quote=True)}"'
+                    f' data-filter-severity="{html.escape(record.filter.severity, quote=True)}"'
                 )
             rendered.append(
-                "".join(markers)
-                + f'<article class="record record-{projection.kind}"{filter_attrs} role="listitem" aria-labelledby="{html.escape(heading_id, quote=True)}" data-record-label="{aria}">'
+                "".join(record.markers)
+                + f'<article class="record record-{kind}"{filter_attrs} role="listitem" aria-labelledby="{html.escape(heading_id, quote=True)}" data-record-label="{aria}">'
                 + meta
                 + content
                 + "</article>"
             )
 
-        label = html.escape(caption, quote=True)
-        return f'<div class="record-list record-list-{projection.kind}" role="list" aria-label="{label}">{"".join(rendered)}</div>'
+        label = html.escape(block.caption, quote=True)
+        return f'<div class="record-list record-list-{kind}" role="list" aria-label="{label}">{"".join(rendered)}</div>'
 
-    def _concern_checklist(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        """Project the calibrated concern table as a grouped reading register."""
-
-        keys = [_header_key(header) for header in headers]
-        groups: dict[tuple[str, str], list[tuple[dict[str, str], list[str]]]] = {}
-        for values, markers in rows:
-            record = dict(zip(keys, values, strict=True))
-            group_key = (_plain(record["category"]), _plain(record["territory"]))
-            groups.setdefault(group_key, []).append((record, markers))
+    def _concern_checklist(self, block: ConcernChecklist) -> str:
+        """The calibrated concern table as a grouped reading register."""
 
         rendered_groups: list[str] = []
-        for (category, territory), records in groups.items():
-            family_name = category.replace("-", " ").capitalize()
-            family_id = self._heading_slug(f"{family_name} concerns")
+        for family in block.families:
+            family_name, territory = family.name, family.territory
+            family_id = self._unique_slug(family.slug_text)
             family_label = f"{family_name} · {territory}" if territory else family_name
             articles: list[str] = []
-
-            for row_number, (record, markers) in enumerate(records, start=1):
-                code_raw = record["code"]
-                code_text = _plain(code_raw) or f"Concern {row_number}"
-                record_id = self._heading_slug(f"concern-checklist-{code_text}")
-                primary_subsystems = record.get("primary subsystems", "")
-                probe = record.get("codebase-specific probe (abbreviated)") or record.get("probe", "")
+            for item in family.items:
+                record_id = self._unique_slug(item.slug_text)
                 facts = ""
-                if _plain(primary_subsystems):
+                if item.primary_subsystems.plain:
                     facts = (
                         '<dl class="record-facts"><div class="record-fact record-fact-primary-subsystems">'
                         '<dt>Review in</dt>'
-                        f'<dd>{_inline(primary_subsystems)}</dd></div></dl>'
+                        f'<dd>{_inlines_html(item.primary_subsystems)}</dd></div></dl>'
                     )
                 articles.append(
-                    "".join(markers)
+                    "".join(item.markers)
                     + f'<article class="record record-concern-checklist" role="listitem" '
                     f'aria-labelledby="{html.escape(record_id, quote=True)}" '
-                    f'data-record-label="{html.escape(f"concern {code_text}", quote=True)}">'
+                    f'data-record-label="{html.escape(f"concern {item.code_text}", quote=True)}">'
                     '<header class="record-meta">'
                     f'<h4 class="record-primary" id="{html.escape(record_id, quote=True)}">'
-                    f'<span data-identifier-defined>{_inline(code_raw)}</span></h4>{facts}</header>'
-                    f'<div class="record-body"><div class="record-probe">{_inline(probe)}</div></div>'
+                    f'<span data-identifier-defined>{_inlines_html(item.code)}</span></h4>{facts}</header>'
+                    f'<div class="record-body"><div class="record-probe">{_inlines_html(item.probe)}</div></div>'
                     '</article>'
                 )
 
@@ -2182,80 +2776,66 @@ class MarkdownRenderer:
             )
 
         return (
-            f'<div class="concern-checklist" aria-label="{html.escape(caption, quote=True)}">'
+            f'<div class="concern-checklist" aria-label="{html.escape(block.caption, quote=True)}">'
             + "".join(rendered_groups)
             + '</div>'
         )
 
-    def _summary_list(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        items: list[str] = []
-        for values, markers in rows:
-            key, value = values[:2]
-            items.append(
-                "".join(markers)
-                + f'<div><dt>{_inline(key)}</dt><dd>{_inline(value)}</dd></div>'
-            )
+    @staticmethod
+    def _summary_list(block: SummaryList) -> str:
+        items = [
+            "".join(item.markers)
+            + f'<div><dt>{_inlines_html(item.key)}</dt><dd>{_inlines_html(item.value)}</dd></div>'
+            for item in block.items
+        ]
         return (
-            f'<dl class="summary-list" aria-label="{html.escape(caption, quote=True)}">'
+            f'<dl class="summary-list" aria-label="{html.escape(block.caption, quote=True)}">'
             + "".join(items)
             + "</dl>"
         )
 
-    def _subsystem_atlas(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        regions: dict[str, list[tuple[str, str, list[str]]]] = {}
-        for values, markers in rows:
-            region, subsystem, depth = values[:3]
-            regions.setdefault(_plain(region) or "Other", []).append((subsystem, depth, markers))
-
+    @staticmethod
+    def _subsystem_atlas(block: Atlas) -> str:
         region_html: list[str] = []
-        for region, subsystems in regions.items():
+        for region in block.regions:
             items = "".join(
-                "".join(markers)
+                "".join(item.markers)
                 + '<li class="atlas-item">'
-                + f'<div class="atlas-subsystem" data-identifier-defined>{_inline(subsystem)}</div>'
-                + f'<div class="atlas-depth">{_atlas_depth(depth)}</div>'
+                + f'<div class="atlas-subsystem" data-identifier-defined>{_inlines_html(item.subsystem)}</div>'
+                + f'<div class="atlas-depth">{_inlines_html(item.depth)}</div>'
                 + "</li>"
-                for subsystem, depth, markers in subsystems
+                for item in region.items
             )
+            count = len(region.items)
             region_html.append(
                 '<section class="atlas-region">'
                 '<header class="atlas-region-head">'
-                f'<h3>{html.escape(region)}</h3>'
-                f'<span class="atlas-region-count">{len(subsystems)} subsystem{"s" if len(subsystems) != 1 else ""}</span>'
+                f'<h3>{html.escape(region.name)}</h3>'
+                f'<span class="atlas-region-count">{count} subsystem{"s" if count != 1 else ""}</span>'
                 '</header>'
                 f'<ul class="atlas-list">{items}</ul>'
                 '</section>'
             )
 
-        label = html.escape(caption, quote=True)
+        label = html.escape(block.caption, quote=True)
+        regions = len(block.regions)
         return (
             f'<div class="subsystem-atlas" role="group" aria-label="{label}">'
             '<div class="atlas-summary">'
-            f'<strong>{sum(len(items) for items in regions.values())} subsystems</strong>'
-            f'<span>{len(regions)} architectural region{"s" if len(regions) != 1 else ""}</span>'
+            f'<strong>{sum(len(region.items) for region in block.regions)} subsystems</strong>'
+            f'<span>{regions} architectural region{"s" if regions != 1 else ""}</span>'
             '<span>Names open the subsystem report</span>'
             '</div>'
             f'<div class="atlas-regions">{"".join(region_html)}</div>'
             '</div>'
         )
 
-    def _runtime_boundary_diagram(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        """Render recorded runtime relations as inline SVG plus readable HTML."""
+    @staticmethod
+    def _runtime_boundary_diagram(block: RuntimeDiagram) -> str:
+        """Recorded runtime relations as inline SVG plus readable HTML."""
 
-        def wrapped(value: str, width: int) -> list[str]:
-            plain = _plain(value).strip() or "Not recorded"
+        def wrapped(value: Inlines, width: int) -> list[str]:
+            plain = value.plain.strip() or "Not recorded"
             return textwrap.wrap(
                 plain,
                 width=width,
@@ -2290,8 +2870,10 @@ class MarkdownRenderer:
         svg_rows: list[str] = []
         details: list[str] = []
 
-        for index, (values, markers) in enumerate(rows):
-            source, language, target, mechanism, note = values[:5]
+        for index, row in enumerate(block.rows):
+            source, language, target, mechanism, note = (
+                row.source, row.language, row.target, row.mechanism, row.note
+            )
             source_lines = wrapped(source, 26)
             language_lines = wrapped(language, 32)
             target_lines = wrapped(target, 27)
@@ -2355,25 +2937,25 @@ class MarkdownRenderer:
 
             note_html = (
                 '<p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>'
-                f'{_inline(note)}</p>'
-                if _plain(note).strip()
+                f'{_inlines_html(note)}</p>'
+                if note.plain.strip()
                 else ""
             )
             details.append(
-                "".join(markers)
+                "".join(row.markers)
                 + '<article class="runtime-detail" role="listitem">'
                 '<header class="runtime-detail-head">'
-                f'<h3>{_inline(source)}</h3>'
-                f'<span class="runtime-detail-language">{_inline(language)}</span></header>'
+                f'<h3>{_inlines_html(source)}</h3>'
+                f'<span class="runtime-detail-language">{_inlines_html(language)}</span></header>'
                 '<div class="runtime-detail-body">'
                 '<p><span class="runtime-detail-label">Communicates with</span>'
-                f'{_inline(target)}</p>'
+                f'{_inlines_html(target)}</p>'
                 '<p><span class="runtime-detail-label">Mechanism</span>'
-                f'{_inline(mechanism)}</p>{note_html}</div></article>'
+                f'{_inlines_html(mechanism)}</p>{note_html}</div></article>'
             )
             current_y += lane_height
 
-        count = len(rows)
+        count = len(block.rows)
         boundary_word = "boundary" if count == 1 else "boundaries"
         svg_height = current_y
         svg = (
@@ -2389,7 +2971,7 @@ class MarkdownRenderer:
             + "".join(svg_rows)
             + '</svg>'
         )
-        label = html.escape(caption or "runtime boundary map", quote=True)
+        label = html.escape(block.caption or "runtime boundary map", quote=True)
         return (
             '<div class="runtime-boundary-projection">'
             f'<figure class="runtime-boundary-diagram" aria-label="{label}">'
@@ -2404,11 +2986,8 @@ class MarkdownRenderer:
             + '</div></div>'
         )
 
-    def _boundary_diagram(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
+    @staticmethod
+    def _boundary_diagram(block: BoundaryDiagram) -> str:
         """Draw the recorded-boundary table as inline SVG (§2.5 item 2).
 
         Columns are layers in table order, eight to a band; boxes are in table
@@ -2421,21 +3000,18 @@ class MarkdownRenderer:
         touched: set[str] = set()
         seams: dict[str, tuple[str, str]] = {}
         xrefs: list[tuple[str, str, str]] = []
-        for values, _markers in rows:
-            layer, subsystem, boundary, other = values[:4]
-            sid = self._record_identifier(subsystem)
+        for row in block.rows:
+            sid = row.subsystem_id
             if sid not in names:
-                names[sid] = _plain(subsystem).removeprefix(sid).strip()
-                layers.setdefault(_plain(layer) or "unlayered", []).append(sid)
-            other_id = self._record_identifier(other) if _plain(other) not in ("", "—") else ""
-            if not other_id:
+                names[sid] = row.name
+                layers.setdefault(row.layer, []).append(sid)
+            if not row.other_id:
                 continue
             touched.add(sid)
-            relation = _plain(boundary)
-            if "](seams.md#" in boundary:
-                seams.setdefault(self._record_identifier(boundary), (sid, other_id))
-            elif relation.endswith("→"):
-                xrefs.append((sid, other_id, relation.removesuffix("→").strip()))
+            if row.seam:
+                seams.setdefault(row.seam_id, (sid, row.other_id))
+            elif row.relation.endswith("→"):
+                xrefs.append((sid, row.other_id, row.relation.removesuffix("→").strip()))
 
         columns = list(layers)
         bands = [columns[i : i + per_band] for i in range(0, len(columns), per_band)]
@@ -2448,8 +3024,8 @@ class MarkdownRenderer:
                 parts_columns.append(
                     f'<text class="boundary-svg-column" x="{x}" y="{band_top + 30}">{html.escape(layer)}</text>'
                 )
-                for row, sid in enumerate(layers[layer]):
-                    boxes[sid] = (x, band_top + 44 + row * (box_h + gap_y))
+                for row_index, sid in enumerate(layers[layer]):
+                    boxes[sid] = (x, band_top + 44 + row_index * (box_h + gap_y))
             tallest = max(len(layers[layer]) for layer in band)
             band_top += 44 + tallest * (box_h + gap_y) + 24
         width = 2 * margin + min(len(columns), per_band) * (box_w + gap_x) - gap_x
@@ -2538,7 +3114,7 @@ class MarkdownRenderer:
             + f'<g class="boundary-svg-labels">{"".join(labels)}</g>'
             + "</svg>"
         )
-        label = html.escape(caption or "recorded boundaries", quote=True)
+        label = html.escape(block.caption or "recorded boundaries", quote=True)
         return (
             '<div class="boundary-projection">'
             f'<figure class="boundary-diagram" aria-label="{label}">'
@@ -2552,57 +3128,16 @@ class MarkdownRenderer:
         )
 
     @staticmethod
-    def _record_identifier(value: str) -> str:
-        """The record ID a cell names: its link's label, whatever the ID's shape.
-
-        The renderer links every record ID it prints, so the label is the exact
-        ID (`auth`, `B04-R6`); a cell with no link falls back to the first
-        letters-dash-number token, the shape the renderer once assumed.
-        """
-
-        link = re.search(r"\[([^\]]+)\]\([^)]*\)", value)
-        if link:
-            return _plain(link.group(1))
-        plain = _plain(value)
-        match = re.search(r"\b[A-Za-z][A-Za-z0-9]*-\d+\b", plain)
-        return match.group(0) if match else plain
-
-    def _connection_topology(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-        *,
-        kind: str,
-    ) -> str:
-        edges: list[dict[str, Any]] = []
-        nodes: dict[str, str] = {}
+    def _connection_topology(block: Topology) -> str:
+        kind = block.kind
+        nodes: dict[str, Inlines] = {}
         adjacency: dict[str, set[str]] = {}
-
-        for values, markers in rows:
-            if kind == "seam":
-                key, left, detail, right = values[:4]
-                qualifier = ""
-                directed = False
-            else:
-                left, key, right, qualifier, detail = values[:5]
-                directed = True
-            left_id = self._record_identifier(left)
-            right_id = self._record_identifier(right)
-            nodes.setdefault(left_id, left)
-            nodes.setdefault(right_id, right)
-            adjacency.setdefault(left_id, set()).add(right_id)
-            adjacency.setdefault(right_id, set()).add(left_id)
-            edges.append(
-                {
-                    "key": key,
-                    "left": left_id,
-                    "right": right_id,
-                    "detail": detail,
-                    "qualifier": qualifier,
-                    "directed": directed,
-                    "markers": markers,
-                }
-            )
+        for edge in block.edges:
+            nodes.setdefault(edge.left_id, edge.left)
+            nodes.setdefault(edge.right_id, edge.right)
+            adjacency.setdefault(edge.left_id, set()).add(edge.right_id)
+            adjacency.setdefault(edge.right_id, set()).add(edge.left_id)
+        edges = list(block.edges)
 
         components: list[set[str]] = []
         unseen = set(nodes)
@@ -2626,16 +3161,16 @@ class MarkdownRenderer:
             hub = sorted(component, key=lambda node: (-degree[node], node))[0]
             component_edges = [
                 edge for edge in edges
-                if edge["left"] in component and edge["right"] in component
+                if edge.left_id in component and edge.right_id in component
             ]
-            spokes = [edge for edge in component_edges if hub in {edge["left"], edge["right"]}]
+            spokes = [edge for edge in component_edges if hub in {edge.left_id, edge.right_id}]
             cross_edges = [edge for edge in component_edges if edge not in spokes]
 
             spoke_html: list[str] = []
             for edge in spokes:
-                peer = edge["right"] if edge["left"] == hub else edge["left"]
-                if edge["directed"]:
-                    outbound = edge["left"] == hub
+                peer = edge.right_id if edge.left_id == hub else edge.left_id
+                if edge.directed:
+                    outbound = edge.left_id == hub
                     arrow = "→" if outbound else "←"
                     peer_label = "To" if outbound else "From"
                     direction = "Outgoing" if outbound else "Incoming"
@@ -2644,20 +3179,20 @@ class MarkdownRenderer:
                     peer_label = "With"
                     direction = "Two-way seam"
                 qualifier = (
-                    f'<span class="topology-qualifier">{html.escape(direction)} · {_inline(edge["qualifier"])}</span>'
-                    if _plain(edge["qualifier"])
+                    f'<span class="topology-qualifier">{html.escape(direction)} · {_inlines_html(edge.qualifier)}</span>'
+                    if edge.qualifier.plain
                     else f'<span class="topology-qualifier">{html.escape(direction)}</span>'
                 )
                 spoke_html.append(
-                    "".join(edge["markers"])
+                    "".join(edge.markers)
                     + '<article class="topology-spoke" role="listitem">'
                     f'<div class="topology-edge-mark" aria-hidden="true">{arrow}</div>'
                     '<div class="topology-edge-body">'
                     '<p class="topology-edge-head">'
-                    f'<span class="topology-edge-key">{_inline(edge["key"])}</span>{qualifier}</p>'
+                    f'<span class="topology-edge-key">{_inlines_html(edge.key)}</span>{qualifier}</p>'
                     f'<p class="topology-peer"><span class="topology-peer-label">{peer_label}</span>'
-                    f'<span class="topology-node" data-identifier-defined>{_inline(nodes[peer])}</span></p>'
-                    f'<p class="topology-object">{_inline(edge["detail"])}</p>'
+                    f'<span class="topology-node" data-identifier-defined>{_inlines_html(nodes[peer])}</span></p>'
+                    f'<p class="topology-object">{_inlines_html(edge.detail)}</p>'
                     '</div></article>'
                 )
 
@@ -2665,17 +3200,17 @@ class MarkdownRenderer:
             if cross_edges:
                 cross_items: list[str] = []
                 for edge in cross_edges:
-                    arrow = "→" if edge["directed"] else "↔"
-                    qualifier = f' · {_inline(edge["qualifier"])}' if _plain(edge["qualifier"]) else ""
+                    arrow = "→" if edge.directed else "↔"
+                    qualifier = f' · {_inlines_html(edge.qualifier)}' if edge.qualifier.plain else ""
                     cross_items.append(
-                        "".join(edge["markers"])
+                        "".join(edge.markers)
                         + '<div class="topology-cross-edge">'
-                        f'<span class="topology-node" data-identifier-defined>{_inline(nodes[edge["left"]])}</span>'
+                        f'<span class="topology-node" data-identifier-defined>{_inlines_html(nodes[edge.left_id])}</span>'
                         '<span class="topology-cross-relation">'
-                        f'<strong>{_inline(edge["key"])}</strong>{html.escape(arrow)}{qualifier}'
-                        f'<span class="topology-cross-object">{_inline(edge["detail"])}</span>'
+                        f'<strong>{_inlines_html(edge.key)}</strong>{html.escape(arrow)}{qualifier}'
+                        f'<span class="topology-cross-object">{_inlines_html(edge.detail)}</span>'
                         '</span>'
-                        f'<span class="topology-node" data-identifier-defined>{_inline(nodes[edge["right"]])}</span>'
+                        f'<span class="topology-node" data-identifier-defined>{_inlines_html(nodes[edge.right_id])}</span>'
                         '</div>'
                     )
                 cross_html = (
@@ -2688,7 +3223,7 @@ class MarkdownRenderer:
                 f'<section class="topology-component" aria-label="{component_label}">'
                 '<header class="topology-hub">'
                 f'<p class="topology-hub-label">Connected area {component_number} · hub</p>'
-                f'<h3 class="topology-hub-title" data-identifier-defined>{_inline(nodes[hub])}</h3>'
+                f'<h3 class="topology-hub-title" data-identifier-defined>{_inlines_html(nodes[hub])}</h3>'
                 f'<p class="topology-hub-count">{len(component)} subsystems · {len(component_edges)} connection{"s" if len(component_edges) != 1 else ""}</p>'
                 '</header>'
                 f'<div class="topology-spokes" role="list">{"".join(spoke_html)}</div>'
@@ -2697,7 +3232,7 @@ class MarkdownRenderer:
             )
 
         noun = "seams" if kind == "seam" else "dependencies"
-        label = html.escape(caption, quote=True)
+        label = html.escape(block.caption, quote=True)
         return (
             f'<div class="topology topology-{kind}" role="group" aria-label="{label}">'
             '<div class="topology-summary">'
@@ -2709,76 +3244,30 @@ class MarkdownRenderer:
             + '</div>'
         )
 
-    def _coverage_index(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-    ) -> str:
+    def _coverage_index(self, block: CoverageIndex) -> str:
         """Sparse, task-oriented projection of the exact coverage matrix."""
 
-        concern_codes = [_plain(header) for header in headers[1:]]
-        totals = {state[0]: 0 for state in _COVERAGE_STATES.values()}
+        concern_codes = list(block.codes)
+        totals = {key: 0 for key, _label, _mark in COVERAGE_STATES}
         linchpin_total = 0
-        records: list[dict[str, Any]] = []
-
-        def outcome(value: str) -> tuple[str, str, str, bool] | None:
-            plain = _plain(value)
-            if not plain or plain == "—":
-                return None
-            for symbol, (key, label, mark) in _COVERAGE_STATES.items():
-                if symbol in plain:
-                    return key, label, mark, "🔗" in plain
-            return "unknown", "Recorded outcome", "?", "🔗" in plain
-
-        for values, markers in rows:
-            identity = values[0]
-            link = re.search(r"\[([^]]+)\]\(([^)]+)\)", identity)
-            subsystem_id = _plain(link.group(1)) if link else _plain(identity).split(" ", 1)[0]
-            route = _html_href(link.group(2)) if link else self._route(subsystem_id)
-            subsystem_name = _plain(identity)
-            if subsystem_name.startswith(subsystem_id):
-                subsystem_name = subsystem_name[len(subsystem_id) :].strip()
-            subsystem_name = subsystem_name or subsystem_id
-
-            reviews: list[dict[str, Any]] = []
+        counts_by_row: list[dict[str, int]] = []
+        for row in block.rows:
             counts: dict[str, int] = {}
-            for code, value in zip(concern_codes, values[1:], strict=True):
-                state = outcome(value)
-                if not state:
-                    continue
-                key, label, mark, linchpin = state
-                counts[key] = counts.get(key, 0) + 1
-                if key in totals:
-                    totals[key] += 1
-                if linchpin:
+            for review in row.reviews:
+                counts[review.key] = counts.get(review.key, 0) + 1
+                if review.key in totals:
+                    totals[review.key] += 1
+                if review.linchpin:
                     linchpin_total += 1
-                reviews.append(
-                    {
-                        "code": code,
-                        "key": key,
-                        "label": label,
-                        "mark": mark,
-                        "linchpin": linchpin,
-                    }
-                )
-            records.append(
-                {
-                    "markers": markers,
-                    "id": subsystem_id,
-                    "name": subsystem_name,
-                    "route": route,
-                    "reviews": reviews,
-                    "counts": counts,
-                }
-            )
+            counts_by_row.append(counts)
 
-        review_total = sum(len(record["reviews"]) for record in records)
-        intersection_total = len(records) * len(concern_codes)
+        review_total = sum(len(row.reviews) for row in block.rows)
+        intersection_total = len(block.rows) * len(concern_codes)
         unassessed = intersection_total - review_total
 
         summary_items = (
             (review_total, "Recorded reviews"),
-            (len(records), "Subsystems"),
+            (len(block.rows), "Subsystems"),
             (len(concern_codes), "Active concerns"),
             (totals.get("confirmed-bug", 0), "Confirmed defects"),
         )
@@ -2799,18 +3288,17 @@ class MarkdownRenderer:
 
         subsystem_items: list[str] = []
         matrix_rows: list[str] = []
-        for record in records:
-            route = str(record["route"] or "")
-            name = str(record["name"])
-            subsystem_id = str(record["id"])
+        for row, counts in zip(block.rows, counts_by_row, strict=True):
+            route = str((row.href if row.href is not None else self._route(row.subsystem_id)) or "")
+            name = row.name
+            subsystem_id = row.subsystem_id
             name_html = html.escape(name)
             primary = (
                 f'<a href="{html.escape(route, quote=True)}">{name_html}</a>'
                 if route
                 else name_html
             )
-            reviews = list(record["reviews"])
-            reviewed = len(reviews)
+            reviewed = len(row.reviews)
             progress = reviewed / len(concern_codes) * 100 if concern_codes else 0
             outcome_counts = "".join(
                 f'<span class="coverage-state-{html.escape(key, quote=True)}">'
@@ -2823,11 +3311,11 @@ class MarkdownRenderer:
                     "out-of-scope",
                     "unknown",
                 )
-                if (count := record["counts"].get(key, 0))
+                if (count := counts.get(key, 0))
             )
 
             tokens: list[str] = []
-            review_map = {review["code"]: review for review in reviews}
+            review_map = {review.code: review for review in row.reviews}
             matrix_cells: list[str] = []
             for code in concern_codes:
                 review = review_map.get(code)
@@ -2839,10 +3327,7 @@ class MarkdownRenderer:
                     )
                     continue
 
-                key = str(review["key"])
-                label = str(review["label"])
-                mark = str(review["mark"])
-                linchpin = bool(review["linchpin"])
+                key, label, mark, linchpin = review.key, review.label, review.mark, review.linchpin
                 destination = (
                     f'{route}#concern-disposition-{slugify(code)}' if route else f'#{slugify(code)}'
                 )
@@ -2869,7 +3354,7 @@ class MarkdownRenderer:
                     f'aria-hidden="true">{html.escape(mark)}</span>{linchpin_html}</a></td>'
                 )
 
-            marker_html = "".join(record["markers"])
+            marker_html = "".join(row.markers)
             subsystem_items.append(
                 marker_html
                 + '<article class="coverage-subsystem">'
@@ -2893,15 +3378,11 @@ class MarkdownRenderer:
                 + '</tr>'
             )
 
-        legend_items = [
-            (key, label, mark)
-            for key, label, mark in _COVERAGE_STATES.values()
-        ]
         legend = "".join(
             f'<span class="coverage-legend-item coverage-state-{html.escape(key, quote=True)}">'
             f'<span class="coverage-token-mark" aria-hidden="true">{html.escape(mark)}</span>'
             f'<span>{html.escape(label)}</span></span>'
-            for key, label, mark in legend_items
+            for key, label, mark in COVERAGE_STATES
         )
         legend += (
             '<span class="coverage-legend-item"><span class="coverage-linchpin" '
@@ -2938,339 +3419,249 @@ class MarkdownRenderer:
             f'<div class="coverage-subsystem-list">{"".join(subsystem_items)}</div>'
             f'<div class="coverage-legend" aria-label="Review outcome legend">{legend}</div>'
             '<details class="coverage-matrix-disclosure"><summary><span>Full cross-reference matrix</span>'
-            f'<span>{len(records)} subsystems × {len(concern_codes)} concerns</span></summary>'
+            f'<span>{len(block.rows)} subsystems × {len(concern_codes)} concerns</span></summary>'
             '<p class="coverage-matrix-note">Use the matrix when exact row-and-column comparison matters. '
             'Headers and subsystem names remain fixed while the matrix scrolls.</p>'
             + matrix
             + '</details></div>'
         )
 
-    def _table(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        signature = tuple(_header_key(header) for header in headers)
-        if signature == _SUBSYSTEM_ATLAS_PROJECTION:
-            return self._subsystem_atlas(rows, caption)
-        if signature == _DEPENDENCY_TOPOLOGY_PROJECTION:
-            return self._connection_topology(rows, caption, kind="dependency")
-        if signature == _SEAM_TOPOLOGY_PROJECTION:
-            return self._connection_topology(rows, caption, kind="seam")
-        if signature == _RUNTIME_BOUNDARY_PROJECTION:
-            return self._runtime_boundary_diagram(rows, caption)
-        if signature == _BOUNDARY_PROJECTION:
-            return self._boundary_diagram(rows, caption)
-        if signature in (_CONCERN_CHECKLIST_PROJECTION, _RECORDED_CHECKLIST_PROJECTION):
-            return self._concern_checklist(headers, rows, caption)
-        if (
-            len(signature) > 1
-            and signature[0] == "subsystem"
-            and all(_IDENTIFIER_SHAPE.fullmatch(header.upper()) for header in signature[1:])
-        ):
-            return self._coverage_index(headers, rows)
-        projection = _RECORD_PROJECTIONS.get(signature)
-        if projection:
-            return self._record_list(headers, rows, caption, projection)
-        if signature in _SUMMARY_LIST_PROJECTIONS:
-            return self._summary_list(rows, caption)
-
-        lifecycle = signature in _LIFECYCLE_TABLE_PROJECTIONS
-        enum_table = signature == _ENUM_TABLE_PROJECTION
-        # `hot-spots.md`'s one measure table carries this page's filterable
-        # rows (§8.1.2). The severity facet is named by the band columns
-        # themselves: the table keeps critical+high and medium+low apart on
-        # purpose, and a filter that merged them into four severities would
-        # assert a resolution the columns do not record.
-        hot_spots = (
-            self.current_html_path == "hot-spots.html"
-            and signature[:1] == ("subsystem",)
-            and any(re.search(r"critical|medium", key) for key in signature)
-        )
-        severity_columns: list[tuple[int, str]] = []
-        if hot_spots:
-            self.filter_scope = "hot-spots"
-            for index, key in enumerate(signature):
-                if re.search(r"critical|medium", key):
-                    severity_columns.append((index, self._facet("severity", _plain(headers[index]))))
-        visible_headers = [header for index, header in enumerate(headers) if not lifecycle or index != 1]
-        head = "".join(f'<th scope="col">{_inline(cell)}</th>' for cell in visible_headers)
+    @staticmethod
+    def _table(block: Table | EnumTable | LifecycleTable) -> str:
+        lifecycle = isinstance(block, LifecycleTable)
+        visible_headers = [header for index, header in enumerate(block.headers) if not lifecycle or index != 1]
+        head = "".join(f'<th scope="col">{_inlines_html(cell)}</th>' for cell in visible_headers)
         table_rows: list[str] = []
-        for values, markers in rows:
+        for row in block.rows:
             cells: list[str] = []
-            for index, value in enumerate(values):
+            for index, value in enumerate(row.cells):
                 if lifecycle and index == 1:
                     continue
-                label = _plain(headers[index])
+                label = block.headers[index].plain
                 if lifecycle and index == 0:
-                    location = values[1]
+                    location = row.cells[1]
                     location_html = (
-                        f'<span class="table-detail"><span class="visually-hidden">Location: </span>{_inline(location)}</span>'
-                        if _plain(location)
+                        f'<span class="table-detail"><span class="visually-hidden">Location: </span>{_inlines_html(location)}</span>'
+                        if location.plain
                         else ""
                     )
                     cells.append(
-                        f'<th scope="row" data-label="{html.escape(label, quote=True)}"><span class="table-key">{_inline(value)}</span>{location_html}</th>'
+                        f'<th scope="row" data-label="{html.escape(label, quote=True)}"><span class="table-key">{_inlines_html(value)}</span>{location_html}</th>'
                     )
                 else:
-                    literal = re.fullmatch(r"`([^`]+)`", value.strip()) if enum_table and index == 0 else None
-                    rendered = f"<code>{html.escape(literal.group(1))}</code>" if literal else _inline(value)
                     cells.append(
-                        f'<td data-label="{html.escape(label, quote=True)}">{rendered}</td>'
+                        f'<td data-label="{html.escape(label, quote=True)}">{_inlines_html(value)}</td>'
                     )
             row_attrs = ""
-            if hot_spots:
-                subsystem = self._facet("subsystem", _record_key_text(values[0]))
-                bands = "|".join(
-                    label
-                    for index, label in severity_columns
-                    if index < len(values) and _positive_count(values[index])
-                )
+            if row.filter is not None:
                 row_attrs = (
                     " data-filter-row"
-                    f' data-filter-subsystem="{html.escape(subsystem, quote=True)}"'
-                    f' data-filter-severity="{html.escape(bands, quote=True)}"'
+                    f' data-filter-subsystem="{html.escape(row.filter.subsystem, quote=True)}"'
+                    f' data-filter-severity="{html.escape(row.filter.severity, quote=True)}"'
                 )
-            table_rows.append("".join(markers) + f'<tr{row_attrs}>{"".join(cells)}</tr>')
+            table_rows.append("".join(row.markers) + f'<tr{row_attrs}>{"".join(cells)}</tr>')
         kind = " lifecycle-table" if lifecycle else ""
         return (
-            f'<div class="table-wrap{kind}"><table><caption>{html.escape(caption)}</caption>'
+            f'<div class="table-wrap{kind}"><table><caption>{html.escape(block.caption)}</caption>'
             f'<thead><tr>{head}</tr></thead><tbody>{"".join(table_rows)}</tbody></table></div>'
         )
 
+    def _heading(self, block: Heading) -> str:
+        level = block.level
+        anchor_id = self._unique_slug(block.text.plain)
+        label = html.escape(f"Link to {block.text.plain}", quote=True)
+        heading_class = ' class="finding-subsystem-heading"' if block.finding_group else ""
+        definition_context = " data-identifier-defined" if block.finding_group else ""
+        return (
+            f'<h{level}{heading_class} id="{anchor_id}"{definition_context}>'
+            f'<a class="heading-anchor" href="#{anchor_id}" aria-label="{label}">§</a>'
+            f'{_inlines_html(block.text)}</h{level}>'
+        )
+
+    @staticmethod
+    def _list(block: List) -> str:
+        tag = "ol" if block.ordered else "ul"
+        items = "".join(
+            f"<li>{_inlines_html(item.text)}{''.join(_HtmlWriter._list(child) for child in item.children)}</li>"
+            for item in block.items
+        )
+        return f"<{tag}>{items}</{tag}>"
+
+    def _elements(self, blocks: tuple[Block, ...], out: list[str]) -> None:
+        """Each block as one element, a section or disclosure as its open, its blocks and its close."""
+
+        for block in blocks:
+            if isinstance(block, Section):
+                out.append(f'<section class="section-{html.escape(block.slug, quote=True)}">')
+                self._elements(block.blocks, out)
+                out.append("</section>")
+            elif isinstance(block, Details):
+                out.append(f'<details class="{html.escape(block.css_class, quote=True)}"><summary>{html.escape(block.summary)}</summary>')
+                self._elements(block.blocks, out)
+                out.append("</details>")
+            else:
+                out.append(self._block(block))
+
+    def _block(self, block: Block) -> str:
+        if isinstance(block, Heading):
+            return self._heading(block)
+        if isinstance(block, Paragraph):
+            return f"<p>{_inlines_html(block.text)}</p>"
+        if isinstance(block, List):
+            return self._list(block)
+        if isinstance(block, Quote):
+            return f"<blockquote><p>{_inlines_html(block.text)}</p></blockquote>"
+        if isinstance(block, Code):
+            lang_class = f' class="language-{html.escape(block.language, quote=True)}"' if block.language else ""
+            return f"<pre><code{lang_class}>{html.escape(block.source)}</code></pre>"
+        if isinstance(block, Anchor):
+            return f'<span id="{html.escape(block.id, quote=True)}" class="record-anchor"></span>'
+        if isinstance(block, RecordMarker):
+            return block.raw
+        if isinstance(block, Table | EnumTable | LifecycleTable):
+            return self._table(block)
+        if isinstance(block, RecordList):
+            return self._record_list(block)
+        if isinstance(block, SummaryList):
+            return self._summary_list(block)
+        if isinstance(block, Atlas):
+            return self._subsystem_atlas(block)
+        if isinstance(block, Topology):
+            return self._connection_topology(block)
+        if isinstance(block, RuntimeDiagram):
+            return self._runtime_boundary_diagram(block)
+        if isinstance(block, BoundaryDiagram):
+            return self._boundary_diagram(block)
+        if isinstance(block, CoverageIndex):
+            return self._coverage_index(block)
+        if isinstance(block, ConcernChecklist):
+            return self._concern_checklist(block)
+        if isinstance(block, RelationshipTrace):
+            return self._relationship_trace(block)
+        if isinstance(block, StalenessBars):
+            return self._staleness_bars(block)
+        if isinstance(block, DiagramSource):
+            return f'<figure class="figure"><figcaption class="figure-label">Diagram source</figcaption><pre class="diagram-source">{html.escape(block.source)}</pre></figure>'
+        raise TypeError(f"not a block kind: {type(block).__name__}")
+
+    def write(self, page: Page) -> str:
+        elements: list[str] = []
+        self._elements(page.blocks, elements)
+        return "\n".join(_compose_prose_runs(elements))
+
+
+def write_html(
+    page: Page,
+    route_map: dict[str, str] | None = None,
+    repository_url: str | None = None,
+) -> str:
+    """Print a page model's body as HTML (§3.1). It reads no Markdown."""
+
+    return _HtmlWriter(route_map or {}, page.path, repository_url).write(page)
+
+
+class MarkdownRenderer:
+    """Markdown in, page body out: `parse_markdown`, then `write_html`.
+
+    For callers that hold a page's Markdown; the projection itself calls the
+    two steps directly.
+    """
+
+    def __init__(
+        self,
+        route_map: dict[str, str],
+        current_html_path: str,
+        repository_url: str | None = None,
+    ) -> None:
+        self.route_map = route_map
+        self.current_html_path = current_html_path
+        self.repository_url = repository_url
+
     def render(self, markdown: str) -> tuple[str, str]:
-        lines = markdown.splitlines()
-        title = "Conspectus"
-        body: list[str] = []
-        i = 0
-        in_section = False
-        in_disclosure = False
-        disclose = False
-        current_section = ""
-
-        while i < len(lines):
-            line = lines[i]
-            if not line.strip():
-                i += 1
-                continue
-
-            if line.startswith("<!--") and line.rstrip().endswith("-->"):
-                body.append(line)
-                i += 1
-                continue
-
-            if (
-                current_section in {"coverage-overview", "coverage-heatmap"}
-                and line.startswith("**Legend**:")
-            ):
-                i += 1
-                continue
-
-            anchor = re.fullmatch(r'<a\s+id="([a-zA-Z0-9_.:-]+)"></a>', line.strip())
-            if anchor:
-                body.append(f'<span id="{html.escape(anchor.group(1), quote=True)}" class="record-anchor"></span>')
-                i += 1
-                continue
-
-            fence = re.match(r"^```\s*([\w-]*)\s*$", line)
-            if fence:
-                language = fence.group(1).lower()
-                code_lines: list[str] = []
-                i += 1
-                while i < len(lines) and not lines[i].startswith("```"):
-                    code_lines.append(lines[i])
-                    i += 1
-                i += 1 if i < len(lines) else 0
-                source = "\n".join(code_lines)
-                if language == "mermaid":
-                    body.append(self._mermaid(source))
-                else:
-                    lang_class = f' class="language-{html.escape(language, quote=True)}"' if language else ""
-                    body.append(f"<pre><code{lang_class}>{html.escape(source)}</code></pre>")
-                continue
-
-            heading = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
-            if heading:
-                level = len(heading.group(1))
-                raw = heading.group(2)
-                if level == 1:
-                    title = _plain(raw)
-                    i += 1
-                    continue
-                display_raw = raw
-                if (
-                    self.current_html_path == "concern-checklist.html"
-                    and level == 2
-                    and re.fullmatch(r"Active concerns(?:\s+\(\d+\))?", _plain(raw), re.IGNORECASE)
-                ):
-                    display_raw = "Active concerns"
-                self._note_heading(level, display_raw)
-                if level == 2:
-                    if in_disclosure:
-                        body.append("</details>")
-                        in_disclosure = False
-                    if in_section:
-                        body.append("</section>")
-                    current_section = slugify(_plain(display_raw))
-                    body.append(f'<section class="section-{html.escape(current_section, quote=True)}">')
-                    in_section = True
-                    # The guide's last section holds the tables a reader never
-                    # meets as a label; it stays closed until asked for.
-                    disclose = self.current_html_path == "how-to-read.html" and current_section == "full-vocabulary"
-                anchor_id = self._heading_slug(display_raw)
-                label = html.escape(f"Link to {_plain(display_raw)}", quote=True)
-                # The Unresolved lens nests the subsystem under resolution
-                # state and severity, so its subsystem headings are one level
-                # deeper than the History lens's.
-                finding_group = (self.current_html_path == "findings.html" and level == 4) or (
-                    self.current_html_path == "resolved-findings.html" and level == 3
-                )
-                heading_class = ' class="finding-subsystem-heading"' if finding_group else ""
-                definition_context = " data-identifier-defined" if finding_group else ""
-                body.append(
-                    f'<h{level}{heading_class} id="{anchor_id}"{definition_context}>'
-                    f'<a class="heading-anchor" href="#{anchor_id}" aria-label="{label}">§</a>'
-                    f'{_inline(display_raw)}</h{level}>'
-                )
-                if level == 2 and disclose:
-                    body.append('<details class="vocabulary-disclosure"><summary>Show the full vocabulary</summary>')
-                    in_disclosure = True
-                    disclose = False
-                i += 1
-                continue
-
-            if line.startswith("|") and i + 1 < len(lines) and _is_table_separator(lines[i + 1]):
-                headers = _split_table_row(line)
-                i += 2
-                rows: list[tuple[list[str], list[str]]] = []
-                pending_markers: list[str] = []
-                while i < len(lines):
-                    if lines[i].startswith("<!--") and lines[i].rstrip().endswith("-->"):
-                        pending_markers.append(lines[i])
-                        i += 1
-                        continue
-                    if not lines[i].startswith("|"):
-                        break
-                    rows.append((_split_table_row(lines[i]), pending_markers))
-                    pending_markers = []
-                    i += 1
-                # A table before the first `##` (the Files index is one) has no
-                # section to name it. The page's own title is a true caption;
-                # "Data" is furniture that tells a screen-reader user nothing.
-                caption = current_section.replace("-", " ") or title or "Data"
-                normalized_rows = []
-                for values, markers in rows:
-                    values += [""] * max(0, len(headers) - len(values))
-                    normalized_rows.append((values[: len(headers)], markers))
-                body.append(self._table(headers, normalized_rows, caption))
-                continue
-
-            if _LIST_ITEM.match(line):
-                markup, i = _render_list(lines, i)
-                body.append(markup)
-                continue
-
-            if line.startswith(">"):
-                quote: list[str] = []
-                while i < len(lines) and lines[i].startswith(">"):
-                    quote.append(lines[i][1:].lstrip())
-                    i += 1
-                body.append(f"<blockquote><p>{_inline(' '.join(quote))}</p></blockquote>")
-                continue
-
-            paragraph = [line.strip()]
-            i += 1
-            while i < len(lines) and lines[i].strip():
-                candidate = lines[i]
-                if re.match(r"^(#{1,6})\s+", candidate) or candidate.startswith(("```", "|", ">", "<!--", '<a id="')) or re.match(r"^\s*([-*+] |\d+\. )", candidate):
-                    break
-                paragraph.append(candidate.strip())
-                i += 1
-            body.append(f"<p>{_inline(' '.join(paragraph))}</p>")
-
-        if in_disclosure:
-            body.append("</details>")
-        if in_section:
-            body.append("</section>")
-        return title, "\n".join(_compose_prose_runs(body))
+        page = parse_markdown(markdown, self.current_html_path)
+        return page.title, write_html(page, self.route_map, self.repository_url)
 
 
-_LIST_ITEM = re.compile(r"^(\s*)([-*+] |\d+\. )(.*)$")
+class _IdentifierMarkup(HTMLParser):
+    """Add semantic definitions to known opaque IDs in an HTML fragment."""
 
+    # An SVG renders no HTML element, so an <abbr> in its <text> would hide
+    # the ID it defines; the diagrams carry their own names.
+    _PROTECTED = frozenset({"abbr", "script", "style", "svg"})
+    _VOID = frozenset({
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
+        "meta", "param", "source", "track", "wbr",
+    })
 
-def _render_list(lines: list[str], start: int, nested: bool = False) -> tuple[str, int]:
-    """Render the list whose first item is `lines[start]`; return it and the next line.
+    def __init__(self, definitions: dict[str, str]):
+        super().__init__(convert_charrefs=False)
+        self.definitions = definitions
+        self.pattern = identifier_pattern(definitions)
+        self.parts: list[str] = []
+        self.protected_depth = 0
 
-    An item indented deeper than the list's first item is a child list of the
-    preceding item, one level at a time, so a claim's statement is its own `<li>`
-    and its coordinates a `<ul>` inside it.  At the top level an item indented
-    less than the first is still a sibling, as it always was; a nested list ends
-    at the first item shallower than its own.
-    """
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.parts.append(self.get_starttag_text())
+        is_contextual_definition = any(
+            name == "data-identifier-defined" for name, _ in attrs
+        )
+        if self.protected_depth:
+            if tag not in self._VOID:
+                self.protected_depth += 1
+        elif tag in self._PROTECTED or is_contextual_definition:
+            self.protected_depth = 1
 
-    first = _LIST_ITEM.match(lines[start])
-    assert first is not None
-    base = len(first.group(1))
-    ordered = first.group(2)[0].isdigit()
-    tag = "ol" if ordered else "ul"
-    items: list[str] = []
-    i = start
-    while i < len(lines):
-        item = _LIST_ITEM.match(lines[i])
-        if not item:
-            break
-        indent = len(item.group(1))
-        if nested and indent < base:
-            break
-        if indent > base and items:
-            child, i = _render_list(lines, i, nested=True)
-            items[-1] = items[-1][: -len("</li>")] + child + "</li>"
-            continue
-        if item.group(2)[0].isdigit() != ordered:
-            break
-        value = item.group(3)
-        i += 1
-        continuation: list[str] = []
-        while i < len(lines) and lines[i].startswith(("  ", "    ")) and not _LIST_ITEM.match(lines[i]):
-            continuation.append(lines[i].strip())
-            i += 1
-        if continuation:
-            value += " " + " ".join(continuation)
-        items.append(f"<li>{_inline(value)}</li>")
-    return f"<{tag}>{''.join(items)}</{tag}>", i
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del tag, attrs
+        self.parts.append(self.get_starttag_text())
 
+    def handle_endtag(self, tag: str) -> None:
+        self.parts.append(f"</{tag}>")
+        if self.protected_depth:
+            self.protected_depth -= 1
 
-def _compose_prose_runs(elements: list[str]) -> list[str]:
-    """Give finite runs of sustained prose an editorial multicolumn surface.
-
-    Source order remains ordinary paragraphs. Only adjacent top-level
-    paragraphs with enough text to form a useful reading field are wrapped;
-    headings, lists, records, tables, figures, and code always terminate a run.
-    """
-
-    composed: list[str] = []
-    run: list[str] = []
-
-    def flush() -> None:
-        if not run:
+    def handle_data(self, data: str) -> None:
+        if self.protected_depth or self.pattern is None:
+            self.parts.append(data)
             return
-        character_count = sum(len(re.sub(r"<[^>]+>", "", paragraph)) for paragraph in run)
-        use_columns = (len(run) >= 2 and character_count >= 700) or character_count >= 1300
-        if use_columns:
-            composed.append('<div class="prose-flow">' + "".join(run) + "</div>")
-        else:
-            composed.extend(run)
-        run.clear()
 
-    for element in elements:
-        if element.startswith("<p>") and element.endswith("</p>"):
-            run.append(element)
-            continue
-        flush()
-        composed.append(element)
-    flush()
-    return composed
+        def replace(match: re.Match[str]) -> str:
+            identifier = match.group(1)
+            definition = self.definitions.get(identifier)
+            if not definition:
+                return identifier
+            description = f"{identifier} — {definition}"
+            escaped = html.escape(description, quote=True)
+            return (
+                f'<abbr class="identifier-definition" title="{escaped}" '
+                f'aria-label="{escaped}">{html.escape(identifier)}</abbr>'
+            )
+
+        self.parts.append(self.pattern.sub(replace, data))
+
+    def handle_entityref(self, name: str) -> None:
+        self.parts.append(f"&{name};")
+
+    def handle_charref(self, name: str) -> None:
+        self.parts.append(f"&#{name};")
+
+    def handle_comment(self, data: str) -> None:
+        self.parts.append(f"<!--{data}-->")
+
+    def handle_decl(self, decl: str) -> None:
+        self.parts.append(f"<!{decl}>")
+
+    def handle_pi(self, data: str) -> None:
+        self.parts.append(f"<?{data}>")
+
+
+def _identifier_markup(fragment: str, definitions: dict[str, str]) -> str:
+    if not definitions:
+        return fragment
+    parser = _IdentifierMarkup(definitions)
+    parser.feed(fragment)
+    parser.close()
+    return "".join(parser.parts)
 
 
 def _page_eyebrow(page: SitePage) -> str:
@@ -3556,26 +3947,28 @@ def render_html_projection(
         if not source.is_file():
             warnings.append(f"HTML source missing for {page.markdown_path}")
             continue
-        parser = MarkdownRenderer(
-            route_map,
-            page.html_path,
-            repository_url=str(context.get("repository_url") or "") or None,
-        )
-        source_title, body = parser.render(
+        model = parse_markdown(
             strip_page_head(
                 strip_notice(source.read_text(), notice),
                 page.hint,
                 page.use_when,
                 terms_line(page.markdown_path, page.terms),
-            )
+            ),
+            page.html_path,
         )
+        body = write_html(
+            model,
+            route_map,
+            repository_url=str(context.get("repository_url") or "") or None,
+        )
+        facets = model.facets
         document = _shell(
             page,
             pages,
-            source_title,
+            model.title,
             body,
             context,
-            (parser.filter_scope, parser.facets),
+            (facets.scope, dict(facets.values)) if facets else ("", {}),
             notice,
         )
         target = output / page.html_path

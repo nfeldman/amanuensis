@@ -84,7 +84,10 @@ BASE_TREE_HOOKS = (
     "_SUBSYSTEM_ATLAS_PROJECTION",
     "_SUMMARY_LIST_PROJECTIONS",
 )
-MERMAID_HOOKS = {"mermaid graph": "graph LR\n    A --> B", "mermaid pie showData": 'pie showData\n    "a" : 1'}
+MERMAID_HOOKS = {
+    "mermaid graph": 'graph LR\n    A["B-01<br>Reader"]\n    A -->|"drains"| B',
+    "mermaid pie showData": 'pie showData\n    "a" : 1',
+}
 # Constants that exist only to recognise Markdown; the writer may name none.
 RECOGNITION_PATTERNS = ("_MARKER_RE", "_LIST_ITEM")
 
