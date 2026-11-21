@@ -527,7 +527,7 @@ def main() -> int:
         index = xref.XrefIndex(
             entries={i: (i, f"subsystems/{i.lower()}.md", f"Sub {i}") for i in ids},
             names={i: f"Sub {i}" for i in ids},
-            kinds={i: "subsystem" for i in ids},
+            kinds=dict.fromkeys(ids, "subsystem"),
             protected=("Use it when B-0001 changes.",),
         )
         built = 0
