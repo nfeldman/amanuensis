@@ -8,11 +8,13 @@ The orchestrator:
   1. Opens memory.db read-only.
   2. Discovers all pages that the current DB state requires (static
      + per-subsystem + per-diagnosticity-matrix).
-  3. For each page, renders its Markdown in memory and its source hash map,
+  3. For each page, renders its Markdown in memory (or, for the families that
+     build the page model themselves, the model) and its source hash map,
      and compares both to the manifest to count it rendered or unchanged.
   4. Runs the global cross-reference resolver over every page's in-memory
-     Markdown, since a different page changing can change what an ID links to.
-  5. Writes each page's HTML from that text, `search-index.js` beside it, and
+     Markdown or model, since a different page changing can change what an ID
+     links to.
+  5. Writes each page's HTML from that text or model, `search-index.js` beside it, and
      retires the HTML of pages that no longer have a generator.
   6. Saves the manifest and the publication receipt, and reads the
      publication back against the store.
@@ -51,10 +53,11 @@ from .manifest import (
     sha256_bytes,
     sources_differ,
 )
+from .page import Page
 from .readback import ProjectionVerifier, finding_page, write_contract
 from .renderers import RenderResult
 from .slugs import matrix_page, subsystem_page
-from .xref import XrefIndex, resolve_pages
+from .xref import XrefIndex, resolve_model, resolve_pages
 
 PageFn = Callable[[], RenderResult]
 
@@ -308,6 +311,7 @@ class Materializer:
             # page whose sources and text are unchanged counts as unchanged.
             rendered: list[str] = []
             fresh: dict[str, str] = {}
+            fresh_models: dict[str, Page] = {}
             version_drift = self.manifest.version != MATERIALIZER_VERSION
             for p in plan:
                 try:
@@ -323,13 +327,18 @@ class Materializer:
                     )
                     self.summary.ok = False
                     continue
-                # The hint and "Use it when" sentence sit under the H1, where the
-                # HTML head prints them (PLAN §2.4); the HTML stage lifts them out.
-                text = insert_page_head(
-                    text, p.hint, p.use_when, terms_line(p.path, renderers.page_terms(p.path))
-                )
-                new_hash = sha256_bytes(text.encode("utf-8"))
-                fresh[p.path] = text
+                terms = terms_line(p.path, renderers.page_terms(p.path))
+                if isinstance(text, Page):
+                    # A page built as a model carries no Markdown; its hash is
+                    # over the model and the head the shell prints beside it.
+                    fresh_models[p.path] = text
+                    new_hash = sha256_bytes(repr((text, p.hint, p.use_when, terms)).encode("utf-8"))
+                else:
+                    # The hint and "Use it when" sentence sit under the H1, where the
+                    # HTML head prints them (PLAN §2.4); the HTML stage lifts them out.
+                    text = insert_page_head(text, p.hint, p.use_when, terms)
+                    new_hash = sha256_bytes(text.encode("utf-8"))
+                    fresh[p.path] = text
                 prev = self.manifest.page(p.path)
                 needs = (
                     self.force_full
@@ -358,14 +367,24 @@ class Materializer:
             index = self._build_xref_index(conn, plan)
             alive = {p.path for p in plan}
             linked = resolve_pages(fresh, index)
+            linked_models = {
+                path: resolve_model(model, path, index) for path, model in fresh_models.items()
+            }
+            linked_hashes = {
+                **{path: sha256_bytes(text.encode("utf-8")) for path, text in linked.items()},
+                **{
+                    path: sha256_bytes(repr(model).encode("utf-8"))
+                    for path, model in linked_models.items()
+                },
+            }
             unchanged = alive.difference(rendered)
             self.summary.xref_updates = sum(
                 1
                 for path in unchanged
-                if path in linked and self.manifest.page(path).linked_hash != sha256_bytes(linked[path].encode("utf-8"))
+                if path in linked_hashes and self.manifest.page(path).linked_hash != linked_hashes[path]
             )
-            for path, text in linked.items():
-                self.manifest.page(path).linked_hash = sha256_bytes(text.encode("utf-8"))
+            for path, digest in linked_hashes.items():
+                self.manifest.page(path).linked_hash = digest
 
             # Drop the page ids no plan holds any more; their HTML is retired
             # below with the projection files.
@@ -423,6 +442,7 @@ class Materializer:
                 locus_index=_locus_index(conn),
                 notice=self.notice,
                 markdown=linked,
+                models=linked_models,
             )
             self.manifest.projection_files = html_result.files
             self.summary.html_pages_total = len(site_pages)

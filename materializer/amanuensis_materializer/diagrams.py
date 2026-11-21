@@ -11,6 +11,25 @@ import sqlite3
 from typing import Any
 
 from .db import rows, table_exists
+from .page import (
+    EMPTY,
+    Atlas,
+    AtlasItem,
+    AtlasRegion,
+    Block,
+    BoundaryDiagram,
+    BoundaryRow,
+    Chip,
+    DiagramSource,
+    Inlines,
+    Paragraph,
+    RuntimeDiagram,
+    RuntimeRow,
+    StalenessBars,
+    Topology,
+    TopologyEdge,
+)
+from .prose import _plain, inlines
 from .slugs import subsystem_page
 
 # The obligation predicate is generated from the `obligation_bearing` flag on
@@ -506,3 +525,215 @@ def seam_graph(conn: sqlite3.Connection) -> str:
             f"| **[{party_b}]({route_b})** {_safe_label(name_b)} |"
         )
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# The same sections as page blocks (store-only PLAN §3.2 step 4). The architecture
+# page prints these; the Markdown functions above stay for the pages that
+# still hand Markdown to the parser. Each takes the caption its section names.
+# ---------------------------------------------------------------------------
+
+
+def _sentence(text: str) -> Paragraph:
+    return Paragraph(inlines(text))
+
+
+def _linked_subsystem(sid: str, name: str) -> Inlines:
+    """`**[ID](page)** Name`, the cell every table of subsystems opens its rows with."""
+
+    return inlines(f"**[{sid}]({subsystem_page(sid, name)})** {_safe_label(name)}")
+
+
+def dependency_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
+    """The dependency section's body: the atlas when no edge is recorded, else the edge table."""
+
+    edges = rows(
+        conn,
+        "SELECT from_id, to_id, relationship, strength, context FROM xrefs ORDER BY from_id",
+    )
+    subs = {r["id"]: r for r in rows(conn, "SELECT id, name, status, layer FROM subsystems")}
+    if not subs and not edges:
+        return (_sentence("_No subsystems recorded yet._"),)
+    if not edges:
+        regions: dict[str, list[AtlasItem]] = {}
+        for sid, subsystem in sorted(
+            subs.items(), key=lambda item: ((item[1].get("layer") or "Other"), item[0])
+        ):
+            region = _plain(_safe_label(subsystem.get("layer") or "Other")) or "Other"
+            label = _DEPTH_LABELS.get(subsystem["status"], subsystem["status"])
+            regions.setdefault(region, []).append(
+                AtlasItem(_linked_subsystem(sid, subsystem["name"]), depth_cell(label))
+            )
+        return (
+            _sentence(
+                "_No dependency edges are recorded in this publication. The layer map below is a subsystem atlas, not an inferred dependency graph._"
+            ),
+            Atlas(caption, tuple(AtlasRegion(name, tuple(items)) for name, items in regions.items())),
+        )
+
+    covered = {
+        endpoint
+        for edge in edges
+        for endpoint in (edge["from_id"], edge["to_id"])
+        if endpoint in subs
+    }
+    census = _edge_coverage_sentence(len(covered), len(subs))
+    topology: list[TopologyEdge] = []
+    for edge in edges:
+        from_name = subs.get(edge["from_id"], {"name": edge["from_id"]})["name"]
+        to_name = subs.get(edge["to_id"], {"name": edge["to_id"]})["name"]
+        topology.append(
+            TopologyEdge(
+                key=inlines(_safe_label(edge["relationship"])),
+                left_id=edge["from_id"],
+                left=_linked_subsystem(edge["from_id"], from_name),
+                right_id=edge["to_id"],
+                right=_linked_subsystem(edge["to_id"], to_name),
+                detail=inlines(_safe_label(edge.get("context") or "No additional context recorded")),
+                qualifier=inlines(str(edge["strength"])),
+                directed=True,
+            )
+        )
+    return (*((_sentence(census),) if census else ()), Topology("dependency", caption, tuple(topology)))
+
+
+def boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
+    """The boundary section's body: a sentence, or the census and the boundary diagram's rows."""
+
+    graph = boundary_relations(conn)
+    nodes, edges = graph["nodes"], graph["edges"]
+    if not nodes:
+        return (_sentence("_No subsystems recorded yet._"),)
+    touching: dict[str, list[tuple[str, str, str]]] = {node["id"]: [] for node in nodes}
+    for edge in edges:
+        if edge["kind"] == "seam":
+            label = edge["label"]
+            touching[edge["from"]].append((f"{label} seam", label, edge["to"]))
+            touching[edge["to"]].append((f"{label} seam", label, edge["from"]))
+        else:
+            relationship = _safe_label(edge["label"])
+            touching[edge["from"]].append((f"{relationship} →", "", edge["to"]))
+            touching[edge["to"]].append((f"← {relationship}", "", edge["from"]))
+    census = _no_boundary_sentence(sum(1 for found in touching.values() if not found), len(nodes))
+    not_drawn = graph["not_drawn"]
+    skipped = (
+        f" {not_drawn} recorded relation{' names' if not_drawn == 1 else 's name'} one subsystem"
+        " twice or a subsystem with no record, and is not drawn."
+        if not_drawn
+        else ""
+    )
+    if not edges:
+        return (_sentence(f"_{BOUNDARY_NONE} {census}{skipped}_"),)
+
+    kinds = []
+    if any(edge["kind"] == "seam" for edge in edges):
+        kinds.append("seam")
+    if any(edge["kind"] == "xref" for edge in edges):
+        kinds.append("recorded dependency")
+    names = {node["id"]: node["name"] for node in nodes}
+    rows_out: list[BoundaryRow] = []
+    for node in nodes:
+        sid = node["id"]
+        layer = _plain(_safe_label(node["layer"])) or "unlayered"
+        for boundary, seam_id, other in touching[sid] or [("none recorded", "", "")]:
+            rows_out.append(
+                BoundaryRow(
+                    layer=layer,
+                    subsystem_id=sid,
+                    name=_plain(_safe_label(names[sid])),
+                    other_id=other,
+                    relation=boundary,
+                    seam=bool(seam_id),
+                    seam_id=seam_id,
+                )
+            )
+    return (
+        _sentence(
+            f"_{census} Each {' and each '.join(kinds)} below joins two recorded subsystems;"
+            f" no line is inferred from a name or a layer.{skipped}_"
+        ),
+        BoundaryDiagram(caption, tuple(rows_out)),
+    )
+
+
+def seam_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
+    """Seams as the topology block the HTML draws as connected areas."""
+
+    seams = rows(conn, "SELECT * FROM seams ORDER BY id")
+    if not seams:
+        return (_sentence("_No seams recorded yet._"),)
+    subs = {r["id"]: r for r in rows(conn, "SELECT id, name FROM subsystems")}
+    edges: list[TopologyEdge] = []
+    for s in seams:
+        name_a = subs.get(s["party_a"], {}).get("name", s["party_a"])
+        name_b = subs.get(s["party_b"], {}).get("name", s["party_b"])
+        edges.append(
+            TopologyEdge(
+                key=inlines(f"**[{s['id']}](seams.md#{s['id'].lower()})**"),
+                left_id=s["party_a"],
+                left=_linked_subsystem(s["party_a"], name_a),
+                right_id=s["party_b"],
+                right=_linked_subsystem(s["party_b"], name_b),
+                detail=inlines(_safe_label(s["shared_object"])),
+                qualifier=EMPTY,
+                directed=False,
+            )
+        )
+    return (Topology("seam", caption, tuple(edges)),)
+
+
+def staleness_blocks(conn: sqlite3.Connection) -> tuple[Block, ...]:
+    """The staleness section's body: bars of stale files per subsystem, or what is not measured."""
+
+    text = staleness_map(conn)
+    if not text.startswith("```mermaid"):
+        return (_sentence(text),)
+    values: list[tuple[str, float]] = []
+    for line in text.splitlines()[3:-1]:
+        match = re.fullmatch(r'"(.+?)"\s*:\s*([0-9.]+)', line.strip())
+        if match:
+            values.append((match.group(1), float(match.group(2))))
+    return (StalenessBars(tuple(values)),) if values else (DiagramSource(text),)
+
+
+def runtime_boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
+    """The runtime section's body: the recorded edges as the runtime diagram's rows."""
+
+    edges = runtime_boundary_rows(conn)
+    if not edges:
+        return (_sentence(f"_{RUNTIME_BOUNDARY_ABSENT}_"),)
+    label = imported_runtime_line(edges)
+    return (
+        _sentence(
+            "_Projected from the recorded runtime boundaries; mechanisms and targets"
+            " are preserved as recorded._"
+        ),
+        RuntimeDiagram(
+            caption,
+            tuple(
+                RuntimeRow(
+                    *(
+                        inlines(" ".join(str(cell or "").split()))
+                        for cell in (
+                            edge["from_runtime"],
+                            edge["from_language"],
+                            edge["to_runtime"],
+                            edge["mechanism"],
+                            edge["notes"],
+                        )
+                    )
+                )
+                for edge in edges
+            ),
+        ),
+        *((_sentence(label),) if label else ()),
+    )
+
+
+def depth_cell(label: str) -> Inlines:
+    """A survey-depth label as its status chip, as the atlas prints it."""
+
+    for value, name in _DEPTH_LABELS.items():
+        if name.lower() == _plain(label).lower():
+            return Inlines((Chip("status", value),), _plain(label))
+    return inlines(label)

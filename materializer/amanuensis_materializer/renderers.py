@@ -25,13 +25,16 @@ from .diagrams import (
     BOUNDARY_HEADING,
     RUNTIME_BOUNDARY_ABSENT,
     RUNTIME_BOUNDARY_COLUMNS,
-    boundary_view,
+    boundary_blocks,
     concern_coverage_heatmap,
-    runtime_boundary_map,
+    dependency_blocks,
+    depth_cell,
+    runtime_boundary_blocks,
     runtime_boundary_rows,
     runtime_boundary_state,
+    seam_blocks,
     seam_graph,
-    staleness_map,
+    staleness_blocks,
     subsystem_dependency_view,
 )
 from .legacy_prose import ImportedBody, imported_bodies, imported_page, imports_source
@@ -44,6 +47,36 @@ from .lint import (
     orientation_violations,
 )
 from .manifest import sha256_json
+from .page import (
+    Anchor,
+    Atlas,
+    AtlasItem,
+    AtlasRegion,
+    Block,
+    Chip,
+    CodeSpan,
+    Details,
+    EnumTable,
+    Fact,
+    Heading,
+    Inline,
+    Inlines,
+    Link,
+    List,
+    ListItem,
+    Page,
+    Paragraph,
+    Record,
+    RecordList,
+    Row,
+    Section,
+    Strong,
+    SummaryItem,
+    SummaryList,
+    Table,
+    Text,
+)
+from .prose import _plain, inlines, render_prose
 from .readback import (
     CARRIED_HEADING,
     CARRIED_UNDECIDED,
@@ -89,7 +122,7 @@ from .readback import (
     territory_row,
     workspace_is_bound,
 )
-from .slugs import matrix_page, matrix_slug, subsystem_page
+from .slugs import matrix_page, matrix_slug, slugify, subsystem_page
 from .vocabulary import (
     ID_KINDS,
     OBLIGATION_BEARING_SQL,
@@ -104,7 +137,9 @@ from .vocabulary import (
     values_of,
 )
 
-RenderResult = tuple[str, dict[str, str]]
+# A renderer returns a page's Markdown, or the page model it built itself (store-only
+# PLAN §3.2 step 4), and the hash of each source it read.
+RenderResult = tuple[str | Page, dict[str, str]]
 
 # The resolution states each findings page renders, from the one definition in
 # readback.py, and their human labels from the enum source (spec §6.1, §10).
@@ -126,6 +161,95 @@ def _one_line(text: Any) -> str:
 def _table_cell(text: Any) -> str:
     """An authored value as one table cell: a line break would end the row."""
     return _one_line(text).replace("|", "/")
+
+
+def _heading(level: int, text: str) -> Heading:
+    return Heading(level, inlines(text))
+
+
+def _caption(title: str) -> str:
+    """What a table is captioned by: the words of the section it sits in."""
+
+    return slugify(_plain(title)).replace("-", " ")
+
+
+def _section(title: str, *blocks: Block) -> Section:
+    """A level-2 section: its heading, then the blocks, named by the heading's words."""
+
+    return Section(slugify(_plain(title)), (_heading(2, title), *blocks))
+
+
+def _paragraph(text: str) -> Paragraph:
+    return Paragraph(inlines(text))
+
+
+def _bullets(items: Sequence[str]) -> List:
+    return List(False, tuple(ListItem(inlines(item)) for item in items))
+
+
+def _summary(caption: str, pairs: Sequence[tuple[str, str]]) -> SummaryList:
+    """Metric/value facts, which the HTML prints as a definition list."""
+
+    return SummaryList(caption, tuple(SummaryItem(inlines(key), inlines(value)) for key, value in pairs))
+
+
+def _table(caption: str, headers: Sequence[str], body: Sequence[Sequence[str | Inlines]]) -> Table:
+    """A table of text cells, each read through the inline grammar."""
+
+    return Table(
+        caption,
+        tuple(inlines(header) for header in headers),
+        tuple(
+            Row(tuple(cell if isinstance(cell, Inlines) else inlines(cell) for cell in cells))
+            for cells in body
+        ),
+    )
+
+
+def _status_cell(status: str) -> Inlines:
+    """A survey depth as its chip, the word beside the colour the badge once printed."""
+
+    badge = _badge(status)
+    if badge.startswith("·"):
+        return inlines(badge)
+    return Inlines((Chip("status", status),), badge)
+
+
+def _lint_text(page: Page) -> str:
+    """The page's words, a line to a block row, for the overview's composite-index lint."""
+
+    def words(text: Inlines) -> str:
+        def one(node: Inline) -> str:
+            if isinstance(node, CodeSpan):
+                return f"`{node.text}`"
+            if isinstance(node, Chip):
+                return node.value
+            if isinstance(node, Link):
+                return node.label
+            if hasattr(node, "children"):
+                return "".join(one(child) for child in node.children)
+            return getattr(node, "text", "")
+
+        return "".join(one(node) for node in text.nodes)
+
+    lines: list[str] = []
+
+    def walk(blocks: Sequence[Block]) -> None:
+        for block in blocks:
+            if isinstance(block, Section | Details):
+                walk(block.blocks)
+            elif isinstance(block, Heading):
+                lines.append(f"{'#' * block.level} {words(block.text)}")
+            elif isinstance(block, Paragraph):
+                lines.append(words(block.text))
+            elif isinstance(block, List):
+                lines.extend(f"- {words(item.text)}" for item in block.items)
+            elif isinstance(block, SummaryList):
+                lines.extend(f"| {words(item.key)} | {words(item.value)} |" for item in block.items)
+
+    lines.append(f"# {page.title}")
+    walk(page.blocks)
+    return "\n".join(lines) + "\n"
 
 
 def _fmt_time(ts: str | None) -> str:
@@ -1344,68 +1468,49 @@ def render_index(
 
     # 1. Identity.  The project is the subject; Amanuensis is the method that
     #    recorded it (`reporting-style.md`).
-    out = [
-        f"# {name}",
-        "",
-        OVERVIEW_IDENTITY.format(name=name, guide=GUIDE_TITLE),
-        "",
-        # 2. Thesis — the project purpose, else by heading from entry-point.md,
-        #    or the named instruction.
-        "## What is this codebase?",
-        "",
-        thesis.text,
-        "",
-        # 3. Four status dimensions, each a separate named fact.
-        "## Where the record stands",
-        "",
-        "### Source alignment",
-        "",
+    alignment_pairs = [
+        (
+            "Checked at",
+            f"{_short(checked)} on `{branch}`"
+            + (
+                f", {_fmt_time(alignment['last_checked_at'])}"
+                if alignment["last_checked_at"]
+                else ""
+            ),
+        ),
+        ("Repository head", _relation(checked, alignment["workspace_head"])),
+        (
+            # The row is named for the question, not for one remote. Which
+            # ref answered it belongs in the value, where it is a fact about
+            # this workspace rather than a heading that changes shape.
+            "Upstream head",
+            _relation(checked, alignment["origin_head"])
+            + (f" (`{alignment['upstream_ref']}`)" if alignment.get("upstream_ref") else ""),
+        ),
+        (
+            # §11.2 measures freshness on `scoped_files`, never on the
+            # obligation count. A ledger whose scoped rows all happen to be
+            # exempt has been read exactly, and saying it was not measured
+            # would hide a real reading behind the sentence reserved for
+            # having no ledger at all -- and put this row at odds with the
+            # HTML strip, which reads `scoped_files` on the same store.
+            "Files carrying a survey obligation marked stale",
+            f"{stale_obligation} of {obligation}"
+            if obligation
+            else (
+                "none of the scoped files carries a survey obligation"
+                if scoped
+                else "not measured by this projection"
+            ),
+        ),
+        (
+            "Scoped files exempt from that obligation, marked stale",
+            f"{stale_exempt} of {scoped - obligation}"
+            if scoped > obligation
+            else "none in scope",
+        ),
     ]
-    out += _metric_table(
-        [
-            (
-                "Checked at",
-                f"{_short(checked)} on `{branch}`"
-                + (
-                    f", {_fmt_time(alignment['last_checked_at'])}"
-                    if alignment["last_checked_at"]
-                    else ""
-                ),
-            ),
-            ("Repository head", _relation(checked, alignment["workspace_head"])),
-            (
-                # The row is named for the question, not for one remote. Which
-                # ref answered it belongs in the value, where it is a fact about
-                # this workspace rather than a heading that changes shape.
-                "Upstream head",
-                _relation(checked, alignment["origin_head"])
-                + (f" (`{alignment['upstream_ref']}`)" if alignment.get("upstream_ref") else ""),
-            ),
-            (
-                # §11.2 measures freshness on `scoped_files`, never on the
-                # obligation count. A ledger whose scoped rows all happen to be
-                # exempt has been read exactly, and saying it was not measured
-                # would hide a real reading behind the sentence reserved for
-                # having no ledger at all -- and put this row at odds with the
-                # HTML strip, which reads `scoped_files` on the same store.
-                "Files carrying a survey obligation marked stale",
-                f"{stale_obligation} of {obligation}"
-                if obligation
-                else (
-                    "none of the scoped files carries a survey obligation"
-                    if scoped
-                    else "not measured by this projection"
-                ),
-            ),
-            (
-                "Scoped files exempt from that obligation, marked stale",
-                f"{stale_exempt} of {scoped - obligation}"
-                if scoped > obligation
-                else "none in scope",
-            ),
-        ]
-    )
-    out += ["### Survey coverage", ""]
+    # 3. Four status dimensions, each a separate named fact.
     if not standing.stands:
         files_read = unmeasured
     elif standing.obligation_paths:
@@ -1416,20 +1521,17 @@ def render_index(
         files_read = f"{examined_tracked} of {standing.obligation_paths}"
     else:
         files_read = "no tracked path carries a survey obligation"
-    out += _metric_table(
-        [
-            (
-                "Subsystems by survey depth",
-                depth if depth else "no subsystem is registered",
-            ),
-            (COVERAGE_ROW_FILES_READ, files_read),
-            (
-                COVERAGE_ROW_UNLEDGERED,
-                unmeasured if not standing.stands else str(standing.unledgered),
-            ),
-        ]
-    )
-    out += ["### Open engineering work", ""]
+    coverage_pairs = [
+        (
+            "Subsystems by survey depth",
+            depth if depth else "no subsystem is registered",
+        ),
+        (COVERAGE_ROW_FILES_READ, files_read),
+        (
+            COVERAGE_ROW_UNLEDGERED,
+            unmeasured if not standing.stands else str(standing.unledgered),
+        ),
+    ]
     # A defect this store confirmed and a defect it inherited and has not looked
     # at are different facts, so the carried count is its own row and is never
     # summed into `Findings open` (§5.6). The row is published when a carry is
@@ -1447,79 +1549,104 @@ def render_index(
         ("Contradictions unresolved", str(unresolved["n"] or 0)),
         ("Decisions open", str(decisions["n"] or 0)),
     ]
-    out += _metric_table(work)
-    out += ["### Publication integrity", ""]
+    caption = _caption("Where the record stands")
     if verification:
-        out += [PUBLICATION_INTEGRITY_LAG, ""]
-        out += _metric_table(
-            [
-                *(
-                    (
-                        f"{axis.title()} axis",
-                        "green" if int(verification[f"{axis}_ok"] or 0) else "red",
-                    )
-                    for axis in ("state", "coverage", "content")
-                ),
-                ("Read back at", _fmt_time(str(verification["verified_at"]))),
-            ]
+        integrity: tuple[Block, ...] = (
+            _paragraph(PUBLICATION_INTEGRITY_LAG),
+            _summary(
+                caption,
+                [
+                    *(
+                        (
+                            f"{axis.title()} axis",
+                            "green" if int(verification[f"{axis}_ok"] or 0) else "red",
+                        )
+                        for axis in ("state", "coverage", "content")
+                    ),
+                    ("Read back at", _fmt_time(str(verification["verified_at"]))),
+                ],
+            ),
         )
     else:
-        out += [
-            "No publication read-back is recorded for this store, so none of the"
-            " three axes has a result to report.",
-            "",
-        ]
-
-    # 4. One linked count per resolution state, generated from the enum source so
-    #    the line cannot drift from the enum (§7.2 step 4, §10).
-    out += ["## Findings by resolution state", ""]
-    out += _metric_table(
-        [
-            (
-                f"[{RESOLUTION_LABELS.get(state, state)}]({finding_page(state)})",
-                str(state_counts.get(state, 0)),
-            )
-            for state in values_of("finding_resolution_state")
-        ]
-    )
-
-    # 5. One route into each lens (§1.1, §7.1).
-    out += [
-        "## The four lenses",
-        "",
-        "- **Codebase** — [Subsystem map](master-plan.md): every region, grouped by"
-        " layer, with the boundaries and terms recorded for it.",
-        "- **Unresolved** — [Open findings](findings.md): defects open or awaiting"
-        " verification at the checked revision.",
-        "- **History** — [Resolved findings](resolved-findings.md): the records that"
-        " reached a terminal state, with the basis each one rests on.",
-        f"- **Method** — [{GUIDE_TITLE}](how-to-read.md): what each page is for,"
-        " the terms it uses, and how a survey works.",
-        "",
-    ]
-
-    if latest_session:
-        out += [
-            "## Latest session",
-            "",
-            f"`{latest_session['intent']}` — started {_fmt_time(latest_session['started_at'])}"
-            + (
-                f" · ended {_fmt_time(latest_session['ended_at'])}"
-                if latest_session["ended_at"]
-                else " · **active**"
+        integrity = (
+            _paragraph(
+                "No publication read-back is recorded for this store, so none of the"
+                " three axes has a result to report."
             ),
-            "",
-        ]
+        )
 
-    text = "\n".join(out) + "\n"
+    blocks: list[Block] = [
+        _paragraph(OVERVIEW_IDENTITY.format(name=name, guide=GUIDE_TITLE)),
+        # 2. Thesis — the project purpose, else by heading from entry-point.md,
+        #    or the named instruction.
+        _section("What is this codebase?", *render_prose(thesis.text)),
+        _section(
+            "Where the record stands",
+            _heading(3, "Source alignment"),
+            _summary(caption, alignment_pairs),
+            _heading(3, "Survey coverage"),
+            _summary(caption, coverage_pairs),
+            _heading(3, "Open engineering work"),
+            _summary(caption, work),
+            _heading(3, "Publication integrity"),
+            *integrity,
+        ),
+        # 4. One linked count per resolution state, generated from the enum source so
+        #    the line cannot drift from the enum (§7.2 step 4, §10).
+        _section(
+            "Findings by resolution state",
+            _summary(
+                _caption("Findings by resolution state"),
+                [
+                    (
+                        f"[{RESOLUTION_LABELS.get(state, state)}]({finding_page(state)})",
+                        str(state_counts.get(state, 0)),
+                    )
+                    for state in values_of("finding_resolution_state")
+                ],
+            ),
+        ),
+        # 5. One route into each lens (§1.1, §7.1).
+        _section(
+            "The four lenses",
+            _bullets(
+                [
+                    "**Codebase** — [Subsystem map](master-plan.md): every region, grouped by"
+                    " layer, with the boundaries and terms recorded for it.",
+                    "**Unresolved** — [Open findings](findings.md): defects open or awaiting"
+                    " verification at the checked revision.",
+                    "**History** — [Resolved findings](resolved-findings.md): the records that"
+                    " reached a terminal state, with the basis each one rests on.",
+                    f"**Method** — [{GUIDE_TITLE}](how-to-read.md): what each page is for,"
+                    " the terms it uses, and how a survey works.",
+                ]
+            ),
+        ),
+    ]
+    if latest_session:
+        blocks.append(
+            _section(
+                "Latest session",
+                _paragraph(
+                    f"`{latest_session['intent']}` — started {_fmt_time(latest_session['started_at'])}"
+                    + (
+                        f" · ended {_fmt_time(latest_session['ended_at'])}"
+                        if latest_session["ended_at"]
+                        else " · **active**"
+                    )
+                ),
+            )
+        )
+
+    page = Page(name, "index.html", tuple(blocks))
     # Over the page as published, not over the thesis alone. C32's rule is about
     # what the overview carries, so a renderer that grows a composite row is the
     # same violation as a session that writes one into `entry-point.md`, and
-    # only a lint over the rendered bytes sees both. Until slice-S7 this check
+    # only a lint over the rendered words sees both. Until slice-S7 this check
     # lived in the packet's gate, where it could report on a publish it could
     # not stop (F5/codex).
     if warn is not None:
-        for message in composite_index_violations(text):
+        for message in composite_index_violations(_lint_text(page)):
             warn(f"index.md: the overview may not publish a composite index — {message}")
 
     sources = {
@@ -1535,7 +1662,7 @@ def render_index(
         **_db_source("index:identity", {"project_name": name}),
         **_db_source("index:purpose", {"state": thesis.state, "text": thesis.text}),
     }
-    return text, sources
+    return page, sources
 
 
 def render_architecture(
@@ -1550,7 +1677,7 @@ def render_architecture(
     # modules, so a change to either predicate could head an atlas "Subsystem
     # dependency graph" — a page asserting edges no row records (§9.2). The
     # `xrefs` rows above stay for the manifest source hash only.
-    dependency_heading, dependency_body = subsystem_dependency_view(conn)
+    dependency_heading, _dependency_body = subsystem_dependency_view(conn)
 
     # §3.7: the project account and a line per subsystem open the page. Read by
     # the function the subsystem pages and the read-back read.
@@ -1559,57 +1686,46 @@ def render_architecture(
     head = _checked_head(conn)
     workspace = resolve_workspace(storage)
     bound = workspace_is_bound(workspace)
-    fit = ["## " + ARCHITECTURE_FIT_HEADING, ""]
+    fit: list[Block] = []
     if account.state == "recorded" and account.row is not None:
         text, is_body = _published_explanation(
             "project", "account", str(account.row["body"]), warn
         )
-        fit += [_nest_prose(text.strip(), 2), ""]
+        fit += render_prose(text.strip())
         if is_body:
-            fit += [_provenance_line(workspace, bound, account.row, head), ""]
+            fit.append(_paragraph(_provenance_line(workspace, bound, account.row, head)))
     elif account.state == "declined" and account.row is not None:
         text, _is_body = _published_explanation(
             "project", "account", str(account.row["body"]), warn
         )
-        fit += [
-            PROJECT_ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=text.strip()),
-            "",
-        ]
+        fit.append(
+            _paragraph(
+                PROJECT_ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=text.strip())
+            )
+        )
     else:
-        fit += [PROJECT_ACCOUNT_ABSENT, ""]
+        fit.append(_paragraph(PROJECT_ACCOUNT_ABSENT))
+    lines = []
     for s in subs:
         sid = str(s["id"])
         excerpt = _excerpt(sid, _reading(readings, "subsystem", sid, "purpose"), warn)
-        fit.append(f"- **{sid} — {_one_line(s['name'])}**: {excerpt}")
-    fit.append("")
+        lines.append(f"**{sid} — {_one_line(s['name'])}**: {excerpt}")
+    if lines:
+        fit.append(_bullets(lines))
     explanations = explanation_rows(conn)
 
-    out = [
-        "# Architecture",
-        "",
-        *fit,
-        "## Runtime boundary map",
-        "",
-        runtime_boundary_map(conn),
-        "",
-        f"## {dependency_heading}",
-        "",
-        dependency_body,
-        "",
-        # §2.5 item 2: the HTML draws this section's table as the boundary SVG,
-        # recognised by its header signature as the runtime table is.
-        f"## {BOUNDARY_HEADING}",
-        "",
-        boundary_view(conn),
-        "",
-        "## Seam topology",
-        "",
-        seam_graph(conn),
-        "",
-        "## Staleness map",
-        "",
-        staleness_map(conn),
-    ]
+    blocks: tuple[Block, ...] = (
+        _section(ARCHITECTURE_FIT_HEADING, *fit),
+        _section(
+            "Runtime boundary map",
+            *runtime_boundary_blocks(conn, _caption("Runtime boundary map")),
+        ),
+        _section(dependency_heading, *dependency_blocks(conn, _caption(dependency_heading))),
+        # §2.5 item 2: the HTML draws this section's table as the boundary SVG.
+        _section(BOUNDARY_HEADING, *boundary_blocks(conn, _caption(BOUNDARY_HEADING))),
+        _section("Seam topology", *seam_blocks(conn, _caption("Seam topology"))),
+        _section("Staleness map", *staleness_blocks(conn)),
+    )
     sources = {
         **_db_source("arch:xrefs", xrefs),
         **_db_source("arch:subs", subs),
@@ -1617,7 +1733,7 @@ def render_architecture(
         **_db_source("arch:explanations", {"head": head, "rows": explanations}),
         **_db_source("arch:runtime", runtime_boundary_rows(conn)),
     }
-    return "\n".join(out) + "\n", sources
+    return Page("Architecture", "architecture.html", blocks), sources
 
 
 # ---------------------------------------------------------------------------
@@ -1661,48 +1777,69 @@ def render_master_plan(
     finds_by_ss = {f["subsystem_id"]: f for f in finds}
     readings = effective_explanations(conn, storage)
 
+    blocks: list[Block] = []
     if not subs:
-        body = ["_No subsystems registered yet. Run the Amanuensis coordinator to onboard._"]
+        blocks.append(_paragraph("_No subsystems registered yet. Run the Amanuensis coordinator to onboard._"))
     else:
         # Group by layer.
         layers: dict[str, list[dict[str, Any]]] = {}
         for s in subs:
             layers.setdefault(s["layer"] or "unlayered", []).append(s)
         # The atlas comes first and always has one row per subsystem, whether or
-        # not any edge is recorded (§2.5): the HTML turns this three-column table
-        # into the region cards the architecture page already uses. The depth
-        # is the contract's label in both views, never the stored value.
+        # not any edge is recorded (§2.5): the HTML turns it into the region cards
+        # the architecture page already uses. The depth is the contract's label,
+        # never the stored value. It opens the page before any section, so the
+        # page's own title is its caption.
         depth_labels = labels("subsystem_status")
-        body = [
-            "| Region | Subsystem | Survey depth |",
-            "|---|---|---|",
-        ]
+        regions: dict[str, list[AtlasItem]] = {}
         for layer, items in layers.items():
             for s in items:
-                body.append(
-                    f"| {_table_cell(layer)} | **[{s['id']}]({subsystem_page(str(s['id']), str(s['name']))})**"
-                    f" {_table_cell(s['name'])} | {_table_cell(depth_labels.get(s['status'], s['status']))} |"
+                regions.setdefault(_plain(_table_cell(layer)) or "Other", []).append(
+                    AtlasItem(
+                        inlines(f"**[{s['id']}]({subsystem_page(str(s['id']), str(s['name']))})** {_table_cell(s['name'])}"),
+                        depth_cell(_table_cell(depth_labels.get(s["status"], s["status"]))),
+                    )
                 )
-        body.append("")
+        blocks.append(
+            Atlas("Subsystem map", tuple(AtlasRegion(name, tuple(items)) for name, items in regions.items()))
+        )
         for layer, items in layers.items():
-            body.append(f"## {layer}")
-            body.append("")
-            body.append("| Priority | ID | Name | Status | Purpose | Scope | Jump-in | Findings |")
-            body.append("|---|---|---|---|---|---|---|---|")
-            for s in items:
+            records: list[Record] = []
+            for number, s in enumerate(items, start=1):
                 f = finds_by_ss.get(s["id"], {"n": 0, "open_bugs": 0})
+                sid = str(s["id"])
                 priority = "—" if s.get("priority") is None else str(s["priority"])
-                body.append(
-                    f"| {priority} | **{s['id']}** | {s['name']} | {_badge(s['status'])} | "
-                    f"{_table_cell(_excerpt(str(s['id']), _reading(readings, 'subsystem', str(s['id']), 'purpose'), warn))} | "
-                    f"{_table_cell(s['scope'] or '—')} | "
-                    f"{_table_cell(s['jump_in_reading'] or '—')} | "
-                    f"{f['n']} ({f.get('open_bugs', 0)} open) |"
+                key_text = _plain(str(s["name"])) or f"Record {number}"
+                cells: list[tuple[str, Inlines]] = [
+                    ("id", Inlines((Strong((Text(sid),)),), sid)),
+                    ("status", _status_cell(str(s["status"]))),
+                    ("findings", inlines(f"{f['n']} ({f.get('open_bugs', 0)} open)")),
+                    ("priority", inlines(priority)),
+                    (
+                        "purpose",
+                        inlines(_table_cell(_excerpt(sid, _reading(readings, "subsystem", sid, "purpose"), warn))),
+                    ),
+                    ("scope", inlines(_table_cell(s["scope"] or "—"))),
+                    ("jump-in", inlines(_table_cell(s["jump_in_reading"] or "—"))),
+                ]
+                # A fact or field with nothing to print is left out, as the table's reader left it.
+                facts = [Fact(key, value) for key, value in cells[:4] if value.plain]
+                fields = [Fact(key, value) for key, value in cells[4:] if value.plain]
+                records.append(
+                    Record(
+                        markers=(),
+                        key=inlines(str(s["name"])),
+                        key_text=key_text,
+                        slug_text=_plain(f"subsystem-{key_text}"),
+                        facts=tuple(facts),
+                        fields=tuple(fields),
+                        path=_plain(str(s["name"])),
+                        subsystem_id=sid,
+                    )
                 )
-            body.append("")
-    text = "# Subsystem map\n\n" + "\n".join(body) + "\n"
+            blocks.append(_section(layer, RecordList("subsystem", _caption(layer), tuple(records))))
     return (
-        text,
+        Page("Subsystem map", "master-plan.html", tuple(blocks)),
         _db_source("master-plan:subs", subs)
         | _db_source("master-plan:finds", finds)
         | _db_source("master-plan:explanations", explanation_rows(conn)),
@@ -3653,9 +3790,6 @@ def _ledger_stale_table(
 # sees as a label.
 GUIDE_TITLE = "How to read this survey"
 SURVEY_SECTION = "How a survey works"
-HOW_TO_READ_INTRO = f"# {GUIDE_TITLE}\n"
-
-HOW_TO_READ_CLOSING = ""
 
 # Appendix C, "What this site is". The project name is the only variable. The
 # second paragraph (PLAN §4 O14, rewritten by store-only SO13 for the one view
@@ -3719,8 +3853,8 @@ def _enum_heading(name: str) -> str:
     return str(title) if title else name.replace("_", " ").capitalize()
 
 
-def _site_is(name: str) -> list[str]:
-    return ["## What this site is", "", SITE_IS.format(name=name), "", SITE_VIEWS, ""]
+def _site_is(name: str) -> Section:
+    return _section("What this site is", _paragraph(SITE_IS.format(name=name)), _paragraph(SITE_VIEWS))
 
 
 # Appendix C, "How a survey works". The surrounding sentences are constants; the
@@ -3771,74 +3905,75 @@ _NUMBER_WORDS = {2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven
 _WHEN = {"end": "when the pass is done", "start": "as the pass starts"}
 
 
-def _survey_passes_section() -> list[str]:
+def _survey_passes_section() -> Section:
     """Appendix C's "How a survey works", the pass table generated from the contract."""
 
     spec = [dict(p) for p in SURVEY_PASSES]
     count = len(spec)
-    out = [
-        f"## {SURVEY_SECTION}",
-        "",
-        SURVEY_LEAD,
-        "",
-        SURVEY_ONBOARDING,
-        "",
-        SURVEY_EACH.format(passes=_NUMBER_WORDS.get(count, str(count))),
-        "",
-        "| Pass | What the agent does | Survey depth it sets, and when | What that depth means |",
-        "|---|---|---|---|",
-    ]
+    passes: list[list[str]] = []
     for p in spec:
         status = str(p["status"])
         label = SUBSYSTEM_STATUS_LABELS.get(status, status)
-        out.append(
-            f"| {_table_cell(p['pass'])} | {_table_cell(p['does'])} |"
-            f" **{_table_cell(label)}**, {_WHEN.get(str(p['set_when']), str(p['set_when']))} |"
-            f" {_table_cell(SUBSYSTEM_STATUS_MEANINGS.get(status, ''))} |"
+        passes.append(
+            [
+                _table_cell(p["pass"]),
+                _table_cell(p["does"]),
+                f"**{_table_cell(label)}**, {_WHEN.get(str(p['set_when']), str(p['set_when']))}",
+                _table_cell(SUBSYSTEM_STATUS_MEANINGS.get(status, "")),
+            ]
         )
     under_way = [
         f"*{SUBSYSTEM_STATUS_LABELS.get(str(p['status']), p['status'])}*"
         for p in spec
         if p["set_when"] == "start"
     ]
-    out += ["", SURVEY_IN_PROGRESS.format(labels=" or ".join(under_way)), ""]
-    out += [SURVEY_REFRESH, "", f"### {EXPECTS_HEADING}", "", *SURVEY_EXPECTS, ""]
     phases = [int(str(p["phase"])) for p in spec]
     survey_phases = f"{min(phases)}–{max(phases)}"
     named = ", ".join(f"{p['pass']} ({p['phase']})" for p in spec)
-    out += [
-        f"### {PHASES_HEADING}",
-        "",
-        PHASES_LEAD,
-        "",
-        "| Numbering | Phases | What they are |",
-        "|---|---|---|",
-        f"| Onboarding | {ONBOARDING_PHASES} | {ONBOARDING_PHASES_MEANING} |",
-        f"| Subsystem survey | {survey_phases} | {_table_cell(named)}, in order. |",
-        "",
-    ]
-    return out
+    caption = _caption(SURVEY_SECTION)
+    return _section(
+        SURVEY_SECTION,
+        _paragraph(SURVEY_LEAD),
+        _paragraph(SURVEY_ONBOARDING),
+        _paragraph(SURVEY_EACH.format(passes=_NUMBER_WORDS.get(count, str(count)))),
+        _table(
+            caption,
+            ["Pass", "What the agent does", "Survey depth it sets, and when", "What that depth means"],
+            passes,
+        ),
+        _paragraph(SURVEY_IN_PROGRESS.format(labels=" or ".join(under_way))),
+        _paragraph(SURVEY_REFRESH),
+        _heading(3, EXPECTS_HEADING),
+        _bullets([item.removeprefix("- ") for item in SURVEY_EXPECTS]),
+        _heading(3, PHASES_HEADING),
+        _paragraph(PHASES_LEAD),
+        _table(
+            caption,
+            ["Numbering", "Phases", "What they are"],
+            [
+                ["Onboarding", ONBOARDING_PHASES, ONBOARDING_PHASES_MEANING],
+                ["Subsystem survey", survey_phases, f"{_table_cell(named)}, in order."],
+            ],
+        ),
+    )
 
 
-def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list[str]:
+def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> Section:
     """One entry per `READER_TERMS` row, anchored for the pages that link to it."""
 
     # Only planned pages are linked: a term's `pages` may name a prose page this
     # store has no source for, and a link to it would not resolve (read-back).
     labels = {route[0]: route[1] for route in routes}
-    out: list[str] = [
-        "## Terms",
-        "",
-        "Words this site uses in a particular sense. Each entry says where you will meet it.",
-        "",
+    blocks: list[Block] = [
+        _paragraph("Words this site uses in a particular sense. Each entry says where you will meet it."),
     ]
     for entry in READER_TERMS:
         term = str(entry["term"])
-        out += [f'<a id="term-{term_slug(term)}"></a>', "", f"### {term}", ""]
+        blocks += [Anchor(f"term-{term_slug(term)}"), _heading(3, term)]
         aliases = [str(alias) for alias in entry.get("aliases") or ()]  # type: ignore[union-attr]
         if aliases:
-            out += [f"*Also called: {', '.join(aliases)}.*", ""]
-        out += [str(entry["definition"]), ""]
+            blocks.append(_paragraph(f"*Also called: {', '.join(aliases)}.*"))
+        blocks.append(_paragraph(str(entry["definition"])))
         links: list[str] = []
         for page in entry.get("pages") or ():  # type: ignore[union-attr]
             page = str(page)
@@ -3852,8 +3987,8 @@ def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> lis
             if link not in links:
                 links.append(link)
         if links:
-            out += [f"Seen on: {', '.join(links)}", ""]
-    return out
+            blocks.append(_paragraph(f"Seen on: {', '.join(links)}"))
+    return _section("Terms", *blocks)
 
 
 # Appendix B, "How IDs are formed" (PLAN §2.2 items 1 and 2, D1). The kinds come
@@ -3930,71 +4065,102 @@ def _id_examples(conn: sqlite3.Connection) -> dict[str, str]:
     return {kind: example for kind, example in found.items() if example}
 
 
-def _ids_section(conn: sqlite3.Connection) -> list[str]:
+def _ids_section(conn: sqlite3.Connection) -> Section:
     """Appendix B's table of ID kinds, with this store's examples and letter key."""
 
-    out = [f"## {IDS_SECTION}", "", IDS_LEAD, ""]
     key = subsystem_letter_key(
         [(str(r["id"]), r["layer"]) for r in rows(conn, "SELECT id, layer FROM subsystems ORDER BY id")]
     )
-    if key:
-        out += [key, ""]
     examples = _id_examples(conn)
-    out += [
-        "| Kind | Shape | Names | Chosen by | Example here | Links to |",
-        "|---|---|---|---|---|---|",
+    kinds = [
+        [
+            _table_cell(str(kind["kind"])),
+            _table_cell(kind["shape"]),
+            _table_cell(kind["names"]),
+            _table_cell(kind["chosen_by"]),
+            _table_cell(examples.get(str(kind["kind"]), NO_EXAMPLE)),
+            _table_cell(kind["links_to"]),
+        ]
+        for kind in ID_KINDS
     ]
-    for kind in ID_KINDS:
-        name = str(kind["kind"])
-        out.append(
-            f"| {_table_cell(name)} | {_table_cell(kind['shape'])} | {_table_cell(kind['names'])}"
-            f" | {_table_cell(kind['chosen_by'])} | {_table_cell(examples.get(name, NO_EXAMPLE))}"
-            f" | {_table_cell(kind['links_to'])} |"
-        )
-    out.append("")
-    return out
+    return _section(
+        IDS_SECTION,
+        _paragraph(IDS_LEAD),
+        *((_paragraph(key),) if key else ()),
+        _table(
+            _caption(IDS_SECTION),
+            ["Kind", "Shape", "Names", "Chosen by", "Example here", "Links to"],
+            kinds,
+        ),
+    )
 
 
-def _enum_tables(heading: str, lede: str, reader_facing: bool) -> list[str]:
+def _enum_tables(heading: str, lede: str, reader_facing: bool) -> tuple[Block, ...]:
     """The enum tables whose `reader_facing` flag matches, in declared order."""
 
-    out: list[str] = [f"## {heading}", "", lede, ""]
+    blocks: list[Block] = [_paragraph(lede)]
     for name, definition in VOCABULARY.items():
         if bool(definition.get("reader_facing")) != reader_facing:
             continue
         axis = str(definition.get("axis") or "")
-        out += [
-            f"### {_enum_heading(name)}",
-            "",
-            f"Stored as `{name}`" + (f" · {axis} axis" if axis else ""),
-            "",
-            "| Value | Label | What it means | What it cannot justify |",
-            "|---|---|---|---|",
+        blocks += [
+            _heading(3, _enum_heading(name)),
+            _paragraph(f"Stored as `{name}`" + (f" · {axis} axis" if axis else "")),
+            EnumTable(
+                _caption(heading),
+                tuple(
+                    inlines(header)
+                    for header in ("Value", "Label", "What it means", "What it cannot justify")
+                ),
+                tuple(
+                    Row(
+                        (
+                            # The stored value prints literally, as the code it is.
+                            Inlines((CodeSpan(str(entry["value"])),), str(entry["value"])),
+                            inlines(_table_cell(entry["label"])),
+                            inlines(_table_cell(entry["meaning"])),
+                            inlines(_table_cell(entry["cannot_justify"])),
+                        )
+                    )
+                    for entry in definition.get("values") or ()  # type: ignore[union-attr]
+                ),
+            ),
         ]
-        for entry in definition.get("values") or ():  # type: ignore[union-attr]
-            out.append(
-                f"| `{entry['value']}` | {_table_cell(entry['label'])}"
-                f" | {_table_cell(entry['meaning'])}"
-                f" | {_table_cell(entry['cannot_justify'])} |"
-            )
-        out.append("")
-    return out
+    return tuple(blocks)
 
 
-def _vocabulary_tables() -> list[str]:
-    """Status values, then the full vocabulary, from the enum source (§7.8)."""
+def _vocabulary_tables() -> tuple[Section, Section]:
+    """Status values, then the full vocabulary, from the enum source (§7.8).
 
-    return _enum_tables(
-        "Status values",
-        "The values this site prints as labels, from the vocabulary contract, version"
-        f" `{VOCABULARY_CONTRACT_VERSION}`: the same source the server checks writes"
-        " against. Each table gives the label, what it means, and what it cannot justify.",
-        True,
-    ) + _enum_tables(
-        "Full vocabulary",
-        "The remaining values the record stores, which the pages rarely print as labels."
-        " They come from the same contract.",
-        False,
+    The second section holds the tables a reader never meets as a label, so it
+    stays closed until asked for.
+    """
+
+    status = "Status values"
+    full = "Full vocabulary"
+    return (
+        _section(
+            status,
+            *_enum_tables(
+                status,
+                "The values this site prints as labels, from the vocabulary contract, version"
+                f" `{VOCABULARY_CONTRACT_VERSION}`: the same source the server checks writes"
+                " against. Each table gives the label, what it means, and what it cannot justify.",
+                True,
+            ),
+        ),
+        _section(
+            full,
+            Details(
+                "Show the full vocabulary",
+                _enum_tables(
+                    full,
+                    "The remaining values the record stores, which the pages rarely print as labels."
+                    " They come from the same contract.",
+                    False,
+                ),
+            ),
+        ),
     )
 
 
@@ -4007,7 +4173,7 @@ _SUBGROUP_ROWS: dict[str, tuple[str, str, str]] = {
 }
 
 
-def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list[str]:
+def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> Section:
     """The index of pages, generated from the page plan (§7.8, PLAN §2.4).
 
     Written from the plan rather than by hand so a page cannot be published and
@@ -4018,27 +4184,24 @@ def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list
     """
 
     lens_meanings = meanings("lens")
-    out: list[str] = [
-        "## Pages on this site",
-        "",
-        "Every kind of page this survey publishes, grouped by lens. The lens says"
-        " what kind of claim a page carries. Subsystem pages and evidence tables"
-        " take one row each; the pages they stand for are listed on the pages"
-        " the rows link to.",
-        "",
+    title = "Pages on this site"
+    blocks: list[Block] = [
+        _paragraph(
+            "Every kind of page this survey publishes, grouped by lens. The lens says"
+            " what kind of claim a page carries. Subsystem pages and evidence tables"
+            " take one row each; the pages they stand for are listed on the pages"
+            " the rows link to."
+        ),
     ]
     groups: dict[str, list[tuple[str, str, str, str, str, str]]] = {}
     for route in routes:
         groups.setdefault(route[3], []).append(route)
     for group, members in groups.items():
-        out += [f"### {group}", ""]
+        blocks.append(_heading(3, group))
         meaning = lens_meanings.get(group.lower())
         if meaning:
-            out += [meaning, ""]
-        out += [
-            "| Page | What it shows | Use it when |",
-            "|---|---|---|",
-        ]
+            blocks.append(_paragraph(meaning))
+        pages: list[list[str]] = []
         done: set[str] = set()
         for path, label, hint, _group, subgroup, use_when in members:
             if subgroup:
@@ -4049,16 +4212,13 @@ def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list
                 name, target, scope = _SUBGROUP_ROWS.get(
                     subgroup, (subgroup, path, "one page per record")
                 )
-                out.append(
-                    f"| [{name}]({target}) | {_table_cell(f'{len(family)} pages, {scope}.')}"
-                    f" | {_table_cell(use_when)} |"
+                pages.append(
+                    [f"[{name}]({target})", _table_cell(f"{len(family)} pages, {scope}."), _table_cell(use_when)]
                 )
                 continue
-            out.append(
-                f"| [{label}]({path}) | {_table_cell(hint)} | {_table_cell(use_when)} |"
-            )
-        out.append("")
-    return out
+            pages.append([f"[{label}]({path})", _table_cell(hint), _table_cell(use_when)])
+        blocks.append(_table(_caption(title), ["Page", "What it shows", "Use it when"], pages))
+    return _section(title, *blocks)
 
 
 def render_how_to_read(
@@ -4074,17 +4234,17 @@ def render_how_to_read(
     `verified-fixed`. Nothing kept them in step, so nothing did.
     """
 
-    body = [HOW_TO_READ_INTRO, ""]
-    body += _site_is(project_name(conn, storage))
-    body += _route_tables(routes or ())
-    body += _survey_passes_section()
-    body += _terms_section(routes or ())
-    body += _ids_section(conn)
-    body += _vocabulary_tables()
-    body += [HOW_TO_READ_CLOSING]
-    text = "\n".join(body)
-    return text, {
-        "synthetic:how-to-read": _hash_text(text),
+    sections = [
+        _site_is(project_name(conn, storage)),
+        _route_tables(routes or ()),
+        _survey_passes_section(),
+        _terms_section(routes or ()),
+        _ids_section(conn),
+        *_vocabulary_tables(),
+    ]
+    page = Page(GUIDE_TITLE, "how-to-read.html", tuple(sections))
+    return page, {
+        "synthetic:how-to-read": _hash_text(repr(page)),
         "synthetic:how-to-read-contract": _hash_text(VOCABULARY_CONTRACT_VERSION),
     }
 

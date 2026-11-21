@@ -431,7 +431,7 @@ def main() -> int:
                 "- item naming B-01 beside Auth\n"
                 "- an auth word and the id auth, plus SM-01\n"
                 "- [B-02](subsystems/b-02-jobs.md) already linked, and [the B-01 thing](x.md)\n\n"
-                "| Subsystem | CC-1 |\n|---|---|\n| B-01 Auth | 🟢 |\n| B-02 | ok |\n\n"
+                "| Value | Label | What it means | What it cannot justify |\n|---|---|---|---|\n| `mapped` | Mapped | B-01 is mapped. | CC-1 |\n\n"
                 "| Metric | Value |\n|---|---|\n| Checked B-02 | 3 of B-01 |\n"
             ),
             "subsystems/b-01-auth.md": (
