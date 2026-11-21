@@ -21,7 +21,7 @@
 |---|---|---|---|---|---|
 | SO8 | The materializer reads the store, not files | done (1 attempt) | SO4, SO7 | `materializer/test-store-only-sources.py` | §8 SO8, §3.3, §3.4, §5.4 |
 | SO9 | New records on pages, censused by the read-back | done (1 attempt) | SO3, SO8 | `materializer/test-store-only-record-pages.py` | §8 SO9, §2.1, §2.2 |
-| SO10 | The skill records instead of writing files | ready | SO3, SO4, SO5, SO6, SO9 | `dev/test-skill-no-file-writes.mjs` | §8 SO10, §4, §7.2 |
+| SO10 | The skill records instead of writing files | ready (1 attempt) | SO3, SO4, SO5, SO6, SO9 | `dev/test-skill-no-file-writes.mjs` | §8 SO10, §4, §7.2 |
 
 ## S3 · HTML without Markdown (review: pending)
 
