@@ -223,6 +223,13 @@ jobs:
       - name: The server stops depending on files — structure narrative prerequisite, hand-written kinds refused, locus pointer by record, composition record items
         working-directory: mcp-server
         run: node test-store-only-no-files.mjs
+      # GATE SO7 (design/store-only/PLAN.md §5.2, §8 SO7). The import over
+      # scratch copies of both committed legacy fixtures; the thesis and runtime
+      # rows are compared with the materializer's own functions. Needs python3
+      # and the materializer. The real-store acceptance is the owner's, not CI's.
+      - name: Import — every artifact's bytes, hash_matches, the thesis, name and runtime rows, idempotent, no file changed
+        working-directory: mcp-server
+        run: node test-store-only-import.mjs
       # The orientation lint at write time (BACKLOG explanation quality item 2):
       # both writers refuse text the pages would withhold. Needs python3 and the
       # materializer, as the projection gates do.

@@ -508,6 +508,10 @@ async function main(mods) {
         if (!reported.has(path)) return `${path} is not reported`;
         if (!reported.get(path)) return `${path} is reported with no reason`;
       }
+      if (!/outside/.test(reported.get("../outside.md"))) {
+        return `the escaping path is reported as ${JSON.stringify(reported.get("../outside.md"))}, not as outside storage`;
+      }
+      if (/outside/.test(reported.get("S-01-storage-substrate.md"))) return "the missing file is reported as outside storage";
       return reported.size === 2 ? null : `${reported.size} path(s) reported`;
     });
     check("M3 the extraction runs although a survey body is missing", () => {

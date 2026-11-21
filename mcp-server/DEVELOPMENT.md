@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_224 tools across 47 groups. Generated from `tools/list` — do not hand-edit._
+_226 tools across 48 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -451,6 +451,13 @@ _224 tools across 47 groups. Generated from `tools/list` — do not hand-edit._
 | `predict_change_impact` | Compute and durably record an explainable predicted diff before comparison or invalidation. Uses rename-aware Git changes, file-ledger mappings, claim/finding evidence, xrefs, seams, and open obligations. Explicit gaps can emit a non-executing discovery request; this tool never calls a model. |
 | `get_change_impact` | Read a durable predicted-diff artifact and its current application state. Optional object_type/object_id filters return the exact traversable reason path for one impacted object. |
 | `apply_change_impact` | Atomically apply a previously recorded prediction: create structured git-change evidence, close every still-current predicted claim at head_sha, append validity events, and retain the immutable predicted artifact for audit. |
+
+### `import` (2)
+
+| Tool | Description |
+|---|---|
+| `import_artifact_bodies` | Copy every file an earlier version had the survey write by hand (onboarding report, entry point, master plan, findings index, concern checklist, field notes, subsystem surveys, seam assessments, dispatch prompts) into the store, as written: for each registered row of those kinds not yet imported, the file's bytes under storage, their sha256, the registered hash and whether the two still match. A missing file, a path outside storage or bytes that are not UTF-8 are reported and imported as nothing; the rest are imported. Then, with the materializer's own functions, it copies the thesis of entry-point.md in as the project's purpose (disposition 'imported', no evidence), the codebase line of the onboarding report as the project's name, and its runtime boundary table as runtime boundaries (origin 'imported'), each only where nothing is recorded yet. Nothing else is parsed: no claim, concern or narrative is created. No file is written, moved or deleted. Running it again imports nothing new. dry_run reports what would be imported and writes nothing. Requires an active session. |
+| `get_imported_artifacts` | Read the files import_artifact_bodies copied into the store: for each, its path, kind, subsystem, size, sha256, the hash it was registered with, whether the two match (hash_matches 1 or 0; 0 means the file was edited after it was registered), the registered revision and date, when it was imported, and the withdrawal a subsystem reset appended, if any. Filter by kind, subsystem_id or path. The bodies are left out unless include_body is true. Every body was written by a model in an earlier version and is not tied to evidence. It needs no session and writes nothing. |
 
 ### `learning` (8)
 

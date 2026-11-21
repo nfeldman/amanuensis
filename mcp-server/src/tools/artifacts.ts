@@ -58,7 +58,7 @@ function hashFile(path: string): { hash: string; bytes: number } {
   return { hash, bytes: buf.length };
 }
 
-function resolveArtifactPath(storagePath: string, relOrAbs: string): string {
+export function resolveArtifactPath(storagePath: string, relOrAbs: string): string {
   // Artifacts are addressed by a path relative to project storage. Reject
   // any attempt to escape storage via `..`, an absolute path, or a
   // symlink under the storage tree pointing outward. The lexical check

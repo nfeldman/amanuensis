@@ -90,6 +90,10 @@ const ADDITIVE_TOOLS = new Set([
   "record_claim_mark",
   "withdraw_claim_mark",
   "decline_claim_marks",
+  // `imported_artifacts`, `explanations`, `project_profile` and
+  // `runtime_boundaries` are append-only (PLAN §5.2): the import inserts rows,
+  // skips what is already there, and writes no file.
+  "import_artifact_bodies",
   "record_open_question",
   "rebaseline_operating_envelope",
 ]);
@@ -144,6 +148,7 @@ import { fileTools } from "./tools/files.js";
 import { findingTools } from "./tools/findings.js";
 import { gitTools } from "./tools/git.js";
 import { impactTools } from "./tools/impact.js";
+import { importTools } from "./tools/import.js";
 import { learningTools } from "./tools/learning.js";
 import { lockTools } from "./tools/locks.js";
 import { loggingTools } from "./tools/logging.js";
@@ -350,6 +355,7 @@ async function main(): Promise<void> {
     ...narrativeTools,
     ...projectRecordTools,
     ...claimMarkTools,
+    ...importTools,
     ...carriedTools,
     ...xrefTools,
     ...contradictionTools,

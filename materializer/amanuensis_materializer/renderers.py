@@ -514,6 +514,24 @@ def _package_name(workspace: Path) -> str | None:
     return None
 
 
+def recorded_project_name(storage: Path) -> str | None:
+    """The name onboarding recorded on the `**Codebase**:` line, or None.
+
+    The first line of that form decides: a blank one records nothing. The
+    import (`legacy_extract`) reads the name through this function too, so the
+    store holds what the page printed.
+    """
+
+    report = storage / "onboarding-report.md"
+    if not report.is_file():
+        return None
+    for line in report.read_text().splitlines():
+        if line.startswith("**Codebase**:"):
+            recorded = line.partition(":")[2].strip().split(" — ", 1)[0].strip()
+            return recorded or None
+    return None
+
+
 def project_name(storage: Path) -> str:
     """The project's own name, which is the projection's primary identity.
 
@@ -531,14 +549,9 @@ def project_name(storage: Path) -> str:
     checkout's folder as an identity.
     """
 
-    report = storage / "onboarding-report.md"
-    if report.is_file():
-        for line in report.read_text().splitlines():
-            if line.startswith("**Codebase**:"):
-                recorded = line.partition(":")[2].strip().split(" — ", 1)[0].strip()
-                if recorded:
-                    return recorded
-                break
+    recorded = recorded_project_name(storage)
+    if recorded:
+        return recorded
     bound = _binding_name(storage)
     if bound:
         return bound

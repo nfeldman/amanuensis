@@ -159,8 +159,8 @@
     },
     {
       "id": "active-session-required",
-      "note": "Existing, and spec.md §4.2 extends its reach to define_term, which is the caller registered here. Roughly fifty handlers call requireActiveSession; refuses is sound, not exhaustive.",
-      "refuses": ["define_term"],
+      "note": "Existing, and spec.md §4.2 extends its reach to define_term, which is the caller registered here; store-only PLAN §5.2 (SO7) registers import_artifact_bodies, whose only refusal it is. Roughly fifty handlers call requireActiveSession; refuses is sound, not exhaustive.",
+      "refuses": ["define_term", "import_artifact_bodies"],
       "instructs": ["start_session"],
       "server": {
         "file": "src/invariants.ts",
