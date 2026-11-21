@@ -1390,8 +1390,8 @@ def _flow_marks(conn: sqlite3.Connection, flow_key: str) -> list[dict[str, Any]]
     )
     found = rows(
         conn,
-        "SELECT m.id, m.claim_id, m.kind, m.label, m.target, m.ref_sha, c.claim_key FROM claim_marks m"
-        " JOIN claims c ON c.claim_id = m.claim_id"
+        "SELECT m.id, m.claim_id, m.kind, m.label, m.target, m.ref_sha, e.kind AS evidence_kind, c.claim_key FROM claim_marks m"
+        " JOIN claims c ON c.claim_id = m.claim_id LEFT JOIN evidence e ON e.id = m.evidence_id"
         f" WHERE c.valid_until_sha IS NULL AND c.claim_key LIKE ? ESCAPE '\\'{withdrawn} ORDER BY m.id",
         (f"{_like_escaped(flow_key)}/%",),
     )
@@ -1421,6 +1421,45 @@ def _stale_citations(conn: sqlite3.Connection, claim_ids: Sequence[str]) -> dict
     ):
         out.setdefault(str(cited["claim_id"]), []).append((str(cited["file_path"]), str(cited["ref_sha"] or "")))
     return out
+
+
+#: Appendix B rule 7: evidence too weak to rest a mark on alone; a mark resting only on it is a linchpin.
+_WEAK_EVIDENCE = ("comment-asserted", "name-inferred", "pattern-matched")
+_EVIDENCE_LABELS = labels("evidence_kind")
+_LINCHPIN, _SURVIVED = "◆", "✓"
+
+
+def _claim_evidence_kinds(conn: sqlite3.Connection, claim_ids: Sequence[str]) -> dict[str, set[str]]:
+    if not claim_ids or not table_exists(conn, "claim_evidence"):
+        return {}
+    marks = ",".join("?" * len(claim_ids))
+    out: dict[str, set[str]] = {}
+    for cited in rows(
+        conn,
+        f"SELECT ce.claim_id, e.kind FROM claim_evidence ce JOIN evidence e ON e.id = ce.evidence_id WHERE ce.claim_id IN ({marks})",
+        tuple(claim_ids),
+    ):
+        out.setdefault(str(cited["claim_id"]), set()).add(str(cited["kind"]))
+    return out
+
+
+def _survived(conn: sqlite3.Connection, claim_ids: Sequence[str]) -> set[str]:
+    if not claim_ids or not table_exists(conn, "claim_challenge_outcomes"):
+        return set()
+    marks = ",".join("?" * len(claim_ids))
+    return {
+        str(r["claim_id"])
+        for r in rows(conn, f"SELECT claim_id FROM claim_challenge_outcomes WHERE outcome = 'survived' AND claim_id IN ({marks})", tuple(claim_ids))
+    }
+
+
+def _linchpin_line(kinds: set[str]) -> str:
+    """The account's words for a step or mark that rests only on weak evidence, or nothing."""
+
+    if not kinds or not kinds <= set(_WEAK_EVIDENCE):
+        return ""
+    named = ", ".join(_EVIDENCE_LABELS.get(k, k) for k in _WEAK_EVIDENCE if k in kinds)
+    return f" It rests only on weak evidence ({named}), so it is a linchpin."
 
 
 def _changed_since(path: str, sha: str) -> str:
@@ -1550,6 +1589,9 @@ def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
     column_of = {s["step"]: i for i, s in enumerate(steps)}
     # Appendix B rule 3: a step whose cited file changed since it was examined is hatched.
     stale = _stale_citations(conn, [str(s["claim_id"]) for s in steps])
+    # Appendix B rule 7: the linchpin mark on weak evidence, the tick on a survived challenge.
+    cited_kinds = _claim_evidence_kinds(conn, [str(s["claim_id"]) for s in steps])
+    survived = _survived(conn, [str(s["claim_id"]) for s in steps])
     nodes: list[DiagramNode] = []
     edges: list[DiagramEdge] = []
     items: list[tuple[str, str]] = []
@@ -1557,14 +1599,19 @@ def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
         kind = str(s["epistemic_kind"] or "")
         anchor = f"flow-strip-{slug_id}-{s['step']}"
         changed = stale.get(str(s["claim_id"]), [])
+        linchpin = _linchpin_line(cited_kinds.get(str(s["claim_id"]), set()))
+        held = str(s["claim_id"]) in survived
         nodes.append(DiagramNode(
             f"flow-step:{s['claim_id']}", str(s["step"]), index // FLOW_BAND, index % FLOW_BAND, " ".join(str(s["statement"]).split()),
             _STEP_STYLE.get(kind, "solid"), f"#{anchor}",
             hatch=", ".join(sorted({sha[:8] for _, sha in changed if sha})) or ("not recorded" if changed else ""),
+            qualifiers=(("linchpin",) if linchpin else ()) + (("survived",) if held else ()),
         ))
         items.append((
             anchor,
             f"Step {s['step']}: {' '.join(str(s['statement']).split())} ({_STEP_KIND_PHRASE.get(kind, kind or 'kind not recorded')})."
+            + linchpin
+            + (" It survived a challenge." if held else "")
             + "".join(f" {_changed_since(path, sha)}" for path, sha in changed),
         ))
         if index and index // FLOW_BAND == (index - 1) // FLOW_BAND:
@@ -1573,12 +1620,16 @@ def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
     crowded = sorted(step for step, count in exits_at.items() if count > MAX_EXITS_DRAWN)
     for mark in marks:
         anchor = f"flow-strip-{slug_id}-mark-{mark['id']}"
-        items.append((anchor, _flow_mark_text(mark)))
+        weak = _linchpin_line({str(mark["evidence_kind"])} if mark.get("evidence_kind") else set())
+        items.append((anchor, _flow_mark_text(mark) + weak))
         if mark["kind"] == "exit" and mark["step"] in crowded:
             continue
         position = column_of[mark["step"]]
         href = f"../seams.html#{str(mark['target']).lower()}" if mark["kind"] == "crosses-seam" and mark["target"] else f"#{anchor}"
-        nodes.append(DiagramNode(f"flow-mark:{mark['id']}", _flow_mark_box(mark), position // FLOW_BAND, position % FLOW_BAND, str(mark["kind"]), "solid", href))
+        nodes.append(DiagramNode(
+            f"flow-mark:{mark['id']}", _flow_mark_box(mark), position // FLOW_BAND, position % FLOW_BAND, str(mark["kind"]), "solid", href,
+            qualifiers=("linchpin",) if weak else (),
+        ))
     bands = (n + FLOW_BAND - 1) // FLOW_BAND
     kinds_present = [str(v["value"]) for v in VOCABULARY["claim_mark_kind"]["values"] if any(m["kind"] == v["value"] for m in marks)]  # type: ignore[index,union-attr]
     contract = {str(v["value"]): v for v in VOCABULARY["claim_mark_kind"]["values"]}  # type: ignore[index,union-attr]
@@ -1600,6 +1651,14 @@ def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
         }
         account.append(f"{_count(len(marks), 'mark')} recorded: " + "; ".join(key[k] for k in kinds_present) + ".")
     account.append(f"{bare} of {n} steps {'has' if bare == 1 else 'have'} no recorded mark.")
+    signs = [
+        f"a {_LINCHPIN} marks a step or mark that rests only on weak evidence, a linchpin"
+        if any("linchpin" in node.qualifiers for node in nodes) else "",
+        f"a {_SURVIVED} marks a step that survived a challenge" if survived else "",
+    ]
+    if any(signs):
+        legend = "; ".join(sign for sign in signs if sign)
+        account.append(legend[:1].upper() + legend[1:] + ".")
     hatched = sum(1 for s in steps if stale.get(str(s["claim_id"])))
     if hatched:
         account.append(
@@ -2001,7 +2060,8 @@ def _draw_flow(diagram: Diagram) -> str:
         if node.hatch:
             inner += f'<rect x="{_n(cx - boxw / 2)}" y="{_n(cy - _FLOW_BOX_H / 2)}" width="{_n(boxw)}" height="{_n(_FLOW_BOX_H)}" rx="4" fill="url(#{hatch_id})" opacity="0.5"/>'
         inner += text
-        said = f"Step {node.label}: {node.detail}" + (f"; cited file changed since {node.hatch}" if node.hatch else "")
+        inner += _qualifier_glyphs(node, cx + boxw / 2 - 8, cy - _FLOW_BOX_H / 2 + 11)
+        said = f"Step {node.label}: {node.detail}" + (f"; cited file changed since {node.hatch}" if node.hatch else "") + _qualifier_words(node)
         name = escape(said, quote=True)
         body.append(f'<g data-node="{escape(node.record, quote=True)}"><a href="{escape(node.href, quote=True)}" aria-label="{name}">{inner}</a></g>')
     for (band, column), group in sorted(above.items()):
@@ -2040,6 +2100,19 @@ def _flow_mark(mark: DiagramNode, cx: float, top: float, boxw: float, chars: int
     # Thin rectangles, not lines: the read-back counts every `<line>` of a figure as an arrow.
     stub = f'<rect x="{_n(cx - 0.75)}" y="{_n(from_y)}" width="1.5" height="{_n(to_y - from_y)}" fill="var(--rule-strong)"/>'
     box = svg_box(cx - boxw / 2, top, boxw, _FLOW_MARK_H)
-    text = svg_text(lines, cx, top + _FLOW_MARK_H / 2, size=11)
-    name = escape(mark.label, quote=True)
+    text = svg_text(lines, cx, top + _FLOW_MARK_H / 2, size=11) + _qualifier_glyphs(mark, cx + boxw / 2 - 8, top + 11)
+    name = escape(mark.label + _qualifier_words(mark), quote=True)
     return f'<g data-node="{escape(mark.record, quote=True)}"><a href="{escape(mark.href, quote=True)}" aria-label="{name}">{stub}{box}{text}</a></g>'
+
+
+def _qualifier_glyphs(node: DiagramNode, right: float, y: float) -> str:
+    """The linchpin mark and the tick in a box's top right corner, right to left."""
+
+    glyphs = [g for q, g in (("survived", _SURVIVED), ("linchpin", _LINCHPIN)) if q in node.qualifiers]
+    return "".join(svg_text([g], right - i * 13, y, size=12, weight="600", fill="var(--accent)") for i, g in enumerate(glyphs))
+
+
+def _qualifier_words(node: DiagramNode) -> str:
+    return ("; linchpin: rests only on weak evidence" if "linchpin" in node.qualifiers else "") + (
+        "; survived a challenge" if "survived" in node.qualifiers else ""
+    )

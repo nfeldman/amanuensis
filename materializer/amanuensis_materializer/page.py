@@ -515,6 +515,8 @@ class DiagramNode:
     tone: str = ""
     # The revision(s) a cited file was examined at, when it has changed since: the box is hatched.
     hatch: str = ""
+    # What else the box carries (Appendix B rule 7): `linchpin`, `survived`.
+    qualifiers: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
