@@ -868,6 +868,42 @@ async function main(mods) {
     return wrong.length === 0 ? null : wrong.join("; ");
   });
 
+  // The catalog declares its territories by heading; an id it does not declare
+  // is spelled like one but names nothing (F4/codex, slice-S1). The denominator
+  // is read from the catalog, not from the server under test.
+  check("C6 both writers accept every territory the catalog declares and refuse an undeclared id", () => {
+    const catalog = readFileSync(
+      join(here, "..", ".claude", "skills", "amanuensis", "references", "concern-territories.md"),
+      "utf8",
+    );
+    const declared = [...catalog.matchAll(/^## Territory (\d+)\b/gm)].map((m) => `T${m[1]}`);
+    if (declared.length < 2) return `the catalog declares ${declared.length} territories`;
+    const undeclared = [`T${Math.max(...declared.map((t) => Number(t.slice(1)))) + 1}`, "T999"];
+    const ctx = world("c6");
+    const wrong = [];
+    for (const territory of declared) {
+      const said = refusal(() => disposition(ctx, { territory }));
+      if (said) wrong.push(`${territory} was refused by ${TERRITORY}: ${said.slice(0, 80)}`);
+      const code = `TT-${territory.slice(1)}`;
+      const added = refusal(() => call("add_concern", { code, origin: "seeded", territory, probe: PROBE }, ctx));
+      if (added) wrong.push(`${territory} was refused by add_concern: ${added.slice(0, 80)}`);
+    }
+    const before = count(ctx, "territory_dispositions");
+    for (const territory of undeclared) {
+      const said = refusal(() => disposition(ctx, { territory }));
+      if (!said) wrong.push(`${TERRITORY} accepted ${territory}`);
+      else if (!stems(TERRITORY, said)) wrong.push(`${territory} was refused with "${said.slice(0, 100)}"`);
+      const added = refusal(() => call("add_concern", { code: "UD-1", origin: "seeded", territory, probe: PROBE }, ctx));
+      if (!added) wrong.push(`add_concern accepted ${territory}`);
+      else if (!stems("add_concern", added)) wrong.push(`${territory} was refused with "${added.slice(0, 100)}"`);
+    }
+    if (count(ctx, "territory_dispositions") !== before) wrong.push("a refused territory left a disposition");
+    if (ctx.db.prepare("SELECT COUNT(*) AS n FROM concerns WHERE code = 'UD-1'").get().n !== 0) {
+      wrong.push("a refused territory left a concern");
+    }
+    return wrong.length === 0 ? null : wrong.join("; ");
+  });
+
   check("C5 the newest disposition per territory is the effective one", () => {
     const ctx = world("c5");
     disposition(ctx, { disposition: "disqualified", condition: "No caches." });
