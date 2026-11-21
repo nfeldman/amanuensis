@@ -1067,6 +1067,18 @@ _STANDING_LABELS = labels("standing_state")
 _NOT_MEASURED = "Coverage not measured"
 
 
+def _depth_qualification(sid: str, status: str) -> str:
+    """What a subject's depth lets a reader rely on, quoted from the contract (Appendix B rule 2)."""
+
+    depth = next((d for d in _depths() if d["value"] == status), None)
+    if depth is None:
+        return f"{sid} is at {status}, a depth the contract does not name."
+    return (
+        f"{sid} is at {depth['label']}: the contract says it authorizes {depth['authorizes']},"
+        f" and cannot justify {depth['cannot_justify']}."
+    )
+
+
 def _latest_reconciliation(conn: sqlite3.Connection) -> dict[str, Any] | None:
     if not table_exists(conn, "scope_reconciliations"):
         return None
@@ -1157,6 +1169,7 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
             f"{subject} has {_count(total, 'ledger file')}. Each segment is the share of them in one standing,"
             " not a share of the repository.",
             reconciliation_line,
+            _depth_qualification(subject, depth_of[subject]),
         ]
     else:
         ids = sorted(depth_of)
@@ -1187,6 +1200,7 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
                 f" {'is' if len(parked) == 1 else 'are'} not drawn ({', '.join(parked)})."
             )
         account.append(reconciliation_line)
+        account += [_depth_qualification(sid, depth_of[sid]) for sid in eligible if standing.get(sid)]
         in_tree = ledgered - absent
         if tracked == in_tree + unledgered and 0 <= exempt <= in_tree:
             lane = len(lanes)
@@ -1304,6 +1318,7 @@ def seam_contract_model(conn: sqlite3.Connection, seam_id: str) -> Diagram:
             f"{party} is at {shown}, so its half of this seam is not drawn: a seam half is drawn from Structural up."
             " Its fields are listed below."
         )
+    account += [_depth_qualification(party, depth_of[side]) for side, party in sides.items() if side == "a" or party != sides["a"]]
     if seam["notes"]:
         account.append(f"Notes on the seam: {_recorded(seam['notes'])}")
     return Diagram(KIND_SEAM, seam_id, title, caption, (), tuple(nodes), tuple(edges), tuple(account), tuple(items), read_at=read_at, notes=notes)
