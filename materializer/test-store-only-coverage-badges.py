@@ -42,7 +42,8 @@ Turns red when:
   - the read-back of either publication is not green on every axis;
   - the golden corpus's `VERSION` is not SO23, or a golden page differs from the corpus this
     packet started from outside a coverage figure, a "not measured" sentence, a badge, or a
-    badge note, or no golden page gained one;
+    badge note (or a figure or sentence of SO22's diagrams, which a fix to the slice may reprint),
+    or no golden page gained one;
   - the gate has no step in `.github/workflows/test.yml`.
 
 Output protocol: exactly one status line, last, on stdout.
@@ -389,6 +390,15 @@ _ADDED = re.compile(
 )
 
 
+# The slice's earlier diagrams (SO22): a fix to slice S5 may reprint them, so they are taken out of
+# both the start's corpus and the current one, which still pins everything around them.
+_EARLIER = re.compile(
+    r'<figure\b[^>]*data-diagram="(?:survey-workflow|status-ladder)"[^>]*>.*?</figure>\n?'
+    r'|<p class="diagram-below"[^>]*data-diagram="(?:survey-workflow|status-ladder)"[^>]*>.*?</p>\n?',
+    re.S,
+)
+
+
 # SO24 adds seam contracts to the System boundaries page and SO25 flow strips to the subsystem pages
 # (PLAN §3.2's update rule); taking them out can leave the wrapper that held a run of paragraphs empty.
 _EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
@@ -417,10 +427,10 @@ def golden_additions_only(previous: Path | None) -> str | None:
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     gained = 0
     for rel in sorted(after):
-        new, old = after[rel].read_text(), before[rel].read_text()
+        new, old = _EARLIER.sub("", after[rel].read_text()), _EARLIER.sub("", before[rel].read_text())
         # Blocks are joined by a newline, so taking one out can leave a newline behind; only that is let go.
         if _EMPTY_FLOW.sub("", _ADDED.sub("", new)).replace("\n", "") != old.replace("\n", ""):
-            return f"{rel} differs from the start's corpus outside a coverage figure, a sentence, a badge or its note"
+            return f"{rel} differs from the start's corpus outside a coverage figure, a sentence, a badge or its note, or the slice's earlier diagrams"
         gained += new != old
     for asset in (previous / "assets").iterdir():
         if not (GOLDEN / "assets" / asset.name).is_file():

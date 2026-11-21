@@ -896,18 +896,18 @@ def survey_workflow_model(
         pass_id = f"survey-workflow-pass-{phase}"
         nodes.append(DiagramNode(f"survey-pass:{phase}", str(p["pass"]), 0, column, f"Pass {phase}", href=f"#{pass_id}"))
         if column:
-            edges.append(DiagramEdge(f"pass-order:{spec[column - 1]['phase']}:{phase}", f"survey-pass:{spec[column - 1]['phase']}", f"survey-pass:{phase}"))
+            edges.append(DiagramEdge(f"pass-order:{spec[column - 1]['phase']}:{phase}", f"survey-pass:{spec[column - 1]['phase']}", f"survey-pass:{phase}", href=f"#{pass_id}"))
         checks = ruled.get(status, [])
         if checks:
             nodes.append(DiagramNode(f"status-check:{status}", "Server checks", 1, column, f"{_count(len(checks), 'check')} for {label}", href=f"#{pass_id}"))
-            edges.append(DiagramEdge(f"pass-check:{status}", f"survey-pass:{phase}", f"status-check:{status}"))
+            edges.append(DiagramEdge(f"pass-check:{status}", f"survey-pass:{phase}", f"status-check:{status}", href=f"#{pass_id}"))
         else:
             unchecked.append(str(p["pass"]))
         checkpoint = str(p.get("checkpoint") or "").strip()
         if checkpoint:
             told += 1
             nodes.append(DiagramNode(f"checkpoint:{status}", "Your checkpoint", 2, column + 1, "Summary in your chat", href=f"#survey-workflow-checkpoint-{phase}"))
-            edges.append(DiagramEdge(f"pass-checkpoint:{status}", f"survey-pass:{phase}", f"checkpoint:{status}"))
+            edges.append(DiagramEdge(f"pass-checkpoint:{status}", f"survey-pass:{phase}", f"checkpoint:{status}", href=f"#survey-workflow-checkpoint-{phase}"))
         sentence = f"{p['pass']} (pass {phase}). {p['does']} It sets {label} {_WHEN.get(str(p['set_when']), str(p['set_when']))}."
         sentence += f" The server checks: {'; '.join(c.rstrip('.') for c in checks)}." if checks else " The server checks nothing before it."
         items.append((pass_id, sentence))
@@ -990,7 +990,7 @@ def status_ladder_model(
     labels_by_value = {str(d["value"]): str(d["label"]) for d in depths}
     if not subject:
         for a, b in zip(steps, steps[1:], strict=False):
-            edges.append(DiagramEdge(f"ladder-step:{a['value']}:{b['value']}", f"status:{a['value']}", f"status:{b['value']}"))
+            edges.append(DiagramEdge(f"ladder-step:{a['value']}:{b['value']}", f"status:{a['value']}", f"status:{b['value']}", href=f"{anchor}{b['value']}"))
         for d in [*steps, parked]:
             value = str(d["value"])
             checks = _checks_for(value)
@@ -1007,7 +1007,7 @@ def status_ladder_model(
     if here in column_of:
         # The marker sits above a rung; below `deferred`, where no arrow comes in.
         above = -1 if here != "deferred" else 1
-        nodes.append(DiagramNode(f"subsystem:{subject}", "Here", row_of[here] + above, column_of[here], subject, marker=True))
+        nodes.append(DiagramNode(f"subsystem:{subject}", "Here", row_of[here] + above, column_of[here], subject, href=f"{anchor}{here}", marker=True))
     drawn_moves = moves if len(moves) <= MAX_MOVES else []
     seen: dict[frozenset[str], int] = {}
     for move in drawn_moves:
@@ -1022,7 +1022,10 @@ def status_ladder_model(
         reach = abs(column_of[source] - column_of[target]) if source and "deferred" not in (source, target) else 0
         if reach > 1:
             bow += 40 * reach
-        edges.append(DiagramEdge(f"transition:{move['id']}", f"status:{source}" if source else "", f"status:{target}", bow=bow))
+        edges.append(DiagramEdge(
+            f"transition:{move['id']}", f"status:{source}" if source else "", f"status:{target}", bow=bow,
+            href=f"#status-ladder-{subject.lower()}-move-{move['id']}",
+        ))
     for move in moves:
         before = labels_by_value.get(str(move["from_status"]), str(move["from_status"])) if move["from_status"] else "Created at"
         after = labels_by_value.get(str(move["to_status"]), str(move["to_status"]))
@@ -1293,10 +1296,10 @@ def seam_contract_model(conn: sqlite3.Connection, seam_id: str) -> Diagram:
         party = sides[side]
         drawn = depth_of[side] in SEAM_HALVES_FROM
         record = f"seam-field:{seam_id}:{side}_{verb}"
+        anchor = f"seam-contract-{_id_part(seam_id)}-{side}-{verb}"
         if drawn:
             source, target = (f"subsystem:{party}", f"seam:{seam_id}") if verb == "writes" else (f"seam:{seam_id}", f"subsystem:{party}")
-            edges.append(DiagramEdge(record, source, target, value or SEAM_NOT_RECORDED, "solid" if value else "dashed"))
-        anchor = f"seam-contract-{_id_part(seam_id)}-{side}-{verb}"
+            edges.append(DiagramEdge(record, source, target, value or SEAM_NOT_RECORDED, "solid" if value else "dashed", href=f"#{anchor}"))
         line = f"{party} {verb}: {value or SEAM_NOT_RECORDED}."
         items.append((anchor, line if drawn else f"{line[:-1]} (not drawn)."))
     notes = tuple(f"{label}: {value or SEAM_NOT_RECORDED}" for label, value in assumed)
@@ -1631,7 +1634,9 @@ def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
         ))
         if index and index // FLOW_BAND == (index - 1) // FLOW_BAND:
             before = steps[index - 1]
-            edges.append(DiagramEdge(f"flow-next:{before['claim_id']}:{s['claim_id']}", f"flow-step:{before['claim_id']}", f"flow-step:{s['claim_id']}"))
+            edges.append(DiagramEdge(
+                f"flow-next:{before['claim_id']}:{s['claim_id']}", f"flow-step:{before['claim_id']}", f"flow-step:{s['claim_id']}", href=f"#{anchor}",
+            ))
     crowded = sorted(step for step, count in exits_at.items() if count > MAX_EXITS_DRAWN)
     for mark in marks:
         anchor = f"flow-strip-{slug_id}-mark-{mark['id']}"
@@ -1784,8 +1789,10 @@ def _clip(cx: float, cy: float, w: float, h: float, toward: tuple[float, float])
     return cx + dx * t, cy + dy * t
 
 
-def svg_arrow(record: str, start: tuple[float, float], control: tuple[float, float], end: tuple[float, float], *, style: str = "solid") -> str:
-    """One marked path from `start` to `end`, bowed through `control`, and its head as a polygon."""
+def svg_arrow(
+    record: str, start: tuple[float, float], control: tuple[float, float], end: tuple[float, float], *, style: str = "solid", href: str = ""
+) -> str:
+    """One marked path from `start` to `end`, bowed through `control`, and its head as a polygon; a link to its account line."""
 
     dash = f' stroke-dasharray="{_DASH[style]}"' if style in _DASH else ""
     straight = control == ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
@@ -1797,10 +1804,11 @@ def svg_arrow(record: str, start: tuple[float, float], control: tuple[float, flo
     ux, uy = vx / length, vy / length
     base = (end[0] - ux * 9, end[1] - uy * 9)
     left, right = (base[0] - uy * 4.5, base[1] + ux * 4.5), (base[0] + uy * 4.5, base[1] - ux * 4.5)
-    return (
+    drawn = (
         f'<path data-edge="{escape(record, quote=True)}" d="{d}" fill="none" stroke="var(--accent)" stroke-width="1.5"{dash}/>'
         f'<polygon aria-hidden="true" points="{_n(end[0])},{_n(end[1])} {_n(left[0])},{_n(left[1])} {_n(right[0])},{_n(right[1])}" fill="var(--accent)"/>'
     )
+    return f'<a href="{escape(href, quote=True)}">{drawn}</a>' if href else drawn
 
 
 def _id_part(text: str) -> str:
@@ -1851,7 +1859,7 @@ def draw_svg(diagram: Diagram) -> str:
             end = _clip(*target, boxw, boxh, (target[0] - 100, target[1]))
             start = (end[0] - 36, end[1])
             control = ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
-        body.append(svg_arrow(edge.record, start, control, end, style=edge.style))
+        body.append(svg_arrow(edge.record, start, control, end, style=edge.style, href=edge.href))
     for node in diagram.nodes:
         cx, cy = centres[node.record]
         width = boxw if not node.marker else boxw * 0.6
@@ -1971,7 +1979,7 @@ def _draw_seam(diagram: Diagram) -> str:
         facing = 1 if target[0] > source[0] else -1
         start = (source[0] + facing * (boxw / 2 + 2), y)
         end = (target[0] - facing * (boxw / 2 + 2), y)
-        body.append(svg_arrow(edge.record, start, ((start[0] + end[0]) / 2, y), end, style=edge.style))
+        body.append(svg_arrow(edge.record, start, ((start[0] + end[0]) / 2, y), end, style=edge.style, href=edge.href))
         lines = _seam_label(edge.label)
         mid = (start[0] + end[0]) / 2
         absent = edge.label == SEAM_NOT_RECORDED
@@ -2067,7 +2075,7 @@ def _draw_flow(diagram: Diagram) -> str:
     centre = {n.record: (_FLOW_LEFT + n.column * colw + colw / 2, box_top[n.row] + _FLOW_BOX_H / 2) for n in steps}
     for edge in diagram.edges:
         (sx, sy), (tx, ty) = centre[edge.source], centre[edge.target]
-        body.append(svg_arrow(edge.record, (sx + boxw / 2 + 3, sy), ((sx + tx) / 2, sy), (tx - boxw / 2 - 3, ty), style=edge.style))
+        body.append(svg_arrow(edge.record, (sx + boxw / 2 + 3, sy), ((sx + tx) / 2, sy), (tx - boxw / 2 - 3, ty), style=edge.style, href=edge.href))
     for node in steps:
         cx, cy = centre[node.record]
         lines = _flow_label(node.detail, chars, 2) if chars >= 14 else []

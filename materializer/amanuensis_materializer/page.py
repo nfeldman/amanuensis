@@ -530,6 +530,8 @@ class DiagramEdge:
     style: str = "solid"
     # How far a line bows from the straight one, so two between the same boxes stay apart.
     bow: int = 0
+    # Where the arrow links: the account line that says it in words.
+    href: str = ""
 
 
 @dataclass(frozen=True)
