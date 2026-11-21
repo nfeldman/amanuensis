@@ -45,7 +45,8 @@ Turns red when:
         `imported-body`;
       * a subsystem page's own status chip changed: state, `subsystem`;
       * a disposition's verdict chip changed under an unchanged mark: state,
-        `disposition`; a finding's status chip removed: state, `finding`;
+        `disposition`; a finding's status chip removed: state, `finding`; a
+        territory's printed disposition changed: state, `territory`;
       * the project's purpose printed twice on the overview: coverage, `explanation`;
   - the golden corpus's `VERSION` is not SO20 or a later packet the update rule names
     (SO22–SO25, which add `<figure data-diagram>` blocks), or a golden page differs
@@ -525,6 +526,9 @@ def sabotages(facts: dict[str, Any]) -> list[tuple[str, str, Callable[[str], str
          _status_chip(f"disposition:{disposition}", "confirmed-bug" if facts["dispositions"][disposition] != "confirmed-bug" else "ruled-out",
                       "Confirmed bug" if facts["dispositions"][disposition] != "confirmed-bug" else "Ruled out", "disposition"),
          "state", "disposition", disposition),
+        ("a territory's printed disposition changed under its mark", "concern-checklist.html",
+         lambda text: text.replace('<td data-label="Disposition">disqualified</td>', '<td data-label="Disposition">applies</td>', 1),
+         "state", "territory", "T2"),
         ("a finding's status chip removed", "findings.html", _chip_removed(f"finding:{open_finding}"), "state", "finding", open_finding),
         ("the project's purpose printed twice on the overview", "index.html", _purpose_twice,
          "coverage", "explanation", str(facts["purpose_id"])),

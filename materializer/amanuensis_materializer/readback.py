@@ -723,6 +723,7 @@ def _resolver_pattern(
     concerns: set[str],
     *,
     words: bool = False,
+    tokens: bool = False,
 ) -> re.Pattern[str]:
     """`owed` as a pattern that also matches what the xref resolver adds to it.
 
@@ -734,10 +735,14 @@ def _resolver_pattern(
     including a name the author wrote in brackets after an ID. The two shapes
     recognised are exactly those: ` (<name>)` directly after a subsystem ID and
     `concern ` directly before a concern code. With `words`, `owed` and the
-    page are `_html_words` text and the additions are matched as words.
+    page are `_html_words` text and the additions are matched as words; with
+    `tokens`, they are `_tokens_of` text, and the brackets around a name are
+    tokens too.
     """
 
     def form(text: str) -> str:
+        if tokens:
+            return _tokens_of(text)
         return _html_words(text).strip() if words else text
 
     shown = {identifier: form(name.replace("|", "/")) for identifier, name in names.items()}
@@ -745,7 +750,7 @@ def _resolver_pattern(
     if not forms:
         return re.compile(re.escape(owed))
     ids = "|".join(re.escape(f) for f in sorted(forms, key=lambda f: (-len(f), f)))
-    found = re.compile(rf"(?<!\S)({ids})(?!\S)" if words else rf"(?<![\w-])({ids})(?![\w-])")
+    found = re.compile(rf"(?<!\S)({ids})(?!\S)" if words or tokens else rf"(?<![\w-])({ids})(?![\w-])")
     parts: list[str] = []
     at = 0
     for match in found.finditer(owed):
@@ -755,7 +760,10 @@ def _resolver_pattern(
             parts.append(f"(?:concern )?{re.escape(match.group(1))}")
         else:
             name = shown[identifier]
-            addition = f" {re.escape(name)}" if words else rf" \({re.escape(name)}\)"
+            if tokens:
+                addition = rf" \( {re.escape(name)} \)"
+            else:
+                addition = f" {re.escape(name)}" if words else rf" \({re.escape(name)}\)"
             parts.append(f"{re.escape(match.group(1))}(?:{addition})?" if name else re.escape(match.group(1)))
         at = match.end()
     parts.append(re.escape(owed[at:]))
@@ -1287,10 +1295,12 @@ class _MarkInventory(HTMLParser):
         if record and (current is None or current.record != record):
             piece = _Piece(record, values.get("data-state"), tag, self._offset(), text=[], chips=[])
             self.pieces.append(piece)
-        # A status chip inside a record is the state the reader sees printed.
-        chip = tag == "span" and "status" in classes and (piece or current) is not None
+        # A status chip inside a record is the state the reader sees printed; a
+        # territory prints its disposition as a table cell, read as one too.
+        cell = tag == "td" and values.get("data-label") == "Disposition"
+        chip = (tag == "span" and "status" in classes or cell) and (piece or current) is not None
         if chip:
-            self.chip = (classes, [])
+            self.chip = ({"cell-disposition"} if cell else classes, [])
         if closed or tag in _VOID:
             if piece is not None:
                 piece.end = self._offset() + len(self.get_starttag_text() or "")
@@ -1333,16 +1343,23 @@ class _MarkInventory(HTMLParser):
             self.chip[1].append(data)
 
 
-def _words_of(text: str) -> str:
-    """Text as `_html_words` reads a page: its words, one space apart."""
+def _tokens_of(text: str) -> str:
+    """Text as tokens one space apart: each run of letters and digits, and each other mark.
 
-    return " ".join(re.findall(r"[^\W_]+", text))
+    Punctuation, operators and the underscore are kept, each as its own token, so
+    `attempts < 3` and `attempts > 3` differ; only where the spaces fall is not
+    compared, since a tag the cross-reference pass adds is a boundary on the page
+    and not in the store's body.
+    """
+
+    return " ".join(re.findall(r"[^\W_]+|[^\s\w]|_", text))
 
 
-def _fragment_words(fragment: str) -> str:
-    """The words an HTML fragment prints, its table captions left out."""
+def _fragment_tokens(fragment: str) -> str:
+    """The tokens an HTML fragment prints, its table captions, scripts and styles left out."""
 
-    return _html_words(re.sub(r"(?is)<caption\b.*?</caption>", " ", fragment)).strip()
+    visible = re.sub(r"(?is)<(script|style|caption)\b.*?</\1>", " ", fragment)
+    return _tokens_of(unescape(re.sub(r"<[^>]+>", " ", visible)))
 
 
 @dataclass
@@ -1369,7 +1386,7 @@ def _record_occurrences(text: str) -> tuple[list[_Occurrence], dict[str, list[tu
             and previous.end >= 0
             and _RUN_GAP.fullmatch(text[previous.end : piece.start]) is not None
         )
-        words = _words_of("".join(piece.text or []))
+        words = _tokens_of("".join(piece.text or []))
         if joined and out:
             last = out[-1]
             last.states.add(piece.state)
@@ -2403,9 +2420,11 @@ class ProjectionVerifier:
             for occurrence in _record_occurrences(text)[0]:
                 found.setdefault(occurrence.record, {}).setdefault(rel, []).append(occurrence)
 
-        enums = {
-            "finding": set(values_of("finding_resolution_state")),
-            "subsystem": set(values_of("subsystem_status")),
+        # The status chip each stated record prints, by its family's class and enum.
+        families = {
+            "finding": ("resolution", set(values_of("finding_resolution_state"))),
+            "subsystem": ("survey", set(values_of("subsystem_status"))),
+            "disposition": ("disposition", set(values_of("disposition_classification"))),
         }
         mismatches: list[dict[str, str]] = []
 
@@ -2438,22 +2457,38 @@ class ProjectionVerifier:
                 else:
                     text, under, sections, page = prose
                     blocks = body_blocks(text, under=under, sections=sections, path=page)
-                expected_words = _fragment_words(_HtmlWriter({}, page).write(Page("", page, blocks)))
+                expected_words = _fragment_tokens(_HtmlWriter({}, page).write(Page("", page, blocks)))
             kind = record.partition(":")[0]
             for page, occurrences in sorted(printed.items()):
                 for occurrence in occurrences:
                     if state is not None and occurrence.states != {state}:
                         marked = ", ".join(sorted(str(s) for s in occurrence.states))
                         report("state", record, f"{page} marks it {marked}; the store holds {state}")
-                    for classes, label in occurrence.chips:
-                        keys = {c.removeprefix("status-") for c in classes} & enums.get(kind, set())
-                        if state is None or not keys:
-                            continue
+                    if state is not None and kind in families:
+                        # Every occurrence prints its state as a chip of its family, and
+                        # only the store's value: a missing chip or an unknown value is red.
+                        family, values = families[kind]
                         wanted = DISPLAY_STATUS.get(state, state.replace("-", " ").title())
-                        if keys != {state} or label != wanted:
-                            report("state", record, f"{page} prints {label!r}; the store holds {state} ({wanted!r})")
+                        chips = [(c, label) for c, label in occurrence.chips if f"status-{family}" in c]
+                        if not chips:
+                            report("state", record, f"{page} prints no {family} status for it; the store holds {state} ({wanted!r})")
+                        for classes, label in chips:
+                            keys = {c.removeprefix("status-") for c in classes if c.startswith("status-")} - {family}
+                            if keys != {state} or label != wanted:
+                                unknown = "" if keys <= values else "; the schema holds no such value"
+                                report(
+                                    "state",
+                                    record,
+                                    f"{page} prints {label!r} as {', '.join(sorted(keys)) or 'no value'}{unknown};"
+                                    f" the store holds {state} ({wanted!r})",
+                                )
+                    if state is not None and kind == "territory":
+                        # Its disposition prints as the value itself, in its row's cell.
+                        printed_as = [label for c, label in occurrence.chips if "cell-disposition" in c]
+                        if printed_as != [state]:
+                            report("state", record, f"{page} prints {printed_as or 'no disposition'}; the store holds {state}")
                     if expected_words is not None:
-                        pattern = _resolver_pattern(f" {expected_words} ", named, concerns, words=True)
+                        pattern = _resolver_pattern(f" {expected_words} ", named, concerns, tokens=True)
                         if not pattern.fullmatch(f" {occurrence.text} "):
                             report(
                                 "content",
