@@ -662,6 +662,39 @@ async function main(mods) {
     return exact && `a 120-character topic was refused: ${exact}`;
   });
 
+  // §3.4's grammar: fenced code is permitted, raw HTML and images are not. A
+  // line-prefix check refused a fenced `# comment` and passed `<div>` and
+  // `![x](y)` (F5/codex, slice-S1).
+  check("B6 the stored-prose grammar: fenced code is accepted, raw HTML and images are refused", () => {
+    const ctx = world("b6");
+    seedSubsystem(ctx, "S-01", "mapped");
+    const permitted = [
+      ["a fenced Python comment", "The loader is short:\n\n```python\n# read the header first\nheader = f.read(8)\n```\n\nIt stops there."],
+      ["a tilde fence with a table-like line", "Shape:\n\n~~~\n| not | a table |\n~~~"],
+      ["HTML in a code span", "It emits `<div class=\"x\">` for each row."],
+      ["HTML and an image inside a fence", "```html\n<img src=\"a.png\">\n![x](y.png)\n```"],
+      ["a comparison", "It keeps a < b and c > d apart."],
+      ["a link", "See [the parser](src/a.ts) for the rest."],
+    ];
+    for (const [label, body] of permitted) {
+      const said = refusal(() => record(ctx, { body }));
+      if (said) return `${label} was refused: ${said}`;
+    }
+    const forbidden = [
+      ["raw HTML", "It renders <div>one row</div> per record."],
+      ["an HTML comment", "Prose <!-- hidden --> here."],
+      ["a self-closing tag", "A break<br/>here."],
+      ["an image", "The shape:\n\n![diagram](shape.png)"],
+      ["a heading after a closed fence", "```\ncode\n```\n# Parts"],
+      ["a heading behind an unclosed shorter fence", "````\ncode\n```\n````\n## Parts"],
+    ];
+    for (const [label, body] of forbidden) {
+      const said = refusesWith(ctx, RECORD, () => record(ctx, { body }), `a body with ${label}`);
+      if (said) return said;
+    }
+    return null;
+  });
+
   // ------------------------------------------------- E: the evidence
 
   check("E1 missing, absent and out-of-ledger evidence is refused", () => {
