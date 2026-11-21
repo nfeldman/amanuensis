@@ -25,8 +25,8 @@ Turns red when:
   - `subsystems.notes` is not under the Scope section as a "Survey note" subsection
     with the fixed label sentence, whether or not the subsystem has claims or an
     artifact, or appears more than once on its page;
-  - the allowlist is not exactly the eight seam prose columns, or lists one
-    whose sentinel appears (`explanations.body` left it at EX11);
+  - the allowlist is not empty (the eight seam prose columns left it at SO24, as
+    `explanations.body` did at EX11), or lists a field whose sentinel appears;
   - `test-materializer.py` does not assert the "Why it matters" field of the findings record;
   - the gate is not listed in `.github/workflows/test.yml`.
 
@@ -141,39 +141,25 @@ RENDERED_FIELDS: tuple[str, ...] = (
     "vocabulary.expansion.global",
     "seams.shared_object",
     "seams.notes",
+    # SO24 draws the seam contract (A2) on System boundaries: the four fields and the four assumptions.
+    "seams.a_writes",
+    "seams.a_reads",
+    "seams.b_writes",
+    "seams.b_reads",
+    "seams.ordering_assumption",
+    "seams.cardinality",
+    "seams.staleness_tolerance",
+    "seams.schema_owner",
     "explanations.body",
     "survey artifact",
 )
 
-# The allowlist the specification fixes at EX2: the eight seam prose columns
-# that no renderer reads, each with its reason.
-SEAM_REASON = "no published conspectus records a seam; rendering is deferred"
-ALLOWLIST: dict[str, str] = {
-    "seams.a_writes": SEAM_REASON,
-    "seams.a_reads": SEAM_REASON,
-    "seams.b_writes": SEAM_REASON,
-    "seams.b_reads": SEAM_REASON,
-    "seams.ordering_assumption": SEAM_REASON,
-    "seams.cardinality": SEAM_REASON,
-    "seams.staleness_tolerance": SEAM_REASON,
-    "seams.schema_owner": SEAM_REASON,
-}
-
-# EX9 added the explanation record and allowlisted its body until a renderer read
-# it; EX11 renders it on the subsystem page, so the allowlist is the eight seam
-# columns again and `explanations.body` is a field that must reach a page.
-EXPECTED_ALLOWLIST = frozenset(
-    {
-        "seams.a_writes",
-        "seams.a_reads",
-        "seams.b_writes",
-        "seams.b_reads",
-        "seams.ordering_assumption",
-        "seams.cardinality",
-        "seams.staleness_tolerance",
-        "seams.schema_owner",
-    }
-)
+# EX2 fixed an allowlist of the eight seam prose columns no renderer read. SO24 renders them
+# (the seam contract, A2), so they moved to `RENDERED_FIELDS` and the allowlist is empty. The
+# machinery stays: a field a renderer stops reading goes back here with its reason, and an
+# entry whose sentinel appears fails the gate.
+ALLOWLIST: dict[str, str] = {}
+EXPECTED_ALLOWLIST: frozenset[str] = frozenset()
 
 # The open-finding record presents these fields in this order (the old record had no Why it matters).
 NEW_COLUMNS = ["ID", "Status", "Symptom", "Why it matters", "Root cause", "Revision"]
@@ -504,14 +490,14 @@ def main() -> int:
 
         # -- 2. the allowlist is exactly the eight seam columns, two-sided ----
         def allowlist_is_exact() -> str | None:
-            if set(ALLOWLIST) != EXPECTED_ALLOWLIST or len(ALLOWLIST) != 8:
+            if set(ALLOWLIST) != EXPECTED_ALLOWLIST or ALLOWLIST:
                 return f"the allowlist is {sorted(ALLOWLIST)}"
             if any(not reason for reason in ALLOWLIST.values()):
                 return "an allowlist entry has no reason"
             return None
 
         check(
-            "the allowlist holds exactly the eight seam prose columns",
+            "the allowlist is empty: the eight seam prose columns render",
             allowlist_is_exact,
         )
 
@@ -529,7 +515,8 @@ def main() -> int:
         # predicate against a corpus that carries one allowlisted sentinel.
         def two_sided_has_teeth() -> str | None:
             planted = corpus + "\n" + sentinel("seams.a_writes")
-            appearing = [f for f in ALLOWLIST if sentinel(f) in planted]
+            probe = {**ALLOWLIST, "seams.a_writes": "a stale entry planted by the control"}
+            appearing = [f for f in probe if sentinel(f) in planted]
             return None if appearing == ["seams.a_writes"] else "the stale-entry control passed"
 
         check("the two-sided control turns red on a stale entry", two_sided_has_teeth)
