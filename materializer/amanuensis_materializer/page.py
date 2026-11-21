@@ -136,6 +136,11 @@ class ListItem:
     # The record an item prints, when it prints one (a claim), as `<type>:<id>` (§3.5).
     record: str = ""
 
+    def __repr__(self) -> str:
+        # An unmarked item reads as it did before it could carry a mark.
+        mark = f", record={self.record!r}" if self.record else ""
+        return f"ListItem(text={self.text!r}, children={self.children!r}{mark})"
+
 
 @dataclass(frozen=True)
 class List:
@@ -209,6 +214,11 @@ class Row:
     # The record a row prints, and its state (§3.5).
     record: str = ""
     state: str = ""
+
+    def __repr__(self) -> str:
+        # An unmarked row reads as it did before it could carry a mark.
+        mark = f", record={self.record!r}, state={self.state!r}" if self.record or self.state else ""
+        return f"Row(cells={self.cells!r}, markers={self.markers!r}, filter={self.filter!r}{mark})"
 
 
 @dataclass(frozen=True)
