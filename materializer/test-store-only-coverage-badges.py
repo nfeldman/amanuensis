@@ -30,6 +30,8 @@ Turns red when:
   - an SVG lacks `role="img"`, a `<title>` or a `<desc>` that counts its segments, states a font
     size under 11, uses a literal colour, runs a script, or is not 960 wide, or a mark has no
     `data-node`;
+  - the badge note or a coverage sentence names a depth other than by its contract label
+    ("Concerns" for "Reviewing concerns", "Scoping" for "Scoped");
   - two publications of one store print different figures or badges;
   - a sabotage that edits one page and reseals `.projection-contract.json` is not reported with
     the right axis and object type: a badge count changed, a badge removed from the boundary
@@ -688,6 +690,40 @@ def main() -> int:
             return None
 
         check("the reconciliation sentence counts tracked paths in the ledger as the bar does, apart from absent ones", absent_paths_counted)
+
+        def contract_labels() -> str | None:
+            # Prose names a depth by its contract label, never by its stored value capitalised.
+            vocab = json.loads((REPO / "mcp-server" / "contracts" / "conspectus-vocabulary.json").read_text())
+            depths = vocab["enums"]["subsystem_status"]["values"]
+            wrong = {v["value"].capitalize(): v["label"] for v in depths if v["value"].capitalize() != v["label"]}
+            db = sqlite3.connect(":memory:")
+            db.row_factory = sqlite3.Row
+            source = sqlite3.connect(f"file:{store_a / 'memory.db'}?mode=ro", uri=True)
+            try:
+                source.backup(db)
+                db.execute("UPDATE subsystems SET status = 'adversarial' WHERE id = 'B-02'")
+                note = " ".join(b.text for b in diagrams.badge_note(db, diagrams.finding_badges(db)))
+                db.execute("DELETE FROM file_ledger")
+                bare = diagrams.coverage_bars_model(db).below
+            finally:
+                source.close()
+                db.close()
+            for where, said, needs in (
+                ("the badge note", note, ("concerns", "adversarial")),
+                ("the coverage sentence", bare, ("scoping",)),
+            ):
+                if not said:
+                    return f"{where} is empty"
+                for stored, label in wrong.items():
+                    if re.search(rf"\b{stored}\b", said):
+                        return f"{where} says {stored!r}, not the contract's label {label!r}: {said!r}"
+                for value in needs:
+                    label = next(v["label"] for v in depths if v["value"] == value)
+                    if label not in said:
+                        return f"{where} does not name {value} by its label {label!r}: {said!r}"
+            return None
+
+        check("badge and coverage prose names depths by their contract labels", contract_labels)
 
         def files_page() -> str | None:
             found = figures((out_a / FILES).read_text())
