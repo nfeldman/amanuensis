@@ -44,13 +44,22 @@ export function textOf(fragment) {
     .join("\n");
 }
 
-/** The page's own content: the `<article class="content …">` element, without the rail or the header. */
+/**
+ * The page's own content: the `<article class="content …">` element, without the rail or the header.
+ * Records print as articles inside it, so its close is the one that balances its open.
+ */
 export function articleOf(html) {
   const start = /<article\b[^>]*class="content\b[^"]*"[^>]*>/i.exec(html);
   if (!start) return null;
   const from = start.index + start[0].length;
-  const end = html.indexOf("</article>", from);
-  return html.slice(from, end < 0 ? undefined : end);
+  const tags = /<(\/?)article\b[^>]*>/gi;
+  tags.lastIndex = from;
+  let depth = 1;
+  for (let tag = tags.exec(html); tag; tag = tags.exec(html)) {
+    depth += tag[1] ? -1 : 1;
+    if (depth === 0) return html.slice(from, tag.index);
+  }
+  return html.slice(from);
 }
 
 function headingText(inner) {
