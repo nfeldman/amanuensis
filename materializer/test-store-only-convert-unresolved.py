@@ -180,7 +180,7 @@ def seed_rich(storage: Path) -> None:
 
         finding("B01-2", "B-01", "CRITICAL", "confirmed-bug", "Rows repeat after a restart. The reader replays the last page.", "The cursor is saved before the page is acknowledged.", "A repeat bills a customer twice.", SHA)
         finding("B01-3", "B-01", "HIGH", "confirmed-bug", "A | in a name\nbreaks the log line.", "The formatter does not escape it.", None, None)
-        finding("B04-1", "B-04", "HIGH", "confirmed-bug", "The cache never expires a slot.", "No timer is armed. See `cache.ts`.", "Memory grows without bound.", SHA)
+        finding("B04-1", "B-04", "HIGH", "confirmed-bug", "The cache never expires a slot.", "No timer is armed. See `cache.ts`, and B-02 for the writer.", "Memory grows without bound while B-01 waits.", SHA)
         finding("B04-2", "B-04", "MEDIUM", "confirmed-bug", "Stale slot served for **one** call.", "The slot is read before the check.", None, SHA)
         finding("B05-1", "B-05", "LOW", "confirmed-bug", "Index order is unstable across runs", "A map is iterated.", "", SHA)
         finding("B05-2", "B-05", "MEDIUM", "fixed", "Keys collide on case.", "Keys are not folded.", None, SHA)
@@ -193,7 +193,7 @@ def seed_rich(storage: Path) -> None:
         )
         for fid, sid, sev, symptom, cause in (
             ("B09-1", "B-09", "HIGH", "An old defect nobody re-found.", "The old cause."),
-            ("B09-2", "B-01", "LOW", "A second old defect. It had two sentences.", ""),
+            ("B09-2", "B-01", "LOW", "A second old defect. It had two sentences.\n\nA second paragraph naming B-02 and SM-1.", ""),
         ):
             cur.execute(
                 "INSERT INTO carried_findings (archived_finding_id, archived_store_id, archived_anchor_sha, subsystem_id,"
@@ -231,8 +231,8 @@ def seed_rich(storage: Path) -> None:
                 (sid, code, cls, quality, linchpin, rationale, WHEN),
             )
         for cat, sid, phase, question, blocked, assumed, resolution in (
-            ("contradiction", "B-01", "phase-3", "Which reading is right?", "The merge of two pages.", "The first one.", "open"),
-            ("domain-knowledge", None, None, "Is tenancy per account?", None, None, "open"),
+            ("contradiction", "B-01", "phase-3", "Which reading is right?", "The merge of two pages, SM-1 included.", "The first one.", "open"),
+            ("domain-knowledge", None, None, "Is tenancy per account in B-04?", None, None, "open"),
             ("domain-knowledge", "B-04", "phase-2", "Does the cache hold secrets?", "A review of the slots.", "It does not.", "open"),
             ("tooling-limit", None, "phase-1", "Could not run the suite.", "A runtime check.", None, "open"),
             ("other", "B-05", None, "Anything else | here?", None, "None.", "open"),
@@ -244,7 +244,7 @@ def seed_rich(storage: Path) -> None:
                 (cat, sid, phase, question, blocked, assumed, resolution, WHEN),
             )
         for cat, observation, location, follow_up in (
-            ("candidate-concern", "Clock skew could reorder rows.", "src/clock.ts", "open"),
+            ("candidate-concern", "Clock skew could reorder rows in B-02, see CC-1.", "src/clock.ts", "open"),
             ("anomaly", "A `retry` loop with no bound.", None, "open"),
             ("pattern", "Every reader checks twice.", "B-01", "open"),
             ("tension", "Two modules own the cursor.", "src/cursor.ts@abc", "open"),
