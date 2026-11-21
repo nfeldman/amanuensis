@@ -26,14 +26,13 @@ from .diagrams import (
     RUNTIME_BOUNDARY_ABSENT,
     RUNTIME_BOUNDARY_COLUMNS,
     boundary_blocks,
-    concern_coverage_heatmap,
+    coverage_blocks,
     dependency_blocks,
     depth_cell,
     runtime_boundary_blocks,
     runtime_boundary_rows,
     runtime_boundary_state,
     seam_blocks,
-    seam_graph,
     staleness_blocks,
     subsystem_dependency_view,
 )
@@ -60,6 +59,7 @@ from .page import (
     AtlasRegion,
     Block,
     Chip,
+    Code,
     CodeSpan,
     Details,
     Emph,
@@ -3097,7 +3097,7 @@ def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         conn,
         "SELECT code, category, origin, status, discovered_in, notes FROM concerns ORDER BY status, code",
     )
-    out = ["# Concerns", "", "## Coverage overview", "", concern_coverage_heatmap(conn), ""]
+    blocks: list[Block] = [_section("Coverage overview", *coverage_blocks(conn))]
     active = [c for c in cs if c["status"] == "active"]
     retired = [c for c in cs if c["status"] in ("retired", "merged")]
     # Each subsystem's concern reasoning, the survey's account of why its
@@ -3113,34 +3113,72 @@ def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             or ""
         )
         names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
-        out += [
-            "## Concern reasoning",
-            "",
-            "Why each subsystem's concerns apply where they do, in the survey's words.",
-            "",
+        held: list[Block] = [
+            _paragraph("Why each subsystem's concerns apply where they do, in the survey's words.")
         ]
         for sid in dict.fromkeys(str(r["subject_id"]) for r in reasoning):
-            out += [f"### {sid} — {_one_line(names.get(sid, sid))}", ""]
-            out += _narrative_lines(
+            held.append(_heading(3, f"{sid} — {_one_line(names.get(sid, sid))}"))
+            held += _narrative_blocks(
                 [r for r in reasoning if r["subject_id"] == sid], 4, workspace, bound, head, None
             )
+        blocks.append(_section("Concern reasoning", *held))
     if active:
-        out += ["## Active concerns", "", "| Code | Category | Origin | Discovered in | Notes |", "|---|---|---|---|---|"]
-        for c in active:
-            out.append(
-                f"| <a id=\"{c['code'].lower()}\"></a>**{c['code']}** | {c['category'] or '—'} | "
-                f"{c['origin']} | {c['discovered_in'] or '—'} | {_table_cell(c['notes'] or '')} |"
+        blocks.append(
+            _section(
+                "Active concerns",
+                RecordList(
+                    "concern",
+                    _caption("Active concerns"),
+                    tuple(
+                        _record(
+                            "concern",
+                            f"<a id=\"{c['code'].lower()}\"></a>**{c['code']}**",
+                            (
+                                ("category", c["category"] or "—"),
+                                ("origin", c["origin"]),
+                                ("discovered in", c["discovered_in"] or "—"),
+                            ),
+                            (("notes", _table_cell(c["notes"] or "")),),
+                            number,
+                        )
+                        for number, c in enumerate(active, start=1)
+                    ),
+                ),
             )
-        out.append("")
+        )
     if retired:
-        out += ["## Retired/merged concerns", ""]
-        for c in retired:
-            out.append(f"- **{c['code']}** — {c['status']} · {c['notes'] or ''}")
-        out.append("")
-    return "\n".join(out) + "\n", _db_source("concerns:all", cs) | _db_source(
+        blocks.append(
+            _section(
+                "Retired/merged concerns",
+                _bullets([f"**{c['code']}** — {c['status']} · {_one_line(c['notes'] or '')}" for c in retired]),
+            )
+        )
+    return Page("Concerns", "concerns.html", tuple(blocks)), _db_source("concerns:all", cs) | _db_source(
         "concerns:disp", rows(conn, "SELECT * FROM dispositions")
     ) | _db_source("concerns:subs", rows(conn, "SELECT id FROM subsystems")) | _db_source(
         "concerns:reasoning", reasoning
+    )
+
+
+def _record(
+    kind: str,
+    key_raw: str,
+    facts: Sequence[tuple[str, str]],
+    fields: Sequence[tuple[str, str]],
+    number: int,
+) -> Record:
+    """One row of a record table as the record the HTML prints: its facts, then its content fields."""
+
+    key_text = _plain(key_raw) or f"Record {number}"
+    anchor_text = re.sub(r"^concern\s+", "", key_text) if kind == "concern-disposition" else key_text
+    return Record(
+        markers=(),
+        key=inlines(key_raw.strip()),
+        key_text=key_text,
+        slug_text=_plain(f"{kind}-{anchor_text}"),
+        facts=tuple(Fact(name, inlines(value.strip())) for name, value in facts if _plain(value)),
+        fields=tuple(Fact(name, inlines(value.strip())) for name, value in fields if _plain(value)),
+        path=_plain(key_raw),
     )
 
 
@@ -3148,24 +3186,28 @@ def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     seams = rows(conn, "SELECT * FROM seams ORDER BY id")
     assess = rows(conn, "SELECT * FROM seam_assessability")
     asmap = {a["seam_id"]: a for a in assess}
-    out = ["# Seams", "", seam_graph(conn), ""]
+    blocks: list[Block] = list(seam_blocks(conn, "Seams"))
     if not seams:
-        out.append("_No seams recorded yet._")
+        blocks.append(_paragraph("_No seams recorded yet._"))
     else:
-        out += [
-            "| Seam | Shared object | Kind | Parties | Assessable? | Notes |",
-            "|---|---|---|---|---|---|",
-        ]
-        for s in seams:
+        records: list[Record] = []
+        for number, s in enumerate(seams, start=1):
             a = asmap.get(s["id"], {})
-            assessable = "✅" if a.get("assessable") else "⏳"
-            parties = f"**{s['party_a']}** ↔ **{s['party_b']}**"
-            out.append(
-                f"| <a id=\"{s['id'].lower()}\"></a>**{s['id']}** | {_table_cell(s['shared_object'])} | {s['shared_object_kind'] or '—'} | "
-                f"{parties} | {assessable} | {_table_cell(s['notes'] or '')} |"
+            records.append(
+                _record(
+                    "seam",
+                    f"<a id=\"{s['id'].lower()}\"></a>**{s['id']}**",
+                    (
+                        ("kind", s["shared_object_kind"] or "—"),
+                        ("parties", f"**{s['party_a']}** ↔ **{s['party_b']}**"),
+                        ("assessable?", "✅" if a.get("assessable") else "⏳"),
+                    ),
+                    (("shared object", _table_cell(s["shared_object"])), ("notes", _table_cell(s["notes"] or ""))),
+                    number,
+                )
             )
-        out.append("")
-    return "\n".join(out) + "\n", _db_source("seams:all", seams) | _db_source("seams:assess", assess)
+        blocks.append(RecordList("seam", "Seams", tuple(records)))
+    return Page("Seams", "seams.html", tuple(blocks)), _db_source("seams:all", seams) | _db_source("seams:assess", assess)
 
 
 def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -3251,35 +3293,38 @@ def render_diagnosticity(conn: sqlite3.Connection, storage: Path) -> RenderResul
         conn,
         "SELECT id, subsystem_id, symptom, outcome, leading_concern, created_at FROM diagnosticity_sessions ORDER BY created_at DESC",
     )
-    out = [
-        "# Diagnosticity matrices",
-        "",
-        "_When two or more concerns could each explain the same symptom, we open a "
-        "[diagnosticity matrix](https://en.wikipedia.org/wiki/Analysis_of_competing_hypotheses) "
-        "and evaluate evidence row-by-row across the competing concerns. Evidence consistent "
-        "with all concerns has zero diagnostic value; evidence that contradicts only one is "
-        "decisive. We rank by inconsistency — the concern with the most contradicting evidence "
-        "is rejected first. Linchpin evidence (single-point-of-failure for the leading "
-        "hypothesis) is flagged explicitly._",
-        "",
+    blocks: list[Block] = [
+        _paragraph(
+            "_When two or more concerns could each explain the same symptom, we open a "
+            "[diagnosticity matrix](https://en.wikipedia.org/wiki/Analysis_of_competing_hypotheses) "
+            "and evaluate evidence row-by-row across the competing concerns. Evidence consistent "
+            "with all concerns has zero diagnostic value; evidence that contradicts only one is "
+            "decisive. We rank by inconsistency — the concern with the most contradicting evidence "
+            "is rejected first. Linchpin evidence (single-point-of-failure for the leading "
+            "hypothesis) is flagged explicitly._"
+        )
     ]
     if not matrices:
-        out.append("_No diagnosticity matrices recorded._")
+        blocks.append(_paragraph("_No diagnosticity matrices recorded._"))
     else:
-        out += [
-            "| ID | Subsystem | Symptom | Outcome | Leading concern | Opened |",
-            "|---|---|---|---|---|---|",
-        ]
-        for m in matrices:
-            mid = f"DM-{m['id']}"
-            out.append(
-                f"| [**{mid}**](diagnosticity/{matrix_slug(m['id'])}.md) | "
-                f"**{m['subsystem_id'] or '—'}** | {_table_cell(m['symptom'] or '')} | "
-                f"{m['outcome']} | {m['leading_concern'] or '—'} | "
-                f"{_fmt_time(m['created_at'])} |"
+        blocks.append(
+            _table(
+                "Diagnosticity matrices",
+                ("ID", "Subsystem", "Symptom", "Outcome", "Leading concern", "Opened"),
+                [
+                    [
+                        f"[**DM-{m['id']}**](diagnosticity/{matrix_slug(m['id'])}.md)",
+                        f"**{m['subsystem_id'] or '—'}**",
+                        _table_cell(m["symptom"] or ""),
+                        str(m["outcome"]),
+                        m["leading_concern"] or "—",
+                        _fmt_time(m["created_at"]),
+                    ]
+                    for m in matrices
+                ],
             )
-        out.append("")
-    return "\n".join(out) + "\n", _db_source("diagnosticity:index", matrices)
+        )
+    return Page("Diagnosticity matrices", "diagnosticity.html", tuple(blocks)), _db_source("diagnosticity:index", matrices)
 
 
 def render_diagnosticity_matrix(
@@ -3322,53 +3367,60 @@ def render_diagnosticity_matrix(
             "ambiguous": "~",
         }.get(verdict or "", "—")
 
-    out = [
-        f"# DM-{mid} · {m['symptom']}",
-        "",
-        f"**Subsystem**: **{m['subsystem_id'] or '—'}**  ",
-        f"**Shared location**: `{m['shared_location'] or '—'}`  ",
+    head = [
+        f"**Subsystem**: **{m['subsystem_id'] or '—'}**",
+        f"**Shared location**: `{m['shared_location'] or '—'}`",
         f"**Outcome**: {m['outcome']}",
     ]
     if m.get("leading_concern"):
-        out.append(f"**Leading concern**: **{m['leading_concern']}**  ")
+        head.append(f"**Leading concern**: **{m['leading_concern']}**")
     if m.get("linchpin_note"):
-        out.append(f"**Linchpin note**: {m['linchpin_note']}")
-    out += ["", "## Matrix", ""]
+        head.append(f"**Linchpin note**: {m['linchpin_note']}")
+    blocks: list[Block] = [_paragraph(" ".join(head))]
+
+    matrix: list[Block] = []
     if not concerns or not evidence:
-        out.append("_Matrix has no concerns or evidence rows._")
+        matrix.append(_paragraph("_Matrix has no concerns or evidence rows._"))
     else:
-        # Header: evidence row x concerns
-        header = "| Evidence | " + " | ".join(f"**{c['concern_code']}**" for c in concerns) + " | Diagnostic value |"
-        sep = "|---|" + "|".join(["---"] * len(concerns)) + "|---|"
-        out += [header, sep]
+        body: list[list[str]] = []
         for e in evidence:
             loc = f"`{e['file_path']}`"
             if e["symbol"]:
                 loc += f" · `{e['symbol']}`"
             loc += f" · _{e['kind']}_"
-            cells_row = [
-                _cell_emoji(cell_map.get((c["concern_code"], e["id"]), {}).get("verdict"))
-                for c in concerns
-            ]
             v = value_map.get(e["id"], {})
-            dv = f"{v.get('n_contradicts', 0)}✗ / {v.get('n_consistent', 0)}✓"
-            out.append(f"| {loc} | " + " | ".join(cells_row) + f" | {dv} |")
-        out += ["", "**Cell legend**: ✓ consistent · ✗ contradicts · · irrelevant · ~ ambiguous", ""]
+            body.append(
+                [
+                    loc,
+                    *(_cell_emoji(cell_map.get((c["concern_code"], e["id"]), {}).get("verdict")) for c in concerns),
+                    f"{v.get('n_contradicts', 0)}✗ / {v.get('n_consistent', 0)}✓",
+                ]
+            )
+        matrix.append(
+            _table(
+                "matrix",
+                ("Evidence", *(f"**{c['concern_code']}**" for c in concerns), "Diagnostic value"),
+                body,
+            )
+        )
+        matrix.append(_paragraph("**Cell legend**: ✓ consistent · ✗ contradicts · · irrelevant · ~ ambiguous"))
+    blocks.append(_section("Matrix", *matrix))
 
     if evidence:
-        out += ["## Evidence detail", ""]
+        detail: list[Block] = []
         for e in evidence:
-            out.append(f"### Evidence #{e['id']}")
-            out.append("")
-            out.append(f"`{e['file_path']}` · `{e.get('symbol') or '—'}` · _{e['kind']}_ · ref `{(e['ref_sha'] or '')[:8]}`")
+            detail.append(_heading(3, f"Evidence #{e['id']}"))
+            detail.append(
+                _paragraph(
+                    f"`{e['file_path']}` · `{e.get('symbol') or '—'}` · _{e['kind']}_ · ref `{(e['ref_sha'] or '')[:8]}`"
+                )
+            )
             if e.get("excerpt"):
-                out += ["", "```", e["excerpt"], "```"]
+                detail.append(Code("", "\n".join(str(e["excerpt"]).splitlines())))
             if e.get("note"):
-                out.append("")
-                out.append(f"_{e['note']}_")
-            out.append("")
+                detail.append(_paragraph(f"_{_one_line(e['note'])}_"))
+        blocks.append(_section("Evidence detail", *detail))
 
-    text = "\n".join(out) + "\n"
     sources = (
         _db_source(f"matrix:{mid}:session", m)
         | _db_source(f"matrix:{mid}:concerns", concerns)
@@ -3376,7 +3428,8 @@ def render_diagnosticity_matrix(
         | _db_source(f"matrix:{mid}:cells", cells)
         | _db_source(f"matrix:{mid}:value", value)
     )
-    return text, sources
+    title = _plain(f"DM-{mid} · {m['symptom']}")
+    return Page(title, matrix_page(mid).replace(".md", ".html"), tuple(blocks)), sources
 
 
 # §4.5's three states, named once. `terms`, `declined` and `not-recorded` are
@@ -3641,38 +3694,31 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         conn,
         "SELECT term, gloss, expansion, subsystem_id, first_seen FROM vocabulary ORDER BY COALESCE(subsystem_id, ''), term",
     )
-    out = ["# Glossary", ""]
+    blocks: list[Block] = []
+
+    def term_blocks(t: dict[str, Any]) -> list[Block]:
+        out: list[Block] = [_heading(3, str(t["term"])), _paragraph(f"_{t['gloss']}_")]
+        if t.get("expansion"):
+            out += render_prose(str(t["expansion"]).strip())
+        if t.get("first_seen"):
+            out.append(_paragraph(f"First seen: `{t['first_seen']}`"))
+        return out
+
     if not terms:
-        out.append("_No vocabulary recorded._")
+        blocks.append(_paragraph("_No vocabulary recorded._"))
     else:
         # Codebase-wide first, then grouped by subsystem.
         global_terms = [t for t in terms if not t["subsystem_id"]]
         scoped = [t for t in terms if t["subsystem_id"]]
         if global_terms:
-            out += ["## Codebase-wide", ""]
-            for t in global_terms:
-                out.append(f"### {t['term']}")
-                out += ["", f"_{t['gloss']}_"]
-                if t.get("expansion"):
-                    out += ["", t["expansion"]]
-                if t.get("first_seen"):
-                    out += ["", f"First seen: `{t['first_seen']}`"]
-                out.append("")
+            blocks.append(_section("Codebase-wide", *(b for t in global_terms for b in term_blocks(t))))
         if scoped:
             # Group by subsystem_id.
             by_ss: dict[str, list[dict[str, Any]]] = {}
             for t in scoped:
                 by_ss.setdefault(t["subsystem_id"], []).append(t)
             for sid, items in by_ss.items():
-                out += [f"## Scoped to **{sid}**", ""]
-                for t in items:
-                    out.append(f"### {t['term']}")
-                    out += ["", f"_{t['gloss']}_"]
-                    if t.get("expansion"):
-                        out += ["", t["expansion"]]
-                    if t.get("first_seen"):
-                        out += ["", f"First seen: `{t['first_seen']}`"]
-                    out.append("")
+                blocks.append(_section(f"Scoped to **{sid}**", *(b for t in items for b in term_blocks(t))))
 
     # §4.5: a subsystem that answered "none" is listed, with its reason, so a
     # reader can tell it from a subsystem nobody asked. The denominator is
@@ -3691,27 +3737,23 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         sid for sid in registered if states[sid] == "terms" and declined.get(sid)
     ]
     if current or superseded:
-        out += [
-            f"## {VOCABULARY_INDEX_HEADING} ({len(current)} of {len(registered)})",
-            "",
-        ]
-    if current:
-        for sid in current:
-            out.append(f"- **{sid}** — {_declination_sentence(declined[sid][0])}")
-        out.append("")
-    elif superseded:
-        out += [
-            "No subsystem's current state is a declination.",
-            "",
-        ]
-    if superseded:
-        out += [
-            f"{_count(len(superseded), 'further subsystem')} declared none earlier and"
-            " has since recorded a term; the judgment is kept on each subsystem's page"
-            f" as superseded history: {', '.join(f'**{sid}**' for sid in superseded)}.",
-            "",
-        ]
-    return "\n".join(out) + "\n", {
+        index: list[Block] = []
+        if current:
+            index.append(
+                _bullets([f"**{sid}** — {_declination_sentence(declined[sid][0])}" for sid in current])
+            )
+        elif superseded:
+            index.append(_paragraph("No subsystem's current state is a declination."))
+        if superseded:
+            index.append(
+                _paragraph(
+                    f"{_count(len(superseded), 'further subsystem')} declared none earlier and"
+                    " has since recorded a term; the judgment is kept on each subsystem's page"
+                    f" as superseded history: {', '.join(f'**{sid}**' for sid in superseded)}."
+                )
+            )
+        blocks.append(_section(f"{VOCABULARY_INDEX_HEADING} ({len(current)} of {len(registered)})", *index))
+    return Page("Glossary", "vocabulary.html", tuple(blocks)), {
         **_db_source("vocab:all", terms),
         **_db_source("vocab:declined", declined),
     }
@@ -4644,25 +4686,26 @@ def render_files(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     for entry in standing:
         by_path.setdefault(str(entry["file_path"]), []).append(entry)
 
-    out = ["# Files", ""]
+    blocks: list[Block] = []
     if not by_path:
-        out += [
-            "No file is recorded in the ledger, so this index has nothing to show."
-            " That is a statement about the record, not about the repository: no"
-            " path here has been read, excluded, or even scoped.",
-            "",
-        ]
+        blocks.append(
+            _paragraph(
+                "No file is recorded in the ledger, so this index has nothing to show."
+                " That is a statement about the record, not about the repository: no"
+                " path here has been read, excluded, or even scoped."
+            )
+        )
     else:
-        out += [
-            f"{_count(len(by_path), 'distinct path')} across"
-            f" {_count(len(standing), 'ledger row')},"
-            f" read at {_short(checked)}. Every owner of a path is listed, and the"
-            " examined revision is the one that owner recorded — two subsystems"
-            " may have read the same file at different revisions.",
-            "",
-            "| File | Owners | Standing | Examined at | Open defects |",
-            "|---|---|---|---|---|",
-        ]
+        blocks.append(
+            _paragraph(
+                f"{_count(len(by_path), 'distinct path')} across"
+                f" {_count(len(standing), 'ledger row')},"
+                f" read at {_short(checked)}. Every owner of a path is listed, and the"
+                " examined revision is the one that owner recorded — two subsystems"
+                " may have read the same file at different revisions."
+            )
+        )
+        body: list[list[str]] = []
         for file_path in sorted(by_path):
             owners = by_path[file_path]
             states = {str(o["standing_state"]) for o in owners}
@@ -4682,21 +4725,23 @@ def render_files(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 f"#{ledger_entry_anchor(str(o['subsystem_id']), file_path)})"
                 for o in owners
             )
-            out.append(
-                f'| <a id="{file_anchor(file_path)}"></a>`{file_path}` |'
-                f" {owner_links} |"
-                f" {STANDING_LABELS.get(headline, headline)} |"
-                f" {revision} |"
-                f" {defects.get(file_path, 0)} |"
+            body.append(
+                [
+                    f'<a id="{file_anchor(file_path)}"></a>`{file_path}`',
+                    owner_links,
+                    STANDING_LABELS.get(headline, headline),
+                    revision,
+                    str(defects.get(file_path, 0)),
+                ]
             )
-        out.append("")
+        blocks.append(_table("Files", ("File", "Owners", "Standing", "Examined at", "Open defects"), body))
 
     sources = {
         **_db_source("files:standing", standing),
         **_db_source("files:defects", defects),
         **_db_source("files:git", git),
     }
-    return "\n".join(out) + "\n", sources
+    return Page("Files", "files.html", tuple(blocks)), sources
 
 
 def _tracked_paths(
@@ -4772,7 +4817,7 @@ def _gap_denominator(
     unit: str,
     clause: str,
     reason: str | None = None,
-) -> list[str]:
+) -> list[Block]:
     """One section's headline: the count, its unit, and its denominator.
 
     A bare zero is not a reading. Without the denominator beside it, a section
@@ -4790,8 +4835,8 @@ def _gap_denominator(
             f"No {unit} is recorded, so this gap is not measured here. That is a"
             " statement about the record, not a claim that the gap is closed."
         )
-        return [sentence if reason is None else f"{sentence} {reason}", ""]
-    return [f"**{numerator} of {denominator}** {unit} {clause}", ""]
+        return [_paragraph(sentence if reason is None else f"{sentence} {reason}")]
+    return [_paragraph(f"**{numerator} of {denominator}** {unit} {clause}")]
 
 
 def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -4854,16 +4899,10 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         for d in rows(conn, "SELECT subsystem_id, concern_code FROM dispositions")
     }
 
-    out = [
-        "# Not yet surveyed",
-        "",
-        f"Counted at {_short(checked)} on `{branch}`.",
-        "",
-    ]
+    blocks: list[Block] = [_paragraph(f"Counted at {_short(checked)} on `{branch}`.")]
 
     # 1. Unledgered paths, over tracked paths.
-    out += ["## Paths with no ledger row", ""]
-    out += _gap_denominator(
+    held: list[Block] = _gap_denominator(
         len(unledgered),
         tracked,
         "tracked paths",
@@ -4875,17 +4914,16 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         by_directory: dict[str, list[str]] = {}
         for entry in unledgered:
             path = str(entry["file_path"])
-            head = path.split("/", 1)[0] if "/" in path else "(repository root)"
-            by_directory.setdefault(head, []).append(path)
+            directory = path.split("/", 1)[0] if "/" in path else "(repository root)"
+            by_directory.setdefault(directory, []).append(path)
         for directory in sorted(by_directory, key=lambda d: (-len(by_directory[d]), d)):
             paths = by_directory[directory]
-            out += [f"### {directory} — {_count(len(paths), 'path')}", ""]
-            out += [f"- `{path}`" for path in paths]
-            out.append("")
+            held.append(_heading(3, f"{directory} — {_count(len(paths), 'path')}"))
+            held.append(_bullets([f"`{path}`" for path in paths]))
+    blocks.append(_section("Paths with no ledger row", *held))
 
     # 2. Candidate rows, over obligation-bearing ledger rows.
-    out += ["## Files in scope that no one has read", ""]
-    out += _gap_denominator(
+    held = _gap_denominator(
         len(candidates),
         len(ledger),
         "ledger rows that carry a survey obligation",
@@ -4900,20 +4938,25 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
             entries = by_subsystem[subsystem_id]
             name = names.get(subsystem_id, subsystem_id)
             owned = sum(1 for r in ledger if str(r["subsystem_id"]) == subsystem_id)
-            out += [
-                f"### {name} **{subsystem_id}** — {len(entries)} unread of"
-                f" {_count(owned, 'row')} carrying an obligation",
-                "",
-            ]
-            out += [
-                f"- `{entry['file_path']}` — {entry['why_in_scope'] or 'no reason recorded'}"
-                for entry in entries
-            ]
-            out.append("")
+            held.append(
+                _heading(
+                    3,
+                    f"{name} **{subsystem_id}** — {len(entries)} unread of"
+                    f" {_count(owned, 'row')} carrying an obligation",
+                )
+            )
+            held.append(
+                _bullets(
+                    [
+                        f"`{entry['file_path']}` — {_one_line(entry['why_in_scope'] or 'no reason recorded')}"
+                        for entry in entries
+                    ]
+                )
+            )
+    blocks.append(_section("Files in scope that no one has read", *held))
 
     # 3. Deferred subsystems, over subsystems.
-    out += ["## Subsystems set aside", ""]
-    out += _gap_denominator(
+    held = _gap_denominator(
         len(deferred),
         len(subsystems),
         "subsystems",
@@ -4922,15 +4965,21 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         " depth.",
     )
     if deferred:
-        out += ["| Subsystem | Layer | Recorded reason |", "|---|---|---|"]
-        for s in deferred:
-            reason = _table_cell(s["notes"] or "")
-            out.append(
-                f"| [{s['name']}]({subsystem_page(str(s['id']), str(s['name']))})"
-                f" **{s['id']}** | {s['layer'] or '—'} |"
-                f" {reason or 'No reason is recorded.'} |"
+        held.append(
+            _table(
+                _caption("Subsystems set aside"),
+                ("Subsystem", "Layer", "Recorded reason"),
+                [
+                    [
+                        f"[{s['name']}]({subsystem_page(str(s['id']), str(s['name']))}) **{s['id']}**",
+                        s["layer"] or "—",
+                        _table_cell(s["notes"] or "") or "No reason is recorded.",
+                    ]
+                    for s in deferred
+                ],
             )
-        out.append("")
+        )
+    blocks.append(_section("Subsystems set aside", *held))
 
     # 4. Unassessed seam sides, over 2 × seams.
     unassessed: list[tuple[str, str, str, str]] = []
@@ -4947,8 +4996,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
             else:
                 continue
             unassessed.append((str(seam["seam_id"]), side, other, why))
-    out += ["## Seam sides no one has assessed", ""]
-    out += _gap_denominator(
+    held = _gap_denominator(
         len(unassessed),
         2 * len(seams),
         "(seam, side) pairs",
@@ -4956,16 +5004,24 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         " assessed from one side only is half-known, and counting seams would report"
         " it as covered.",
     )
-    out += [PER_PARTY_PROXY, ""]
+    held.append(_paragraph(PER_PARTY_PROXY))
     if unassessed:
-        out += ["| Seam | Unassessed party | Other party | Why |", "|---|---|---|---|"]
-        for seam_id, side, other, why in unassessed:
-            out.append(
-                f"| **{seam_id}** | [{names.get(side, side)}]"
-                f"({subsystem_page(side, names.get(side, side))}) **{side}** |"
-                f" **{other}** | {why} |"
+        held.append(
+            _table(
+                _caption("Seam sides no one has assessed"),
+                ("Seam", "Unassessed party", "Other party", "Why"),
+                [
+                    [
+                        f"**{seam_id}**",
+                        f"[{names.get(side, side)}]({subsystem_page(side, names.get(side, side))}) **{side}**",
+                        f"**{other}**",
+                        why,
+                    ]
+                    for seam_id, side, other, why in unassessed
+                ],
             )
-        out.append("")
+        )
+    blocks.append(_section("Seam sides no one has assessed", *held))
 
     # 5. Undispositioned (subsystem, active concern) pairs.
     missing: dict[str, list[str]] = {}
@@ -4975,8 +5031,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
             if pair not in dispositioned:
                 missing.setdefault(str(s["id"]), []).append(str(concern["code"]))
     undispositioned = sum(len(codes) for codes in missing.values())
-    out += ["## Concerns no one has dispositioned here", ""]
-    out += _gap_denominator(
+    held = _gap_denominator(
         undispositioned,
         len(subsystems) * len(active_concerns),
         "(subsystem, active concern) pairs",
@@ -4986,16 +5041,22 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         " tested against it.",
     )
     if missing:
-        out += ["| Subsystem | Undispositioned | Concerns |", "|---|---|---|"]
-        for subsystem_id in sorted(missing):
-            codes = missing[subsystem_id]
-            name = names.get(subsystem_id, subsystem_id)
-            out.append(
-                f"| [{name}]({subsystem_page(subsystem_id, name)}) **{subsystem_id}** |"
-                f" {len(codes)} of {len(active_concerns)} |"
-                f" {', '.join(f'**{code}**' for code in codes)} |"
+        held.append(
+            _table(
+                _caption("Concerns no one has dispositioned here"),
+                ("Subsystem", "Undispositioned", "Concerns"),
+                [
+                    [
+                        f"[{names.get(subsystem_id, subsystem_id)}]"
+                        f"({subsystem_page(subsystem_id, names.get(subsystem_id, subsystem_id))}) **{subsystem_id}**",
+                        f"{len(missing[subsystem_id])} of {len(active_concerns)}",
+                        ", ".join(f"**{code}**" for code in missing[subsystem_id]),
+                    ]
+                    for subsystem_id in sorted(missing)
+                ],
             )
-        out.append("")
+        )
+    blocks.append(_section("Concerns no one has dispositioned here", *held))
 
     sources = {
         **_db_source("gaps:unledgered", unledgered),
@@ -5008,7 +5069,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         **_db_source("gaps:dispositions", sorted(dispositioned)),
         **_db_source("gaps:git", git),
     }
-    return "\n".join(out) + "\n", sources
+    return Page("Not yet surveyed", "not-yet-surveyed.html", tuple(blocks)), sources
 
 
 # ---------------------------------------------------------------------------

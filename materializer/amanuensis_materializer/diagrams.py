@@ -12,6 +12,7 @@ from typing import Any
 
 from .db import rows, table_exists
 from .page import (
+    COVERAGE_STATES,
     EMPTY,
     Atlas,
     AtlasItem,
@@ -20,6 +21,9 @@ from .page import (
     BoundaryDiagram,
     BoundaryRow,
     Chip,
+    CoverageIndex,
+    CoverageReview,
+    CoverageRow,
     DiagramSource,
     Inlines,
     Paragraph,
@@ -249,53 +253,6 @@ def subsystem_dependency_graph(conn: sqlite3.Connection) -> str:
     """Dependency surface from xrefs, or a truthful layer atlas without them."""
     return subsystem_dependency_view(conn)[1]
 
-def concern_coverage_heatmap(conn: sqlite3.Connection) -> str:
-    """Table-form heatmap (mermaid doesn't do heatmaps natively; we use
-    a GitHub-rendered table with emoji cells)."""
-    ss = rows(conn, "SELECT id, name, status FROM subsystems ORDER BY id")
-    cn = rows(
-        conn,
-        "SELECT code, category FROM concerns WHERE status='active' ORDER BY code",
-    )
-    if not ss or not cn:
-        return "_Heatmap requires at least one subsystem and one active concern._"
-    disp = rows(
-        conn,
-        "SELECT subsystem_id, concern_code, classification, linchpin_dependent FROM dispositions",
-    )
-    key = {(d["subsystem_id"], d["concern_code"]): d for d in disp}
-
-    def cell(subsystem_id: str, concern_code: str) -> str:
-        d = key.get((subsystem_id, concern_code))
-        if not d:
-            return "—"
-        c = d["classification"]
-        lp = d["linchpin_dependent"]
-        base = {
-            "confirmed-bug": "🔴",
-            "confirmed-acceptable": "🟡",
-            "ruled-out": "🟢",
-            "out-of-scope": "⚪",
-            "unresolved-competition": "⚠️",
-        }.get(c, "?")
-        return f"{base}{'🔗' if lp else ''}"
-
-    # Header row: concern codes.
-    header = "| Subsystem | " + " | ".join(c["code"] for c in cn) + " |"
-    sep = "|---|" + "|".join(["---"] * len(cn)) + "|"
-    body = []
-    for s in ss:
-        row_cells = [cell(s["id"], c["code"]) for c in cn]
-        body.append(f"| **{s['id']}** {s['name']} | " + " | ".join(row_cells) + " |")
-    legend = (
-        "\n\n**Legend**: 🟢 ruled-out · 🟡 confirmed-acceptable · 🔴 confirmed-bug · "
-        "⚠️ unresolved-competition · ⚪ out-of-scope · 🔗 linchpin-dependent · — not assessed"
-    )
-    return "\n".join([header, sep, *body]) + legend
-
-
-
-
 def staleness_map(conn: sqlite3.Connection) -> str:
     """Bar chart of stale entries per subsystem.
 
@@ -499,34 +456,6 @@ def runtime_boundary_map(conn: sqlite3.Connection) -> str:
     )
 
 
-def seam_graph(conn: sqlite3.Connection) -> str:
-    """Seams as a portable relation table; HTML builds connected areas."""
-    seams = rows(conn, "SELECT * FROM seams ORDER BY id")
-    if not seams:
-        return "_No seams recorded yet._"
-    subs = {
-        r["id"]: r for r in rows(conn, "SELECT id, name FROM subsystems")
-    }
-    lines = [
-        "| Seam | Party A | Shared object | Party B |",
-        "|---|---|---|---|",
-    ]
-    for s in seams:
-        party_a = s["party_a"]
-        party_b = s["party_b"]
-        name_a = subs.get(party_a, {}).get("name", party_a)
-        name_b = subs.get(party_b, {}).get("name", party_b)
-        route_a = subsystem_page(party_a, name_a)
-        route_b = subsystem_page(party_b, name_b)
-        lines.append(
-            f"| **[{s['id']}](seams.md#{s['id'].lower()})** "
-            f"| **[{party_a}]({route_a})** {_safe_label(name_a)} "
-            f"| {_safe_label(s['shared_object'])} "
-            f"| **[{party_b}]({route_b})** {_safe_label(name_b)} |"
-        )
-    return "\n".join(lines)
-
-
 # ---------------------------------------------------------------------------
 # The same sections as page blocks (store-only PLAN §3.2 step 4). The architecture
 # page prints these; the Markdown functions above stay for the pages that
@@ -654,6 +583,51 @@ def boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]
         ),
         BoundaryDiagram(caption, tuple(rows_out)),
     )
+
+
+def coverage_blocks(conn: sqlite3.Connection) -> tuple[Block, ...]:
+    """The review-coverage heatmap's body: every subsystem against every active concern.
+
+    Each cell is the outcome recorded for the pair (its mark and label come from
+    `COVERAGE_STATES`) and whether it leans on a linchpin; a pair nobody assessed
+    has no cell. The row's link is the reference pass's to give.
+    """
+
+    ss = rows(conn, "SELECT id, name, status FROM subsystems ORDER BY id")
+    cn = rows(
+        conn,
+        "SELECT code, category FROM concerns WHERE status='active' ORDER BY code",
+    )
+    if not ss or not cn:
+        return (_sentence("_Heatmap requires at least one subsystem and one active concern._"),)
+    disp = rows(
+        conn,
+        "SELECT subsystem_id, concern_code, classification, linchpin_dependent FROM dispositions",
+    )
+    key = {(d["subsystem_id"], d["concern_code"]): d for d in disp}
+    states = {state[0]: state for state in COVERAGE_STATES}
+    out: list[CoverageRow] = []
+    for s in ss:
+        reviews: list[CoverageReview] = []
+        for c in cn:
+            d = key.get((s["id"], c["code"]))
+            if not d:
+                continue
+            state = states.get(d["classification"])
+            reviews.append(
+                CoverageReview(
+                    c["code"],
+                    state[0] if state else "unknown",
+                    state[1] if state else "Recorded outcome",
+                    state[2] if state else "?",
+                    bool(d["linchpin_dependent"]),
+                )
+            )
+        name = _plain(f"**{s['id']}** {s['name']}")
+        if name.startswith(s["id"]):
+            name = name[len(s["id"]) :].strip()
+        out.append(CoverageRow(s["id"], name or s["id"], None, tuple(reviews)))
+    return (CoverageIndex(tuple(c["code"] for c in cn), tuple(out)),)
 
 
 def seam_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:

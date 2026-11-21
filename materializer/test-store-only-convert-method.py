@@ -247,6 +247,7 @@ def seed_rich(storage: Path, shas: tuple[str, str]) -> None:
         drop_triggers(db)
         db.execute("PRAGMA foreign_keys = OFF")
         cur = db.cursor()
+        since = db.execute("SELECT datetime('now', '-2 minutes')").fetchone()[0]
         cur.execute("UPDATE git_state SET last_checked_sha = ? WHERE repo_id = 'default'", (head,))
 
         # Concerns: every status, a territory the contract does not name, probes with pipes.
@@ -439,6 +440,11 @@ def seed_rich(storage: Path, shas: tuple[str, str]) -> None:
         cur.execute(
             "INSERT INTO imported_artifact_withdrawals (path, reason, session_id) VALUES ('onboarding-old.md', 'reset', 'p8')"
         )
+        # A column the store fills with the time of the insert would make two publications differ.
+        for (table,) in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall():
+            for column in db.execute(f'PRAGMA table_info("{table}")').fetchall():
+                if column[1].endswith("_at") or column[1] == "at":
+                    db.execute(f'UPDATE "{table}" SET "{column[1]}" = ? WHERE "{column[1]}" >= ?', (WHEN, since))
         db.commit()
     finally:
         db.close()

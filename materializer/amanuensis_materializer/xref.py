@@ -32,6 +32,11 @@ from .page import (
     BoundaryDiagram,
     Chip,
     CodeSpan,
+    ConcernChecklist,
+    ConcernFamily,
+    ConcernItem,
+    CoverageIndex,
+    CoverageRow,
     Details,
     Emph,
     EnumTable,
@@ -657,6 +662,40 @@ class _Walk:
                     replace(row, source=source, language=language, target=target, mechanism=mechanism, note=note)
                 )
             return replace(block, rows=tuple(runtime))
+        if isinstance(block, CoverageIndex):
+            # A row opens with its subsystem's ID and name; the ID links to the subsystem
+            # unless this is its own page, and the row names it for the rest of the page.
+            coverage: list[CoverageRow] = []
+            for line in block.rows:
+                hit = self.index.entries.get(line.subsystem_id)
+                href = line.href
+                if hit and not _is_self(hit[1], self.rel_path):
+                    href = _html_href(_relative(self.rel_path, hit[1]))
+                if line.subsystem_id in self.index.names:
+                    self.named.add(line.subsystem_id)
+                coverage.append(replace(line, href=href))
+            return replace(block, rows=tuple(coverage))
+        if isinstance(block, ConcernChecklist):
+            families: list[ConcernFamily] = []
+            for family in block.families:
+                items: list[ConcernItem] = []
+                for item in family.items:
+                    # A checklist row is one line: code, category, territory, probe, subsystems.
+                    cells = [
+                        item.code,
+                        Inlines((Text(family.name),), family.name),
+                        Inlines((Text(family.territory),), family.territory),
+                        item.probe,
+                        item.primary_subsystems,
+                    ]
+                    code, _category, _territory, probe, where = self.line(cells, table=True)
+                    named = {}
+                    if code != item.code:
+                        code_text = _plain_of(code.nodes) or item.code_text
+                        named = {"code_text": code_text, "slug_text": _plain(f"concern-checklist-{code_text}")}
+                    items.append(replace(item, code=code, probe=probe, primary_subsystems=where, **named))
+                families.append(replace(family, items=tuple(items)))
+            return replace(block, families=tuple(families))
         if isinstance(block, BoundaryDiagram):
             # The rows name their subsystems in full, so the page counts both ends as named.
             for boundary in block.rows:
