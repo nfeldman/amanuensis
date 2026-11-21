@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .vocabulary import DISPOSITION_CLASSIFICATIONS, labels
+
 # ---------------------------------------------------------------------------
 # Inlines.
 # ---------------------------------------------------------------------------
@@ -336,13 +338,20 @@ class BoundaryDiagram:
     rows: tuple[BoundaryRow, ...]
 
 
-# The outcomes a coverage cell records: key, label, mark. Order is the legend's.
-COVERAGE_STATES: tuple[tuple[str, str, str], ...] = (
-    ("confirmed-bug", "Confirmed defect", "!"),
-    ("confirmed-acceptable", "Accepted behavior", "✓"),
-    ("ruled-out", "Ruled out", "×"),
-    ("out-of-scope", "Out of scope", "○"),
-    ("unresolved-competition", "Competing explanations", "?"),
+# The mark a coverage cell prints for each concern review verdict; the presentation
+# glyph is the projection's own, the key and label are the vocabulary contract's.
+_COVERAGE_MARKS = {
+    "confirmed-bug": "!",
+    "confirmed-acceptable": "✓",
+    "ruled-out": "×",
+    "out-of-scope": "○",
+    "unresolved-competition": "?",
+}
+_VERDICT_LABELS = labels("disposition_classification")
+
+# The outcomes a coverage cell records: key, label, mark. Order is the contract's, and the legend's.
+COVERAGE_STATES: tuple[tuple[str, str, str], ...] = tuple(
+    (key, _VERDICT_LABELS[key], _COVERAGE_MARKS[key]) for key in DISPOSITION_CLASSIFICATIONS
 )
 
 
