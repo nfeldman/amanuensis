@@ -631,6 +631,26 @@ async function main(mods) {
     return refused && `codes 0/1/3 was refused: ${refused}`;
   });
 
+  // A topic prints as a subheading, so the lint the pages run reads it too. No
+  // assertion supplied a forbidden topic: removing record_narrative's topic lint
+  // stayed green, and decline_narrative never linted its topic (F11/codex,
+  // slice-S1).
+  check("B3b a topic failing the orientation lint is refused, in either tool; a clean one is not", () => {
+    const ctx = world("b3b");
+    seedSubsystem(ctx, "S-01", "mapped");
+    for (const [label, topic] of [
+      ["a count fraction", "12/35 callers"],
+      ["survey-status language", "fully surveyed dispatch"],
+    ]) {
+      const recorded = refusesWith(ctx, RECORD, () => record(ctx, { topic }), `a topic with ${label}`);
+      if (recorded) return recorded;
+      const declined = refusesWith(ctx, DECLINE, () => decline(ctx, { topic }), `a declined topic with ${label}`);
+      if (declined) return declined;
+    }
+    const clean = refusal(() => record(ctx, { topic: "dispatch" })) ?? refusal(() => decline(ctx, { topic: "storage" }));
+    return clean && `a clean topic was refused: ${clean}`;
+  });
+
   check("B4 an empty body, an over-long reason and a multi-paragraph reason are refused", () => {
     const ctx = world("b4");
     seedSubsystem(ctx, "S-01", "mapped");
