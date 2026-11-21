@@ -580,7 +580,7 @@ def main() -> int:
                 return f"the self-seam's model holds {len(model.nodes)} nodes and its SVG draws {len(groups)}"
             centres = []
             for _record, inner in groups:
-                rect = re.search(r'<rect\b[^>]*\bx="([\d.]+)"[^>]*\bwidth="([\d.]+)"', inner)
+                rect = re.search(r'<rect\b[^>]*\sx="([\d.]+)"[^>]*\swidth="([\d.]+)"', inner)
                 centres.append(float(rect.group(1)) + float(rect.group(2)) / 2 if rect else -1.0)
             if len(set(centres)) != 3:
                 return f"the self-seam's boxes sit at {centres}, not three places"

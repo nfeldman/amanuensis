@@ -1945,11 +1945,13 @@ def _draw_seam(diagram: Diagram) -> str:
 
     title_id, desc_id = svg_ids(diagram)
     boxw, boxh = _SEAM_BOX
-    by_record = {n.record: n for n in diagram.nodes}
-    centre = {n.record: (_SEAM_X[n.column], _SEAM_Y) for n in diagram.nodes}
+    # Boxes are placed by column, not looked up by record: a seam may name one subsystem as both
+    # parties, and each half's arrows then join the box on its own side.
+    shared_x = _SEAM_X[1]
     body: list[str] = [f'<rect x="0" y="0" width="{VIEW_WIDTH}" height="{_n(_SEAM_Y * 2 - 20)}" fill="var(--canvas-subtle)" opacity="0.7"/>']
     for edge in diagram.edges:
-        source, target = centre[edge.source], centre[edge.target]
+        party = (_SEAM_X[0] if edge.record.rsplit(":", 1)[-1].startswith("a_") else _SEAM_X[2], _SEAM_Y)
+        source, target = (party, (shared_x, _SEAM_Y)) if edge.record.endswith("writes") else ((shared_x, _SEAM_Y), party)
         y = _SEAM_WRITE_Y if edge.record.endswith("writes") else _SEAM_READ_Y
         facing = 1 if target[0] > source[0] else -1
         start = (source[0] + facing * (boxw / 2 + 2), y)
@@ -1963,8 +1965,9 @@ def _draw_seam(diagram: Diagram) -> str:
             body.append(svg_text(lines, mid, y - 10 - (len(lines) - 1) * 7.5 - 7, size=11, fill=fill))
         else:
             body.append(svg_text(lines, mid, y + 10 + (len(lines) - 1) * 7.5 + 7, size=11, fill=fill))
-    for record, node in by_record.items():
-        cx, cy = centre[record]
+    for node in diagram.nodes:
+        record = node.record
+        cx, cy = _SEAM_X[node.column], _SEAM_Y
         head = _wrap(node.label, 24)[:2]
         detail = [line for part in node.detail.split("\n") for line in _wrap(part, 28)[:1]][:3]
         total = len(head) + len(detail)
