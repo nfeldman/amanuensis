@@ -17,6 +17,10 @@ What it owns:
 - the source hash a page records for the imports it printed, so a withdrawal or a
   new import re-renders the page.
 
+- the page blocks an imported body is read into (`render_body`): the block grammar
+  of today's parser, the record-list projections included, so a body prints as it
+  always did.
+
 A store that has not been opened by a server carrying the tables reads as one
 with no imports.
 """
@@ -29,7 +33,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from .db import rows, table_exists
+from .html_projection import _MarkdownParser
 from .manifest import sha256_json
+from .page import Block, Section
 
 # CommonMark fences: three or more backticks or tildes, indented at most three
 # spaces.  Tracking only the backtick form let a `~~~` block's contents through
@@ -73,6 +79,35 @@ def nest_headings(text: str, under: int) -> str:
                 line = "#" * level + line[len(match.group(1)) :]
         out.append(line)
     return "\n".join(out)
+
+
+def render_body(text: str, *, under: int, section: str, path: str) -> tuple[Block, ...]:
+    """An imported body as page blocks, its headings moved `under` levels down.
+
+    The body is full Markdown (headings, tables, fences, record-list tables), so
+    it is read with the parser's block grammar, as it always was; this is the one
+    place a page's blocks still come from Markdown. It is read as the content of
+    a level-2 section titled `section`, which is what names its tables' captions,
+    so the body prints exactly as it did when it sat inside that section of the
+    page's Markdown. `under` must be 2 or more: a body whose headings reached
+    level 2 would close the section it sits in.
+    """
+
+    if under < 2:
+        raise ValueError("an imported body's headings must move beneath the section's own")
+    body = nest_headings(text.strip(), under)
+    if not body.strip():
+        return ()
+    page = _MarkdownParser(path).parse(f"## {section}\n\n{body}")
+    held = page.blocks[0]
+    assert isinstance(held, Section)
+    out = list(held.blocks[1:])
+    # A level-2 heading that survives the shift (one inside a `~~~` fence, which
+    # the parser does not read as a fence) opens another section in the parser's
+    # reading. Its content stays on the page, under the section it was written in.
+    for later in page.blocks[1:]:
+        out += later.blocks if isinstance(later, Section) else (later,)
+    return tuple(out)
 
 
 #: The pages the imports of one kind are printed on, as `(page path, kind)`.

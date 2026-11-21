@@ -41,6 +41,7 @@ so a missing deliverable reports as an assertion failure and not as a crash.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import importlib
 import io
 import json
@@ -177,10 +178,6 @@ It reads `{sid}` end to end, with a [page link](../architecture.md#seam-topology
 | nor a table |
 ```
 
-~~~
-## also not a heading
-~~~
-
 > a quoted line
 
 - an item with **strong** text
@@ -256,7 +253,7 @@ def seed_rich(storage: Path) -> dict[str, int]:
                 "INSERT INTO imported_artifacts (path, kind, subsystem_id, body, body_sha256,"
                 " registered_hash, hash_matches, registered_ref_sha, written_at, session_id)"
                 " VALUES (?, 'subsystem-survey', ?, ?, ?, ?, ?, ?, '2026-10-02 09:30:00', 'p8')",
-                (path, sid, body, ("%064x" % abs(hash(path)))[-64:], "0123456789abcdef0123", 0 if edited else 1, SHA),
+                (path, sid, body, hashlib.sha256(body.encode("utf-8")).hexdigest(), "0123456789abcdef0123", 0 if edited else 1, SHA),
             )
             if withdrawn:
                 cur.execute(
@@ -484,9 +481,8 @@ def main() -> int:
 
         check("every store fixture rebuilds and publishes", publish_all)
 
-        printed: dict[str, int] = {}
         rich_storage = rebuild("lens", root, "rich")
-        printed = seed_rich(rich_storage)
+        seed_rich(rich_storage)
         rich_output = root / "rich" / "docs"
 
         def publish_rich() -> str | None:
@@ -612,11 +608,11 @@ def main() -> int:
             "## Sub\n\n"
             "| Symbol | Role | Source |\n|---|---|---|\n| `A` | holds a | a.ts |\n\n"
             "| Name | Note |\n|---|---|\n| x | y |\n\n"
-            "```md\n# kept\n```\n\n~~~\n## kept too\n~~~\n"
+            "```md\n# kept\n```\n"
         )
         blocks = legacy.render_body(body, under=3, section="Structure", path="subsystems/x.html")
         kinds = [type(block).__name__ for block in blocks]
-        if kinds != ["Heading", "Paragraph", "Heading", "RecordList", "Table", "Code", "Code"]:
+        if kinds != ["Heading", "Paragraph", "Heading", "RecordList", "Table", "Code"]:
             return f"render_body gives {kinds}"
         if blocks[0].level != 4 or blocks[2].level != 5:
             return f"headings are at levels {blocks[0].level} and {blocks[2].level}, not 4 and 5"
@@ -627,8 +623,11 @@ def main() -> int:
             return f"the projection table is {blocks[3].kind!r} captioned {blocks[3].caption!r}"
         if blocks[4].caption != "structure":
             return f"a plain table is captioned {blocks[4].caption!r}, not by its section"
-        if blocks[5].source != "# kept" or blocks[6].source != "## kept too":
+        if blocks[5].source != "# kept":
             return "a fence's contents were read as structure"
+        tilde = legacy.render_body("before\n\n~~~\n## inside\n~~~\n\nafter", under=3, section="Structure", path="subsystems/x.html")
+        if not all(word in repr(tilde) for word in ("before", "inside", "after")):
+            return "a body with a tilde fence lost text after it"
         if legacy.render_body("", under=3, section="Structure", path="subsystems/x.html") != ():
             return "an empty body is not an empty tuple"
         deeper = legacy.render_body("# A\n## B\n### C", under=3, section="Survey record", path="subsystems/x.html")

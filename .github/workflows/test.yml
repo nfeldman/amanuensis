@@ -535,6 +535,11 @@ jobs:
       - name: The overview, architecture, subsystem map and guide are built as page models
         working-directory: materializer
         run: python3 test-store-only-convert-overview.py
+      # SO15: the subsystem pages are page models; imported bodies reach the Markdown parser
+      # only through legacy_prose.py, and the HTML equals the golden pages and the start tree's.
+      - name: The subsystem pages are built as page models
+        working-directory: materializer
+        run: python3 test-store-only-convert-subsystem.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py

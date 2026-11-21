@@ -58,7 +58,7 @@ from .page import (
     Topology,
     TopologyEdge,
 )
-from .prose import _html_href
+from .prose import _html_href, _plain
 from .slugs import slugify
 
 
@@ -365,6 +365,16 @@ def _merge(nodes: Iterable[Inline]) -> tuple[Inline, ...]:
     return tuple(out)
 
 
+@dataclass(frozen=True)
+class _Toggle(Text):
+    """A page's own ID in the middle of a strong run.
+
+    The text pass wrote it as `**ID**` inside `**...**`, which closes the run before
+    it and reopens it after, so the ID is plain text between two strong runs. The
+    model prints that as it always printed: the run is split at the ID.
+    """
+
+
 @dataclass
 class _Walk:
     """One page's resolution: the index, the page's path and the IDs already named."""
@@ -425,7 +435,9 @@ class _Walk:
                 and not CONCERN_WORD_PAT.search(text[:start])
             )
 
-        def in_text(value: str, base: int, strong: bool) -> tuple[list[Inline], str]:
+        def in_text(
+            value: str, base: int, strong: bool, edge: tuple[bool, bool] | None = None
+        ) -> tuple[list[Inline], str]:
             """The nodes for one run of text, and the name its last mention owes after the run."""
 
             parts: list[Inline] = []
@@ -446,7 +458,12 @@ class _Walk:
                 target = index.entries[id_][1]
                 if _is_self(target, self.rel_path):
                     # An ID on its own page is strong text, never a link to itself.
-                    parts.append(Text(label) if strong else Strong((Text(label),)))
+                    if not strong:
+                        parts.append(Strong((Text(label),)))
+                    elif edge is None or (start == 0 and edge[0]) or (end == len(value) and edge[1]):
+                        parts.append(Text(label))
+                    else:
+                        parts.append(_Toggle(label))
                 else:
                     parts.append(Link(_html_href(_relative(self.rel_path, target)), label))
                 owed = ""
@@ -459,7 +476,7 @@ class _Walk:
             return parts, owed
 
         def nodes_of(
-            nodes: tuple[Inline, ...], base: int, strong: bool
+            nodes: tuple[Inline, ...], base: int, strong: bool, direct: bool = False
         ) -> tuple[list[Inline], str]:
             out: list[Inline] = []
             owed = ""
@@ -468,7 +485,9 @@ class _Walk:
                 last = number == len(nodes) - 1
                 here = ""
                 if isinstance(node, Text):
-                    parts, here = in_text(node.text, base, strong)
+                    parts, here = in_text(
+                        node.text, base, strong, (number == 0, last) if direct else None
+                    )
                     out.extend(parts)
                 elif isinstance(node, Link):
                     label = node.label.strip("*")
@@ -484,8 +503,25 @@ class _Walk:
                         out.append(Text(suffix))
                         here = suffix
                 elif isinstance(node, Strong | Emph):
-                    children, inside = nodes_of(node.children, base, strong or isinstance(node, Strong))
-                    if inside and isinstance(node, Strong) and children and children[-1] == Text(inside):
+                    children, inside = nodes_of(
+                        node.children, base, strong or isinstance(node, Strong), isinstance(node, Strong)
+                    )
+                    if any(isinstance(child, _Toggle) for child in children):
+                        runs: list[Inline] = []
+                        run: list[Inline] = []
+                        for child in children:
+                            if isinstance(child, _Toggle):
+                                if run:
+                                    runs.append(Strong(tuple(run)))
+                                    run = []
+                                runs.append(Text(child.text))
+                            else:
+                                run.append(child)
+                        if run:
+                            runs.append(Strong(tuple(run)))
+                        out.extend(runs)
+                        here = inside
+                    elif inside and isinstance(node, Strong) and children and children[-1] == Text(inside):
                         # The name follows the closing mark, not the id inside it.
                         out.append(replace(node, children=tuple(children[:-1])))
                         out.append(Text(inside))
@@ -579,7 +615,20 @@ class _Walk:
                 lede = next(resolved) if record.lede is not None else None
                 facts = tuple(replace(fact, value=next(resolved)) for fact in record.facts)
                 content = tuple(replace(field_, value=next(resolved)) for field_ in record.fields)
-                records.append(replace(record, key=key, lede=lede, facts=facts, fields=content))
+                named = {}
+                if key != record.key:
+                    # The names a record is labelled and anchored by are read off its key as
+                    # linked, a concern code with its "concern" prefix.
+                    key_text = _plain_of(key.nodes) or record.key_text
+                    anchor = (
+                        re.sub(r"^concern\s+", "", key_text) if block.kind == "concern-disposition" else key_text
+                    )
+                    named = {
+                        "key_text": key_text,
+                        "slug_text": _plain(f"{block.kind}-{anchor}"),
+                        "path": _plain_of(key.nodes),
+                    }
+                records.append(replace(record, key=key, lede=lede, facts=facts, fields=content, **named))
             return replace(block, records=tuple(records))
         if isinstance(block, Atlas):
             regions: list[AtlasRegion] = []
@@ -625,4 +674,8 @@ def resolve_model(page: Page, rel_path: str, index: XrefIndex) -> Page:
     to. Run over a renderer's fresh model, never over a model already resolved.
     """
 
-    return replace(page, blocks=_Walk(rel_path, index).blocks(page.blocks))
+    walk = _Walk(rel_path, index)
+    # The title is the page's first heading line, which the text pass read: it
+    # names its own subject, so a page about B-01 counts B-01 as named.
+    title = walk.inlines(Inlines((Text(page.title),), page.title), plain=True)
+    return replace(page, title=title.plain, blocks=walk.blocks(page.blocks))

@@ -37,8 +37,14 @@ from .diagrams import (
     staleness_blocks,
     subsystem_dependency_view,
 )
-from .legacy_prose import ImportedBody, imported_bodies, imported_page, imports_source
-from .legacy_prose import nest_headings as _nest_prose
+from .legacy_prose import (
+    ImportedBody,
+    imported_bodies,
+    imported_page,
+    imports_source,
+    nest_headings,
+    render_body,
+)
 from .lint import (
     THESIS_REFUSED,
     THESIS_REFUSED_COMPOSITE,
@@ -912,20 +918,21 @@ LEDGER_NO_REASON = "No reason recorded"
 LEDGER_NO_REVISION = "no revision recorded"
 
 
-def _ledger_groups(sid: str, files: Sequence[Mapping[str, object]]) -> list[str]:
+def _ledger_blocks(sid: str, files: Sequence[Mapping[str, object]]) -> list[Block]:
     """The file ledger as groups of rows sharing `(classification, why_in_scope)` (§2.4).
 
     `file_ledger.ref_sha` is set for every classification and `examined_at` only
     for examined rows, so the revision on a candidate or exempt row is the one it
     was recorded at, and only an examined row's revision is an examination.
     Groups keep the ledger's order: classification, then the group's first path.
+    Each group is one item, its files a list inside it.
     """
 
     groups: dict[tuple[str, str], list[Mapping[str, object]]] = {}
     for f in files:
         key = (str(f["classification"] or "—"), str(f["why_in_scope"] or "").strip())
         groups.setdefault(key, []).append(f)
-    out: list[str] = []
+    items: list[ListItem] = []
     for (classification, why), members in groups.items():
         # An absent revision is not a revision: the row says it has none, and the
         # head counts only the ones recorded.
@@ -938,9 +945,7 @@ def _ledger_groups(sid: str, files: Sequence[Mapping[str, object]]) -> list[str]
         else:
             revision = LEDGER_NO_REVISION
         reason = " ".join(why.split()) or LEDGER_NO_REASON
-        out.append(
-            f"- **{reason}** — {classification}, {_count(len(members), 'file')}, {revision}"
-        )
+        paths: list[ListItem] = []
         for m in members:
             path = str(m["file_path"])
             sha = str(m["ref_sha"] or "")
@@ -948,18 +953,46 @@ def _ledger_groups(sid: str, files: Sequence[Mapping[str, object]]) -> list[str]
                 f" (`{sha[:8]}`)" if len(revisions) > 1 and sha else
                 f" ({LEDGER_NO_REVISION})" if revisions and not sha else ""
             )
-            out.append(f'    - <a id="{ledger_entry_anchor(sid, path)}"></a>`{path}`{own}')
-    out.append("")
-    return out
+            paths.append(ListItem(inlines(f'<a id="{ledger_entry_anchor(sid, path)}"></a>`{path}`{own}')))
+        items.append(
+            ListItem(
+                inlines(f"**{reason}** — {classification}, {_count(len(members), 'file')}, {revision}"),
+                (List(False, tuple(paths)),),
+            )
+        )
+    return [List(False, tuple(items))]
 
 
-def _metric_table(pairs: Sequence[tuple[str, str]]) -> list[str]:
-    """Metric/value facts, which the HTML projection renders as a definition list."""
+def _concern_review(dispositions: Sequence[Mapping[str, Any]], caption: str) -> RecordList:
+    """The concern review as the record list the HTML prints: a record per disposition."""
 
-    out = ["| Metric | Value |", "|---|---|"]
-    out.extend(f"| {metric} | {value} |" for metric, value in pairs)
-    out.append("")
-    return out
+    records: list[Record] = []
+    for number, d in enumerate(dispositions, start=1):
+        code = str(d["concern_code"])
+        key_text = code or f"Record {number}"
+        anchor_text = re.sub(r"^concern\s+", "", key_text)
+        facts = [
+            Fact(name, inlines(value))
+            for name, value in (
+                ("classification", str(d["classification"]).strip()),
+                ("evidence quality", str(d["evidence_quality"]).strip()),
+                ("linchpin?", "🔗" if d["linchpin_dependent"] else ""),
+            )
+            if _plain(value)
+        ]
+        rationale = _table_cell(d["rationale"] or "—")
+        records.append(
+            Record(
+                markers=(),
+                key=inlines(f"**{code}**"),
+                key_text=key_text,
+                slug_text=_plain(f"concern-disposition-{anchor_text}"),
+                facts=tuple(facts),
+                fields=(Fact("rationale", inlines(rationale)),) if _plain(rationale) else (),
+                path=_plain(f"**{code}**"),
+            )
+        )
+    return RecordList("concern-disposition", caption, tuple(records))
 
 
 def _ageing_sentence(
@@ -1019,12 +1052,20 @@ def _survey_row(imported: ImportedBody) -> dict[str, str]:
     }
 
 
-def _imported_text(bodies: Sequence[ImportedBody], under: int) -> str:
-    """Imported bodies as Markdown: each behind its label, its headings moved under `under`."""
+def _imported_blocks(
+    bodies: Sequence[ImportedBody], under: int, section: str, path: str
+) -> list[Block]:
+    """Imported bodies as blocks: each behind its label, its headings moved under `under`.
 
-    return "\n\n".join(
-        f"{body.label()}\n\n{_nest_prose(body.body.strip(), under)}" for body in bodies
-    )
+    `section` is the title of the page section they print in, which names their
+    tables' captions.
+    """
+
+    out: list[Block] = []
+    for body in bodies:
+        out.append(_paragraph(body.label()))
+        out += render_body(body.body, under=under, section=section, path=path)
+    return out
 
 
 def _narrative_lines(
@@ -1063,7 +1104,7 @@ def _narrative_lines(
                 "",
             ]
             continue
-        out += [_nest_prose(text.strip(), level), ""]
+        out += [nest_headings(text.strip(), level), ""]
         if not is_body:
             continue
         files = record.get("cited_files") or []
@@ -1080,6 +1121,61 @@ def _narrative_lines(
             ),
             "",
         ]
+    return out
+
+
+def _narrative_blocks(
+    records: Sequence[Mapping[str, Any]],
+    level: int,
+    workspace: Path,
+    bound: bool,
+    head: str,
+    warn: Callable[[str], None] | None,
+    *,
+    untitled: bool = True,
+) -> list[Block]:
+    """Stored narratives as blocks, each under its topic at heading `level`.
+
+    The same rules as `_narrative_lines`: a narrative with no topic prints under
+    its section's label; with `untitled` false it prints under whatever heading
+    already names its section. A text the orientation lint refuses is replaced by
+    the refusal sentence and reported through `warn`. The body is stored prose,
+    read in the §3.4 grammar.
+    """
+
+    out: list[Block] = []
+    for record in records:
+        text, is_body = narrative_text(record)
+        if not is_body and warn is not None:
+            warn(
+                f"{record['subject_id']}: the recorded {record['section']} narrative was not"
+                " published because it carries survey-status vocabulary or a count fraction"
+            )
+        if untitled or str(record["topic"]).strip():
+            out.append(_heading(level, _one_line(narrative_heading(record))))
+        date = _stored_date(record["recorded_at"])
+        sha = str(record["ref_sha"])[:8]
+        if str(record["disposition"]) == "declined":
+            out += render_prose(
+                NARRATIVE_DECLINED.format(declined=_DECLINED, sha=sha, date=date, reason=text.strip())
+            )
+            continue
+        out += render_prose(text.strip())
+        if not is_body:
+            continue
+        files = record.get("cited_files") or []
+        out.append(
+            _paragraph(
+                NARRATIVE_PROVENANCE.format(
+                    date=date,
+                    sha=sha,
+                    n=len(files),
+                    ageing=_ageing_sentence(workspace, bound, record, head),
+                )
+                if files
+                else NARRATIVE_NO_FILES.format(date=date, sha=sha)
+            )
+        )
     return out
 
 
@@ -1207,7 +1303,7 @@ def record_page(
     if bodies:
         out += [f"## {AS_WRITTEN_HEADING}", ""]
         for body in bodies:
-            out += [body.label(), "", _nest_prose(body.body.strip(), 2), ""]
+            out += [body.label(), "", nest_headings(body.body.strip(), 2), ""]
     sources = (
         _narrative_source(f"narratives:{kind}", head, narratives)
         | _db_source(f"checklist:{kind}", extra)
@@ -2003,7 +2099,6 @@ def render_subsystem(
     surveys = imported_bodies(conn, kind="subsystem-survey", subsystem_id=str(sid))
     survey_rows = [_survey_row(imported) for imported in surveys]
     survey_prose = "".join(imported.body + "\n\n" for imported in surveys)
-    survey_text = _imported_text(surveys, 3)
 
     # The effective explanation (§3.2), read by the function the read-back reads
     # so the page and its custody check cannot name different rows.
@@ -2029,12 +2124,9 @@ def render_subsystem(
         for section in ("structure", "concern-reasoning", "challenge")
     }
 
-    out = [
-        f"# {sid} — {s['name']}",
-        "",
-        f"**Status**: {_badge(s['status'])}  ",
-        f"**Layer**: {s.get('layer') or '—'}",
-        "",
+    path = subsystem_page(str(sid), str(s["name"]))[: -len(".md")] + ".html"
+    blocks: list[Block] = [
+        _paragraph(f"**Status**: {_badge(s['status'])} **Layer**: {s.get('layer') or '—'}"),
     ]
 
     # 0. Purpose — only from an effective record, recorded or declined. A page
@@ -2043,16 +2135,16 @@ def render_subsystem(
         text, is_body = _published_explanation(
             str(sid), "purpose", str(purpose.row["body"]), warn
         )
-        out += ["## Purpose", ""]
+        held: list[Block] = []
         if purpose.state == "recorded":
-            out += [_nest_prose(text.strip(), 2), ""]
+            held += render_prose(text.strip())
             if is_body:
-                out += [_provenance_line(workspace, bound, purpose.row, checked_head), ""]
+                held.append(_paragraph(_provenance_line(workspace, bound, purpose.row, checked_head)))
         else:
-            out += [
-                PURPOSE_DECLINED.format(sha=str(purpose.row["ref_sha"])[:8], reason=text.strip()),
-                "",
-            ]
+            held += render_prose(
+                PURPOSE_DECLINED.format(sha=str(purpose.row["ref_sha"])[:8], reason=text.strip())
+            )
+        blocks.append(_section("Purpose", *held))
 
     # 1. Scope — verbatim, under that heading, never as a purpose sentence.
     #
@@ -2061,53 +2153,53 @@ def render_subsystem(
     # recorded scope — a file-and-boundary list — sits alone under the first
     # heading and reads as a statement of what the subsystem is for, which is
     # the relabelling §3.1 forbids and BP6 names (F10/codex).
-    out += ["## Scope", ""]
+    scope: list[Block] = []
     if purpose.state == "not-recorded":
-        out += [NO_PURPOSE_WITH_SCOPE if s.get("scope") else NO_PURPOSE_ALONE, ""]
+        scope.append(_paragraph(NO_PURPOSE_WITH_SCOPE if s.get("scope") else NO_PURPOSE_ALONE))
     if s.get("scope"):
-        out += [str(s["scope"]), ""]
+        scope += render_prose(str(s["scope"]))
     elif files:
-        out += [
-            "No scope statement is recorded for this subsystem. The file ledger in"
-            " its survey record is the only account of what belongs to it.",
-            "",
-        ]
+        scope.append(
+            _paragraph(
+                "No scope statement is recorded for this subsystem. The file ledger in"
+                " its survey record is the only account of what belongs to it."
+            )
+        )
     else:
-        out += [
-            "No scope statement is recorded for this subsystem, and no file is"
-            " recorded in its ledger. Nothing here states what it contains.",
-            "",
-        ]
+        scope.append(
+            _paragraph(
+                "No scope statement is recorded for this subsystem, and no file is"
+                " recorded in its ledger. Nothing here states what it contains."
+            )
+        )
     survey_note = str(s.get("notes") or "").strip()
     if survey_note:
-        out += [
-            f"### {SURVEY_NOTE_HEADING}",
-            "",
-            f"*{SURVEY_NOTE_LABEL}*",
-            "",
-            _nest_prose(survey_note, 3),
-            "",
+        scope += [
+            _heading(3, SURVEY_NOTE_HEADING),
+            _paragraph(f"*{SURVEY_NOTE_LABEL}*"),
+            *render_prose(survey_note),
         ]
+    blocks.append(_section("Scope", *scope))
 
     # 2. Start here.
     if s.get("jump_in_reading"):
-        out += ["## Start here", "", str(s["jump_in_reading"]), ""]
+        blocks.append(_section("Start here", *render_prose(str(s["jump_in_reading"]))))
 
-    # 2b. How it works — the recorded account, nested so that it cannot open a
-    #     heading above H3. A declined account prints one sentence under the
-    #     survey record instead.
+    # 2b. How it works — the recorded account. A declined account prints one
+    #     sentence under the survey record instead.
     if account.state == "recorded" and account.row is not None:
         text, is_body = _published_explanation(
             str(sid), "account", str(account.row["body"]), warn
         )
-        out += ["## How it works", "", _nest_prose(text.strip(), 2), ""]
+        held = list(render_prose(text.strip()))
         if is_body:
-            out += [_provenance_line(workspace, bound, account.row, checked_head), ""]
+            held.append(_paragraph(_provenance_line(workspace, bound, account.row, checked_head)))
+        blocks.append(_section("How it works", *held))
 
     # 3. Structure — current claims, grouped by what each one records (§7.3).
     #    With none, §9.1's literal and the labelled narrative fallback: unbound
     #    prose is never presented where a revision-bound inventory belongs.
-    out += ["## Structure", ""]
+    structure: list[Block] = []
     placement = narrative_placement(
         has_account=account.state == "recorded",
         has_claims=bool(claims),
@@ -2119,94 +2211,87 @@ def render_subsystem(
         f", written on {_stored_date(sv['written_at'])}"
         for sv in survey_rows
     )
+    source = f" Its source is {provenance}." if provenance else ""
+
+    def survey_narrative() -> list[Block]:
+        return [
+            _heading(3, SURVEY_NARRATIVE),
+            _paragraph(f"*{NARRATIVE_LABEL}.*{source}"),
+            *_imported_blocks(surveys, 3, "Structure", path),
+        ]
+
     epistemic_labels = labels("claim_epistemic_kind")
     if claims:
-        out += [
-            "What the survey recorded as claims about this subsystem, grouped by what"
-            " each one states. Every claim is bound to the revision it was asserted at"
-            " and to the evidence attached to it; a superseded claim is not shown here.",
-            "",
-        ]
+        structure.append(
+            _paragraph(
+                "What the survey recorded as claims about this subsystem, grouped by what"
+                " each one states. Every claim is bound to the revision it was asserted at"
+                " and to the evidence attached to it; a superseded claim is not shown here."
+            )
+        )
         claim_evidence = _claim_evidence(conn, [str(c["claim_id"]) for c in claims])
         for heading, group in _claim_groups(str(sid), claims):
-            out += [f"### {heading}", ""]
+            structure.append(_heading(3, heading))
+            # The statement is the item's first text and its coordinates are
+            # one nested item, so a reader meets the sentence before the key
+            # (§2.2).  Whitespace runs collapse because a line break inside the
+            # statement would end the item.
+            items = []
             for c in group:
                 kind = str(c["epistemic_kind"] or "")
-                # The statement is the item's first text and its coordinates are
-                # one nested item, so a reader meets the sentence before the key
-                # (§2.2).  Whitespace runs collapse because a newline inside the
-                # statement would end the item.
-                out += [
-                    f"- {' '.join(str(c['statement'] or '—').split())}",
-                    f"    - `{c['claim_key']}` · subject `{c['subject_id']}`"
+                coordinates = (
+                    f"`{c['claim_key']}` · subject `{c['subject_id']}`"
                     f" · {epistemic_labels.get(kind, kind) or '—'}"
                     f" · asserted at {_short(str(c['asserted_at_sha'] or ''))}"
-                    f" · {_evidence_text(claim_evidence.get(str(c['claim_id']), []))}",
-                ]
-            out.append("")
-        out += _narrative_lines(
+                    f" · {_evidence_text(claim_evidence.get(str(c['claim_id']), []))}"
+                )
+                items.append(
+                    ListItem(
+                        inlines(" ".join(str(c["statement"] or "—").split())),
+                        (List(False, (ListItem(inlines(coordinates)),)),),
+                    )
+                )
+            structure.append(List(False, tuple(items)))
+        structure += _narrative_blocks(
             by_section["structure"], 3, workspace, bound, checked_head, warn
         )
         if placement == "structure-narrative":
-            out += [
-                f"### {SURVEY_NARRATIVE}",
-                "",
-                f"*{NARRATIVE_LABEL}.*" + (f" Its source is {provenance}." if provenance else ""),
-                "",
-                survey_text,
-                "",
-            ]
+            structure += survey_narrative()
     elif by_section["structure"]:
         # A recorded narrative is the reading here: it leads, bound to its
         # revision, and the imported body follows as the earlier account.
-        out += ["### " + NO_STRUCTURAL_CLAIMS, "", NARRATIVE_NO_CLAIMS, ""]
-        out += _narrative_lines(by_section["structure"], 3, workspace, bound, checked_head, warn)
+        structure += [_heading(3, NO_STRUCTURAL_CLAIMS), _paragraph(NARRATIVE_NO_CLAIMS)]
+        structure += _narrative_blocks(by_section["structure"], 3, workspace, bound, checked_head, warn)
         if placement == "inventory-fallback":
-            out += [
-                f"### {SURVEY_NARRATIVE}",
-                "",
-                f"*{NARRATIVE_LABEL}.*" + (f" Its source is {provenance}." if provenance else ""),
-                "",
-                survey_text,
-                "",
-            ]
+            structure += survey_narrative()
         elif placement == "survey-record":
-            out += [NARRATIVE_IN_RECORD + (f" Its source is {provenance}." if provenance else ""), ""]
+            structure.append(_paragraph(NARRATIVE_IN_RECORD + source))
     else:
-        out += ["### " + NO_STRUCTURAL_CLAIMS, ""]
+        structure.append(_heading(3, NO_STRUCTURAL_CLAIMS))
         if placement == "inventory-fallback":
-            out += [
-                "No structural claim is recorded for this subsystem."
-                f" *{NARRATIVE_LABEL}.*"
-                + (f" Its source is {provenance}." if provenance else ""),
-                "",
-                survey_text,
-                "",
+            structure += [
+                _paragraph(f"No structural claim is recorded for this subsystem. *{NARRATIVE_LABEL}.*{source}"),
+                *_imported_blocks(surveys, 3, "Structure", path),
             ]
         elif placement == "survey-record":
-            out += [
-                f"No structural claim is recorded for this subsystem. {NARRATIVE_IN_RECORD}"
-                + (f" Its source is {provenance}." if provenance else ""),
-                "",
-            ]
+            structure.append(
+                _paragraph(f"No structural claim is recorded for this subsystem. {NARRATIVE_IN_RECORD}{source}")
+            )
         else:
-            out += [
-                "No structural claim is recorded for this subsystem, and no narrative was"
-                " left in its place."
-                + (f" The survey artifact is {provenance}." if provenance else ""),
-                "",
-            ]
+            structure.append(
+                _paragraph(
+                    "No structural claim is recorded for this subsystem, and no narrative was"
+                    " left in its place."
+                    + (f" The survey artifact is {provenance}." if provenance else "")
+                )
+            )
+    blocks.append(_section("Structure", *structure))
 
     # 4. Boundaries — seams and recorded edges.
     if seams or xrefs:
-        out += ["## Boundaries", ""]
+        boundaries: list[Block] = []
         if seams:
-            out += [
-                "### Seams",
-                "",
-                "| Seam | Shared object | Other party | Assessable |",
-                "|---|---|---|---|",
-            ]
+            seam_rows: list[Sequence[str]] = []
             for sm in seams:
                 other = sm["party_b"] if sm["party_a"] == sid else sm["party_a"]
                 assessable = (
@@ -2214,94 +2299,101 @@ def render_subsystem(
                     if int(sm["assessable"] or 0)
                     else "not yet: both parties must be `mapped`"
                 )
-                out.append(
-                    f"| **{sm['id']}** | {_table_cell(sm['shared_object'])} | **{other}** |"
-                    f" {assessable} |"
+                seam_rows.append(
+                    (f"**{sm['id']}**", _table_cell(sm["shared_object"]), f"**{other}**", assessable)
                 )
-            out.append("")
-        if xrefs:
-            out += [
-                "### Recorded edges",
-                "",
-                "| From | → | To | Relationship | Strength | Context |",
-                "|---|---|---|---|---|---|",
+            boundaries += [
+                _heading(3, "Seams"),
+                _table(_caption("Boundaries"), ("Seam", "Shared object", "Other party", "Assessable"), seam_rows),
             ]
-            for x in xrefs:
-                out.append(
-                    f"| **{x['from_id']}** | → | **{x['to_id']}** | {x['relationship']} | "
-                    f"{x['strength']} | {_table_cell(x['context'] or '—')} |"
-                )
-            out.append("")
+        if xrefs:
+            boundaries += [
+                _heading(3, "Recorded edges"),
+                _table(
+                    _caption("Boundaries"),
+                    ("From", "→", "To", "Relationship", "Strength", "Context"),
+                    [
+                        (
+                            f"**{x['from_id']}**",
+                            "→",
+                            f"**{x['to_id']}**",
+                            f"{x['relationship']}",
+                            f"{x['strength']}",
+                            _table_cell(x["context"] or "—"),
+                        )
+                        for x in xrefs
+                    ],
+                ),
+            ]
+        blocks.append(_section("Boundaries", *boundaries))
 
     # 5. Vocabulary — §4.5's three states, never collapsed into two. A
     #    subsystem that answered "none" and one nobody asked are different
     #    facts, and the section renders for both: a page that simply omits the
     #    heading makes the silent state unrepresentable (VP4(e)).
-    out += ["## Vocabulary", ""]
+    vocabulary: list[Block] = []
     if vocab:
-        out += [f"- **{v['term']}** — {v['gloss']}" for v in vocab]
-        out.append("")
+        vocabulary.append(_bullets([f"**{v['term']}** — {_one_line(v['gloss'])}" for v in vocab]))
     if vocabulary_state == "declined":
-        out += [
-            f"**Domain vocabulary** — none. {_declination_sentence(declined[0])}",
-            "",
-        ]
+        vocabulary.append(
+            _paragraph(f"**Domain vocabulary** — none. {_declination_sentence(declined[0])}")
+        )
     elif vocabulary_state == "not-recorded":
-        out += [
-            f"{VOCABULARY_NOT_RECORDED}"
-            f" {meanings('vocabulary_discharge').get('not-recorded', '')}",
-            "",
-        ]
+        vocabulary.append(
+            _paragraph(
+                f"{VOCABULARY_NOT_RECORDED}"
+                f" {meanings('vocabulary_discharge').get('not-recorded', '')}"
+            )
+        )
     if vocabulary_state == "terms" and declined:
         # Kept, not erased: a later pass that found a term supersedes the
         # judgment without unsaying it (GP18, §4.3).
-        out += [
-            f"### {SUPERSEDED_HEADING}",
-            "",
-            _declination_sentence(declined[0]),
-            "",
-        ]
+        vocabulary += [_heading(3, SUPERSEDED_HEADING), _paragraph(_declination_sentence(declined[0]))]
+    blocks.append(_section("Vocabulary", *vocabulary))
 
     # 6. Known defects here — links, never a second full record (§6.2).
     open_states = FINDING_LENS_STATES.get("findings.md", ())
     open_findings = [f for f in findings if str(f["resolution_state"]) in open_states]
     resolved = [f for f in findings if str(f["resolution_state"]) not in open_states]
-    out += ["## Known defects here", ""]
+    defects: list[Block] = []
     # Subsystem pages live one directory down, so every link to a top-level
     # lens page is written relative to this page. A bare `findings.md` here
     # resolves to `subsystems/findings.md` and turns the coverage axis red.
     up = "../"
     if open_findings:
-        out += [
-            f"{_count(len(open_findings), 'defect')} here"
-            f" {'is' if len(open_findings) == 1 else 'are'} open or awaiting"
-            " verification. Each one's full record, with its evidence, is on"
-            f" [Open findings]({up}findings.md).",
-            "",
-        ]
+        defects.append(
+            _paragraph(
+                f"{_count(len(open_findings), 'defect')} here"
+                f" {'is' if len(open_findings) == 1 else 'are'} open or awaiting"
+                " verification. Each one's full record, with its evidence, is on"
+                f" [Open findings]({up}findings.md)."
+            )
+        )
+        lines = []
         for f in open_findings:
             page = finding_page(str(f["resolution_state"])) or "findings.md"
             state = RESOLUTION_LABELS.get(
                 str(f["resolution_state"]), str(f["resolution_state"])
             )
-            out.append(
-                f"- {f['symptom']}"
+            lines.append(
+                f"{_one_line(f['symptom'])}"
                 f" — [{f['finding_id']}]({up}{page}#{str(f['finding_id']).lower()})"
                 f" · {_sev_badge(str(f['severity']))} · {state}"
             )
-        out.append("")
+        defects.append(_bullets(lines))
     else:
-        out += ["No defect here is open or awaiting verification.", ""]
+        defects.append(_paragraph("No defect here is open or awaiting verification."))
     if resolved:
-        out += [
-            f"{_count(len(resolved), 'further defect')} here reached a terminal"
-            f" state; {'it is' if len(resolved) == 1 else 'they are'} recorded on"
-            f" [Resolved findings]({up}resolved-findings.md).",
-            "",
-        ]
+        defects.append(
+            _paragraph(
+                f"{_count(len(resolved), 'further defect')} here reached a terminal"
+                f" state; {'it is' if len(resolved) == 1 else 'they are'} recorded on"
+                f" [Resolved findings]({up}resolved-findings.md)."
+            )
+        )
+    blocks.append(_section("Known defects here", *defects))
 
     # 7. Standing (§2.5): what this subsystem's record entitles a reader to claim.
-    out += ["## Standing", ""]
     # Read through `file_standing` and counted by the same predicates
     # `describe_locus` uses for a subsystem (§2.5, `mcp-server/src/standing.ts`),
     # so the page and the tool cannot report different coverage for one store.
@@ -2326,12 +2418,6 @@ def render_subsystem(
     # What the ladder status authorizes and what it cannot justify, from the one
     # enum source (§10). A count without that sentence beside it reads as
     # coverage; it is an upper bound on what may be claimed.
-    out += [
-        f"**{SUBSYSTEM_STATUS_LABELS.get(status, status)}** —"
-        f" {SUBSYSTEM_STATUS_MEANINGS.get(status, 'no meaning is recorded for this status.')}"
-        f" It cannot justify {SUBSYSTEM_STATUS_LIMITS.get(status, 'more than it records')}.",
-        "",
-    ]
     # A ledger with no rows has no denominator, and `0 of 0` reads as coverage
     # of an empty set rather than as nothing measured (VP4).
     ledger_facts: list[tuple[str, str]] = (
@@ -2344,102 +2430,93 @@ def render_subsystem(
         if standing
         else [("Ledger", "no file is recorded, so nothing here is measured")]
     )
-    out += _metric_table(
-        [
-            *ledger_facts,
-            (
-                "Active concerns with a disposition recorded here",
-                f"{len(on_active)} of {len(active_concerns)}"
-                + (f" — {breakdown}" if breakdown else ""),
+    blocks.append(
+        _section(
+            "Standing",
+            _paragraph(
+                f"**{SUBSYSTEM_STATUS_LABELS.get(status, status)}** —"
+                f" {SUBSYSTEM_STATUS_MEANINGS.get(status, 'no meaning is recorded for this status.')}"
+                f" It cannot justify {SUBSYSTEM_STATUS_LIMITS.get(status, 'more than it records')}."
             ),
-            (
-                "Findings by resolution state",
-                ", ".join(
-                    f"{count} {RESOLUTION_LABELS.get(state, state).lower()}"
-                    for state, count in by_state.items()
-                    if count
-                )
-                or "none recorded",
+            _summary(
+                _caption("Standing"),
+                [
+                    *ledger_facts,
+                    (
+                        "Active concerns with a disposition recorded here",
+                        f"{len(on_active)} of {len(active_concerns)}"
+                        + (f" — {breakdown}" if breakdown else ""),
+                    ),
+                    (
+                        "Findings by resolution state",
+                        ", ".join(
+                            f"{count} {RESOLUTION_LABELS.get(state, state).lower()}"
+                            for state, count in by_state.items()
+                            if count
+                        )
+                        or "none recorded",
+                    ),
+                    (
+                        "Seams assessable from both sides",
+                        f"{assessable_seams} of {len(seams)}" if seams else "no seam names this subsystem",
+                    ),
+                ],
             ),
-            (
-                "Seams assessable from both sides",
-                f"{assessable_seams} of {len(seams)}" if seams else "no seam names this subsystem",
-            ),
-        ]
+        )
     )
 
     # 8. Survey record — apparatus, last.
-    out += ["## Survey record", ""]
+    record: list[Block] = []
     if account.state == "declined" and account.row is not None:
         reason, _is_body = _published_explanation(
             str(sid), "account", str(account.row["body"]), warn
         )
-        out += [
-            ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=reason.strip()),
-            "",
-        ]
-    out += ["### File ledger", ""]
+        record += render_prose(
+            ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=reason.strip())
+        )
+    record.append(_heading(3, "File ledger"))
     if files:
-        out += _ledger_groups(str(sid), files)
+        record += _ledger_blocks(str(sid), files)
     else:
-        out += ["No file is recorded in this subsystem's ledger.", ""]
+        record.append(_paragraph("No file is recorded in this subsystem's ledger."))
 
-    out += ["### Concern review", ""]
+    record.append(_heading(3, "Concern review"))
     if dispositions:
-        out += [
-            "| Concern | Classification | Evidence quality | Linchpin? | Rationale |",
-            "|---|---|---|---|---|",
-        ]
-        for d in dispositions:
-            lp = "🔗" if d["linchpin_dependent"] else ""
-            out.append(
-                f"| **{d['concern_code']}** | {d['classification']} | {d['evidence_quality']} | "
-                f"{lp} | {_table_cell(d['rationale'] or '—')} |"
-            )
-        out.append("")
+        record.append(_concern_review(dispositions, _caption("Survey record")))
     else:
-        out += ["No concern has been dispositioned in this subsystem.", ""]
+        record.append(_paragraph("No concern has been dispositioned in this subsystem."))
     if by_section["concern-reasoning"]:
-        out += [
-            "The survey's reasoning about the concerns it reviewed here is on"
-            f" [Review coverage]({'../'}concerns.md#concern-reasoning), under this subsystem.",
-            "",
-        ]
+        record.append(
+            _paragraph(
+                "The survey's reasoning about the concerns it reviewed here is on"
+                f" [Review coverage]({'../'}concerns.md#concern-reasoning), under this subsystem."
+            )
+        )
     if by_section["challenge"]:
-        out += [f"### {CHALLENGE_HEADING}", ""]
-        out += _narrative_lines(by_section["challenge"], 4, workspace, bound, checked_head, warn)
+        record.append(_heading(3, CHALLENGE_HEADING))
+        record += _narrative_blocks(by_section["challenge"], 4, workspace, bound, checked_head, warn)
 
     if survey_prose and placement in ("survey-record", "none"):
-        out += ["### Survey artifact", ""]
+        record.append(_heading(3, "Survey artifact"))
         if placement == "survey-record" and account.row is not None:
-            out += [
-                _survey_notes_line(sv, account.row)
-                for sv in survey_rows
-            ]
-            out.append("")
-        out += [survey_text]
+            record += [_paragraph(_survey_notes_line(sv, account.row)) for sv in survey_rows]
+        record += _imported_blocks(surveys, 3, "Survey record", path)
     elif placement == "structure-narrative":
-        out += [
-            "### Survey artifact",
-            "",
-            NARRATIVE_POINTER + (f" Its source is {provenance}." if provenance else ""),
-            "",
-        ]
+        record += [_heading(3, "Survey artifact"), _paragraph(NARRATIVE_POINTER + source)]
     elif survey_prose:
         # §7.3 keeps the artifact in the survey record and §9.1 promotes it into
         # Structure when no claim stands in its place.  Rendering it twice would
         # make one page carry two copies of one witness, so the apparatus points
         # at the reading instead of repeating it.
-        out += [
-            "### Survey artifact",
-            "",
-            "The survey artifact is rendered above, under Structure, because no"
-            " structural claim is recorded to stand in its place."
-            + (f" Its source is {provenance}." if provenance else ""),
-            "",
+        record += [
+            _heading(3, "Survey artifact"),
+            _paragraph(
+                "The survey artifact is rendered above, under Structure, because no"
+                " structural claim is recorded to stand in its place." + source
+            ),
         ]
+    blocks.append(_section("Survey record", *record))
 
-    text = "\n".join(out).rstrip() + "\n"
     sources: dict[str, str] = (
         _db_source(f"subsystem:{sid}:row", s)
         | _db_source(f"subsystem:{sid}:files", files)
@@ -2456,7 +2533,7 @@ def render_subsystem(
         | _db_source(f"subsystem:{sid}:explanations", {"head": checked_head, "rows": explanations})
         | _narrative_source(f"subsystem:{sid}:narratives", checked_head, narratives)
     )
-    return text, sources
+    return Page(_plain(f"{sid} — {s['name']}"), path, tuple(blocks)), sources
 
 
 # ---------------------------------------------------------------------------
