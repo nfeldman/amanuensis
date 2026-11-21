@@ -25,6 +25,9 @@ Turns red when:
   - the guide lacks B1 or the ladder, or a subsystem page lacks its ladder, or a drawn
     node or edge differs in count or record from the model, or has no `data-node` /
     `data-edge`, or an SVG line carries no record;
+  - a counted node draws nothing: its `<g data-node>` holds no visible shape, lacks the
+    words its record gives it (a pass's name, a rung's contract label, "Here" and the
+    subject), or, other than the marker, links to nothing;
   - an SVG lacks `role="img"`, a `<title>`, or a `<desc>` that counts its boxes and arrows,
     states a font size under 11, uses a colour that is not a CSS token, runs a script,
     or has a width other than the 960 viewBox;
@@ -368,6 +371,38 @@ def drawn(figure: str) -> tuple[list[str], list[str], int]:
     return nodes, edges, unmarked
 
 
+def node_words(doc: dict[str, Any], record: str) -> list[str]:
+    """What a node's box must say, read from the contract rather than from the renderer."""
+
+    kind, _, key = record.partition(":")
+    if kind == "survey-pass":
+        return [next(p["pass"] for p in doc["survey_passes"] if str(p["phase"]) == key)]
+    if kind == "status-check":
+        return ["Server checks"]
+    if kind == "checkpoint":
+        return ["Your checkpoint"]
+    if kind == "status":
+        return [next(v["label"] for v in doc["enums"]["subsystem_status"]["values"] if v["value"] == key)]
+    if kind == "subsystem":
+        return ["Here", key]
+    return []
+
+
+def node_faults(figure: str, doc: dict[str, Any]) -> str | None:
+    """Each counted node must draw something: a visible box, the words its record gives it, and a link."""
+
+    for record, inner in re.findall(r'<g\b[^>]*\bdata-node="([^"]*)"[^>]*>(.*?)</g>', figure, re.S):
+        if not re.search(r"<(?:rect|polygon|circle|path)\b", inner):
+            return f"the node {record} draws no visible shape"
+        said = " ".join(re.sub(r"<[^>]+>", " ", inner).split())
+        for words in node_words(doc, record):
+            if " ".join(words.split()) not in said:
+                return f"the node {record} does not say {words!r}; it says {said[:120]!r}"
+        if not record.startswith("subsystem:") and not re.search(r'<a\b[^>]*\bhref="[^"]+"', inner):
+            return f"the node {record} links to nothing"
+    return None
+
+
 def svg_faults(figure: str, nodes: int, edges: int) -> str | None:
     svg = re.search(r"<svg\b[^>]*>.*?</svg>", figure, re.S)
     if svg is None:
@@ -603,6 +638,8 @@ def main() -> int:
                 return f"B1 draws {unmarked} line or path with no data-edge"
             if (fault := svg_faults(found[0], len(nodes), len(edges))) is not None:
                 return fault
+            if (fault := node_faults(found[0], doc)) is not None:
+                return fault
             account = account_of(found[0])
             plain = re.sub(r"<[^>]+>", " ", account)
             for row in doc["survey_passes"]:
@@ -641,6 +678,8 @@ def main() -> int:
                 return f"the guide ladder draws nodes {sorted(nodes)}, edges {sorted(edges)}, {unmarked} unmarked"
             if (fault := svg_faults(found[0], len(nodes), len(edges))) is not None:
                 return fault
+            if (fault := node_faults(found[0], doc)) is not None:
+                return fault
             plain = " ".join(re.sub(r"<[^>]+>", " ", account_of(found[0])).split())
             for value in doc["enums"]["subsystem_status"]["values"]:
                 if value["label"] not in plain:
@@ -671,6 +710,8 @@ def main() -> int:
                 if unmarked:
                     return f"{sid}'s ladder draws {unmarked} line or path with no data-edge"
                 if (fault := svg_faults(found[0], len(nodes), len(edges))) is not None:
+                    return f"{sid}: {fault}"
+                if (fault := node_faults(found[0], doc)) is not None:
                     return f"{sid}: {fault}"
                 if f'data-subject="{sid}"' not in found[0]:
                     return f"{sid}'s ladder does not name its subject"
