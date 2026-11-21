@@ -127,7 +127,18 @@ PROJECT = "Fixture Repo"
 IDENTITY = (
     f"An architecture survey of {PROJECT}. An AI agent running Amanuensis read the repository,"
     " without changing it, and recorded what it found here. New to this site? Start with"
-    " [How to read this survey](how-to-read.md)."
+    " How to read this survey."
+)
+IDENTITY_LINK = ("How to read this survey", "how-to-read.html")
+# Every element a browser knows; the O4 section may carry no other tag.
+KNOWN_TAGS = frozenset(
+    {
+        *("a", "abbr", "article", "aside", "b", "blockquote", "br", "caption", "code", "dd", "del"),
+        *("details", "div", "dl", "dt", "em", "figcaption", "figure", "h1", "h2", "h3", "h4", "h5"),
+        *("h6", "hr", "i", "kbd", "li", "mark", "ol", "p", "pre", "q", "s", "section", "small"),
+        *("span", "strong", "sub", "summary", "sup", "table", "tbody", "td", "tfoot", "th", "thead"),
+        *("tr", "u", "ul"),
+    }
 )
 IDENTITY_FORBIDDEN_OLD = "recorded by Amanuensis"
 # The orientation lint's forbidden terms (vocabulary.ORIENTATION_FORBIDDEN_TERMS).
@@ -230,42 +241,6 @@ def make_store(tmp: Path, name: str, materializer: Path, *, with_question: bool 
 # ---------------------------------------------------------------------------
 # Readers
 # ---------------------------------------------------------------------------
-LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-
-
-def md_sections(text: str) -> list[tuple[str, list[str]]]:
-    """(H2 title, its lines) in page order."""
-
-    out: list[tuple[str, list[str]]] = []
-    for line in text.splitlines():
-        if line.startswith("## "):
-            out.append((line[3:].strip(), []))
-        elif out:
-            out[-1][1].append(line)
-    return out
-
-
-def md_blocks(lines: list[str]) -> list[tuple[str, list[str]]]:
-    """(H3 title, its lines) inside one H2 section."""
-
-    out: list[tuple[str, list[str]]] = []
-    for line in lines:
-        if line.startswith("### "):
-            out.append((line[4:].strip(), []))
-        elif out:
-            out[-1][1].append(line)
-    return out
-
-
-def md_visible(text: str) -> str:
-    text = LINK.sub(r"\1", text)
-    return re.sub(
-        r"\*\*(.+?)\*\*|\*(.+?)\*|_(.+?)_|`([^`]*)`",
-        lambda m: m.group(1) or m.group(2) or m.group(3) or m.group(4) or "",
-        text,
-    )
-
-
 def html_text(fragment: str) -> str:
     return " ".join(htmllib.unescape(re.sub(r"<[^>]+>", "", fragment)).split())
 
@@ -290,22 +265,15 @@ def html_h3_titles(fragment: str) -> list[str]:
     return [html_text(m.group(1)).lstrip("§").strip() for m in re.finditer(r"<h3\b[^>]*>(.*?)</h3>", fragment, re.S)]
 
 
-def md_table_rows(lines: list[str]) -> list[list[str]]:
-    """Data rows of the first pipe table in the lines, cells as raw markdown."""
+def html_h3_blocks(fragment: str) -> list[tuple[str, str]]:
+    """(H3 title, markup up to the next h3) inside a fragment."""
 
-    rows: list[list[str]] = []
-    in_table = False
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("|"):
-            cells = [c.strip() for c in stripped.strip("|").split("|")]
-            if all(re.fullmatch(r":?-{3,}:?", c) for c in cells):
-                continue
-            rows.append(cells)
-            in_table = True
-        elif in_table:
-            break
-    return rows[1:]  # drop the header row
+    heads = list(re.finditer(r"<h3\b[^>]*>(.*?)</h3>", fragment, re.S))
+    out: list[tuple[str, str]] = []
+    for index, match in enumerate(heads):
+        end = heads[index + 1].start() if index + 1 < len(heads) else len(fragment)
+        out.append((html_text(match.group(1)).lstrip("§").strip(), fragment[match.end() : end]))
+    return out
 
 
 def html_table_rows(fragment: str) -> list[list[str]]:
@@ -321,12 +289,11 @@ def html_table_rows(fragment: str) -> list[list[str]]:
     return out
 
 
-def identity_paragraph(md: str) -> str:
-    """The last paragraph before the first H2: the page-head hint, if any, sits above it."""
+def identity_paragraph(page: str) -> str:
+    """The markup of the last paragraph before the first section of the article."""
 
-    head = md.split("\n## ", 1)[0]
-    paragraphs = [" ".join(p.split()) for p in re.split(r"\n\s*\n", head) if p.strip()]
-    paragraphs = [p for p in paragraphs if not p.startswith("# ")]
+    article = re.search(r"<article\b[^>]*>(.*?)(?=<section\b|<h2\b|</article>)", page, re.S)
+    paragraphs = re.findall(r"<p\b[^>]*>(.*?)</p>", article.group(1), re.S) if article else []
     return paragraphs[-1] if paragraphs else ""
 
 
@@ -338,23 +305,18 @@ def expected_when(set_when: str) -> str:
     return WHEN_START if set_when == "start" else WHEN_END
 
 
-def check_pass_table(
-    md: str, page: str, passes: list[dict[str, Any]], status_by_value: dict[str, dict[str, Any]]
-) -> str | None:
-    section = dict(md_sections(md)).get(SECTION)
-    if section is None:
-        return f"the Markdown guide has no '{SECTION}' section"
-    got = md_table_rows(section)
+def check_pass_table(page: str, passes: list[dict[str, Any]], status_by_value: dict[str, dict[str, Any]]) -> str | None:
+    section = html_section(page, SECTION)
+    if not section:
+        return f"the HTML guide has no '{SECTION}' section"
+    got = html_table_rows(section)
     if len(got) != len(passes):
         return f"the pass table has {len(got)} rows, the contract's survey_passes has {len(passes)}"
-    html_rows = html_table_rows(html_section(page, SECTION))
-    if len(html_rows) != len(passes):
-        return f"the HTML pass table has {len(html_rows)} rows, expected {len(passes)}"
     for index, (spec, cells) in enumerate(zip(passes, got, strict=True)):
         status = status_by_value[spec["status"]]
         if len(cells) < 4:
             return f"row {index + 1} has {len(cells)} cells, expected pass, action, depth and meaning"
-        pass_cell, does, depth, meaning = (md_visible(c) for c in cells[:4])
+        pass_cell, does, depth, meaning = cells[:4]
         if pass_cell != spec["pass"]:
             return f"row {index + 1} names the pass {pass_cell!r}, the contract says {spec['pass']!r}"
         if does != spec["does"]:
@@ -378,8 +340,6 @@ def check_pass_table(
             )
         if meaning != status["meaning"]:
             return f"row {index + 1} ({spec['pass']}) gives the meaning {meaning!r}, the contract says {status['meaning']!r}"
-        if html_rows[index][:4] != [md_visible(c) for c in cells[:4]]:
-            return f"row {index + 1} reads {html_rows[index][:4]!r} in HTML, {[md_visible(c) for c in cells[:4]]!r} in Markdown"
     return None
 
 
@@ -412,7 +372,6 @@ def main() -> int:
         tmp = Path(tmpdir)
         storage, summary = make_store(tmp, "store", ROOT)
         docs = storage / "docs"
-        md = read(docs / "how-to-read.md") or ""
         full_page = read(docs / "how-to-read.html") or ""
         article = re.search(r"<article\b.*?</article>", full_page, re.S)
         page = article.group(0) if article else full_page
@@ -420,16 +379,13 @@ def main() -> int:
         def published() -> str | None:
             if not summary or summary.get("_returncode") != 0 or summary.get("ok") is False:
                 return f"the materializer did not publish the fixture — {summary.get('_diagnostic', summary)}"
-            if not md:
-                return "docs/how-to-read.md was not written"
             if not full_page:
                 return "docs/how-to-read.html was not written"
             return None
 
         check("the fixture publishes", published)
 
-        sections = md_sections(md)
-        titles = [t for t, _ in sections]
+        titles = [t for t, _, _ in html_h2_spans(page)]
 
         def slot() -> str | None:
             if SECTION not in titles:
@@ -437,34 +393,28 @@ def main() -> int:
             index = titles.index(SECTION)
             if titles[:index][-1:] != [H2_NEIGHBOURS[0]] or titles[index + 1 : index + 2] != [H2_NEIGHBOURS[2]]:
                 return f"'{SECTION}' sits between {titles[:index][-1:]} and {titles[index + 1:index + 2]}, not {H2_NEIGHBOURS[0]!r} and {H2_NEIGHBOURS[2]!r}"
-            html_titles = [t for t, _, _ in html_h2_spans(page)]
-            if SECTION not in html_titles:
-                return f"the HTML guide has no '{SECTION}' heading"
+            if f'id="{SECTION.lower().replace(" ", "-")}"' not in page:
+                return f"the HTML guide's '{SECTION}' heading carries no id anchor"
             return None
 
         check("the section sits between Pages on this site and Terms", slot)
 
-        check("the pass table follows the contract", lambda: check_pass_table(md, page, passes, status_by_value))
+        check("the pass table follows the contract", lambda: check_pass_table(page, passes, status_by_value))
 
-        section = dict(sections).get(SECTION, [])
-        blocks = md_blocks(section)
+        section = html_section(page, SECTION)
+        blocks = html_h3_blocks(section)
         block_titles = [t for t, _ in blocks]
 
         def subheadings() -> str | None:
             missing = [s for s in SUBHEADINGS if s not in block_titles]
             if missing:
-                return f"the section lacks the subheadings {missing}; it has {block_titles}"
-            html_titles = html_h3_titles(html_section(page, SECTION))
-            absent = [s for s in SUBHEADINGS if s not in html_titles]
-            if absent:
-                return f"the HTML section lacks the subheadings {absent}; it has {html_titles}"
+                return f"the HTML section lacks the subheadings {missing}; it has {block_titles}"
             return None
 
         check("the section has 'What it expects from you' and 'Phase numbers'", subheadings)
 
         def body(title: str) -> str:
-            lines = dict(blocks).get(title, [])
-            return md_visible("\n".join(lines))
+            return html_text(dict(blocks).get(title, ""))
 
         def expects() -> str | None:
             text = body(SUBHEADINGS[0])
@@ -476,23 +426,19 @@ def main() -> int:
                 return f"'{SUBHEADINGS[0]}' does not say the agent keeps going without the reader: {text[:200]!r}"
             if "read-only" not in lowered:
                 return f"'{SUBHEADINGS[0]}' does not say the site is read-only: {text[:200]!r}"
-            html_block = html_text(html_section(page, SECTION))
-            if "telling the agent" not in html_block.lower():
-                return "the HTML section does not say 'telling the agent'"
             return None
 
         check("'What it expects from you' says what to do, and to tell the agent", expects)
 
         def no_raw_tags() -> str | None:
-            # A CommonMark reader treats `<file>` as inline HTML and drops it, so
-            # the Markdown would print a shorter sentence than the HTML. Outside
-            # a code span, only the guide's own `<a id>` anchors are HTML.
-            section = "\n".join(line for _title, lines in md_sections(md) if _title == SECTION for line in lines)
-            outside = re.sub(r"`[^`]*`", "", section)
-            tags = [t for t in re.findall(r"</?[A-Za-z][^>]*>", outside) if not re.fullmatch(r'<a id="[^"]+"></a>|</?a\b[^>]*>', t)]
-            return f"the Markdown section prints raw HTML a reader drops: {tags[:4]}" if tags else None
+            # An unknown element (`<file>` typed into a sentence) is dropped by a
+            # browser, so the page would print a shorter sentence than the record
+            # holds. Outside a code span a placeholder is escaped text; every tag
+            # the section opens is one the browser knows.
+            tags = sorted({t.lower() for t in re.findall(r"</?([A-Za-z][A-Za-z0-9-]*)\b[^>]*>", section)} - KNOWN_TAGS)
+            return f"the HTML section carries tags a browser does not know: {tags[:4]}" if tags else None
 
-        check("the section's Markdown carries no raw HTML tag outside a code span", no_raw_tags)
+        check("the section's HTML carries no tag a browser would drop", no_raw_tags)
 
         def phases() -> str | None:
             text = body(SUBHEADINGS[1])
@@ -502,39 +448,33 @@ def main() -> int:
             for spec in passes:
                 if spec["pass"] not in text:
                     return f"'Phase numbers' does not name the pass {spec['pass']!r}"
-            rows = md_table_rows(dict(blocks).get(SUBHEADINGS[1], []))
-            if len(rows) != 2:
-                return f"'Phase numbers' key has {len(rows)} rows, expected 2 (onboarding and survey)"
-            html_rows = html_table_rows(html_section(page, SECTION).split("Phase numbers", 1)[-1])
+            html_rows = html_table_rows(dict(blocks).get(SUBHEADINGS[1], ""))
             if len(html_rows) != 2:
-                return f"the HTML 'Phase numbers' key has {len(html_rows)} rows, expected 2"
-            if [[md_visible(c) for c in r] for r in rows] != html_rows:
-                return "the 'Phase numbers' key reads differently in HTML and Markdown"
+                return f"the HTML 'Phase numbers' key has {len(html_rows)} rows, expected 2 (onboarding and survey)"
             return None
 
         check("'Phase numbers' is a two-row key over the pass names", phases)
 
         # -- Decisions needed ---------------------------------------------------
-        def answer_line(md_text: str, html_page: str, state: str) -> str | None:
-            if not md_text:
-                return f"docs/open-questions.md was not written ({state})"
-            head = md_text.split("\n## ", 1)[0].lower()
+        def answer_line(html_page: str, state: str) -> str | None:
+            if not html_page:
+                return f"docs/open-questions.html was not written ({state})"
+            start = html_page.find('<header class="page-head"')
+            above = re.split(r"<h2\b", html_page[start:] if start >= 0 else html_page, maxsplit=1)[0]
+            head = html_text(above).lower()
             for phrase in ANSWER_LINE_PHRASES:
                 if phrase not in head:
-                    return f"the Markdown page lacks {phrase!r} above its first section ({state})"
-            first = re.search(r"^# Decisions needed\s*$", md_text, re.M)
-            if not first:
-                return f"the Markdown page lacks its title ({state})"
-            if "tell the agent" not in html_text(html_page).lower():
-                return f"the HTML page lacks 'tell the agent' ({state})"
+                    return f"the HTML page lacks {phrase!r} above its first section ({state})"
+            title = re.search(r"<h1\b[^>]*>(.*?)</h1>", html_page, re.S)
+            if not title or html_text(title.group(1)) != "Decisions needed":
+                return f"the HTML page lacks its title ({state})"
             return None
 
         def decisions_with_question() -> str | None:
-            md_text = read(docs / "open-questions.md") or ""
             html_text_page = read(docs / "open-questions.html") or ""
-            if "tenancy" not in md_text:
+            if "tenancy" not in html_text(html_text_page):
                 return "the fixture's open question is not on the page, so the check proves nothing"
-            return answer_line(md_text, html_text_page, "a question is open")
+            return answer_line(html_text_page, "a question is open")
 
         check("Decisions needed tells the reader to tell the agent (a question open)", decisions_with_question)
 
@@ -542,24 +482,19 @@ def main() -> int:
             empty, empty_summary = make_store(tmp, "empty", ROOT, with_question=False)
             if empty_summary.get("_returncode") != 0:
                 return f"the materializer did not publish the empty fixture — {empty_summary.get('_diagnostic')}"
-            return answer_line(
-                read(empty / "docs" / "open-questions.md") or "",
-                read(empty / "docs" / "open-questions.html") or "",
-                "no question is open",
-            )
+            return answer_line(read(empty / "docs" / "open-questions.html") or "", "no question is open")
 
         check("Decisions needed tells the reader to tell the agent (none open)", decisions_empty)
 
         # -- Overview identity ------------------------------------------------
-        index_md = read(docs / "index.md") or ""
         index_html = read(docs / "index.html") or ""
 
         def identity() -> str | None:
-            if not index_md:
-                return "docs/index.md was not written"
-            if IDENTITY_FORBIDDEN_OLD in index_md:
+            if not index_html:
+                return "docs/index.html was not written"
+            if IDENTITY_FORBIDDEN_OLD in html_text(index_html):
                 return f"the overview still says {IDENTITY_FORBIDDEN_OLD!r}"
-            paragraph = identity_paragraph(index_md)
+            paragraph = html_text(identity_paragraph(index_html))
             if paragraph != IDENTITY:
                 return f"the identity paragraph is {paragraph!r}, expected Appendix C's {IDENTITY!r}"
             digits = re.findall(r"\d", paragraph)
@@ -576,11 +511,9 @@ def main() -> int:
         def identity_html() -> str | None:
             if not index_html:
                 return "docs/index.html was not written"
-            link = re.search(
-                r'<a\b[^>]*href="([^"]*how-to-read\.html)"[^>]*>\s*How to read this survey\s*</a>', index_html
-            )
-            if not link:
-                return "the HTML overview does not link 'How to read this survey' to how-to-read.html"
+            link = re.findall(r'<a\b[^>]*href="([^"]*)"[^>]*>(.*?)</a>', identity_paragraph(index_html), re.S)
+            if [(html_text(t), h) for h, t in link] != [IDENTITY_LINK]:
+                return f"the HTML overview's identity paragraph links {link!r}, not {IDENTITY_LINK!r}"
             if "An AI agent running Amanuensis read the repository" not in html_text(index_html):
                 return "the HTML overview does not carry the identity sentence"
             return None
@@ -621,12 +554,11 @@ def main() -> int:
             mutated, mutated_summary = make_store(tmp, "mutated", copy)
             if mutated_summary.get("_returncode") != 0:
                 return f"the mutated copy did not publish — {mutated_summary.get('_diagnostic')}"
-            mutated_md = read(mutated / "docs" / "how-to-read.md") or ""
-            sec = dict(md_sections(mutated_md)).get(SECTION, [])
-            rows = md_table_rows(sec)
+            mutated_page = read(mutated / "docs" / "how-to-read.html") or ""
+            rows = html_table_rows(html_section(mutated_page, SECTION))
             if not rows:
                 return "the mutated copy's guide has no pass table"
-            cells = [md_visible(c) for c in rows[0]]
+            cells = rows[0]
             if "Xdoes." not in cells[1]:
                 return f"the 'what the agent does' cell did not follow the contract: {cells[1]!r}"
             if not cells[2].startswith("Xlabel"):

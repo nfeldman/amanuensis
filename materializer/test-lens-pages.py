@@ -140,8 +140,8 @@ MATRIX_SUBGROUP = "Evidence matrices"
 MATRIX_ID = 7
 MATRIX_SYMPTOM = "rows appear twice after a restart"
 
-FILES_PAGE = "files.md"
-GAPS_PAGE = "not-yet-surveyed.md"
+FILES_PAGE = "files.html"
+GAPS_PAGE = "not-yet-surveyed.html"
 
 # The group each page belongs to, from §7.1's table. Only the pages this packet
 # is responsible for planning are listed; P9's pages are checked by P9's gate.
@@ -171,23 +171,23 @@ EXPECTED_GROUP_OF: dict[str, str] = {
 # retired." A path that stops being produced is a broken authored link and a
 # red coverage axis, so the whole set is asserted by name.
 LEGACY_PAGE_PATHS: tuple[str, ...] = (
-    "index.md",
-    "architecture.md",
-    "master-plan.md",
-    "findings.md",
-    "resolved-findings.md",
-    "concerns.md",
-    "seams.md",
-    "contradictions.md",
-    "diagnosticity.md",
-    "open-questions.md",
-    "field-notes.md",
-    "stale.md",
-    "vocabulary.md",
-    "how-to-read.md",
-    "onboarding-report.md",
-    "entry-point.md",
-    "concern-checklist.md",
+    "index.html",
+    "architecture.html",
+    "master-plan.html",
+    "findings.html",
+    "resolved-findings.html",
+    "concerns.html",
+    "seams.html",
+    "contradictions.html",
+    "diagnosticity.html",
+    "open-questions.html",
+    "field-notes.html",
+    "stale.html",
+    "vocabulary.html",
+    "how-to-read.html",
+    "onboarding-report.html",
+    "entry-point.html",
+    "concern-checklist.html",
 )
 
 # §7.3's order. Identity is the page title and the layer line; the H2 sequence
@@ -647,47 +647,108 @@ def read(path: Path) -> str | None:
         return None
 
 
-def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level."""
+_BLOCK_TAGS = frozenset(
+    {
+        *("p", "li", "div", "section", "article", "ul", "ol", "dl", "tr", "table", "br"),
+        *("h1", "h2", "h3", "h4", "h5", "h6", "header", "footer", "main", "aside", "nav"),
+        *("blockquote", "pre"),
+    }
+)
+_CELL_TAGS = frozenset({"dt", "dd", "td", "th"})
+_HEADING_RE = re.compile(r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.S)
 
-    lines = text.splitlines()
-    marker = "#" * level + " "
-    start = None
-    for index, line in enumerate(lines):
-        if line.startswith(marker) and line[len(marker):].strip() == heading:
-            start = index + 1
-            break
-    if start is None:
-        return ""
-    body: list[str] = []
-    for line in lines[start:]:
-        stripped = line.lstrip("#")
-        depth = len(line) - len(stripped)
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body)
+
+class _Visible(HTMLParser):
+    """The text a reader sees: one line per block, scripts and styles dropped."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.hidden = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("script", "style"):
+            self.hidden += 1
+        elif tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+        elif tag in _CELL_TAGS:
+            self.parts.append(" ")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("script", "style"):
+            self.hidden -= 1
+        elif tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+        elif tag in _CELL_TAGS:
+            self.parts.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        if not self.hidden:
+            self.parts.append(data)
+
+
+def visible(fragment: str) -> str:
+    """The visible text of an HTML fragment, one line per block element."""
+
+    parser = _Visible()
+    parser.feed(fragment)
+    parser.close()
+    lines = (" ".join(line.split()) for line in "".join(parser.parts).splitlines())
+    return "\n".join(line for line in lines if line)
+
+
+def article(text: str) -> str:
+    """A page's article, without the navigation, footer and scripts around it."""
+
+    # Record blocks inside a page are `article` elements too, so the page's own
+    # article is the one classed `content`, closed by the last `</article>`.
+    start, end = text.find('<article class="content'), text.rfind("</article>")
+    return text[start:end] if start != -1 and end != -1 else text
+
+
+def heading_text(inner: str) -> str:
+    return " ".join(visible(inner).split()).lstrip("\u00a7").strip()
+
+
+def section(text: str, heading: str, level: int = 2) -> str:
+    """The HTML of one section, up to the next heading of its level or above."""
+
+    text = article(text)
+    found = list(_HEADING_RE.finditer(text))
+    for index, match in enumerate(found):
+        if int(match.group(1)) != level or heading_text(match.group(2)) != heading:
+            continue
+        stop = len(text)
+        for later in found[index + 1 :]:
+            if int(later.group(1)) <= level:
+                stop = later.start()
+                break
+        return text[match.end() : stop]
+    return ""
 
 
 def headings(text: str, level: int = 2) -> list[str]:
-    marker = "#" * level + " "
     return [
-        line[len(marker):].strip() for line in text.splitlines() if line.startswith(marker)
+        heading_text(match.group(2))
+        for match in _HEADING_RE.finditer(article(text))
+        if int(match.group(1)) == level
     ]
 
 
 def table_rows(body: str) -> list[list[str]]:
-    """The data rows of the first Markdown table in `body`."""
+    """The rows of the first HTML table in `body`: the header row, then each data row.
 
+    Header cells are their text; data cells are kept as the HTML they are, so a
+    caller can read a link's target as well as its label.
+    """
+
+    table = re.search(r"<table\b.*?</table>", body, flags=re.S)
+    if table is None:
+        return []
     out: list[list[str]] = []
-    for line in body.splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("|"):
-            continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-        if all(set(cell) <= {"-", ":", " "} and cell for cell in cells):
-            continue
-        out.append(cells)
+    for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", table.group(0), flags=re.S):
+        cells = re.findall(r"<t([dh])\b[^>]*>(.*?)</t\1>", row, flags=re.S)
+        out.append([inner if kind == "d" else heading_text(inner) for kind, inner in cells])
     return out
 
 
@@ -1031,7 +1092,7 @@ def main() -> int:
                     "the seeded evidence matrix does not render under it;"
                     f" the subgroup holds {after!r}"
                 )
-            if not (docs / "diagnosticity" / f"dm-{MATRIX_ID}.md").is_file():
+            if not (docs / "diagnosticity" / f"dm-{MATRIX_ID}.html").is_file():
                 return "the per-matrix page path changed, retiring the old one"
             return None
 
@@ -1093,21 +1154,16 @@ def main() -> int:
         )
 
         def nothing_retired() -> str | None:
-            absent = [
-                path
-                for path in LEGACY_PAGE_PATHS
-                if not (docs / path).is_file()
-                or not (docs / path).with_suffix(".html").is_file()
-            ]
+            absent = [path for path in LEGACY_PAGE_PATHS if not (docs / path).is_file()]
             if absent:
                 return f"{len(absent)} previously planned page path(s) retired: {absent[:5]}"
-            subsystem_pages = sorted((docs / "subsystems").glob("*.md"))
+            subsystem_pages = sorted((docs / "subsystems").glob("*.html"))
             if len(subsystem_pages) != SUBSYSTEM_COUNT:
                 return (
                     f"{len(subsystem_pages)} subsystem page(s) produced for"
                     f" {SUBSYSTEM_COUNT} subsystems"
                 )
-            retired = summary.get("pages_retired") or []
+            retired = summary.get("html_pages_retired") or []
             if retired:
                 return f"the publish retired {retired!r}"
             return None
@@ -1115,13 +1171,12 @@ def main() -> int:
         check("no previously planned page path is retired", nothing_retired)
 
         # -- files.md --------------------------------------------------------
-        files_md = read(docs / FILES_PAGE) or ""
-        files_html = read(docs / "files.html") or ""
-        rows_of_files = table_rows(files_md)
+        files_html = read(docs / FILES_PAGE) or ""
+        rows_of_files = table_rows(article(files_html))
         body_rows = rows_of_files[1:] if rows_of_files else []
 
         def one_row_per_path() -> str | None:
-            if not files_md:
+            if not files_html:
                 return f"{FILES_PAGE} is absent from the projection"
             if not body_rows:
                 return f"{FILES_PAGE} carries no table rows"
@@ -1145,7 +1200,7 @@ def main() -> int:
                 return "the rows are not sorted by path"
             return None
 
-        check("files.md carries one row per distinct ledger path, sorted", one_row_per_path)
+        check("files.html carries one row per distinct ledger path, sorted", one_row_per_path)
 
         def row_for(path: str) -> str:
             for row in body_rows:
@@ -1162,7 +1217,7 @@ def main() -> int:
             for owner in ("Read path", "Write path"):
                 if owner not in row:
                     return f"the row for {MULTI_OWNER_DISAGREEING} does not name {owner!r}"
-            links = re.findall(r"\]\((subsystems/[^)]+)\)", row)
+            links = re.findall(r'href="(subsystems/[^"]+)"', row)
             if len(links) < 2:
                 return (
                     "the row does not link each owner to its subsystem page"
@@ -1228,16 +1283,16 @@ def main() -> int:
         check("the open-defect count counts open and awaiting verification only", open_defect_count)
 
         def anchors_do_not_collide() -> str | None:
-            if not files_md:
+            if not files_html:
                 return f"{FILES_PAGE} is absent"
             expected = {path: file_anchor(path) for path in COLLIDING_PATHS}
             if len(set(expected.values())) != 3:
                 return "the three expected anchors are not distinct"
             missing = [
-                path for path, anchor in expected.items() if f'id="{anchor}"' not in files_md
+                path for path, anchor in expected.items() if f'id="{anchor}"' not in files_html
             ]
             if missing:
-                present = re.findall(r'id="(f-[0-9a-f]+)"', files_md)
+                present = re.findall(r'id="(f-[0-9a-f]+)"', files_html)
                 return (
                     f"{len(missing)} colliding path(s) carry no f-<sha1> anchor"
                     f" ({missing}); the page carries {present[:4]}"
@@ -1259,11 +1314,11 @@ def main() -> int:
         )
 
         # -- not-yet-surveyed.md ---------------------------------------------
-        gaps_md = read(docs / GAPS_PAGE) or ""
-        gaps_sections = headings(gaps_md)
+        gaps_html = read(docs / GAPS_PAGE) or ""
+        gaps_sections = headings(gaps_html)
 
         def five_sections() -> str | None:
-            if not gaps_md:
+            if not gaps_html:
                 return f"{GAPS_PAGE} is absent from the projection"
             if gaps_sections != list(GAPS_SECTIONS):
                 return (
@@ -1272,10 +1327,10 @@ def main() -> int:
                 )
             return None
 
-        check("not-yet-surveyed.md carries §7.5's five sections in order", five_sections)
+        check("not-yet-surveyed.html carries §7.5's five sections in order", five_sections)
 
         def denominator(name: str) -> str:
-            return section(gaps_md, name)
+            return visible(section(gaps_html, name))
 
         def counted_over_tracked_paths() -> str | None:
             body = denominator(GAPS_SECTIONS[0])
@@ -1418,8 +1473,8 @@ def main() -> int:
         )
 
         # -- subsystem pages -------------------------------------------------
-        subsystem_md = {
-            sid: read(docs / "subsystems" / f"{sid.lower().replace('-', '')}-{slug}.md") or ""
+        subsystem_html = {
+            sid: read(docs / "subsystems" / f"{sid.lower().replace('-', '')}-{slug}.html") or ""
             for sid, slug in (
                 ("B-01", "read-path"),
                 ("B-02", "write-path"),
@@ -1429,7 +1484,7 @@ def main() -> int:
         }
 
         def opens_with_scope() -> str | None:
-            page = subsystem_md.get("B-01", "")
+            page = subsystem_html.get("B-01", "")
             if not page:
                 return "the B-01 subsystem page could not be read"
             order = headings(page)
@@ -1440,7 +1495,7 @@ def main() -> int:
             if "Purpose" in order:
                 return "the page carries a Purpose heading; §3.1 forbids relabelling scope"
             scope = next(s[4] for s in SUBSYSTEMS if s[0] == "B-01")
-            body = section(page, "Scope")
+            body = visible(section(page, "Scope"))
             if scope and scope not in body:
                 return "the Scope section does not carry subsystems.scope verbatim"
             return None
@@ -1457,18 +1512,18 @@ def main() -> int:
             §3.1 forbids and BP6 names.
             """
             missing = []
-            for sid, page in subsystem_md.items():
+            for sid, page in subsystem_html.items():
                 if not page:
                     return f"the {sid} subsystem page could not be read"
-                body = section(page, "Scope")
+                body = visible(section(page, "Scope"))
                 if not re.search(r"no purpose statement is recorded", body, re.IGNORECASE):
                     missing.append(sid)
             if missing:
-                shown = subsystem_md.get(missing[0], "")
+                shown = subsystem_html.get(missing[0], "")
                 return (
                     f"{len(missing)} subsystem page(s) render Scope without saying that no"
                     f" purpose statement is recorded; {missing[0]}'s section reads"
-                    f" {section(shown, 'Scope').strip()[:160]!r}"
+                    f" {visible(section(shown, 'Scope')).strip()[:160]!r}"
                 )
             return None
 
@@ -1486,12 +1541,12 @@ def main() -> int:
             newest row withdraws its purpose.
             """
             for sid in ("B-02", "B-03", "F-01"):
-                page = subsystem_md.get(sid, "")
+                page = subsystem_html.get(sid, "")
                 if not page:
                     return f"the {sid} subsystem page could not be read"
                 if "Purpose" in headings(page):
                     return f"{sid} renders a Purpose heading without an effective record"
-                if UNRECORDED_PURPOSE in page:
+                if UNRECORDED_PURPOSE in visible(article(page)):
                     return f"{sid} prints a purpose that is not its effective record"
                 if headings(page)[0] != "Scope":
                     return f"{sid} no longer opens with Scope"
@@ -1503,10 +1558,10 @@ def main() -> int:
         )
 
         def absent_scope_says_so() -> str | None:
-            page = subsystem_md.get("B-03", "")
+            page = subsystem_html.get("B-03", "")
             if not page:
                 return "the B-03 subsystem page could not be read"
-            body = section(page, "Scope")
+            body = visible(section(page, "Scope"))
             if not body.strip():
                 return "a subsystem with no recorded scope renders an empty Scope section"
             if not re.search(r"\bno\b", body, re.IGNORECASE):
@@ -1532,7 +1587,7 @@ def main() -> int:
         check("a subsystem with no recorded scope says so", absent_scope_says_so)
 
         def section_order() -> str | None:
-            for sid, page in subsystem_md.items():
+            for sid, page in subsystem_html.items():
                 if not page:
                     return f"the {sid} subsystem page could not be read"
                 order = headings(page)
@@ -1552,7 +1607,7 @@ def main() -> int:
         check("subsystem pages follow §7.3's order and end with the survey record", section_order)
 
         def survey_record_order() -> str | None:
-            page = subsystem_md.get("B-01", "")
+            page = subsystem_html.get("B-01", "")
             body = section(page, "Survey record")
             if not body:
                 return "the B-01 survey record is empty"
@@ -1568,16 +1623,17 @@ def main() -> int:
         check("the survey record keeps the ledger and concern review subordinate", survey_record_order)
 
         def defects_link_not_record() -> str | None:
-            page = subsystem_md.get("B-02", "")
+            page = subsystem_html.get("B-02", "")
             if not page:
                 return "the B-02 subsystem page could not be read"
-            body = section(page, "Known defects here")
-            if not body:
+            links = section(page, "Known defects here")
+            if not links:
                 return "B-02 carries no 'Known defects here' section"
-            if "findings.md#b02-1" not in body:
-                return "the open defect is not linked to its record on findings.md"
-            if "resolved-findings.md" not in body:
-                return "the resolved count does not link to resolved-findings.md"
+            body = visible(links)
+            if not re.search(r'href="(?:\.\./)?findings\.html#b02-1"', links):
+                return "the open defect is not linked to its record on findings.html"
+            if not re.search(r'href="(?:\.\./)?resolved-findings\.html', links):
+                return "the resolved count does not link to resolved-findings.html"
             if not re.search(r"(?<![0-9])1(?![0-9])", body):
                 return f"the resolved count is not reported; the section reads {body[:200]!r}"
             if "root cause" in body.lower() or "Root cause" in body:
@@ -1596,18 +1652,18 @@ def main() -> int:
             marker = getattr(readback, "finding_marker", None)
             if marker is None:
                 return "readback.py exposes no finding_marker"
-            for sid, page in subsystem_md.items():
+            for sid, page in subsystem_html.items():
                 for fid, *_rest in FINDINGS:
                     if marker(fid) in page:
                         return f"{sid} emits the durable marker for {fid}"
             corpus = "\n".join(
-                read(path) or "" for path in sorted(docs.rglob("*.md")) if path.is_file()
+                read(path) or "" for path in sorted(docs.rglob("*.html")) if path.is_file()
             )
             for fid, *_rest in FINDINGS:
                 if corpus.count(marker(fid)) != 1:
                     return (
                         f"{fid} carries {corpus.count(marker(fid))} markers across the"
-                        " Markdown corpus, not exactly one"
+                        " HTML corpus, not exactly one"
                     )
             return None
 
@@ -1630,7 +1686,7 @@ def main() -> int:
     if FAILURES:
         emit(
             "GATE P8 RED: the NAV_GROUPS page plan, the Files index, and"
-            f" not-yet-surveyed.md do not hold — {len(FAILURES)} assertion(s) failed;"
+            f" not-yet-surveyed.html do not hold — {len(FAILURES)} assertion(s) failed;"
             f" first: {FAILURES[0]}"
         )
         return 1

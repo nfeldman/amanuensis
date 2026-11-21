@@ -65,6 +65,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -258,11 +259,11 @@ NOT_RECORDED = "not recorded"
 SUPERSEDED_HEADING = "Superseded: this subsystem previously declared no domain vocabulary"
 DECLINED_INDEX_HEADING = "Subsystems that declared no domain vocabulary"
 
-OVERVIEW_PAGE = "index.md"
-GAPS_PAGE = "not-yet-surveyed.md"
-FINDINGS_PAGE = "findings.md"
-RESOLVED_PAGE = "resolved-findings.md"
-GLOSSARY_PAGE = "vocabulary.md"
+OVERVIEW_PAGE = "index.html"
+GAPS_PAGE = "not-yet-surveyed.html"
+FINDINGS_PAGE = "findings.html"
+RESOLVED_PAGE = "resolved-findings.html"
+GLOSSARY_PAGE = "vocabulary.html"
 COVERAGE_ROWS = (
     "Files read, of those carrying an obligation",
     "Paths in scope with no ledger row",
@@ -279,22 +280,25 @@ GAPS_SECTION_1 = "Paths with no ledger row"
 # committer, fixed dates, fixed tree — so `c4ee87e3b6ac` is the same revision
 # on every machine and these bytes are reproducible rather than local.
 # ---------------------------------------------------------------------------
-EXPECTED_SURVEY_COVERAGE = """| Metric | Value |
-|---|---|
-| Subsystems by survey depth | 1 scoping, 2 mapped |
-| Files read, of those carrying an obligation | 3 of 5 |
-| Paths in scope with no ledger row | 0 |"""
+# The HTML view presents a metric block as a description list: the label of each
+# row is a `dt`, its value the `dd` beside it. A block is therefore recorded as
+# its (label, visible value) rows, in order, and compared whole.
+EXPECTED_SURVEY_COVERAGE = (
+    ("Subsystems by survey depth", "1 scoping, 2 mapped"),
+    ("Files read, of those carrying an obligation", "3 of 5"),
+    ("Paths in scope with no ledger row", "0"),
+)
 
-EXPECTED_SOURCE_ALIGNMENT = """| Metric | Value |
-|---|---|
-| Checked at | `c4ee87e3b6ac` on `main`, 2026-09-14 00:00 UTC |
-| Repository head | `c4ee87e3b6ac` \u2014 the same revision the survey checked |
-| Upstream head | not known here |
-| Files carrying a survey obligation marked stale | 0 of 5 |
-| Scoped files exempt from that obligation, marked stale | 0 of 2 |"""
+EXPECTED_SOURCE_ALIGNMENT = (
+    ("Checked at", "c4ee87e3b6ac on main, 2026-09-14 00:00 UTC"),
+    ("Repository head", "c4ee87e3b6ac \u2014 the same revision the survey checked"),
+    ("Upstream head", "not known here"),
+    ("Files carrying a survey obligation marked stale", "0 of 5"),
+    ("Scoped files exempt from that obligation, marked stale", "0 of 2"),
+)
 
 EXPECTED_GAPS_SECTION = (
-    "**0 of 7** tracked paths are named by no `file_ledger` row in any subsystem."
+    "0 of 7 tracked paths are named by no file_ledger row in any subsystem."
     " They participate in no subsystem's scope, so nothing here has been read,"
     " excluded, or deferred."
 )
@@ -568,38 +572,85 @@ def read(path: Path) -> str | None:
         return None
 
 
+class _VisibleText(HTMLParser):
+    """The text a reader sees: tags and comments dropped, entities decoded."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+
+def plain(fragment: str) -> str:
+    """The visible text of an HTML fragment, whitespace collapsed."""
+
+    parser = _VisibleText()
+    parser.feed(fragment)
+    parser.close()
+    return " ".join("".join(parser.parts).split())
+
+
+_HEADING_RE = re.compile(r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.S)
+_PAIR_RE = re.compile(r"<dt\b[^>]*>(?P<label>.*?)</dt>\s*<dd\b[^>]*>(?P<value>.*?)</dd>", re.S)
+
+
+def article(text: str) -> str:
+    """A page's article, without the navigation, footer and scripts around it."""
+
+    # Record blocks inside the page are `article` elements too, so the page's own
+    # article is the one classed `content`, closed by the last `</article>`.
+    start, end = text.find('<article class="content'), text.rfind("</article>")
+    return text[start:end] if start != -1 and end != -1 else text
+
+
 def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level."""
+    """The HTML of one section, up to the next heading of its level or above.
 
-    lines = text.splitlines()
-    marker = "#" * level + " "
-    start = None
-    for index, line in enumerate(lines):
-        if line.startswith(marker) and line[len(marker) :].strip() == heading:
-            start = index + 1
-            break
-    if start is None:
-        return ""
-    body: list[str] = []
-    for line in lines[start:]:
-        stripped = line.lstrip("#")
-        depth = len(line) - len(stripped)
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body).strip("\n")
+    Only the page's article is searched, so the last section does not run on into
+    the footer and scripts that follow it.
+    """
 
-
-def metric_row(text: str, label: str) -> str | None:
-    """The value cell of one `| label | value |` row, or None when absent."""
-
-    for line in text.splitlines():
-        if not line.startswith("|"):
+    text = article(text)
+    headings = list(_HEADING_RE.finditer(text))
+    for index, match in enumerate(headings):
+        if int(match.group(1)) != level:
             continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) >= 2 and cells[0].strip("*` ") == label:
-            return cells[1]
+        if plain(match.group(2)).lstrip("\u00a7").strip() != heading:
+            continue
+        stop = len(text)
+        for later in headings[index + 1 :]:
+            if int(later.group(1)) <= level:
+                stop = later.start()
+                break
+        return text[match.end() : stop].strip("\n")
+    return ""
+
+
+def metric_pair(block: str, label: str) -> tuple[str, str] | None:
+    """The raw `<dt>..</dt><dd>..</dd>` row for one label, with its visible value."""
+
+    for pair in _PAIR_RE.finditer(block):
+        if plain(pair.group("label")).strip("*` ") == label:
+            return pair.group(0), plain(pair.group("value"))
     return None
+
+
+def metric_row(block: str, label: str) -> str | None:
+    """The visible value of one metric row, or None when absent."""
+
+    found = metric_pair(block, label)
+    return None if found is None else found[1]
+
+
+def metric_rows(block: str) -> tuple[tuple[str, str], ...]:
+    """Every (label, visible value) row of a metric block, in page order."""
+
+    return tuple(
+        (plain(pair.group("label")), plain(pair.group("value")))
+        for pair in _PAIR_RE.finditer(block)
+    )
 
 
 def coverage_block(docs: Path) -> str:
@@ -740,18 +791,19 @@ def main() -> int:
             body = gaps_block(unrec_docs)
             if not body:
                 return f"{GAPS_PAGE} carries no {GAPS_SECTION_1!r} section"
-            if re.search(r"\*\*\d+ of \d+\*\*", body):
+            if re.search(r"<strong>\d+ of \d+</strong>", body):
                 return (
                     "'Not yet surveyed' section 1 prints a denominator for an"
-                    f" unreconciled store: {body.splitlines()[0]!r}"
+                    f" unreconciled store: {plain(body)[:120]!r}"
                 )
-            if "not measured here" not in body:
+            text = plain(body)
+            if "not measured here" not in text:
                 return (
                     "section 1 neither counts nor routes into the gap-denominator"
-                    f" sentence: {body[:200]!r}"
+                    f" sentence: {text[:200]!r}"
                 )
-            if not names_revision(body, head):
-                return f"section 1's refusal to measure names no revision: {body[:240]!r}"
+            if not names_revision(text, head):
+                return f"section 1's refusal to measure names no revision: {text[:240]!r}"
             return None
 
         check(
@@ -785,7 +837,9 @@ def main() -> int:
         )
         full_docs = full_storage / "docs"
 
-        def byte_identical(name: str, actual: Callable[[], str], expected: str) -> str | None:
+        def byte_identical(
+            name: str, actual: Callable[[], object], expected: object
+        ) -> str | None:
             if full_error:
                 return full_error
             body = actual()
@@ -798,17 +852,21 @@ def main() -> int:
         check(
             "the overview's Survey coverage block is byte-for-byte what it renders today",
             lambda: byte_identical(
-                "Survey coverage", lambda: coverage_block(full_docs), EXPECTED_SURVEY_COVERAGE
+                "Survey coverage",
+                lambda: metric_rows(coverage_block(full_docs)),
+                EXPECTED_SURVEY_COVERAGE,
             ),
         )
         check(
             "the overview's Source alignment block is byte-for-byte what it renders today",
             lambda: byte_identical(
                 "Source alignment",
-                lambda: section(
-                    section(read(full_docs / OVERVIEW_PAGE) or "", "Where the record stands"),
-                    "Source alignment",
-                    level=3,
+                lambda: metric_rows(
+                    section(
+                        section(read(full_docs / OVERVIEW_PAGE) or "", "Where the record stands"),
+                        "Source alignment",
+                        level=3,
+                    )
                 ),
                 EXPECTED_SOURCE_ALIGNMENT,
             ),
@@ -816,7 +874,7 @@ def main() -> int:
         check(
             "'Not yet surveyed' section 1 is byte-for-byte what it renders today",
             lambda: byte_identical(
-                GAPS_SECTION_1, lambda: gaps_block(full_docs), EXPECTED_GAPS_SECTION
+                GAPS_SECTION_1, lambda: plain(gaps_block(full_docs)), EXPECTED_GAPS_SECTION
             ),
         )
 
@@ -883,11 +941,11 @@ def main() -> int:
             if part_error:
                 return part_error
             body = gaps_block(part_docs)
-            expected = f"**{len(UNLEDGERED_PATHS)} of {len(TRACKED_PATHS)}**"
+            expected = f"<strong>{len(UNLEDGERED_PATHS)} of {len(TRACKED_PATHS)}</strong>"
             if expected not in body:
                 return (
-                    f"section 1 does not count {expected} tracked paths;"
-                    f" it reads {body.splitlines()[0]!r}"
+                    f"section 1 does not count {plain(expected)} tracked paths;"
+                    f" it reads {plain(body)[:120]!r}"
                 )
             return None
 
@@ -1036,10 +1094,10 @@ def main() -> int:
         vocab_docs = vocab_storage / "docs"
 
         def subsystem_page(sid: str) -> str:
-            # Subsystem pages are slugged `b01-read-path.md`: the id without its
+            # Subsystem pages are slugged `b01-read-path.html`: the id without its
             # hyphen, then the name. Matching on the bare id finds nothing.
             needle = sid.lower().replace("-", "")
-            for path in sorted(vocab_docs.glob("subsystems/*.md")):
+            for path in sorted(vocab_docs.glob("subsystems/*.html")):
                 if path.name.lower().startswith(needle):
                     return read(path) or ""
             return ""
@@ -1047,7 +1105,7 @@ def main() -> int:
         def declined_renders() -> str | None:
             if vocab_error:
                 return vocab_error
-            body = section(subsystem_page(DECLINED_CURRENT), "Vocabulary")
+            body = plain(section(subsystem_page(DECLINED_CURRENT), "Vocabulary"))
             if not body:
                 return f"{DECLINED_CURRENT}'s page carries no Vocabulary section at all"
             missing = [
@@ -1071,8 +1129,8 @@ def main() -> int:
         def declined_is_not_not_recorded() -> str | None:
             if vocab_error:
                 return vocab_error
-            declined = section(subsystem_page(DECLINED_CURRENT), "Vocabulary")
-            silent = section(subsystem_page(VOCAB_NOT_RECORDED), "Vocabulary")
+            declined = plain(section(subsystem_page(DECLINED_CURRENT), "Vocabulary"))
+            silent = plain(section(subsystem_page(VOCAB_NOT_RECORDED), "Vocabulary"))
             if not silent:
                 return (
                     f"{VOCAB_NOT_RECORDED} has neither a term nor a declination and its"
@@ -1098,7 +1156,7 @@ def main() -> int:
             if vocab_error:
                 return vocab_error
             page = subsystem_page(DECLINED_SUPERSEDED)
-            body = section(page, "Vocabulary")
+            body = plain(section(page, "Vocabulary"))
             if not body:
                 return f"{DECLINED_SUPERSEDED}'s page carries no Vocabulary section"
             if VOCAB_TERM not in body:
@@ -1125,7 +1183,7 @@ def main() -> int:
         def glossary_lists_declined() -> str | None:
             if vocab_error:
                 return vocab_error
-            body = read(vocab_docs / GLOSSARY_PAGE) or ""
+            body = plain(article(read(vocab_docs / GLOSSARY_PAGE) or ""))
             if not body:
                 return f"{GLOSSARY_PAGE} is absent from the projection"
             if DECLINED_INDEX_HEADING not in body:
@@ -1220,13 +1278,15 @@ def main() -> int:
                 return part_error
             page = part_docs / OVERVIEW_PAGE
             original = read(page) or ""
-            cell = metric_row(coverage_block(part_docs), label)
-            if cell is None:
+            found = metric_pair(coverage_block(part_docs), label)
+            if found is None:
                 return f"the overview carries no {label!r} row at all"
-            row_line = f"| {label} | {cell} |"
-            if row_line not in original:
-                return f"the {label!r} row is not written as {row_line!r}"
-            page.write_text(original.replace(row_line, f"| {label} | {replacement} |"))
+            row_html, cell = found
+            if row_html not in original:
+                return f"the {label!r} row is not written as {row_html!r}"
+            page.write_text(
+                original.replace(row_html, f"<dt>{label}</dt><dd>{replacement}</dd>")
+            )
             try:
                 summary = publish(part_storage, "--readback-only")
                 if axes(summary)["coverage"]:
@@ -1297,11 +1357,11 @@ def main() -> int:
                     return error
                 needle = DECLINED_SUPERSEDED.lower().replace("-", "")
                 page = ""
-                for path in sorted(docs.glob("subsystems/*.md")):
+                for path in sorted(docs.glob("subsystems/*.html")):
                     if path.name.lower().startswith(needle):
                         page = read(path) or ""
                         break
-                body = section(page, "Vocabulary")
+                body = plain(section(page, "Vocabulary"))
                 if not body:
                     return f"{DECLINED_SUPERSEDED}'s page carries no Vocabulary section"
                 if SUPERSEDED_HEADING in body:
@@ -1334,7 +1394,7 @@ def main() -> int:
             return f"<!-- amanuensis:carried:{token} -->"
 
         def section_on(page: str) -> str:
-            return section(read(carried_docs / page) or "", CARRIED_HEADING)
+            return plain(section(read(carried_docs / page) or "", CARRIED_HEADING))
 
         def carried_on_unresolved() -> str | None:
             if carried_error:
@@ -1346,7 +1406,7 @@ def main() -> int:
                 for part, label in (
                     (archived_id, "its archived id"),
                     (CARRIED_STORE, "the store it came from"),
-                    (severity, "its severity"),
+                    (severity.capitalize(), "its severity"),
                     (symptom, "its symptom"),
                     (UNDECIDED_WORD, f"the word {UNDECIDED_WORD!r}"),
                 ):
@@ -1375,10 +1435,14 @@ def main() -> int:
                 for part, label in (
                     (archived_id, "its archived id"),
                     (CARRIED_STORE, "the store it came from"),
-                    (severity, "its severity"),
+                    (severity.capitalize(), "its severity"),
                     (symptom, "its symptom"),
                     (str(outcome), "its outcome"),
                 ):
+                    # The page words an outcome as a status label, so `ruled-out`
+                    # reads `Ruled out`; either spelling names the outcome.
+                    if label == "its outcome" and part.replace("-", " ").capitalize() in body:
+                        continue
                     if part not in body:
                         return f"the record carried as {archived_id} renders without {label}"
             return None
@@ -1391,7 +1455,7 @@ def main() -> int:
         def carried_in_both_formats() -> str | None:
             if carried_error:
                 return carried_error
-            for suffix, label in ((".md", "markdown"), (".html", "html")):
+            for suffix, label in ((".html", "html"),):
                 text = corpus(carried_docs, suffix)
                 for archived_id, *_rest in CARRIED:
                     count = text.count(marker(archived_id))
@@ -1487,8 +1551,8 @@ def main() -> int:
             lambda: fault(
                 RESOLVED_PAGE,
                 lambda body: body.replace(
-                    f"]({FINDINGS_PAGE}#{CARRIED_SUCCESSOR.lower()})",
-                    "](carried-missing.md#gone)",
+                    f'href="{FINDINGS_PAGE}#{CARRIED_SUCCESSOR.lower()}"',
+                    'href="carried-missing.html#gone"',
                     1,
                 ),
                 "coverage",
@@ -1517,18 +1581,11 @@ def main() -> int:
                 return f"the unreconciled fixture would not republish cleanly: {again}"
             target = unrec_docs / OVERVIEW_PAGE
             body = read(target) or ""
-            row_line = next(
-                (
-                    line
-                    for line in body.splitlines()
-                    if line.startswith("|") and COVERAGE_ROWS[1] in line
-                ),
-                None,
-            )
-            if row_line is None:
+            found = metric_pair(coverage_block(unrec_docs), COVERAGE_ROWS[1])
+            if found is None or found[0] not in body:
                 return f"the overview carries no {COVERAGE_ROWS[1]!r} row to forge"
-            forged = f"| {COVERAGE_ROWS[1]} | 0 |"
-            target.write_text(body.replace(row_line, forged, 1))
+            forged = f"<dt>{COVERAGE_ROWS[1]}</dt><dd>0</dd>"
+            target.write_text(body.replace(found[0], forged, 1))
             summary = publish(unrec_storage, "--readback-only")
             if axes(summary)["coverage"]:
                 return (

@@ -15,8 +15,8 @@ Turns red when:
   - an empty `file_ledger` produces anything but *"Freshness not measured by
     this projection"*;
   - `readback.ledger_stale_marker` is absent, or an obligation-bearing stale
-    ledger row does not carry exactly one record on `stale.md` in the Markdown
-    corpus and exactly one in the HTML corpus;
+    ledger row does not carry exactly one record on `stale.html` and exactly
+    one in the HTML corpus;
   - a row exempt from the survey obligation is given a stale record anyway;
   - a `candidate` row is reported as stale knowledge rather than under its own
     heading with its own denominator (C60), or an obligation-bearing stale row
@@ -48,6 +48,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -114,7 +115,6 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # expects (§11.2, §11.3, §6.1, §7.1).
 # ---------------------------------------------------------------------------
 PROJECT_NAME = "LedgerFixture"
-STALE_PAGE = "stale.md"
 STALE_HTML = "stale.html"
 NOT_MEASURED = "Freshness not measured by this projection"
 FALSE_GREEN = "No recorded stale entries"
@@ -302,8 +302,71 @@ def corpus(docs: Path, suffix: str) -> str:
     )
 
 
+class _Outline(HTMLParser):
+    """The visible words of a page's `<article>`, one block per line, with each
+    heading on a line of its own led by one `#` per level."""
+
+    _BREAKS = frozenset(
+        (
+            "p", "li", "tr", "div", "section", "pre", "ul", "ol", "table", "br",
+            "blockquote", "caption", "dt", "dd", "article", "details", "summary",
+        )
+    )
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.lines: list[str] = []
+        self._buf: list[str] = []
+        self._in_article = False
+        self._skip = 0
+        self._heading = 0
+
+    def _flush(self) -> None:
+        words = " ".join("".join(self._buf).split())
+        self._buf = []
+        if words:
+            self.lines.append(("#" * self._heading + " " if self._heading else "") + words)
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        classes = (dict(attrs).get("class") or "").split()
+        if tag == "article":
+            self._in_article = True
+        elif tag in ("script", "style") or (tag == "a" and "heading-anchor" in classes):
+            self._skip += 1
+        elif self._in_article and tag in self._BREAKS:
+            self._flush()
+        elif self._in_article and re.fullmatch(r"h[1-6]", tag):
+            self._flush()
+            self._heading = int(tag[1])
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "article":
+            self._flush()
+            self._in_article = False
+        elif tag in ("script", "style", "a") and self._skip:
+            self._skip -= 1
+        elif self._in_article and re.fullmatch(r"h[1-6]", tag):
+            self._flush()
+            self._heading = 0
+        elif self._in_article and tag in self._BREAKS:
+            self._flush()
+        elif self._in_article and tag in ("td", "th"):
+            self._buf.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        if self._in_article and not self._skip:
+            self._buf.append(data)
+
+
+def outline(page: str | None) -> str:
+    parser = _Outline()
+    parser.feed(page or "")
+    parser.close()
+    return "\n".join(parser.lines)
+
+
 def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level."""
+    """The lines of one section of an outline, up to the next heading of its level."""
 
     lines = text.splitlines()
     marker = "#" * level + " "
@@ -468,9 +531,10 @@ def main() -> int:
         storage, seed_error = seeded(root, "ledger")
         summary = publish(storage, "--clean-publish") if seed_error is None else {}
         docs = storage / "docs"
-        index_md = read(docs / "index.md") or ""
-        stale_md = read(docs / STALE_PAGE) or ""
-        md_corpus = corpus(docs, ".md")
+        index_html = read(docs / "index.html") or ""
+        index_text = outline(index_html)
+        stale_html = read(docs / STALE_HTML) or ""
+        stale_text = outline(stale_html)
         html_corpus = corpus(docs, ".html")
         dashboard = (
             dashboard_counts(storage, obligation_sql) if seed_error is None else "not seeded"
@@ -487,7 +551,7 @@ def main() -> int:
                     f" warnings {warnings[:2]}, diagnostic"
                     f" {scrub(summary.get('_diagnostic'))[:160]}"
                 )
-            if not index_md:
+            if not index_html:
                 return "the publish produced no overview to inspect"
             return None
 
@@ -559,7 +623,7 @@ def main() -> int:
         check("every page's strip carries the same reading", strip_is_shell_wide)
 
         def no_false_green() -> str | None:
-            if FALSE_GREEN in html_corpus or FALSE_GREEN in md_corpus:
+            if FALSE_GREEN in html_corpus:
                 return f"a published page still claims {FALSE_GREEN!r}"
             return None
 
@@ -568,7 +632,7 @@ def main() -> int:
         def overview_reads_the_ledger() -> str | None:
             if isinstance(dashboard, str):
                 return "get_dashboard's quantities are unavailable, so parity cannot run"
-            body = section(index_md, "Where the record stands")
+            body = section(index_text, "Where the record stands")
             if not body:
                 return "the overview has no 'Where the record stands' section"
             obligation_fact = f"{dashboard['stale_entries']} of {shape['obligation']}"
@@ -601,27 +665,23 @@ def main() -> int:
         check("the strip does not report the entries count", entries_count_is_unpublished)
 
         def stale_page_exists() -> str | None:
-            if not stale_md:
-                return f"{STALE_PAGE} was not published"
-            if not read(docs / STALE_HTML):
-                return f"{STALE_HTML} was not published beside its Markdown companion"
+            if not stale_html:
+                return f"{STALE_HTML} was not published"
+            if not headings(stale_text):
+                return f"{STALE_HTML} was published without a section to read"
             return None
 
-        check("stale.md is published in both formats", stale_page_exists)
+        check("stale.html is published and reads as sections", stale_page_exists)
 
         def one_record_per_row() -> str | None:
             if ledger_mark is None:
                 return "ledger_stale_marker is unavailable, so its records cannot be counted"
-            if not stale_md:
-                return f"{STALE_PAGE} was not published"
-            stale_html = read(docs / STALE_HTML) or ""
+            if not stale_html:
+                return f"{STALE_HTML} was not published"
             wrong: list[str] = []
             for subsystem, path in OBLIGATION_STALE:
                 marker = ledger_mark(subsystem, path)
-                for label, page, whole in (
-                    ("markdown", stale_md, md_corpus),
-                    ("html", stale_html, html_corpus),
-                ):
+                for label, page, whole in (("html", stale_html, html_corpus),):
                     if page.count(marker) != 1 or whole.count(marker) != 1:
                         wrong.append(
                             f"{subsystem}/{path} has {page.count(marker)} record(s) on the"
@@ -632,7 +692,7 @@ def main() -> int:
             return None
 
         check(
-            "every obligation-bearing stale row has exactly one record per format",
+            "every obligation-bearing stale row has exactly one record",
             one_record_per_row,
         )
 
@@ -649,12 +709,12 @@ def main() -> int:
                     f" {len(markers)} distinct marker(s); the record is keyed on the"
                     " path alone, so one owner's row loses its record"
                 )
-            if not stale_md:
-                return f"{STALE_PAGE} was not published"
+            if not stale_html:
+                return f"{STALE_HTML} was not published"
             for owner in owners:
-                if f"[{owner}]" not in stale_md and owner not in stale_md:
+                if owner not in stale_text:
                     return (
-                        f"{STALE_PAGE} does not name {owner} as an owner of"
+                        f"{STALE_HTML} does not name {owner} as an owner of"
                         f" {MULTI_OWNER_PATH}"
                     )
             return None
@@ -667,8 +727,7 @@ def main() -> int:
             recorded = [
                 f"{subsystem}/{path}"
                 for subsystem, path in EXEMPT_STALE
-                if ledger_mark(subsystem, path) in md_corpus
-                or ledger_mark(subsystem, path) in html_corpus
+                if ledger_mark(subsystem, path) in html_corpus
             ]
             if recorded:
                 return (
@@ -680,14 +739,14 @@ def main() -> int:
         check("rows exempt from the obligation get no stale record", exempt_rows_have_no_record)
 
         def candidates_have_their_own_heading() -> str | None:
-            if not stale_md:
-                return f"{STALE_PAGE} was not published"
-            if CANDIDATE_HEADING not in headings(stale_md):
+            if not stale_html:
+                return f"{STALE_HTML} was not published"
+            if CANDIDATE_HEADING not in headings(stale_text):
                 return (
-                    f"{STALE_PAGE} has no {CANDIDATE_HEADING!r} heading; its sections are"
-                    f" {headings(stale_md)}"
+                    f"{STALE_HTML} has no {CANDIDATE_HEADING!r} heading; its sections are"
+                    f" {headings(stale_text)}"
                 )
-            body = section(stale_md, CANDIDATE_HEADING)
+            body = section(stale_text, CANDIDATE_HEADING)
             candidate_total = sum(1 for _s, _p, c, _x in LEDGER if c == "candidate")
             denominator = f"{len(CANDIDATE_STALE)} of {candidate_total}"
             if denominator not in body:
@@ -703,14 +762,14 @@ def main() -> int:
         check("drifted candidates are reported under their own heading", candidates_have_their_own_heading)
 
         def candidates_are_not_stale_knowledge() -> str | None:
-            if not stale_md:
-                return f"{STALE_PAGE} was not published"
-            sections = headings(stale_md)
+            if not stale_html:
+                return f"{STALE_HTML} was not published"
+            sections = headings(stale_text)
             if CANDIDATE_HEADING not in sections:
-                return f"{STALE_PAGE} has no drifted-candidate section to separate"
+                return f"{STALE_HTML} has no drifted-candidate section to separate"
             others = [h for h in sections if h != CANDIDATE_HEADING]
             for heading in others:
-                body = section(stale_md, heading)
+                body = section(stale_text, heading)
                 for _subsystem, path in CANDIDATE_STALE:
                     if path in body:
                         return (
@@ -718,7 +777,7 @@ def main() -> int:
                             " which reads it as stale knowledge"
                         )
             examined_section = next(
-                (h for h in others if any(path in section(stale_md, h) for _s, path in EXAMINED_STALE)),
+                (h for h in others if any(path in section(stale_text, h) for _s, path in EXAMINED_STALE)),
                 None,
             )
             if examined_section is None:
@@ -728,10 +787,10 @@ def main() -> int:
         check("an unread file is never reported as stale knowledge", candidates_are_not_stale_knowledge)
 
         def every_row_lands_in_one_section() -> str | None:
-            if not stale_md:
-                return f"{STALE_PAGE} was not published"
-            sections = headings(stale_md)
-            bodies = {heading: section(stale_md, heading) for heading in sections}
+            if not stale_html:
+                return f"{STALE_HTML} was not published"
+            sections = headings(stale_text)
+            bodies = {heading: section(stale_text, heading) for heading in sections}
             for subsystem, path in OBLIGATION_STALE:
                 homes = [h for h, body in bodies.items() if path in body]
                 if len(homes) != 1:
@@ -744,18 +803,15 @@ def main() -> int:
         check("every obligation-bearing stale row lands in exactly one section", every_row_lands_in_one_section)
 
         def deleting_a_record_turns_state_red() -> str | None:
-            if ledger_mark is None or not stale_md:
+            if ledger_mark is None or not stale_html:
                 return "there is no ledger stale record to delete"
             subsystem, path = OBLIGATION_STALE[0]
             marker = ledger_mark(subsystem, path)
-            page = docs / STALE_PAGE
+            page = docs / STALE_HTML
             body = page.read_text()
-            line = next(
-                (candidate for candidate in body.splitlines() if marker in candidate), None
-            )
-            if line is None:
-                return f"{STALE_PAGE} carries no record for {subsystem}/{path} to delete"
-            page.write_text(body.replace(line + "\n", "", 1))
+            if marker not in body:
+                return f"{STALE_HTML} carries no record for {subsystem}/{path} to delete"
+            page.write_text(body.replace(marker, "", 1))
             try:
                 verified = publish(storage, "--readback-only")
                 axes = verified.get("axes") or {}
@@ -785,7 +841,7 @@ def main() -> int:
             carrying = [
                 str(p.relative_to(docs))
                 for p in sorted(docs.rglob("*"))
-                if p.suffix in (".md", ".html") and "amanuensis:stale-entry:" in (read(p) or "")
+                if p.suffix == ".html" and "amanuensis:stale-entry:" in (read(p) or "")
             ]
             if carrying:
                 return (
@@ -833,7 +889,7 @@ def main() -> int:
         def empty_overview_is_honest() -> str | None:
             if empty_error:
                 return empty_error
-            body = section(read(empty_docs / "index.md") or "", "Where the record stands")
+            body = section(outline(read(empty_docs / "index.html")), "Where the record stands")
             if not body:
                 return "the empty-ledger overview has no 'Where the record stands' section"
             if "not measured by this projection" not in body:
@@ -893,7 +949,7 @@ def main() -> int:
                     "the all-exempt fixture is not all-exempt:"
                     f" {shape['scoped']} scoped, {shape['obligation']} obligation-bearing"
                 )
-            body = section(read(all_exempt_docs / "index.md") or "", "Where the record stands")
+            body = section(outline(read(all_exempt_docs / "index.html")), "Where the record stands")
             if not body:
                 return "the all-exempt overview has no 'Where the record stands' section"
             if NOT_MEASURED.lower() in body.lower() or "not measured by this projection" in body:

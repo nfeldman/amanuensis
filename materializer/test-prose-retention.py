@@ -12,22 +12,22 @@ go stale.
 Turns red when:
 
   - a seeded field that must render reaches no generated page;
-  - `findings.business_context` is not labelled **Why it matters**, is not a
-    column of the open-findings table after the symptom and before the root
-    cause, is not empty-celled for a finding with none, is missing from the
+  - `findings.business_context` is not labelled "Why it matters", is not a
+    field of the open-finding record after the symptom and before the root
+    cause, is printed for a finding with none, is missing from the
     resolved-findings record or from either page's HTML record, or is present
     in a record whose value is empty;
-  - either page's HTML record does not put **Why it matters** after the symptom
+  - either page's HTML record does not put "Why it matters" after the symptom
     and before the root cause;
   - a field holding two paragraphs splits a table row or leaves its record, on
     any page;
   - a scoped vocabulary term prints its gloss and not its expansion;
-  - `subsystems.notes` is not under `## Scope` as `### Survey note` with the
-    fixed label sentence, whether or not the subsystem has claims or an
+  - `subsystems.notes` is not under the Scope section as a "Survey note" subsection
+    with the fixed label sentence, whether or not the subsystem has claims or an
     artifact, or appears more than once on its page;
   - the allowlist is not exactly the eight seam prose columns, or lists one
     whose sentinel appears (`explanations.body` left it at EX11);
-  - the findings header literal in `test-materializer.py` is not the new one;
+  - `test-materializer.py` does not assert the "Why it matters" field of the findings record;
   - the gate is not listed in `.github/workflows/test.yml`.
 
 False green it cannot exclude: a field can render somewhere a reader will not
@@ -41,6 +41,7 @@ deliverable reports as an assertion failure and not as a crash.
 
 from __future__ import annotations
 
+import html as htmllib
 import re
 import shutil
 import sqlite3
@@ -174,11 +175,11 @@ EXPECTED_ALLOWLIST = frozenset(
     }
 )
 
-NEW_HEADER = "| ID | Status | Symptom | Why it matters | Root cause | Ref SHA |"
+# The open-finding record presents these fields in this order (the old record had no Why it matters).
+NEW_COLUMNS = ["ID", "Status", "Symptom", "Why it matters", "Root cause", "Revision"]
+OLD_COLUMNS = ["ID", "Status", "Symptom", "Root cause", "Revision"]
 OLD_HEADER = "| ID | Status | Symptom | Root cause | Ref SHA |"
-SURVEY_NOTE_LABEL = (
-    "*A note the survey left on the subsystem record; not bound to a revision.*"
-)
+SURVEY_NOTE_LABEL = "A note the survey left on the subsystem record; not bound to a revision."
 
 # Subsystems. B-01 carries claims and an artifact, B-02 carries neither, so the
 # note is asserted in both states. B-03 has no notes at all.
@@ -375,26 +376,98 @@ def read(path: Path) -> str:
         return ""
 
 
-def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level or higher."""
+BLOCK_TAGS = r"p|li|ul|ol|div|h[1-6]|section|article|header|footer|tr|td|th|br|dl|dt|dd|blockquote|table|caption"
+HEADING = re.compile(r"(?is)<h([1-6])\b[^>]*>(.*?)</h\1>")
 
-    marker = "#" * level + " "
-    body: list[str] = []
-    inside = False
-    for line in text.splitlines():
-        if not inside:
-            inside = line.startswith(marker) and line[len(marker):].strip() == heading
-            continue
-        depth = len(line) - len(line.lstrip("#"))
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body)
+
+def visible(markup: str) -> str:
+    """The reader's text of an HTML fragment: scripts, styles and heading anchors dropped, block
+    boundaries read as spaces, inline tags as nothing, entities decoded, whitespace collapsed."""
+
+    body = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", markup)
+    body = re.sub(r'(?is)<a class="heading-anchor"[^>]*>.*?</a>', "", body)
+    body = re.sub(rf"(?i)</?(?:{BLOCK_TAGS})\b[^>]*>", " ", body)
+    body = re.sub(r"<[^>]+>", "", body)
+    return " ".join(htmllib.unescape(body).split())
+
+
+def article_of(markup: str) -> str:
+    """The report an HTML page carries: its content article, without the navigation around it."""
+
+    start = markup.find('<article class="content')
+    end = markup.rfind("</article>")
+    return markup[start:end] if 0 <= start < end else ""
+
+
+def headings(markup: str, level: int | None = None) -> list[str]:
+    """The text of the report's headings, of one level or of every level."""
+
+    body = article_of(markup) or markup
+    return [visible(m.group(2)) for m in HEADING.finditer(body) if level is None or int(m.group(1)) == level]
+
+
+def section(markup: str, heading: str, level: int = 2) -> str:
+    """The HTML of one section: from the heading of this text and level to the next heading of
+    its level or higher. It reads a page's report, or a fragment of one."""
+
+    body = article_of(markup) or markup
+    found = -1
+    for match in HEADING.finditer(body):
+        depth = int(match.group(1))
+        if found < 0:
+            if depth == level and visible(match.group(2)) == heading:
+                found = match.end()
+        elif depth <= level:
+            return body[found : match.start()]
+    return body[found:] if found >= 0 else ""
 
 
 def subsystem_page(docs: Path, sid: str) -> str:
-    pages = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.md"))
+    pages = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))
     return read(pages[0]) if pages else ""
+
+
+def open_record(markup: str, fid: str) -> str:
+    """The open-finding record of one finding on findings.html."""
+
+    match = re.search(
+        rf'<article class="record record-finding"[^>]*data-record-label="finding {fid}".*?</article>',
+        markup,
+        re.S,
+    )
+    return match.group(0) if match else ""
+
+
+def record_columns(record: str) -> tuple[list[str], list[str]]:
+    """The columns an open-finding record presents, in reading order, and their values: its ID,
+    status, symptom (the lede, then any "Observed behavior" the symptom's later paragraphs
+    became), each other labelled field, and its revision."""
+
+    ident = re.search(r'(?is)<h4 class="record-primary"[^>]*>(.*?)</h4>', record)
+    facts = {
+        visible(term): visible(value)
+        for term, value in re.findall(r'(?is)<div class="record-fact[^"]*"><dt>(.*?)</dt><dd>(.*?)</dd></div>', record)
+    }
+    lede = re.search(r'(?is)<p class="record-lede">(.*?)</p>', record)
+    fields = [
+        (visible(label), visible(copy))
+        for label, copy in re.findall(
+            r'(?is)<div class="record-field"><p class="record-label">(.*?)</p><div class="record-copy">(.*?)</div></div>',
+            record,
+        )
+    ]
+    symptom = " ".join([visible(lede.group(1)) if lede else ""] + [v for k, v in fields if k == "Observed behavior"])
+    rest = [(k, v) for k, v in fields if k != "Observed behavior"]
+    columns = ["ID", "Status", "Symptom", *(k for k, _ in rest), "Revision"]
+    cells = [visible(ident.group(1)) if ident else "", facts.get("Status", ""), symptom, *(v for _, v in rest), facts.get("Revision", "")]
+    return columns, cells
+
+
+def resolved_block(markup: str, fid: str) -> str:
+    """The resolved-finding record of one finding: from its anchor to the end of its list."""
+
+    match = re.search(rf'<span id="{fid.lower()}" class="record-anchor"></span>.*?</ul>', markup, re.S)
+    return match.group(0) if match else ""
 
 
 def main() -> int:
@@ -411,10 +484,10 @@ def main() -> int:
             seed_error = f"the fixture could not be seeded — {scrub(exc)}"
         outcome = publish(storage) if seed_error is None else {}
         docs = storage / "docs"
-        markdown = {
-            str(p.relative_to(docs)): read(p) for p in sorted(docs.rglob("*.md"))
+        pages = {
+            str(p.relative_to(docs)): read(p) for p in sorted(docs.rglob("*.html"))
         }
-        corpus = "\n".join(markdown.values())
+        corpus = "\n".join(visible(markup) for markup in pages.values())
 
         # -- 1. the first assertion: every field reaches a page ----------------
         def reaches_a_page() -> str | None:
@@ -462,51 +535,49 @@ def main() -> int:
         check("the two-sided control turns red on a stale entry", two_sided_has_teeth)
 
         # -- 3. findings: Why it matters ---------------------------------------
-        findings_md = markdown.get("findings.md", "")
-        resolved_md = markdown.get("resolved-findings.md", "")
+        findings_html = pages.get("findings.html", "")
+        resolved_html = pages.get("resolved-findings.html", "")
 
         def open_table() -> str | None:
-            lines = findings_md.splitlines()
-            if NEW_HEADER not in lines:
-                return f"findings.md has no table header `{NEW_HEADER}`"
-            if OLD_HEADER in lines:
-                return "findings.md still carries the old five-column header"
-            rows = {}
-            for line in lines:
-                match = re.match(r"\| <a id=\"([a-z0-9-]+)\"></a>\*\*", line)
-                if match:
-                    rows[match.group(1).upper()] = [c.strip() for c in line.strip("|").split("|")]
+            columns: dict[str, list[str]] = {}
+            cells: dict[str, list[str]] = {}
             for fid in ("B01-1", NO_CONTEXT_FINDING):
-                if fid not in rows:
-                    return f"findings.md has no row for {fid}"
-                if len(rows[fid]) != 6:
-                    return f"the row for {fid} has {len(rows[fid])} cells, not 6"
-            with_context = rows["B01-1"]
+                record = open_record(findings_html, fid)
+                if not record:
+                    return f"findings.html has no record for {fid}"
+                columns[fid], cells[fid] = record_columns(record)
+            if columns["B01-1"] != NEW_COLUMNS:
+                return f"findings.html's record for B01-1 presents {columns['B01-1']}, not {NEW_COLUMNS}"
+            if columns["B01-1"] == OLD_COLUMNS:
+                return "findings.html still carries the old five-column record"
+            with_context = cells["B01-1"]
+            if len(with_context) != 6:
+                return f"the record for B01-1 has {len(with_context)} cells, not 6"
             if sentinel("findings.business_context") not in with_context[3]:
                 return "the Why it matters cell of B01-1 is not the fourth column"
             if sentinel("findings.symptom") not in with_context[2]:
                 return "the symptom is not the third column"
             if sentinel("findings.root_cause") not in with_context[4]:
                 return "the root cause is not the fifth column"
-            if rows[NO_CONTEXT_FINDING][3] != "":
+            if columns[NO_CONTEXT_FINDING] != OLD_COLUMNS:
                 return (
-                    "the Why it matters cell of a finding with no business context is"
-                    f" {rows[NO_CONTEXT_FINDING][3]!r}, not empty"
+                    "the record of a finding with no business context presents"
+                    f" {columns[NO_CONTEXT_FINDING]}, not {OLD_COLUMNS}: its Why it matters is not left out"
                 )
             return None
 
         check("open findings carry Why it matters between symptom and root cause", open_table)
 
         def resolved_record() -> str | None:
-            record = section(resolved_md, "**B01-3** · `MEDIUM`", level=4)
+            record = visible(resolved_block(resolved_html, "B01-3"))
             if not record:
-                return "resolved-findings.md has no record for B01-3"
-            label = "**Why it matters**"
+                return "resolved-findings.html has no record for B01-3"
+            label = "Why it matters"
             if label not in record:
                 return "the resolved record has no Why it matters field"
             if sentinel("findings.business_context resolved") not in record:
                 return "the resolved record does not carry the business context"
-            at = {k: record.find(k) for k in (sentinel("findings.symptom"), label, "**Root cause**")}
+            at = {k: record.find(k) for k in (sentinel("findings.symptom"), label, "Root cause")}
             symptom_at, why_at, root_at = at.values()
             if not (0 <= symptom_at < why_at < root_at):
                 return "Why it matters is not after the symptom and before the root cause"
@@ -530,7 +601,7 @@ def main() -> int:
             result = publish(alt)
             if result.get("returncode") != 0:
                 return f"the second store did not publish — {result.get('diagnostic')}"
-            record = section(read(alt / "docs" / "resolved-findings.md"), "**B01-3** · `MEDIUM`", level=4)
+            record = visible(resolved_block(read(alt / "docs" / "resolved-findings.html"), "B01-3"))
             if not record:
                 return "the second store's resolved page has no record for B01-3"
             if "Why it matters" in record:
@@ -648,32 +719,23 @@ def main() -> int:
         def open_multiline() -> str | None:
             if isinstance(multiline_docs, str):
                 return multiline_docs
-            rows = [
-                line
-                for line in read(multiline_docs / "findings.md").splitlines()
-                if line.startswith('| <a id="b01-1"></a>')
-            ]
-            if len(rows) != 1:
-                return f"findings.md has {len(rows)} rows for B01-1"
-            cells = [c.strip() for c in rows[0].strip().strip("|").split("|")]
-            if not rows[0].rstrip().endswith("|") or len(cells) != 6:
+            html = read(multiline_docs / "findings.html")
+            records = len(re.findall(r'data-record-label="finding B01-1"', html))
+            if records != 1:
+                return f"findings.html has {records} records for B01-1"
+            record = open_record(html, "B01-1")
+            if not record:
+                return "findings.html has no record for B01-1"
+            columns, cells = record_columns(record)
+            if columns != NEW_COLUMNS or len(cells) != 6:
                 return (
-                    "a two-paragraph field split the row for B01-1:"
-                    f" {len(cells)} cells on its first line"
+                    "a two-paragraph field split the record for B01-1:"
+                    f" it presents {columns} with {len(cells)} cells"
                 )
             for at, column in ((2, "symptom"), (3, "business_context"), (4, "root_cause")):
                 first, second = multiline(column)
                 if first not in cells[at] or second not in cells[at]:
                     return f"the {column} cell of B01-1 does not carry both paragraphs"
-            html = read(multiline_docs / "findings.html")
-            match = re.search(
-                r'<article class="record record-finding"[^>]*data-record-label="finding B01-1".*?</article>',
-                html,
-                re.S,
-            )
-            if not match:
-                return "findings.html has no record for B01-1"
-            record = match.group(0)
             outside = re.sub(r"<[^>]+>", " ", html.replace(record, ""))
             for column in ("symptom", "business_context", "root_cause"):
                 for paragraph in multiline(column):
@@ -690,14 +752,12 @@ def main() -> int:
         def resolved_multiline() -> str | None:
             if isinstance(multiline_docs, str):
                 return multiline_docs
-            record = section(
-                read(multiline_docs / "resolved-findings.md"), "**B01-3** · `MEDIUM`", level=4
-            )
+            record = resolved_block(read(multiline_docs / "resolved-findings.html"), "B01-3")
             if not record:
-                return "resolved-findings.md has no record for B01-3"
-            lines = record.splitlines()
+                return "resolved-findings.html has no record for B01-3"
+            lines = [visible(item) for item in re.findall(r"(?is)<li\b[^>]*>(.*?)</li>", record)]
             for label, column in (("Why it matters", "business_context"), ("Root cause", "root_cause")):
-                item = next((ln for ln in lines if ln.startswith(f"- **{label}** — ")), "")
+                item = next((ln for ln in lines if ln.startswith(f"{label} — ")), "")
                 first, second = multiline(column)
                 if first not in item or second not in item:
                     return f"a two-paragraph {column} left the {label} item of B01-3"
@@ -708,36 +768,33 @@ def main() -> int:
         def tables_hold_rows() -> str | None:
             if isinstance(multiline_docs, str):
                 return multiline_docs
-            for path in sorted(multiline_docs.rglob("*.md")):
-                fence = False
-                for line in read(path).splitlines():
-                    if line.lstrip().startswith("```"):
-                        fence = not fence
-                    if not fence and line.startswith("|") and not line.rstrip().endswith("|"):
-                        return f"{path.name} has a table row a line break split: {line[:60]}"
+            for path in sorted(multiline_docs.rglob("*.html")):
+                for table in re.findall(r"(?is)<table\b.*?</table>", read(path)):
+                    widths = {len(re.findall(r"(?is)<t[dh]\b", row)) for row in re.findall(r"(?is)<tr\b.*?</tr>", table)}
+                    if len(widths) > 1:
+                        return f"{path.name} has a table row a line break split: rows of {sorted(widths)} cells"
+                    for cell in re.findall(r"(?is)<td\b.*?</td>", table):
+                        if TAIL in visible(cell) and "SENTINEL" not in visible(cell):
+                            return f"{path.name} has a table cell holding {TAIL!r} apart from its field: {visible(cell)[:60]}"
             return None
 
         check("a two-paragraph field splits no table row on any page", tables_hold_rows)
 
         # -- 4. the vocabulary page renders a scoped expansion ----------------
         def scoped_expansion() -> str | None:
-            vocab = markdown.get("vocabulary.md", "")
+            vocab = pages.get("vocabulary.html", "")
             # The renderer links the subsystem id, so the heading is matched by
             # its leading words and the id inside it.
             scoped_heading = next(
-                (
-                    line[3:].strip()
-                    for line in vocab.splitlines()
-                    if line.startswith("## Scoped to ") and "B-01" in line
-                ),
+                (h for h in headings(vocab, 2) if h.startswith("Scoped to ") and "B-01" in h),
                 "",
             )
-            scoped = section(vocab, scoped_heading) if scoped_heading else ""
+            scoped = visible(section(vocab, scoped_heading)) if scoped_heading else ""
             if sentinel("vocabulary.expansion.scoped") not in scoped:
                 return "the scoped term's expansion is not under its subsystem heading"
             if sentinel("vocabulary.gloss") not in scoped:
                 return "the scoped term's gloss is not under its subsystem heading"
-            glob = section(vocab, "page frame", level=3)
+            glob = visible(section(vocab, "page frame", level=3))
             if sentinel("vocabulary.expansion.global") not in glob:
                 return "the codebase-wide term lost its expansion"
             return None
@@ -752,17 +809,15 @@ def main() -> int:
                     return f"no page for {sid}"
                 scope = section(page, "Scope")
                 note = section(scope, "Survey note", level=3)
-                if SURVEY_NOTE_LABEL not in note:
-                    return "### Survey note is not under ## Scope with the fixed label sentence"
-                if sentinel("subsystems.notes") not in note:
-                    return "the notes are not under ### Survey note"
-                if page.count(sentinel("subsystems.notes")) != 1:
-                    return (
-                        f"the notes appear {page.count(sentinel('subsystems.notes'))} times"
-                        " on the page, not once"
-                    )
-                if page.count("### Survey note") != 1:
-                    return "### Survey note does not appear exactly once"
+                if f"<em>{SURVEY_NOTE_LABEL}</em>" not in note:
+                    return "the Survey note is not under Scope with the fixed label sentence, in italics"
+                if sentinel("subsystems.notes") not in visible(note):
+                    return "the notes are not under the Survey note heading"
+                seen = visible(article_of(page)).count(sentinel("subsystems.notes"))
+                if seen != 1:
+                    return f"the notes appear {seen} times on the page, not once"
+                if headings(page).count("Survey note") != 1:
+                    return "the Survey note heading does not appear exactly once"
                 return None
 
             return run
@@ -771,7 +826,7 @@ def main() -> int:
         check("B-02 (no claims, no artifact) shows its survey note once", survey_note("B-02"))
 
         def no_note_when_empty() -> str | None:
-            if "Survey note" in subsystem_page(docs, "B-03"):
+            if "Survey note" in visible(article_of(subsystem_page(docs, "B-03"))):
                 return "a subsystem with no notes prints a Survey note"
             return None
 
@@ -796,12 +851,12 @@ def main() -> int:
             if done.get("returncode") != 0:
                 return f"the materializer failed — {done.get('diagnostic')}"
             text = subsystem_page(nested / "docs", "B-03")
-            outline = [ln[3:].strip() for ln in text.splitlines() if ln.startswith("## ")]
+            outline = headings(text, 2)
             for heading in ("Note heading", "Note title"):
                 if heading in outline:
                     return f"the survey note opened a new section: {heading!r}"
-                if heading not in section(section(text, "Scope"), "Survey note", level=3):
-                    return f"{heading!r} is not under ### Survey note"
+                if heading not in visible(section(section(text, "Scope"), "Survey note", level=3)):
+                    return f"{heading!r} is not under the Survey note heading"
             return None
 
         check("a survey note cannot open a section on the page", note_cannot_open_a_section)
@@ -817,7 +872,7 @@ def main() -> int:
 
         def fallback_removed() -> str | None:
             page = subsystem_page(docs, "B-02")
-            structure = section(page, "Structure")
+            structure = visible(section(page, "Structure"))
             if sentinel("subsystems.notes") in structure:
                 return "the old no-claims fallback still prints the notes under Structure"
             return None
@@ -827,13 +882,14 @@ def main() -> int:
         # -- 6. the old header literal is replaced in the existing test --------
         def header_literal() -> str | None:
             text = read(MATERIALIZER_TEST)
-            if f'"{NEW_HEADER}" in findings' not in text:
-                return "test-materializer.py does not assert the new full header"
+            asserted = [ln for ln in text.splitlines() if re.match(r"\s*assert\b", ln) and "Why it matters" in ln]
+            if not asserted:
+                return "test-materializer.py does not assert the Why it matters field of the findings record"
             if f'"{OLD_HEADER}" in findings' in text:
                 return "test-materializer.py still asserts the old header"
             return None
 
-        check("test-materializer.py asserts the full new header", header_literal)
+        check("test-materializer.py asserts the Why it matters field of the findings record", header_literal)
     finally:
         shutil.rmtree(root, ignore_errors=True)
 

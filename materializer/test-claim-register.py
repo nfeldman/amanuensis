@@ -7,12 +7,12 @@ Seeds a store whose subsystem B-01 carries claims keyed `<sid>/recoverability/�
 whose key is outside B-01's namespace that is reached through its evidence, and
 whose evidence covers a ranged row, an unranged row, a `contradicts` row, a
 `qualifies` row and no row at all. It materializes the store and reads the
-subsystem page in Markdown and in HTML.
+subsystem page in HTML.
 
 Turns red when:
 
   - a claim's statement is not the first text of a list item, or its record is
-    not one nested list item four spaces deeper, or a claim has a heading of its
+    not one nested list item, or a claim has a heading of its
     own;
   - a record's coordinates differ from `claim key · subject · epistemic kind
     label · asserted at · evidence:` as §2.2 fixes them;
@@ -41,7 +41,6 @@ deliverable reports as an assertion failure and not as a crash.
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import sqlite3
 import subprocess
@@ -261,38 +260,9 @@ def read(path: Path) -> str:
         return ""
 
 
-def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level or higher."""
-
-    marker = "#" * level + " "
-    body: list[str] = []
-    inside = False
-    for line in text.splitlines():
-        if not inside:
-            inside = line.startswith(marker) and line[len(marker):].strip() == heading
-            continue
-        depth = len(line) - len(line.lstrip("#"))
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body)
-
-
 def subsystem_page(docs: Path, sid: str, suffix: str) -> str:
     pages = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.{suffix}"))
     return read(pages[0]) if pages else ""
-
-
-def groups(structure: str) -> list[tuple[str, list[str]]]:
-    """`###` headings under Structure and the lines under each, in page order."""
-
-    out: list[tuple[str, list[str]]] = []
-    for line in structure.splitlines():
-        if line.startswith("### "):
-            out.append((line[4:].strip(), []))
-        elif out:
-            out[-1][1].append(line)
-    return out
 
 
 def evidence_text(claim_id: str) -> str:
@@ -307,10 +277,12 @@ def evidence_text(claim_id: str) -> str:
 
 
 def record_line(claim_id: str, labels: dict[str, str]) -> str:
+    """The record's visible text; code spans are `<code>` elements, so no backticks."""
+
     key, subject, _statement, kind, sha, _rows = CLAIMS[claim_id]
     return (
-        f"    - `{key}` · subject `{subject}` · {labels[kind]} · asserted at `{sha[:12]}`"
-        f" · {evidence_text(claim_id)}"
+        f"{key} · subject {subject} · {labels[kind]} · asserted at {sha[:12]}"
+        f" · {evidence_text(claim_id).replace('`', '')}"
     )
 
 
@@ -318,8 +290,9 @@ def record_line(claim_id: str, labels: dict[str, str]) -> str:
 # A tiny element tree, so the HTML assertions are about structure.
 # ---------------------------------------------------------------------------
 class Node:
-    def __init__(self, tag: str, parent: Node | None) -> None:
+    def __init__(self, tag: str, parent: Node | None, attrs: dict[str, str | None] | None = None) -> None:
         self.tag = tag
+        self.attrs = attrs or {}
         self.parent = parent
         self.children: list[Node | str] = []
 
@@ -346,7 +319,7 @@ class TreeBuilder(HTMLParser):
         self.cursor = self.root
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        node = Node(tag, self.cursor)
+        node = Node(tag, self.cursor, dict(attrs))
         self.cursor.children.append(node)
         if tag not in _VOID:
             self.cursor = node
@@ -366,6 +339,40 @@ def parse_html(text: str) -> Node:
     builder = TreeBuilder()
     builder.feed(text)
     return builder.root
+
+
+def structure_groups(page: str) -> tuple[bool, list[tuple[str, list[Node]]]]:
+    """The Structure section of a rendered page: `<h3>` headings with the top-level
+    `<li>` claims under each, in page order. The flag says the section exists."""
+
+    tree = parse_html(page)
+    section = next(
+        (n for n in tree.walk() if n.tag == "section" and "section-structure" in (n.attrs.get("class") or "")),
+        None,
+    )
+    if section is None:
+        return False, []
+    out: list[tuple[str, list[Node]]] = []
+    for child in section.children:
+        if not isinstance(child, Node):
+            continue
+        if child.tag == "h3":
+            out.append((child.own_text().strip(), []))
+        elif child.tag == "ul" and out:
+            out[-1][1].extend(c for c in child.children if isinstance(c, Node) and c.tag == "li")
+    return True, out
+
+
+def nested_records(item: Node) -> list[Node]:
+    """The `<li>` records nested directly under a claim's `<li>`."""
+
+    return [
+        li
+        for ul in item.children
+        if isinstance(ul, Node) and ul.tag == "ul"
+        for li in ul.children
+        if isinstance(li, Node) and li.tag == "li"
+    ]
 
 
 def main() -> int:
@@ -389,10 +396,9 @@ def main() -> int:
             seed_error = f"the fixture could not be seeded — {scrub(exc)}"
         outcome = publish(storage) if seed_error is None else {}
         docs = storage / "docs"
-        page_md = subsystem_page(docs, "B-01", "md")
         page_html = subsystem_page(docs, "B-01", "html")
-        structure = section(page_md, "Structure")
-        claim_groups = groups(structure)
+        has_structure, claim_groups = structure_groups(page_html)
+        structure_items = [li for _heading, items in claim_groups for li in items]
 
         def published() -> str | None:
             if seed_error:
@@ -401,7 +407,7 @@ def main() -> int:
                 return label_error
             if outcome.get("returncode") != 0:
                 return f"the materializer failed — {outcome.get('diagnostic')}"
-            if not structure:
+            if not has_structure:
                 return "the B-01 page has no Structure section"
             return None
 
@@ -409,19 +415,18 @@ def main() -> int:
         def statement_leads() -> str | None:
             if (why := published()):
                 return why
-            lines = structure.splitlines()
             for claim_id, (key, _s, statement, *_rest) in CLAIMS.items():
-                if claim_id in ("c5", "c6"):
+                if claim_id == "c6":
                     continue
-                item = f"- {statement}"
-                if item not in lines:
-                    return f"{RED_EXPECT}: `{key}` has no list item `- <statement>`"
-                at = lines.index(item)
-                following = lines[at + 1] if at + 1 < len(lines) else ""
-                if not following.startswith("    - `"):
-                    return f"{RED_EXPECT}: the record of `{key}` is not one nested item"
-                if page_md.index(statement) > page_md.index(f"`{key}`"):
+                own = [li for li in structure_items if li.own_text().strip() == statement]
+                if not own:
+                    return f"{RED_EXPECT}: `{key}` has no list item `<li>{statement}`"
+                item = own[0]
+                lead = item.children[0] if item.children else ""
+                if not isinstance(lead, str) or lead.strip() != statement:
                     return f"{RED_EXPECT}: `{key}` precedes its statement"
+                if len(nested_records(item)) != 1:
+                    return f"{RED_EXPECT}: the record of `{key}` is not one nested item"
             return None
 
         check("each claim's statement leads its record", statement_leads)
@@ -430,19 +435,18 @@ def main() -> int:
         def coordinates() -> str | None:
             if (why := published()):
                 return why
-            lines = structure.splitlines()
             for claim_id, (key, _s, statement, *_rest) in CLAIMS.items():
                 if claim_id == "c6":
                     continue
-                item = f"- {statement}"
-                if item not in lines:
+                own = [li for li in structure_items if li.own_text().strip() == statement]
+                if not own:
                     return f"`{key}` has no list item"
-                at = lines.index(item)
-                got = lines[at + 1] if at + 1 < len(lines) else ""
+                records = nested_records(own[0])
+                got = records[0].text() if records else ""
                 want = record_line(claim_id, labels)
                 if got != want:
                     return f"the record of `{key}` is `{got}`, not `{want}`"
-                if len(lines[at + 1 :]) > 1 and lines[at + 2].startswith("    "):
+                if len(records) > 1:
                     return f"the record of `{key}` is more than one nested item"
             return None
 
@@ -452,11 +456,11 @@ def main() -> int:
         def no_claim_heading() -> str | None:
             if (why := published()):
                 return why
-            for line in page_md.splitlines():
-                if line.startswith("#") and any(
-                    c[0] in line or c[2] in line for c in CLAIMS.values()
-                ):
-                    return f"a claim has a heading: {line[:80]}"
+            for node in parse_html(page_html).walk():
+                if node.tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+                    line = node.text()
+                    if any(c[0] in line or c[2] in line for c in CLAIMS.values()):
+                        return f"a claim has a heading: {line[:80]}"
             return None
 
         check("no claim has a heading of its own", no_claim_heading)
@@ -470,17 +474,17 @@ def main() -> int:
             if headings != want:
                 return f"the groups are {headings}, not {want}"
             for heading, claim_ids in EXPECTED_B01:
-                body = "\n".join(dict(claim_groups)[heading])
+                items = dict(claim_groups)[heading]
                 found = [
                     cid
                     for cid, c in CLAIMS.items()
-                    if cid != "c6" and f"- {c[2]}" in body.splitlines()
+                    if cid != "c6" and any(li.own_text().strip() == c[2] for li in items)
                 ]
                 wanted = list(claim_ids)
                 if sorted(found) != sorted(wanted):
                     return f"under `{heading}` are {sorted(found)}, not {sorted(wanted)}"
                 if heading == "Recoverability":
-                    keys = re.findall(r"^    - `([^`]+)`", body, flags=re.M)
+                    keys = [r.text().split(" · ")[0] for li in items for r in nested_records(li)]
                     if keys != sorted(keys):
                         return f"claims under `{heading}` are not in key order: {keys}"
             return None
@@ -490,14 +494,15 @@ def main() -> int:
         def other_claims_only_outside() -> str | None:
             if (why := published()):
                 return why
-            body = "\n".join(dict(claim_groups).get("Other claims", []))
+            others = dict(claim_groups).get("Other claims", [])
+            body = "\n".join(li.text() for li in others)
             if CLAIMS["c5"][2] not in body:
                 return "the claim keyed outside the namespace is not under Other claims"
             inside = [c[0] for c in CLAIMS.values() if c[0].startswith("B-01/") and c[0] in body]
             if inside:
                 return f"Other claims holds claims inside the namespace: {inside}"
-            sibling = section(subsystem_page(docs, "B-03", "md"), "Structure")
-            headings = [g[0] for g in groups(sibling)]
+            _has, sibling = structure_groups(subsystem_page(docs, "B-03", "html"))
+            headings = [g[0] for g in sibling]
             if "Other claims" in headings:
                 return "a subsystem with only in-namespace claims prints Other claims"
             if "Flow steps" not in headings:
@@ -521,10 +526,15 @@ def main() -> int:
             }
             for label, (claim_id, text) in cases.items():
                 line = next(
-                    (ln for ln in structure.splitlines() if ln.startswith(f"    - `{CLAIMS[claim_id][0]}`")),
+                    (
+                        r.text()
+                        for li in structure_items
+                        for r in nested_records(li)
+                        if r.text().startswith(f"{CLAIMS[claim_id][0]} · ")
+                    ),
                     "",
                 )
-                if not line.endswith(text):
+                if not line.endswith(text.replace("`", "")):
                     return f"{label}: `{line}` does not end with `{text}`"
             return None
 

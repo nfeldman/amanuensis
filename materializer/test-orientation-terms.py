@@ -5,23 +5,23 @@
 Turns red when, on a store this gate seeds and publishes:
 
   - a published page that some `reader_terms` entry names in its `pages` (an
-    exact path, or a `subsystems/*.md` / `diagnosticity/*.md` family glob) lacks
-    a "Terms on this page:" line in its Markdown view or in its HTML view;
-  - a published page that no entry names has the line in either view;
+    exact path, or a `subsystems/*` / `diagnosticity/*` family glob) lacks a
+    "Terms on this page:" line in its HTML page head;
+  - a published page that no entry names has the line;
   - the line's links are not exactly the entries naming the page, in contract
     order, with the term as the link text;
   - a page prints a term as a label (a heading, a bold field label such as
-    `**Layer**:`, a table header cell or a row's first cell; whole word,
-    plural allowed, longest term first) that its terms line omits: read from
-    the page, not from the contract's `pages`, so an incomplete mapping such
-    as subsystem pages without Layer, or the overview without Survey depth, is
-    red;
+    `<strong>Layer</strong>:`, a table header cell, a definition term, a
+    record label, or a row's first cell; whole word, plural allowed, longest
+    term first) that its terms line omits: read from the page, not from the
+    contract's `pages`, so an incomplete mapping such as subsystem pages
+    without Layer, or the overview without Survey depth, is red;
   - the line is not directly under the page's hint and "Use it when" sentence
-    (Markdown: the paragraph after it; HTML: after the `page-use-when`
-    paragraph, inside the page head);
+    (after the `page-use-when` paragraph, inside the page head);
+  - the line carries text besides its links and their separators;
   - a link's anchor does not exist as an `id` in the guide's HTML, or its path
     does not reach the guide's published file from the page's own directory (a
-    subsystem page needs the `../`), in either view;
+    subsystem page needs the `../`);
   - the HTML prints the line without links a reader can follow with scripts
     disabled, or prints it twice (a head line left in the body);
   - the gate does not run in CI.
@@ -44,6 +44,7 @@ captured and never echoed, and every message is scrubbed.
 
 from __future__ import annotations
 
+import html as htmllib
 import json
 import posixpath
 import re
@@ -185,83 +186,67 @@ def read(path: Path) -> str | None:
         return None
 
 
-LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-
-
 def terms_for(page: str, terms: list[dict[str, Any]]) -> list[str]:
-    """The terms whose `pages` name this page, in contract order."""
+    """The terms whose `pages` name this page (an HTML page id), in contract order.
+
+    The contract names pages by their page id; the id's stem is the published
+    page's stem, and a `family/*` glob names every page one level under it."""
 
     out: list[str] = []
     for entry in terms:
         for pattern in entry.get("pages") or []:
-            if pattern == page or (
-                pattern.endswith("/*.md")
-                and page.startswith(pattern[:-4])
-                and page.count("/") == pattern.count("/")
-            ):
+            if "*" in pattern:
+                match = page.startswith(pattern.split("*")[0]) and page.count("/") == pattern.count("/")
+            else:
+                match = page == pattern.rsplit(".", 1)[0] + ".html"
+            if match:
                 out.append(str(entry["term"]))
                 break
     return out
 
 
-def labelled_terms(text: str, names: list[str]) -> dict[str, str]:
-    """Terms a page prints as a label, read from its Markdown, not from the contract.
+def html_cell(fragment: str) -> str:
+    return " ".join(htmllib.unescape(re.sub(r"<[^>]+>", "", fragment)).split())
 
-    A label is a heading, a bold field label (`**Layer**:`), a table header
-    cell, or a row's first cell. A term counts when its name is a whole word or
-    phrase there, plural allowed, longest name first, so "Survey depth" is not
-    also "Survey". Maps each term to the label that printed it.
+
+def labelled_terms(text: str, names: list[str]) -> dict[str, str]:
+    """Terms a page prints as a label, read from its HTML, not from the contract.
+
+    A label is a heading, a bold field label (`<strong>Layer</strong>:`), a
+    table header cell, a definition term, a record label, or a table row's
+    first cell, in the page head or the article. A term counts when its name is
+    a whole word or phrase there, plural allowed, longest name first, so
+    "Survey depth" is not also "Survey". Maps each term to the label that
+    printed it.
     """
 
+    head = re.search(r'<header class="page-head">(.*?)</header>', text, re.S)
+    article = re.search(r"<article\b.*?</article>", text, re.S)
+    body = (head.group(1) if head else "") + (article.group(0) if article else "")
     ordered = sorted(names, key=len, reverse=True)
-    lines = text.splitlines()
-    separator = re.compile(r"^\|\s*:?-{3,}")
+    cells = [html_cell(m).lstrip("§").strip() for m in re.findall(r"<h[1-6]\b[^>]*>(.*?)</h[1-6]>", body, re.S)]
+    cells += [html_cell(m) for m in re.findall(r"<strong>(.*?)</strong>\s*:", body, re.S)]
+    cells += [html_cell(m) for m in re.findall(r"<th\b[^>]*>(.*?)</th>", body, re.S)]
+    cells += [html_cell(m) for m in re.findall(r"<dt\b[^>]*>(.*?)</dt>", body, re.S)]
+    cells += [html_cell(m) for m in re.findall(r'<p class="record-label">(.*?)</p>', body, re.S)]
+    for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", body, re.S):
+        first = re.search(r"<td\b[^>]*>(.*?)</td>", row, re.S)
+        if first:
+            cells.append(html_cell(first.group(1)))
     found: dict[str, str] = {}
-    for i, line in enumerate(lines):
-        if line.startswith(LINE_LABEL) or line.startswith(f"*{LINE_LABEL}"):
-            continue
-        cells = re.findall(r"\*\*([^*]+)\*\*\s*:", line)
-        if re.match(r"#{1,6}\s", line):
-            cells.append(line.lstrip("#").strip())
-        if line.startswith("|") and not separator.match(line):
-            row = [c.strip() for c in line.strip().strip("|").split("|")]
-            header = i + 1 < len(lines) and bool(separator.match(lines[i + 1]))
-            cells += row if header else row[:1]
-        for cell in cells:
-            rest = LINK.sub(lambda m: m.group(1), cell)
-            for name in ordered:
-                pattern = re.compile(r"(?<![\w-])" + re.escape(name) + r"(?:s|es)?(?![\w-])", re.I)
-                if pattern.search(rest):
-                    found.setdefault(name, cell)
-                    rest = pattern.sub(" ", rest)
+    for cell in cells:
+        rest = cell
+        for name in ordered:
+            pattern = re.compile(r"(?<![\w-])" + re.escape(name) + r"(?:s|es)?(?![\w-])", re.I)
+            if pattern.search(rest):
+                found.setdefault(name, cell)
+                rest = pattern.sub(" ", rest)
     return found
 
 
 def relative(from_page: str, to: str) -> str:
     base = posixpath.dirname(from_page) or "."
     return posixpath.relpath(to, base)
-
-
-def md_head_paragraphs(text: str) -> list[str]:
-    """The paragraphs after the H1 up to the next heading or the snapshot."""
-
-    lines = text.split("\n")
-    first = next((i for i, line in enumerate(lines) if line.strip()), None)
-    if first is None or not lines[first].startswith("# "):
-        return []
-    paragraphs: list[str] = []
-    current: list[str] = []
-    for line in lines[first + 1 :]:
-        if line.startswith("#"):
-            break
-        if line.strip():
-            current.append(line)
-        elif current:
-            paragraphs.append(" ".join(current))
-            current = []
-    if current:
-        paragraphs.append(" ".join(current))
-    return paragraphs
 
 
 def html_head(text: str) -> str:
@@ -307,10 +292,7 @@ def main() -> int:
             emit(f"  FAIL fixture: could not seed a store — {scrub(repr(exc))}")
         summary: dict[str, Any] = publish(storage) if seeded else {}
         docs = storage / "docs"
-        pages = sorted(
-            p.relative_to(docs).as_posix()
-            for p in docs.rglob("*.md")
-        ) if docs.is_dir() else []
+        pages = sorted(p.relative_to(docs).as_posix() for p in docs.rglob("*.html")) if docs.is_dir() else []
         guide_html = read(docs / f"{GUIDE}.html") or ""
         guide_ids = set(re.findall(r'\bid="([^"]+)"', guide_html))
 
@@ -318,7 +300,7 @@ def main() -> int:
             if not summary or summary.get("_returncode") != 0 or summary.get("ok") is False:
                 return f"the materializer did not publish the fixture — {summary.get('_diagnostic', summary)}"
             if not pages:
-                return "no Markdown page was written"
+                return "no HTML page was written"
             if not guide_html:
                 return "docs/how-to-read.html was not written"
             if not terms:
@@ -334,9 +316,9 @@ def main() -> int:
                 return "the fixture has no subsystem page that names terms"
             if not any(p.startswith("diagnosticity/") for p in with_terms):
                 return "the fixture has no evidence-table page that names terms"
-            if "index.md" not in with_terms:
-                return "index.md names no term"
-            if GUIDE + ".md" not in without:
+            if "index.html" not in with_terms:
+                return "index.html names no term"
+            if GUIDE + ".html" not in without:
                 return "the guide itself should carry no terms line"
             if len(without) < 2:
                 return "the fixture has no page without terms to test omission on"
@@ -353,48 +335,19 @@ def main() -> int:
 
         check("the guide has an anchor per term", anchors_exist)
 
-        def check_links(page: str, view: str, links: list[tuple[str, str]], want: list[str]) -> str | None:
+        def check_links(page: str, links: list[tuple[str, str]], want: list[str]) -> str | None:
             if [text for text, _ in links] != want:
-                return f"{page} ({view}) links {[text for text, _ in links]}, expected {want}"
-            ext = ".md" if view == "Markdown" else ".html"
+                return f"{page} links {[text for text, _ in links]}, expected {want}"
             for text, href in links:
                 path, _, fragment = href.partition("#")
                 target = posixpath.normpath(posixpath.join(posixpath.dirname(page), path))
-                if target != GUIDE + ext:
-                    return f"{page} ({view}): the link for {text!r} goes to {href!r}, not the guide"
+                if target != GUIDE + ".html":
+                    return f"{page}: the link for {text!r} goes to {href!r}, not the guide"
                 if fragment != f"term-{slug(text)}":
-                    return f"{page} ({view}): the link for {text!r} points at #{fragment}"
+                    return f"{page}: the link for {text!r} points at #{fragment}"
                 if fragment not in guide_ids:
-                    return f"{page} ({view}): #{fragment} is not an id in the guide's HTML"
+                    return f"{page}: #{fragment} is not an id in the guide's HTML"
             return None
-
-        def markdown_view() -> str | None:
-            for page in pages:
-                want = terms_for(page, terms)
-                text = read(docs / page) or ""
-                paragraphs = md_head_paragraphs(text)
-                lines = [p for p in paragraphs if p.startswith(LINE_LABEL)]
-                if not want:
-                    if LINE_LABEL in text:
-                        return f"{page} has the terms line and names no term"
-                    continue
-                if len(lines) != 1:
-                    return f"{page} (Markdown) has {len(lines)} terms lines, expected 1"
-                line = lines[0]
-                position = paragraphs.index(line)
-                if position == 0 or not paragraphs[position - 1].startswith("*"):
-                    return f"{page} (Markdown): the terms line is not directly under the hint and use-when line"
-                if not paragraphs[position - 1].rstrip().endswith("*") or "Use it when" not in paragraphs[position - 1]:
-                    return f"{page} (Markdown): the paragraph above the terms line is not the use-when line"
-                links = LINK.findall(line)
-                if not only_separators(LINK.sub("", line).replace(LINE_LABEL, "")):
-                    return f"{page} (Markdown): the terms line carries text besides links: {line!r}"
-                reason = check_links(page, "Markdown", links, want)
-                if reason:
-                    return reason
-            return None
-
-        check("every page that names terms prints the line in Markdown, and no other does", markdown_view)
 
         def labels_are_listed() -> str | None:
             # Independent of the contract's `pages`: a term a page prints as a
@@ -403,7 +356,7 @@ def main() -> int:
             names = [str(t["term"]) for t in terms]
             missing = []
             for page in pages:
-                if page == f"{GUIDE}.md":
+                if page == f"{GUIDE}.html":
                     continue
                 listed = set(terms_for(page, terms))
                 for term, label in labelled_terms(read(docs / page) or "", names).items():
@@ -414,9 +367,8 @@ def main() -> int:
         check("every term a page prints as a label is on its terms line", labels_are_listed)
 
         def html_view() -> str | None:
-            for page in pages:
-                want = terms_for(page, terms)
-                html_page = page[: -len(".md")] + ".html"
+            for html_page in pages:
+                want = terms_for(html_page, terms)
                 text = read(docs / html_page)
                 if text is None:
                     return f"{html_page} was not written"
@@ -437,6 +389,23 @@ def main() -> int:
                     return f"{html_page} has no use-when line to sit under"
                 if head[use_when.end() : paragraph.start()].strip():
                     return f"{html_page}: the terms line is not directly under the use-when line"
+                links = [
+                    (re.sub(r"<[^>]+>", "", t).strip(), h)
+                    for h, t in re.findall(r'<a\b[^>]*\bhref="([^"]+)"[^>]*>(.*?)</a>', paragraph.group(0), re.S)
+                ]
+                reason = check_links(html_page, links, want)
+                if reason:
+                    return reason
+            return None
+
+        def line_is_reachable() -> str | None:
+            for html_page in pages:
+                if not terms_for(html_page, terms):
+                    continue
+                head = html_head(read(docs / html_page) or "")
+                paragraph = re.search(r"<p\b[^>]*>\s*" + re.escape(LINE_LABEL) + r".*?</p>", head, re.S)
+                if not paragraph:
+                    return f"{html_page} has no terms line"
                 opening = re.match(r"<p\b[^>]*>", paragraph.group(0))
                 if opening and hides_from_readers(opening.group(0)):
                     return f"{html_page}: the terms line is hidden from readers: {opening.group(0)!r}"
@@ -445,16 +414,25 @@ def main() -> int:
                         return f"{html_page}: a terms link is hidden from readers: {tag!r}"
                     if re.search(r"\baria-label(ledby)?\s*=", tag):
                         return f"{html_page}: a terms link overrides its accessible name: {tag!r}"
-                links = [
-                    (re.sub(r"<[^>]+>", "", t).strip(), h)
-                    for h, t in re.findall(r'<a\b[^>]*\bhref="([^"]+)"[^>]*>(.*?)</a>', paragraph.group(0), re.S)
-                ]
-                reason = check_links(html_page, "HTML", links, want)
-                if reason:
-                    return reason
+            return None
+
+        def line_is_links_only() -> str | None:
+            for html_page in pages:
+                if not terms_for(html_page, terms):
+                    continue
+                head = html_head(read(docs / html_page) or "")
+                paragraph = re.search(r"<p\b[^>]*>\s*" + re.escape(LINE_LABEL) + r".*?</p>", head, re.S)
+                if not paragraph:
+                    return f"{html_page} has no terms line"
+                rest = re.sub(r"<a\b[^>]*>.*?</a>", "", paragraph.group(0), flags=re.S)
+                rest = htmllib.unescape(re.sub(r"<[^>]+>", "", rest)).replace(LINE_LABEL, "")
+                if not only_separators(rest):
+                    return f"{html_page}: the terms line carries text besides links: {paragraph.group(0)!r}"
             return None
 
         check("every page that names terms prints the line in HTML, and no other does", html_view)
+        check("no terms line or link is hidden from readers or renamed", line_is_reachable)
+        check("the terms line carries nothing but links and their separators", line_is_links_only)
         check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
 
         def runs_in_ci() -> str | None:

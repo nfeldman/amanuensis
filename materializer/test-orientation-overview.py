@@ -4,14 +4,13 @@
 
 Turns red when:
 
-  - the overview (index.md or index.html) has no "The four lenses" section, or
-    the section has other than one route per lens;
+  - the overview (index.html) has no "The four lenses" section, or the section
+    has other than one route per lens;
   - the Method route's visible text does not read "How to read this survey: what
-    each page is for, the terms it uses, and how a survey works", in Markdown or
-    in HTML;
+    each page is for, the terms it uses, and how a survey works";
   - the Method route's link text is not "How to read this survey", or the link
-    does not point at the guide (how-to-read.md / how-to-read.html), or the
-    guide it points at is not published;
+    does not point at the guide (how-to-read.html), or the guide it points at is
+    not published;
   - the old Method wording ("every recorded state, what it authorizes, and what
     it cannot justify") is still on the overview;
   - anything else on the overview moved: the Codebase, Unresolved and History
@@ -202,56 +201,8 @@ def read(path: Path) -> str | None:
 # ---------------------------------------------------------------------------
 # Readers
 # ---------------------------------------------------------------------------
-LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-
-
 def squash(text: str) -> str:
     return " ".join(text.split())
-
-
-def md_section(text: str, title: str) -> str:
-    lines: list[str] | None = None
-    for line in text.splitlines():
-        if line.startswith("## "):
-            if lines is not None:
-                break
-            if line[3:].strip() == title:
-                lines = []
-        elif lines is not None:
-            lines.append(line)
-    return "\n".join(lines or [])
-
-
-def md_h2_titles(text: str) -> list[str]:
-    return [line[3:].strip() for line in text.splitlines() if line.startswith("## ")]
-
-
-def md_visible(text: str) -> str:
-    text = LINK.sub(r"\1", text)
-    return re.sub(
-        r"\*\*(.+?)\*\*|\*(.+?)\*|_(.+?)_|`([^`]*)`",
-        lambda m: m.group(1) or m.group(2) or m.group(3) or m.group(4) or "",
-        text,
-    )
-
-
-def md_route_list(section: str) -> list[tuple[str, str]]:
-    """(lens, the raw markdown of its bullet) per bullet, in order, duplicates kept."""
-
-    out: list[tuple[str, str]] = []
-    for line in section.splitlines():
-        m = re.match(r"^\s*[-*]\s+\*\*([^*]+)\*\*(.*)$", line)
-        if m:
-            out.append((m.group(1), m.group(2)))
-        elif out and line.strip():
-            out[-1] = (out[-1][0], out[-1][1] + " " + line.strip())
-    return out
-
-
-def md_routes(section: str) -> dict[str, str]:
-    """lens -> the raw markdown of its bullet (continuation lines folded in)."""
-
-    return dict(md_route_list(section))
 
 
 def html_text(fragment: str) -> str:
@@ -319,7 +270,6 @@ def main() -> int:
         except Exception as exc:
             summary = {"_returncode": 1, "_diagnostic": f"could not seed a store — {scrub(repr(exc))}"}
         docs = storage / "docs"
-        md = read(docs / "index.md") or ""
         full_html = read(docs / "index.html") or ""
         article = re.search(r"<article\b.*?</article>", full_html, re.S)
         page = article.group(0) if article else full_html
@@ -327,46 +277,33 @@ def main() -> int:
         def published() -> str | None:
             if summary.get("_returncode") != 0 or not summary.get("ok"):
                 return f"the materializer did not publish a fixture store — {summary.get('_diagnostic', 'no summary')}"
-            if not md.strip():
-                return "docs/index.md was not published"
             if not page.strip():
                 return "docs/index.html was not published"
             return None
 
         check("a fixture store publishes its overview", published)
 
-        md_sec = md_section(md, SECTION)
         html_sec = html_section(page, SECTION)
-        md_r = md_routes(md_sec)
         html_r = html_routes(html_sec)
 
-        def one_route_each() -> str | None:
-            if not md_sec.strip():
-                return f"index.md has no {SECTION!r} section"
+        def routes_present() -> str | None:
             if not html_sec.strip():
                 return f"index.html has no {SECTION!r} section"
             for lens in LENSES:
-                if lens not in md_r:
-                    return f"index.md has no {lens} route"
                 if lens not in html_r:
                     return f"index.html has no {lens} route"
-            # Count before the dictionaries fold duplicates away.
-            for view, routes in (("index.md", md_route_list(md_sec)), ("index.html", html_route_list(html_sec))):
-                names = [lens for lens, _ in routes]
-                if names != list(LENSES):
-                    return f"{view} has the routes {names}, expected one each: {list(LENSES)}"
             return None
 
-        check("the overview has one route per lens in both views", one_route_each)
+        check("the overview has a route for each lens", routes_present)
 
-        def method_text_md() -> str | None:
-            raw = md_r.get("Method")
-            if raw is None:
-                return "index.md has no Method route"
-            got = strip_trailing(strip_dash(squash(md_visible(raw))))
-            if got != METHOD_TEXT:
-                return f"the Markdown Method route reads {got!r}, not {METHOD_TEXT!r}"
+        def one_route_each() -> str | None:
+            # Count before the dictionary folds duplicates away.
+            names = [lens for lens, _ in html_route_list(html_sec)]
+            if names != list(LENSES):
+                return f"index.html has the routes {names}, expected one each: {list(LENSES)}"
             return None
+
+        check("the overview has exactly one route per lens, in order", one_route_each)
 
         def method_text_html() -> str | None:
             raw = html_r.get("Method")
@@ -378,22 +315,7 @@ def main() -> int:
                 return f"the HTML Method route reads {got!r}, not {METHOD_TEXT!r}"
             return None
 
-        check("the Markdown Method route reads the plan's sentence", method_text_md)
-        check("the HTML Method route reads the plan's sentence", method_text_html)
-
-        def method_link_md() -> str | None:
-            raw = md_r.get("Method", "")
-            links = LINK.findall(raw)
-            if len(links) != 1:
-                return f"the Markdown Method route carries {len(links)} links, expected 1"
-            text, target = links[0]
-            if text != METHOD_LINK_TEXT:
-                return f"the Markdown Method link text is {text!r}, not {METHOD_LINK_TEXT!r}"
-            if target.split("#", 1)[0] != "how-to-read.md":
-                return f"the Markdown Method link points at {target!r}, not how-to-read.md"
-            if not (docs / "how-to-read.md").is_file():
-                return "the guide the Method route links is not published"
-            return None
+        check("the Method route reads the plan's sentence", method_text_html)
 
         def method_link_html() -> str | None:
             raw = html_r.get("Method", "")
@@ -409,43 +331,41 @@ def main() -> int:
                 return "the guide the Method route links is not published"
             return None
 
-        check("the Markdown Method route links the guide", method_link_md)
-        check("the HTML Method route links the guide", method_link_html)
+        check("the Method route links the guide", method_link_html)
 
         def old_wording_gone() -> str | None:
-            if OLD_METHOD_WORDS in squash(md_visible(md)):
-                return "index.md still carries the old Method wording"
             if OLD_METHOD_WORDS in html_text(page):
                 return "index.html still carries the old Method wording"
             return None
 
         check("the old Method wording is gone", old_wording_gone)
 
-        def others_unchanged() -> str | None:
-            for lens, (link_text, page_stem, want) in OTHER_ROUTES.items():
-                raw = md_r.get(lens)
+        def others_text_unchanged() -> str | None:
+            for lens, (_link_text, _page_stem, want) in OTHER_ROUTES.items():
                 hraw = html_r.get(lens)
-                if raw is None or hraw is None:
+                if hraw is None:
                     return f"the {lens} route is missing"
-                got = strip_trailing(strip_dash(squash(md_visible(raw))))
-                if got != want:
-                    return f"the Markdown {lens} route reads {got!r}, not {want!r}"
-                links = LINK.findall(raw)
-                if len(links) != 1 or links[0][0] != link_text or links[0][1] != f"{page_stem}.md":
-                    return f"the Markdown {lens} link is {links!r}, not {link_text!r} -> {page_stem}.md"
                 hgot = strip_trailing(re.sub(rf"^{lens}\b\s*[—–:-]?\s*", "", html_text(hraw)))
                 if hgot != want:
                     return f"the HTML {lens} route reads {hgot!r}, not {want!r}"
+            return None
+
+        def others_links_unchanged() -> str | None:
+            for lens, (link_text, page_stem, _want) in OTHER_ROUTES.items():
+                hraw = html_r.get(lens)
+                if hraw is None:
+                    return f"the {lens} route is missing"
+                links = re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>', hraw, re.S)
+                if len(links) != 1 or html_text(links[0][1]) != link_text:
+                    return f"the HTML {lens} link is {links!r}, not {link_text!r} -> {page_stem}.html"
                 if href_pages(hraw) != [f"{page_stem}.html"]:
                     return f"the HTML {lens} link targets {href_pages(hraw)!r}, not {page_stem}.html"
             return None
 
-        check("the Codebase, Unresolved and History routes are unchanged", others_unchanged)
+        check("the Codebase, Unresolved and History routes read as before", others_text_unchanged)
+        check("the Codebase, Unresolved and History routes link their pages as before", others_links_unchanged)
 
         def sections_unchanged() -> str | None:
-            got = md_h2_titles(md)
-            if tuple(got) != EXPECTED_H2:
-                return f"the Markdown overview's H2 sections are {got!r}, not {list(EXPECTED_H2)!r}"
             hgot = html_h2_titles(page)
             if tuple(hgot) != EXPECTED_H2:
                 return f"the HTML overview's H2 sections are {hgot!r}, not {list(EXPECTED_H2)!r}"

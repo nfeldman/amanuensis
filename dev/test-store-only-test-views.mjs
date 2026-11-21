@@ -103,21 +103,53 @@ const BASE = {
   "materializer/test-placeholder-census.py": { assertions: 41, htmlCount: 0, readMd: true },
   "materializer/test-prose-retention.py": { assertions: 23, htmlCount: 14, readMd: true },
   "materializer/test-readback.py": { assertions: 26, htmlCount: 4, readMd: true },
-  "materializer/test-search-index.py": { assertions: 40, htmlCount: 17, readMd: true },
+  "materializer/test-search-index.py": { assertions: 40, htmlCount: 17, readMd: false },
   "materializer/test-severity-history.py": { assertions: 8, htmlCount: 0, readMd: true },
   "materializer/test-unmeasured-coverage.py": { assertions: 37, htmlCount: 1, readMd: true },
   "materializer/test-xref-moved-target.py": { assertions: 6, htmlCount: 5, readMd: true },
   "mcp-server/test-finding-partition.mjs": { assertions: 23, htmlCount: 1, readMd: true },
   "mcp-server/test-projection-custody.mjs": { assertions: 18, htmlCount: 0, readMd: true },
-  "mcp-server/test-edge-contract.mjs": { assertions: 30, htmlCount: 0, readMd: true },
-  "mcp-server/test-structural-claims.mjs": { assertions: 27, htmlCount: 0, readMd: true },
+  "mcp-server/test-edge-contract.mjs": { assertions: 30, htmlCount: 0, readMd: false },
+  "mcp-server/test-structural-claims.mjs": { assertions: 27, htmlCount: 0, readMd: false },
   "mcp-server/test-residual-hardening.mjs": { assertions: 30, htmlCount: 0, readMd: false },
-  "mcp-server/test-invariants.mjs": { assertions: 69, htmlCount: 0, readMd: true },
+  "mcp-server/test-invariants.mjs": { assertions: 69, htmlCount: 0, readMd: false },
 };
 
 // Literals that may keep `.md`: `{ file, re, count, why }`. `re` is tested on the literal's
 // text; `count` is how many literals it must cover exactly.
-const ALLOWED = [];
+const ALLOWED = [
+  // mcp-server: the composition run's artifact reference is an input the test registers, never a page.
+  { file: "mcp-server/test-finding-partition.mjs", re: /^missing-report\.md$/, count: 2, why: "composition artifact path, an input" },
+  // The legacy survey file and its registry row: the test seeds what an earlier server wrote.
+  { file: "mcp-server/test-structural-claims.mjs", re: /^B-02-index\.md$/, count: 1, why: "imported survey file name, an input" },
+  { file: "mcp-server/test-structural-claims.mjs", re: /imported_artifacts WHERE path = 'B-02-index\.md'/, count: 1, why: "the import registry row of that file" },
+  { file: "mcp-server/test-structural-claims.mjs", re: /^\.md$/, count: 1, why: "negative: the narrative pointer names no file path" },
+  { file: "mcp-server/test-invariants.mjs", re: /\.amanuensis\/docs\/index\.md/, count: 2, why: "reserved-path inputs the guard must refuse" },
+  { file: "mcp-server/test-edge-contract.mjs", re: /phase-2-structural\.md/, count: 2, why: "a skill reference document, not a generated page" },
+  // Imported inputs: names the import helpers and seeded registry rows are given.
+  { file: "materializer/test-explanation-pages.py", re: /survey\.md$/, count: 1, why: "imported survey file name, an input" },
+  { file: "materializer/test-narrative-placement.py", re: /survey\.md$/, count: 1, why: "imported survey file name, an input" },
+  { file: "materializer/test-orientation-survey-notes.py", re: /survey\.md$/, count: 2, why: "imported survey file names, inputs" },
+  { file: "materializer/test-prose-retention.py", re: /^B-01-read-path\.md$/, count: 1, why: "imported survey file name, an input" },
+  { file: "materializer/test-materializer.py", re: /^(entry-point|onboarding-report|entry-point-updated)\.md$/, count: 4, why: "seeded artifact paths and imported file names, inputs" },
+  { file: "materializer/test-ledger-freshness.py", re: /'survey\.md'/, count: 1, why: "seeded imported_artifacts path in a SQL insert" },
+  { file: "materializer/test-overview-truthfulness.py", re: /'survey\.md'/, count: 1, why: "seeded entries.source_path in a SQL insert" },
+  { file: "materializer/test-lens-pages.py", re: /^(README|docs\/guide)\.md$/, count: 2, why: "tracked repository paths in the fixture ledger" },
+  { file: "materializer/test-search-index.py", re: /^(README|docs\/guide)\.md$/, count: 2, why: "seeded scope_gaps repository paths" },
+  { file: "materializer/test-unmeasured-coverage.py", re: /^docs\/guide\.md$/, count: 3, why: "a tracked repository path in the fixture ledger" },
+  // Plan and manifest page ids the code under test still emits; they lose the suffix in SO19.
+  { file: "materializer/test-lens-pages.py", re: /^rogue\.md$/, count: 1, why: "a PagePlan id, a plan input" },
+  { file: "materializer/test-explanation-orientation.py", re: /^(architecture|master-plan)\.md$/, count: 2, why: "manifest path ids" },
+  { file: "materializer/test-xref-moved-target.py", re: /^field-notes\.md$/, count: 1, why: "manifest page id" },
+  { file: "materializer/test-placeholder-census.py", re: /^(index|architecture)\.md$|^subsystems\/\{found\[0\]\.stem\}\.md$/, count: 3, why: "census rows name plan page ids" },
+  // Source documents the tests read: repository design documents and the skill's references.
+  { file: "materializer/test-ledger-grouping.py", re: /reporting-style\.md/, count: 2, why: "the skill's reporting-style reference" },
+  { file: "materializer/test-prose-retention.py", re: /reporting-style\.md/, count: 2, why: "the skill's reporting-style reference" },
+  { file: "materializer/test-orientation-guide.py", re: /spec\.md|PLAN\.md/, count: 4, why: "design documents the guide must point to" },
+  { file: "materializer/test-placeholder-census.py", re: /^(onboarding|phase-5-packaging)\.md|^\*\.md$|^(onboarding|phase-5-packaging)\.md /, count: 14, why: "the skill's onboarding and packaging references" },
+  // test-orientation-ids: `xref.resolve_text` takes and returns Markdown, which stays until SO19.
+  { file: "materializer/test-orientation-ids.py", re: /\.md/, count: 29, why: "unit tests of the Markdown xref resolver, which reads no generated page" },
+];
 
 // Markdown-only assertions deleted because the HTML view has no equivalent:
 // `{ file, count, why }`; each lowers that file's assertion floor by `count`.

@@ -7,16 +7,81 @@ re-render almost nothing.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import subprocess
 import sys
 import tempfile
+from html.parser import HTMLParser
 from pathlib import Path
 
 from store_only_seed import import_body, import_onboarding, withdraw_import
 
 ROOT = Path(__file__).resolve().parent
 SCHEMA = ROOT.parent / "mcp-server" / "src" / "schema.sql"
+
+
+class _Outline(HTMLParser):
+    """The visible words of a page's `<article>`, one block per line, with each
+    heading on a line of its own led by one `#` per level."""
+
+    _BREAKS = frozenset(
+        (
+            "p", "li", "tr", "div", "section", "pre", "ul", "ol", "table", "br",
+            "blockquote", "caption", "dt", "dd", "article", "details", "summary",
+        )
+    )
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.lines: list[str] = []
+        self._buf: list[str] = []
+        self._in_article = False
+        self._skip = 0
+        self._heading = 0
+
+    def _flush(self) -> None:
+        words = " ".join("".join(self._buf).split())
+        self._buf = []
+        if words:
+            self.lines.append(("#" * self._heading + " " if self._heading else "") + words)
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        classes = (dict(attrs).get("class") or "").split()
+        if tag == "article":
+            self._in_article = True
+        elif tag in ("script", "style") or (tag == "a" and "heading-anchor" in classes):
+            self._skip += 1
+        elif self._in_article and tag in self._BREAKS:
+            self._flush()
+        elif self._in_article and re.fullmatch(r"h[1-6]", tag):
+            self._flush()
+            self._heading = int(tag[1])
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "article":
+            self._flush()
+            self._in_article = False
+        elif tag in ("script", "style", "a") and self._skip:
+            self._skip -= 1
+        elif self._in_article and re.fullmatch(r"h[1-6]", tag):
+            self._flush()
+            self._heading = 0
+        elif self._in_article and tag in self._BREAKS:
+            self._flush()
+        elif self._in_article and tag in ("td", "th"):
+            self._buf.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        if self._in_article and not self._skip:
+            self._buf.append(data)
+
+
+def outline(page: str) -> str:
+    parser = _Outline()
+    parser.feed(page)
+    parser.close()
+    return "\n".join(parser.lines)
 
 
 def seed(db: sqlite3.Connection) -> None:
@@ -241,22 +306,21 @@ def main() -> None:
         head = subprocess.check_output(
             ["git", "-C", str(ROOT.parent), "rev-parse", "HEAD"], text=True,
         ).strip()
-        assert head[:12] in (relocated / "index.md").read_text()
+        assert head[:12] in (relocated / "index.html").read_text()
         assert (storage / "workspace_path").read_text() == "/example/FictionalProject\n"
         # Verify key pages exist.
         docs = storage / "docs"
         for p in [
-            "index.md", "architecture.md", "master-plan.md", "findings.md",
-            "concerns.md", "seams.md", "contradictions.md", "diagnosticity.md",
-            "vocabulary.md", "field-notes.md", "entry-point.md", "onboarding-report.md",
-            "concern-checklist.md",
-            "how-to-read.md",
-            "subsystems/b01-job-scheduler.md", "subsystems/b02-auth-service.md",
-            "subsystems/f01-web-ui.md",
+            "index.html", "architecture.html", "master-plan.html", "findings.html",
+            "concerns.html", "seams.html", "contradictions.html", "diagnosticity.html",
+            "vocabulary.html", "field-notes.html", "entry-point.html", "onboarding-report.html",
+            "concern-checklist.html",
+            "how-to-read.html",
+            "subsystems/b01-job-scheduler.html", "subsystems/b02-auth-service.html",
+            "subsystems/f01-web-ui.html",
         ]:
             assert (docs / p).is_file(), f"missing: {p}"
-            html_page = str(Path(p).with_suffix(".html"))
-            assert (docs / html_page).is_file(), f"missing HTML companion: {html_page}"
+            assert '<article class="content' in (docs / p).read_text(), f"no article in HTML page: {p}"
         html_index = (docs / "index.html").read_text()
         assert "Amanuensis HTML projection" in html_index
         assert "FictionalProject" in html_index
@@ -397,9 +461,12 @@ def main() -> None:
         assert 'class="status status-disposition status-confirmed-bug"' in html_b02
         assert 'class="evidence-label evidence-code-verified"' in html_b02
         html_architecture = (docs / "architecture.html").read_text()
-        markdown_architecture = (docs / "architecture.md").read_text()
-        assert "A generated mermaid version will replace this placeholder" not in markdown_architecture
-        assert "| Runtime / Process | Language | Communicates with | Mechanism | Notes |" in markdown_architecture
+        assert "A generated mermaid version will replace this placeholder" not in html_architecture
+        # The runtime boundary table's columns, as the HTML presents each boundary:
+        # its name and language in the heading, then one labelled line per column.
+        assert '<h3>Host agent</h3><span class="runtime-detail-language">external</span>' in html_architecture
+        for column in ("Communicates with", "Mechanism", "Recorded note"):
+            assert f'<span class="runtime-detail-label">{column}</span>' in html_architecture, column
         assert '<svg class="runtime-boundary-svg"' in html_architecture
         assert 'aria-labelledby="runtime-boundary-svg-title runtime-boundary-svg-description"' in html_architecture
         assert "3 recorded runtime boundaries" in html_architecture
@@ -462,38 +529,52 @@ def main() -> None:
         assert "Concern dispositions" not in humanized_prose and "Jump-in reading" not in humanized_prose
         # The reader's guide is static — every conspectus ships with it.
         # Sanity-check that the content actually landed.
-        htr = (docs / "how-to-read.md").read_text()
-        assert "How to read this survey" in htr
+        htr_html = (docs / "how-to-read.html").read_text()
+        htr = outline(htr_html)
+        assert "How to read this survey" in htr_html
         assert "### Survey depth" in htr and "cannot justify" in htr.lower()  # the survey-depth ladder is generated from the enum source
         assert "evidence quality" in htr.lower()
-        assert "\x00" not in htr, "nested xref placeholders leaked into Markdown"
-        assert "\x00" not in (docs / "how-to-read.html").read_text(), "xref placeholders leaked into HTML"
+        assert "\x00" not in htr, "nested xref placeholders leaked into the page's text"
+        assert "\x00" not in htr_html, "xref placeholders leaked into HTML"
         # The index should link to it as the first navigation pointer.
-        index = (docs / "index.md").read_text()
-        assert "how-to-read.md" in index, "index missing link to how-to-read.md"
+        assert 'href="how-to-read.html"' in html_index, "index missing link to how-to-read.html"
         # Verify cross-references resolved: findings page should link B-02 somewhere.
-        findings = (docs / "findings.md").read_text()
-        assert "](subsystems/b02-auth-service.md)" in findings, "expected B-02 link in findings.md"
-        assert "### [Auth Service](subsystems/b02-auth-service.md)" in findings
-        assert "| ID | Status | Symptom | Why it matters | Root cause | Ref SHA |" in findings
-        assert "| ID | Subsystem |" not in findings
+        assert 'href="subsystems/b02-auth-service.html"' in html_findings, "expected B-02 link in findings.html"
+        assert (
+            '<h4 class="finding-subsystem-heading" id="auth-service" data-identifier-defined>'
+            '<a class="heading-anchor" href="#auth-service" aria-label="Link to Auth Service">§</a>'
+            '<a href="subsystems/b02-auth-service.html">Auth Service</a></h4>'
+        ) in html_findings
+        # The finding record presents the columns the finding table used to carry:
+        # status and revision as facts, the symptom as its lede, then the labelled fields.
+        finding_facts = re.findall(r"<dt>([^<]*)</dt>", html_findings.split('<article class="record record-finding"', 1)[1].split("</header>", 1)[0])
+        assert finding_facts == ["Status", "Revision"], finding_facts
+        assert '<p class="record-lede">Unvalidated query params reach SQL</p>' in html_findings
+        assert re.findall(r'<p class="record-label">([^<]*)</p>', html_findings) == ["Why it matters", "Root cause"]
+        assert "<dt>Subsystem</dt>" not in html_findings
         # Concerns page should link CC-1 as an anchor target.
-        concerns = (docs / "concerns.md").read_text()
-        assert "<a id=\"cc-1\"></a>" in concerns
-        checklist = (docs / "concern-checklist.md").read_text()
-        assert "## Active concerns (3)" in checklist
-        assert "| Code | Category | Territory | Codebase-specific probe (abbreviated) | Primary subsystems |" in checklist
+        assert '<span id="cc-1" class="record-anchor"></span>' in html_concerns
+        assert html_checklist.split('id="active-concerns"', 1)[1].count('class="record record-concern-checklist"') == 3
+        # The checklist's columns: code, category and territory in the family heading and the
+        # record title, the probe, and the subsystems to review it in.
+        for column in (
+            'href="concerns.html#cc-1">concern CC-1</a>',
+            '<span>Cache coherence</span><span class="concern-territory">T2</span>',
+            '<div class="record-probe">Does the scheduler retain stale authorization state after a policy change?</div>',
+            "<dt>Review in</dt>",
+        ):
+            assert column in html_checklist, column
         # The contradictions page should exist and say what it now carries.
         # §7.1 titles it Conflicting evidence and narrows it to the
         # disagreements the evidence settled; the unresolved ones are on
-        # disagreements.md.
-        contradictions = (docs / "contradictions.md").read_text()
-        assert "# Conflicting evidence" in contradictions
-        assert "disagreements.md" in contradictions
+        # the disagreements page.
+        contradictions = (docs / "contradictions.html").read_text()
+        assert "<h1>Conflicting evidence</h1>" in contradictions
+        assert 'href="disagreements.html"' in contradictions
         # Diagnosticity matrix page should exist and contain the cell legend.
-        matrix_files = list((docs / "diagnosticity").glob("dm-*.md")) if (docs / "diagnosticity").is_dir() else []
+        matrix_files = list((docs / "diagnosticity").glob("dm-*.html")) if (docs / "diagnosticity").is_dir() else []
         assert matrix_files, "expected at least one diagnosticity matrix page"
-        matrix_body = matrix_files[0].read_text()
+        matrix_body = outline(matrix_files[0].read_text())
         assert "Cell legend" in matrix_body
 
         # Second run — nothing should be rendered (all sources unchanged).
@@ -585,7 +666,7 @@ def main() -> None:
         summary4 = run_materializer(storage)
         print("run 4:", json.dumps(summary4, indent=2))
         assert summary4["pages_total"] == summary1["pages_total"] + 1  # new subsystem page
-        assert (docs / "subsystems/b03-rate-limiter.md").is_file()
+        assert "Rate limiter" in (docs / "subsystems/b03-rate-limiter.html").read_text()
         assert (docs / "subsystems/b03-rate-limiter.html").is_file()
 
         # Fifth run — remove B-03; the page and its manifest entry should be retired.
@@ -595,8 +676,8 @@ def main() -> None:
         db.close()
         summary5 = run_materializer(storage)
         print("run 5:", json.dumps(summary5, indent=2))
-        assert "subsystems/b03-rate-limiter.md" in summary5["pages_retired"]
-        assert not (docs / "subsystems/b03-rate-limiter.md").is_file()
+        assert summary5["pages_total"] == summary1["pages_total"], summary5
+        assert "Rate limiter" not in (docs / "master-plan.html").read_text()
         assert "subsystems/b03-rate-limiter.html" in summary5["html_pages_retired"]
         assert not (docs / "subsystems/b03-rate-limiter.html").is_file()
 

@@ -75,7 +75,7 @@ def main() -> None:
 
         # A clean-directory transaction owns only manifest-listed files. It
         # must not erase a human file merely because it sits beside the docs.
-        human_file = docs / "human-notes.md"
+        human_file = docs / "human-notes.txt"
         human_file.write_text("do not replace\n")
         refused = run(storage, "--clean-publish", expect=2)
         assert refused["published"] is False and "unmanaged" in refused["error"], refused
@@ -84,15 +84,16 @@ def main() -> None:
 
         # VP4 red arm 1: remove one durable finding marker.  State and byte
         # correspondence fail; link coverage remains intact.
-        findings = docs / "findings.md"
+        findings = docs / "findings.html"
         body = findings.read_text()
-        marker_line = next(line for line in body.splitlines() if "amanuensis:finding:" in line)
-        findings.write_text(body.replace(marker_line + "\n", "", 1))
+        marker_comment = re.search(r"<!-- amanuensis:finding:[^>]*-->", body)
+        assert marker_comment, body
+        findings.write_text(body.replace(marker_comment.group(0), "", 1))
         missing_finding = run(storage, "--readback-only", expect=1)
         assert missing_finding["published"] is False
         assert_axes(missing_finding, state=False, coverage=True, content=False)
         assert any(
-            m["axis"] == "state" and m["object_type"] == "finding"
+            m["axis"] == "state" and m["object_type"] == "finding-html"
             for m in missing_finding["mismatches"]
         )
 
@@ -105,9 +106,9 @@ def main() -> None:
         # VP4 red arm 2: strip a rendered subsystem cross-link while retaining
         # the finding marker and all pages.  Coverage owns the diagnostic.
         body = findings.read_text()
-        target = "subsystems/b01-reader.md"
+        target = "subsystems/b01-reader.html"
         assert target in body, body
-        target_link = re.compile(rf"\[([^\]]+)\]\({re.escape(target)}\)")
+        target_link = re.compile(rf'<a\b[^>]*href="{re.escape(target)}"[^>]*>(.*?)</a>', re.S)
         assert target_link.search(body), body
         findings.write_text(target_link.sub(r"\1", body, count=1))
         missing_link = run(storage, "--readback-only", expect=1)
@@ -121,21 +122,22 @@ def main() -> None:
 
         # VP4 red arm 3: a stale-state marker is state correspondence, not a
         # link/page coverage question.
-        stale_page = docs / "stale.md"
+        stale_page = docs / "stale.html"
         body = stale_page.read_text()
-        stale_line = next(line for line in body.splitlines() if "amanuensis:ledger-stale:" in line)
-        stale_page.write_text(body.replace(stale_line + "\n", "", 1))
+        stale_marker = re.search(r"<!-- amanuensis:ledger-stale:[^>]*-->", body)
+        assert stale_marker, body
+        stale_page.write_text(body.replace(stale_marker.group(0), "", 1))
         missing_stale = run(storage, "--readback-only", expect=1)
         assert_axes(missing_stale, state=False, coverage=True, content=False)
         assert any(
-            m["axis"] == "state" and m["object_type"] == "ledger-stale"
+            m["axis"] == "state" and m["object_type"] == "ledger-stale-html"
             for m in missing_stale["mismatches"]
         ), missing_stale["mismatches"]
 
         run(storage, "--clean-publish")
 
-        # HTML is independently accountable. A healthy Markdown companion
-        # must not mask a marker removed from the primary reading surface.
+        # HTML is independently accountable: a marker removed from the
+        # primary reading surface is a state fault in its own right.
         findings_html = docs / "findings.html"
         body = findings_html.read_text()
         marker = finding_marker("B01-1")
@@ -150,7 +152,7 @@ def main() -> None:
 
         run(storage, "--clean-publish")
 
-        # The HTML route graph is checked separately from Markdown links.
+        # The HTML route graph: a link retargeted at a page that does not exist.
         body = findings_html.read_text()
         html_target = "subsystems/b01-reader.html"
         assert html_target in body, body
@@ -163,7 +165,7 @@ def main() -> None:
         )
 
         print(
-            "OK — Markdown and HTML read-back turn red on independent state, coverage, and content faults"
+            "OK — HTML read-back turns red on independent state, coverage, and content faults"
         )
 
 

@@ -62,6 +62,7 @@ deliverable reports as an assertion failure and not as a crash.
 
 from __future__ import annotations
 
+import html
 import json
 import re
 import shutil
@@ -147,6 +148,41 @@ def read(path: Path) -> str:
         return ""
 
 
+BLOCK_TAGS = r"p|li|ul|ol|div|h[1-6]|section|article|header|footer|tr|td|th|br|dl|dt|dd|blockquote|table|caption"
+HEADING = re.compile(r"(?is)<h([1-6])\b[^>]*>(.*?)</h\1>")
+
+
+def visible(markup: str) -> str:
+    """The reader's text of an HTML fragment: scripts, styles and heading anchors dropped, block
+    boundaries read as spaces, inline tags as nothing, entities decoded, whitespace collapsed."""
+
+    body = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", markup)
+    body = re.sub(r'(?is)<a class="heading-anchor"[^>]*>.*?</a>', "", body)
+    body = re.sub(rf"(?i)</?(?:{BLOCK_TAGS})\b[^>]*>", " ", body)
+    body = re.sub(r"<[^>]+>", "", body)
+    return " ".join(html.unescape(body).split())
+
+
+def article_of(markup: str) -> str:
+    """The report an HTML page carries: its content article, without the navigation around it."""
+
+    start = markup.find('<article class="content')
+    end = markup.rfind("</article>")
+    return markup[start:end] if 0 <= start < end else ""
+
+
+def h2s(markup: str) -> list[str]:
+    """The text of the H2 headings of a page's report."""
+
+    return [visible(m.group(2)) for m in HEADING.finditer(article_of(markup)) if m.group(1) == "2"]
+
+
+def reader_text(sentence: str) -> str:
+    """A sentence the materializer writes in Markdown, as the reader sees it on an HTML page."""
+
+    return sentence.replace("**", "").replace("`", "")
+
+
 # ---------------------------------------------------------------------------
 # What the three slots print, as the spec's table and the measure script name it
 # ---------------------------------------------------------------------------
@@ -157,7 +193,7 @@ THESIS_SENTENCES = {
 }
 RUNTIME_SENTENCE = "No structured runtime boundary map is recorded yet"
 RUNTIME_COLUMNS = ("Runtime / Process", "Language", "Communicates with", "Mechanism", "Notes")
-VOCABULARY_SENTENCE = "**Domain vocabulary** — not recorded"
+VOCABULARY_SENTENCE = "Domain vocabulary — not recorded"
 ALL_THESIS = tuple(THESIS_SENTENCES.values())
 SLOTS_IN_SCOPE = {"thesis", "runtime-boundary-map", "subsystem-vocabulary"}
 EXPLANATION_SLOTS = {"subsystem-purpose", "subsystem-account", "project-account"}
@@ -169,6 +205,9 @@ ACCOUNT_DECLINED_STEM = "declined to write an account of how this subsystem work
 NO_PURPOSE_PATTERN = re.compile(re.escape(NO_PURPOSE_STEM) + r"[.;]")
 NOT_SLOTS = ("No seams recorded yet", "No dependency edges are recorded")
 ROW_FIELDS = {"slot", "page", "subject", "state", "discharge"}
+# The page ids a census row names. The materializer still keys its pages by these ids.
+INDEX_PAGE = "index.md"
+ARCHITECTURE_PAGE = "architecture.md"
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -342,13 +381,21 @@ class Fixture:
         self.summary: dict[str, object] = summary if isinstance(summary, dict) else {}
 
     def page(self, rel: str) -> str:
-        return read(self.docs / rel)
+        """The reader's text of an HTML page's report."""
+
+        return visible(article_of(read(self.docs / rel)))
 
     def subsystem_page(self, sid: str) -> tuple[str, str]:
-        found = sorted((self.docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.md"))
+        """The page id the census names for a subsystem, and the reader's text of its page."""
+
+        found = sorted((self.docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))
         if not found:
             return "", ""
-        return f"subsystems/{found[0].name}", read(found[0])
+        return f"subsystems/{found[0].stem}.md", visible(article_of(read(found[0])))
+
+    def subsystem_h2s(self, sid: str) -> list[str]:
+        found = sorted((self.docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))
+        return h2s(read(found[0])) if found else []
 
     def rows(self) -> list[dict[str, object]] | str:
         """The census rows, or why they cannot be read."""
@@ -399,8 +446,8 @@ def sentence_correspondence(fx: Fixture) -> str | None:
     rows = fx.rows()
     if isinstance(rows, str):
         return rows
-    index = fx.page("index.md")
-    architecture = fx.page("architecture.md")
+    index = fx.page("index.html")
+    architecture = fx.page("architecture.html")
     by_key = {(str(r.get("slot")), str(r.get("subject"))): r for r in rows}
     if len(by_key) != len(rows):
         return f"the {fx.name} census names one slot and subject twice"
@@ -446,13 +493,13 @@ def row_shape(fx: Fixture, want: list[tuple[str, str, str]]) -> str | None:
         discharge = str(r["discharge"])
         slot = r["slot"]
         if slot == "thesis":
-            if r["page"] != "index.md" or "record_explanation" not in discharge:
+            if r["page"] != INDEX_PAGE or "record_explanation" not in discharge:
                 return f"the thesis row's page or discharge is wrong: {r}"
             if "purpose" not in discharge:
                 return f"the thesis discharge does not name the purpose slot: {discharge}"
         elif slot == "runtime-boundary-map":
             if (
-                r["page"] != "architecture.md"
+                r["page"] != ARCHITECTURE_PAGE
                 or "record_runtime_boundary" not in discharge
                 or any(column not in discharge for column in RUNTIME_COLUMNS)
             ):
@@ -493,7 +540,7 @@ def explanation_correspondence(fx: Fixture, eligible: dict[str, bool]) -> str | 
                 f"the {fx.name} page for {sid} {'prints' if prints_purpose_sentence else 'omits'}"
                 " the no-purpose sentence and the census disagrees"
             )
-        owed = "## How it works" not in text and ACCOUNT_DECLINED_STEM not in text
+        owed = "How it works" not in fx.subsystem_h2s(sid) and ACCOUNT_DECLINED_STEM not in text
         if is_eligible and owed != (("subsystem-account", sid) in keys):
             return (
                 f"the {fx.name} page for {sid} {'owes' if owed else 'has'} an account"
@@ -505,7 +552,7 @@ def explanation_correspondence(fx: Fixture, eligible: dict[str, bool]) -> str | 
             for slot in ("subsystem-purpose", "subsystem-account"):
                 if (slot, sid) in keys:
                     return f"the {fx.name} census holds a `{slot}` row for {sid}, which is not explanation-eligible"
-    sentence = NO_ACCOUNT_SENTENCE in fx.page("architecture.md")
+    sentence = NO_ACCOUNT_SENTENCE in fx.page("architecture.html")
     if any(eligible.values()):
         if sentence != (("project-account", "project") in keys):
             return (
@@ -538,7 +585,7 @@ def explanation_shape(fx: Fixture, want: set[tuple[str, str]]) -> str | None:
         if "record_explanation" not in discharge or "decline_explanation" not in discharge:
             return f"the {fx.name} explanation discharge names neither tool: {discharge}"
         if r["slot"] == "project-account":
-            if r.get("page") != "architecture.md":
+            if r.get("page") != ARCHITECTURE_PAGE:
                 return f"the project-account row names page `{r.get('page')}`"
         else:
             rel, _text = fx.subsystem_page(str(r["subject"]))
@@ -595,12 +642,12 @@ def main() -> int:
             printed = [
                 s
                 for s in (*ALL_THESIS, RUNTIME_SENTENCE, VOCABULARY_SENTENCE)
-                if s in filled.page("index.md") + filled.page("architecture.md")
+                if s in filled.page("index.html") + filled.page("architecture.html")
                 + filled.subsystem_page("B-01")[1] + filled.subsystem_page("B-02")[1]
             ]
             if printed:
                 return f"the filled store still prints {printed}"
-            if THESIS_BODY.strip() not in filled.page("index.md"):
+            if THESIS_BODY.strip() not in filled.page("index.html"):
                 return "the filled store does not publish its thesis"
             return None
 
@@ -616,7 +663,7 @@ def main() -> int:
                 for r in rows:
                     if r.get("slot") not in allowed:
                         return f"{fx.name} carries a row for `{r.get('slot')}`"
-            seams = empty.page("seams.md") + empty.page("architecture.md")
+            seams = empty.page("seams.html") + empty.page("architecture.html")
             if not any(s in seams for s in NOT_SLOTS):
                 return "the empty fixture prints none of the empty-state sentences the control needs"
             return None
@@ -666,11 +713,12 @@ def main() -> int:
                 if any(n in s for n in NOT_SLOTS):
                     return f"PLACEHOLDER_SENTENCES holds `{s}`, which is not a slot"
             pages = "\n".join(
-                [empty.page("index.md"), refused.page("index.md"), composite.page("index.md"), empty.page("architecture.md")]
+                [empty.page("index.html"), refused.page("index.html"), composite.page("index.html"), empty.page("architecture.html")]
                 + [empty.subsystem_page(sid)[1] for sid in ("B-01", "B-02")]
             )
             for s in sentences:
-                if s.rstrip(".") not in pages and s.split(";")[0].rstrip(".") not in pages:
+                shown = reader_text(s)
+                if shown.rstrip(".") not in pages and shown.split(";")[0].rstrip(".") not in pages:
                     return f"PLACEHOLDER_SENTENCES holds a sentence no fixture page prints: `{s[:48]}…`"
             return None
 
@@ -854,7 +902,7 @@ def main() -> int:
                     return rows
                 if rows != []:
                     return f"the {fx.name} store, with every slot filled, returns {rows}"
-                text = fx.page("architecture.md") + fx.subsystem_page("B-01")[1] + fx.subsystem_page("B-02")[1]
+                text = fx.page("architecture.html") + fx.subsystem_page("B-01")[1] + fx.subsystem_page("B-02")[1]
                 if NO_ACCOUNT_SENTENCE in text or NO_PURPOSE_PATTERN.search(text):
                     return f"the {fx.name} store still prints a not-recorded sentence"
             return None

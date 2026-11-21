@@ -8,15 +8,16 @@ Turns red when:
     site, [How a survey works], Terms, [How IDs are formed], Status values,
     Full vocabulary (the two bracketed sections are absent until O4 and O5, and
     must sit in their slot once present);
-  - the guide's title (Markdown H1, HTML h1, HTML <title>) is not "How to read
-    this survey", or any of them says "conspectus" (D2);
-  - the first 600 bytes of the guide's Markdown contain a backtick;
+  - the guide's title (HTML h1, HTML <title>) is not "How to read this survey",
+    or either says "conspectus" (D2);
+  - the first 600 bytes of the guide's visible text contain a backtick or sit
+    in a `<code>` element;
   - "What this site is" is not Appendix C's paragraph for the project;
-  - the Terms section lacks a `###` per `reader_terms` entry in contract order,
-    an `<a id="term-<slug>">` anchor per entry (Markdown), a matching id in the
-    HTML, the entry's definition, an "Also called:" line with every alias, or a
-    "Seen on:" line whose links are not exactly the pages the entry names (a
-    glob stands for its listing page); or lacks Conspectus or Mapped (D2, D3);
+  - the Terms section lacks an `<h3>` per `reader_terms` entry in contract
+    order, a `term-<slug>` anchor directly above each, the entry's definition,
+    an "Also called:" line with every alias, or a "Seen on:" line whose links
+    are not exactly the pages the entry names (a glob stands for its listing
+    page); or lacks Conspectus or Mapped (D2, D3);
   - an enum whose `reader_facing` is false is named before the "Full
     vocabulary" heading, or a reader-facing enum is not under "Status values"
     with a plain heading and its stored name in a code span; the plain heading
@@ -25,11 +26,9 @@ Turns red when:
     or "Subsystem status");
   - the HTML puts a non-reader-facing enum outside a closed `<details>` with a
     `<summary>`, or a reader-facing enum inside it, or an enum table is
-    missing in either view;
-  - the HTML Terms or Status values differ from the Markdown's (an HTML guide
-    that drops them is red while the Markdown is whole), or an enum table's
-    HTML Value cell is anything but the stored value as literal code (a status
-    chip would print another enum's label there);
+    missing;
+  - an enum table's Value cell is anything but the stored value as literal
+    code (a status chip would print another enum's label there);
   - reader-lenses spec §7.8 does not point to design/orientation/PLAN.md;
   - the gate does not run in CI.
 
@@ -57,6 +56,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -136,8 +136,8 @@ SITE_PARAGRAPH = (
     " could not settle. It does not change the code. Every page is as of one commit, shown"
     " at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
 )
-# A glob in a term's `pages` stands for the page that lists the family.
-FAMILY_LISTING = {"subsystems/*.md": "master-plan.md", "diagnosticity/*.md": "diagnosticity.md"}
+# A glob in a term's `pages` (`<family>/*...`) stands for the page that lists the family.
+FAMILY_LISTING = {"subsystems": "master-plan.html", "diagnosticity": "diagnosticity.html"}
 BYTES_WITHOUT_CODE = 600
 REQUIRED_TERMS = ("Conspectus", "Mapped")
 
@@ -217,40 +217,41 @@ def read(path: Path) -> str | None:
 # ---------------------------------------------------------------------------
 # Readers
 # ---------------------------------------------------------------------------
-LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-
-
-def md_sections(text: str) -> list[tuple[str, list[str]]]:
-    """(H2 title, its lines) in page order."""
-
-    out: list[tuple[str, list[str]]] = []
-    for line in text.splitlines():
-        if line.startswith("## "):
-            out.append((line[3:].strip(), []))
-        elif out:
-            out[-1][1].append(line)
-    return out
-
-
-def md_blocks(lines: list[str]) -> list[tuple[str, list[str]]]:
-    """(H3 title, its lines) inside one H2 section; lines before the first H3 are dropped."""
-
-    out: list[tuple[str, list[str]]] = []
-    for line in lines:
-        if line.startswith("### "):
-            out.append((line[4:].strip(), []))
-        elif out:
-            out[-1][1].append(line)
-    return out
-
-
-def md_visible(text: str) -> str:
-    text = LINK.sub(r"\1", text)
-    return re.sub(r"\*\*(.+?)\*\*|\*(.+?)\*|`([^`]*)`", lambda m: m.group(1) or m.group(2) or m.group(3) or "", text)
-
-
 def html_text(fragment: str) -> str:
     return " ".join(htmllib.unescape(re.sub(r"<[^>]+>", "", fragment)).split())
+
+
+class _Head(HTMLParser):
+    """The visible text of a page up to a byte budget, and whether a `<code>`
+    element opened inside that budget."""
+
+    def __init__(self, budget: int) -> None:
+        super().__init__(convert_charrefs=True)
+        self.budget = budget
+        self.text = ""
+        self.code_in_head = False
+        self._skip = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("script", "style"):
+            self._skip += 1
+        if tag == "code" and len(self.text.encode("utf-8")) < self.budget:
+            self.code_in_head = True
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("script", "style") and self._skip:
+            self._skip -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip:
+            self.text += data
+
+
+def visible_head(markup: str, budget: int) -> _Head:
+    parser = _Head(budget)
+    parser.feed(markup)
+    parser.close()
+    return parser
 
 
 def html_h2_spans(text: str) -> list[tuple[str, int, int]]:
@@ -296,7 +297,12 @@ def enum_title(name: str) -> str:
 def expected_targets(pages: list[str], docs: Path) -> set[str]:
     """The pages a term names that this store published; the rest cannot be linked."""
 
-    return {t for t in (FAMILY_LISTING.get(page, page) for page in pages) if (docs / t).is_file()}
+    def page_target(page: str) -> str:
+        if "*" in page:  # a family glob: the page that lists the family
+            return FAMILY_LISTING.get(page.split("/", 1)[0], page)
+        return page.rsplit(".", 1)[0] + ".html"
+
+    return {t for t in (page_target(page) for page in pages) if (docs / t).is_file()}
 
 
 def main() -> int:
@@ -324,7 +330,6 @@ def main() -> int:
             emit(f"  FAIL fixture: could not seed a store — {scrub(repr(exc))}")
         summary: dict[str, Any] = publish(storage) if seeded else {}
         docs = storage / "docs"
-        md = read(docs / "how-to-read.md") or ""
         full_page = read(docs / "how-to-read.html") or ""
         article = re.search(r"<article\b.*?</article>", full_page, re.S)
         page = article.group(0) if article else full_page
@@ -332,25 +337,22 @@ def main() -> int:
         def published() -> str | None:
             if not summary or summary.get("_returncode") != 0 or summary.get("ok") is False:
                 return f"the materializer did not publish the fixture — {summary.get('_diagnostic', summary)}"
-            if not md:
-                return "docs/how-to-read.md was not written"
             if not full_page:
                 return "docs/how-to-read.html was not written"
             return None
 
         check("the fixture publishes", published)
 
-        sections = md_sections(md)
+        sections = [(title, page[start:end]) for title, start, end in html_h2_spans(page)]
         by_title = dict(sections)
 
         # -- title (D2) --------------------------------------------------
         def title_says_survey() -> str | None:
-            h1 = re.search(r"^# (.+)$", md, re.M)
-            if not h1 or h1.group(1).strip() != TITLE:
-                return f"the Markdown H1 is {h1.group(1).strip() if h1 else 'absent'!r}, not {TITLE!r}"
             html_h1 = re.search(r"<h1\b[^>]*>(.*?)</h1>", full_page, re.S)
             if not html_h1 or html_text(html_h1.group(1)) != TITLE:
                 return f"the HTML h1 is {html_text(html_h1.group(1)) if html_h1 else 'absent'!r}, not {TITLE!r}"
+            if "conspectus" in html_text(html_h1.group(1)).lower():
+                return "the HTML h1 says 'conspectus' (D2)"
             doc_title = re.search(r"<title>(.*?)</title>", full_page, re.S)
             if not doc_title or TITLE not in html_text(doc_title.group(1)):
                 return f"the HTML <title> is {html_text(doc_title.group(1)) if doc_title else 'absent'!r}"
@@ -362,15 +364,19 @@ def main() -> int:
 
         # -- nothing raw at the top ------------------------------------
         def no_backtick_up_top() -> str | None:
-            head = md.encode("utf-8")[:BYTES_WITHOUT_CODE].decode("utf-8", "ignore")
-            if "`" in head:
-                at = head.index("`")
-                return f"a backtick sits at byte {at}, near {head[max(0, at - 30) : at + 30]!r}"
-            if len(md.encode("utf-8")) < BYTES_WITHOUT_CODE:
-                return "the guide is shorter than 600 bytes"
+            start = full_page.find('<header class="page-head"')
+            head = visible_head(full_page[start:] if start >= 0 else full_page, BYTES_WITHOUT_CODE)
+            if len(head.text.encode("utf-8")) < BYTES_WITHOUT_CODE:
+                return "the guide's visible text is shorter than 600 bytes"
+            first = head.text.encode("utf-8")[:BYTES_WITHOUT_CODE].decode("utf-8", "ignore")
+            if "`" in first:
+                at = first.index("`")
+                return f"a backtick sits at byte {at}, near {first[max(0, at - 30) : at + 30]!r}"
+            if head.code_in_head:
+                return "a <code> element opens within the first 600 bytes of visible text"
             return None
 
-        check("the first 600 bytes of the guide carry no backtick", no_backtick_up_top)
+        check("the first 600 bytes of the guide's visible text carry no backtick or code", no_backtick_up_top)
 
         # -- section order ------------------------------------------------
         def h2_order() -> str | None:
@@ -387,33 +393,44 @@ def main() -> int:
         check("the H2 order is site, pages, [survey], Terms, [IDs], Status values, Full vocabulary", h2_order)
 
         def html_h2_order() -> str | None:
-            spans = [title for title, _, _ in html_h2_spans(page)]
-            want = [title for title, _ in sections]
-            if spans != want:
-                return f"HTML h2 sections are {spans}, the Markdown's are {want}"
+            # Each section's heading is addressable: an id of the heading's slug and its § link.
+            heads = re.findall(r"<h2\b([^>]*)>(.*?)</h2>", page, re.S)
+            if not heads:
+                return "the HTML guide has no h2 sections"
+            for attrs, inner in heads:
+                title = html_text(inner).lstrip("§").strip()
+                if f'id="{slug(title)}"' not in attrs:
+                    return f"the h2 {title!r} carries no id={slug(title)!r}"
+                if f'href="#{slug(title)}"' not in inner:
+                    return f"the h2 {title!r} has no § link to #{slug(title)}"
             return None
 
-        check("the HTML guide has the Markdown's sections in the same order", html_h2_order)
+        check("the HTML guide's sections each carry their id and § link", html_h2_order)
 
         # -- What this site is -------------------------------------------
         def site_paragraph() -> str | None:
-            lines = by_title.get("What this site is")
-            if lines is None:
+            fragment = by_title.get("What this site is")
+            if fragment is None:
                 return "no 'What this site is' section"
-            paragraph = " ".join(line.strip() for line in "\n".join(lines).strip().split("\n\n")[0].splitlines())
-            match = re.fullmatch(re.escape(SITE_PARAGRAPH).replace(re.escape("{name}"), r"(.+?)"), paragraph)
+            first = re.search(r"<p\b[^>]*>(.*?)</p>", fragment, re.S)
+            if not first:
+                return "the 'What this site is' section has no paragraph"
+            paragraph = html_text(first.group(1))
+            want = SITE_PARAGRAPH.replace("*", "")
+            match = re.fullmatch(re.escape(want).replace(re.escape("{name}"), r"(.+?)"), paragraph)
             if not match:
                 return f"the first paragraph is {paragraph[:160]!r}, not Appendix C's"
             if not match.group(1).strip():
                 return "the paragraph names no project"
+            for emphasised in ("Checked", "Checked at"):
+                if f"<em>{emphasised}</em>" not in first.group(1):
+                    return f"the paragraph does not emphasise {emphasised!r}"
             return None
 
         check("'What this site is' is Appendix C's paragraph, naming the project", site_paragraph)
 
         def checked_where_promised() -> str | None:
             # The paragraph names where the commit is shown; each place must show it.
-            # A Markdown page carries no Checked line at its top, so the sentence
-            # may not promise one there.
             html_pages = sorted(docs.rglob("*.html"))
             if not html_pages:
                 return "the fixture published no HTML pages"
@@ -421,36 +438,29 @@ def main() -> int:
                 text = read(path) or ""
                 if not re.search(r'<span class="snapshot-item"><b>Checked</b>', text):
                     return f"{path.relative_to(docs)} shows no Checked commit at the top"
-            index_md = read(docs / "index.md") or ""
-            if not re.search(r"^\| Checked at \| \S", index_md, re.M):
-                return "index.md has no 'Checked at' row"
-            bare = [
-                str(path.relative_to(docs))
-                for path in sorted(docs.rglob("*.md"))
-                if not re.search(r"^\*?\*?Checked\b", (read(path) or "").split("\n## ", 1)[0], re.M)
-            ]
-            if bare and "at the top as *Checked*." in md:
-                return f"the guide says every page shows Checked at the top; {bare[0]} and {len(bare) - 1} other Markdown pages do not"
+            index_html = read(docs / "index.html") or ""
+            if not re.search(r"<dt>Checked at</dt><dd>\s*\S", index_html):
+                return "index.html has no 'Checked at' row"
             return None
 
-        check("the guide's 'Checked' promise holds where it says, in both views", checked_where_promised)
+        check("the guide's 'Checked' promise holds where it says: each HTML page and the overview row", checked_where_promised)
 
         # -- Terms ---------------------------------------------------------
-        terms_lines = by_title.get("Terms", [])
-        blocks = md_blocks(terms_lines)
+        terms_fragment = by_title.get("Terms", "")
+        blocks = html_h3_blocks(terms_fragment)
 
         def every_term_is_a_block() -> str | None:
             if not terms:
                 return "the contract carries no reader_terms"
             if not blocks:
-                return "the Terms section has no ### entries"
+                return "the Terms section has no h3 entries"
             want = [t["term"] for t in terms]
             got = [title for title, _ in blocks]
             if got != want:
                 return f"Terms entries are {got[:6]}…, the contract's are {want[:6]}… (count {len(got)} vs {len(want)}, order matters)"
             return None
 
-        check("Terms has one ### entry per reader_terms entry, in contract order", every_term_is_a_block)
+        check("Terms has one h3 entry per reader_terms entry, in contract order", every_term_is_a_block)
 
         def required_terms() -> str | None:
             got = {title for title, _ in blocks}
@@ -460,7 +470,7 @@ def main() -> int:
         check("Terms defines Conspectus and Mapped (D2, D3)", required_terms)
 
         def term_anchors() -> str | None:
-            anchors = re.findall(r'<a id="(term-[^"]+)"></a>', "\n".join(terms_lines))
+            anchors = re.findall(r'<span id="(term-[^"]+)" class="record-anchor"></span>', terms_fragment)
             want = [f"term-{slug(t['term'])}" for t in terms]
             if anchors != want:
                 missing = [a for a in want if a not in anchors]
@@ -469,22 +479,24 @@ def main() -> int:
                 return "two terms share one anchor"
             # The anchor must directly precede its own heading.
             for term in terms:
-                needle = f'<a id="term-{slug(term["term"])}"></a>\n\n### {term["term"]}\n'
-                if needle not in "\n".join(terms_lines) + "\n":
+                needle = f'<span id="term-{slug(term["term"])}" class="record-anchor"></span>\n<h3 '
+                at = terms_fragment.find(needle)
+                heading = re.match(r"<h3\b[^>]*>(.*?)</h3>", terms_fragment[at + len(needle) - 4 :], re.S) if at >= 0 else None
+                if not heading or html_text(heading.group(1)).lstrip("§").strip() != term["term"]:
                     return f"the anchor for {term['term']!r} is not directly above its heading"
             return None
 
-        check("each term has an <a id=\"term-<slug>\"> anchor directly above its heading", term_anchors)
+        check("each term has a term-<slug> anchor directly above its heading", term_anchors)
 
         def term_bodies() -> str | None:
             by_block = dict(blocks)
             for term in terms:
-                body = "\n".join(by_block.get(term["term"], []))
-                visible = md_visible(body)
-                if str(term["definition"]) not in visible:
+                body = by_block.get(term["term"], "")
+                paragraphs = [html_text(m) for m in re.findall(r"<p\b[^>]*>(.*?)</p>", body, re.S)]
+                if str(term["definition"]) not in " ".join(paragraphs):
                     return f"{term['term']!r} does not carry its definition"
                 aliases = [str(a) for a in term.get("aliases") or []]
-                alias_lines = [ln for ln in body.splitlines() if ln.strip().startswith("*Also called:")]
+                alias_lines = [ln for ln in paragraphs if ln.startswith("Also called:")]
                 if aliases:
                     if len(alias_lines) != 1:
                         return f"{term['term']!r} has {len(alias_lines)} 'Also called:' lines, wanted one"
@@ -493,12 +505,12 @@ def main() -> int:
                             return f"{term['term']!r}: the alias {alias!r} is not on its 'Also called:' line"
                 elif alias_lines:
                     return f"{term['term']!r} has no aliases but prints an 'Also called:' line"
-                seen = [ln for ln in body.splitlines() if ln.strip().startswith("Seen on:")]
+                seen = [m for m in re.findall(r"<p\b[^>]*>(.*?)</p>", body, re.S) if html_text(m).startswith("Seen on:")]
                 pages = [str(p) for p in term.get("pages") or []]
                 if expected_targets(pages, docs):
                     if len(seen) != 1:
                         return f"{term['term']!r} has {len(seen)} 'Seen on:' lines, wanted one"
-                    targets = {m.group(2) for m in LINK.finditer(seen[0])}
+                    targets = set(re.findall(r'<a\b[^>]*\bhref="([^"]+)"', seen[0]))
                     want = expected_targets(pages, docs)
                     if targets != want:
                         return f"{term['term']!r} 'Seen on:' links {sorted(targets)}, wanted {sorted(want)}"
@@ -512,16 +524,15 @@ def main() -> int:
         check("each term carries its definition, aliases on one line, and Seen on: links to its pages", term_bodies)
 
         def html_terms() -> str | None:
-            spans = {title: (start, end) for title, start, end in html_h2_spans(page)}
-            if "Terms" not in spans:
+            if "Terms" not in by_title:
                 return "the HTML has no Terms section"
-            fragment = page[spans["Terms"][0] : spans["Terms"][1]]
+            fragment = by_title["Terms"]
             for term in terms:
                 tid = f"term-{slug(term['term'])}"
                 if not re.search(rf'id="{re.escape(tid)}"', fragment):
                     return f"the HTML has no id={tid!r} in Terms"
             text = html_text(fragment)
-            by_block = {title: html_text(body) for title, body in html_h3_blocks(fragment)}
+            by_block = {title: html_text(body) for title, body in blocks}
             for term in terms:
                 body = by_block.get(term["term"])
                 if body is None:
@@ -531,11 +542,11 @@ def main() -> int:
                 for alias in term.get("aliases") or []:
                     if alias not in body:
                         return f"the HTML entry for {term['term']!r} lacks the alias {alias!r}"
-            hrefs = set(re.findall(r'href="([^"#]+)\.html"', fragment))
+            hrefs = set(re.findall(r'href="([^"#]+\.html)"', fragment))
             for term in terms:
                 for target in expected_targets([str(p) for p in term.get("pages") or []], docs):
-                    if target[:-3] not in hrefs:
-                        return f"the HTML Terms carries no link to {target[:-3]}.html"
+                    if target not in hrefs:
+                        return f"the HTML Terms carries no link to {target}"
             if "Seen on" not in text:
                 return "the HTML Terms prints no 'Seen on' line"
             return None
@@ -544,11 +555,11 @@ def main() -> int:
 
         # -- enums ---------------------------------------------------------
         def locate_enums() -> tuple[dict[str, str], str | None]:
-            """enum -> the H2 section whose ### heading names it."""
+            """enum -> the H2 section whose h3 heading names it."""
 
             where: dict[str, str] = {}
-            for title, lines in sections:
-                for heading, _ in md_blocks(lines):
+            for title, fragment in sections:
+                for heading, _ in html_h3_blocks(fragment):
                     for name in enums:
                         if heading == enum_title(name):
                             where[name] = title
@@ -598,9 +609,9 @@ def main() -> int:
             order = [title for title, _ in sections]
             if "Full vocabulary" not in order:
                 return "no 'Full vocabulary' section"
-            before = "\n".join("\n".join(lines) for title, lines in sections if order.index(title) < order.index("Full vocabulary"))
+            before = "\n".join(fragment for title, fragment in sections if order.index(title) < order.index("Full vocabulary"))
             for name, definition in enums.items():
-                if not definition.get("reader_facing") and f"`{name}`" in before:
+                if not definition.get("reader_facing") and f"<code>{name}</code>" in before:
                     return f"the stored name `{name}` of a non-reader-facing enum appears before 'Full vocabulary'"
             return None
 
@@ -608,46 +619,30 @@ def main() -> int:
 
         def enum_headings() -> str | None:
             for title in ("Status values", "Full vocabulary"):
-                for heading, lines in md_blocks(by_title.get(title, [])):
+                for heading, body in html_h3_blocks(by_title.get(title, "")):
                     name = next((n for n in enums if enum_title(n) == heading), None)
                     if name is None:
                         return f"{title} has the heading {heading!r}, which names no enum"
-                    body = "\n".join(lines)
-                    if f"`{name}`" not in body:
+                    if f"<code>{name}</code>" not in body:
                         return f"{heading!r} does not print its stored name {name!r} in a code span"
-                    rows = [ln for ln in lines if ln.startswith("|")]
+                    rows = re.findall(r"<tr>", body.split("</tbody>")[0].split("<tbody>")[-1])
                     values = enums[name].get("values") or []
-                    if len(rows) != len(values) + 2:
-                        return f"{heading!r} has {len(rows) - 2} rows for {len(values)} values"
+                    if len(rows) != len(values):
+                        return f"{heading!r} has {len(rows)} rows for {len(values)} values"
             return None
 
         check("each enum table has a plain heading, its stored name in a code span, and a row per value", enum_headings)
 
         def enum_cells() -> str | None:
             # Each row must carry its own value's label, meaning and limit, in
-            # contract order, in both views: a row count cannot see a label
+            # contract order: a row count cannot see a label
             # moved onto the wrong value.
             def expected(entry: dict[str, Any]) -> list[str]:
-                return [
-                    " ".join(str(entry[key]).split()).replace("|", "/")
-                    for key in ("value", "label", "meaning", "cannot_justify")
-                ]
+                return [" ".join(str(entry[key]).split()) for key in ("value", "label", "meaning", "cannot_justify")]
 
             html_blocks = dict(html_h3_blocks(page))
             for name, definition in enums.items():
                 title = enum_title(name)
-                lines = next(
-                    (
-                        body
-                        for section in ("Status values", "Full vocabulary")
-                        for heading, body in md_blocks(by_title.get(section, []))
-                        if heading == title
-                    ),
-                    None,
-                )
-                if lines is None:
-                    return f"the Markdown guide has no table for {name}"
-                rows = [ln for ln in lines if ln.startswith("|")][2:]
                 block = html_blocks.get(title)
                 if block is None:
                     return f"the HTML guide has no table for {name}"
@@ -658,13 +653,10 @@ def main() -> int:
                 ]
                 html_rows = [[html_text(c) for c in cells] for cells in raw_rows]
                 values = list(definition.get("values") or [])
-                if len(rows) != len(values) or len(html_rows) != len(values):
-                    return f"{name} has {len(rows)} Markdown and {len(html_rows)} HTML rows for {len(values)} values"
+                if len(html_rows) != len(values):
+                    return f"{name} has {len(html_rows)} HTML rows for {len(values)} values"
                 for index, entry in enumerate(values):
                     want = expected(entry)
-                    got = [md_visible(c).strip() for c in rows[index].strip().strip("|").split(" | ")]
-                    if got != want:
-                        return f"{name} row {index + 1} reads {got!r} in Markdown, the contract says {want!r}"
                     # The Value column is the stored value, printed literally. A
                     # chip would print some enum's label in its place (pass_type's
                     # `adversarial` as subsystem_status's "Challenging claims").
@@ -675,7 +667,7 @@ def main() -> int:
                         return f"{name} row {index + 1}: the HTML Value cell is {raw_rows[index][0].strip()[:80]!r}, not {literal!r}"
             return None
 
-        check("each enum row carries its own value's label, meaning and limit, in both views", enum_cells)
+        check("each enum row carries its own value's label, meaning and limit, in HTML", enum_cells)
 
         def html_disclosure() -> str | None:
             spans = {title: (start, end) for title, start, end in html_h2_spans(page)}

@@ -6,7 +6,7 @@ Seeds four subsystems, each with a registered survey artifact whose prose carrie
 one sentinel line:
 
   B-01  one or more current claims, an artifact   → the narrative is inside
-        `## Structure`, after the last claim group, under `### Survey narrative`
+        Structure, after the last claim group, under a `Survey narrative` heading
   B-02  no claim, an artifact                      → today's page, unchanged
   B-03  claims, no artifact                        → no narrative heading at all
   B-04  no claim, no artifact                      → no narrative heading at all
@@ -44,6 +44,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
 
 from store_only_seed import import_body
@@ -136,7 +137,9 @@ def artifact_text(sid: str) -> str:
 
 
 def provenance(sid: str) -> str:
-    return f"`{artifact_path(sid)}` at content hash `{HASH[:12]}`, recorded at `{SHA[:12]}`, written on {WRITTEN[:10]}"
+    """The provenance as a reader sees it; code spans are `<code>` elements."""
+
+    return f"{artifact_path(sid)} at content hash {HASH[:12]}, recorded at {SHA[:12]}, written on {WRITTEN[:10]}"
 
 
 def seed(storage: Path) -> None:
@@ -205,30 +208,104 @@ def read(path: Path) -> str:
         return ""
 
 
-def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level or higher."""
+class Node:
+    def __init__(self, tag: str, parent: Node | None, attrs: dict[str, str | None]) -> None:
+        self.tag = tag
+        self.parent = parent
+        self.attrs = attrs
+        self.children: list[Node | str] = []
 
-    marker = "#" * level + " "
-    body: list[str] = []
-    inside = False
-    for line in text.splitlines():
-        if not inside:
-            inside = line.startswith(marker) and line[len(marker):].strip() == heading
+    def text(self) -> str:
+        return "".join(c if isinstance(c, str) else c.text() for c in self.children)
+
+    def walk(self):
+        yield self
+        for child in self.children:
+            if isinstance(child, Node):
+                yield from child.walk()
+
+
+_VOID = {"br", "hr", "img", "meta", "link", "input"}
+
+
+class TreeBuilder(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.root = Node("#root", None, {})
+        self.cursor = self.root
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        node = Node(tag, self.cursor, dict(attrs))
+        self.cursor.children.append(node)
+        if tag not in _VOID:
+            self.cursor = node
+
+    def handle_endtag(self, tag: str) -> None:
+        node: Node | None = self.cursor
+        while node is not None and node.tag != tag:
+            node = node.parent
+        if node is not None and node.parent is not None:
+            self.cursor = node.parent
+
+    def handle_data(self, data: str) -> None:
+        self.cursor.children.append(data)
+
+
+def parse_html(text: str) -> Node:
+    builder = TreeBuilder()
+    builder.feed(text)
+    return builder.root
+
+
+HEADINGS = {"h1": 1, "h2": 2, "h3": 3, "h4": 4, "h5": 5, "h6": 6}
+
+
+def heading_text(node: Node) -> str:
+    """A heading's words, without the `§` anchor link every heading carries."""
+
+    return " ".join(node.text().removeprefix("§").split())
+
+
+def flat(blocks: list[Node]) -> str:
+    return " ".join(" ".join(b.text().split()) for b in blocks)
+
+
+def section(page: Node, heading: str) -> list[Node]:
+    """The blocks of the `<section>` whose `<h2>` reads `heading`, heading excluded."""
+
+    for node in page.walk():
+        if node.tag != "section":
             continue
-        depth = len(line) - len(line.lstrip("#"))
-        if line.startswith("#") and 0 < depth <= level:
+        kids = [c for c in node.children if isinstance(c, Node)]
+        if kids and kids[0].tag == "h2" and heading_text(kids[0]) == heading:
+            return kids[1:]
+    return []
+
+
+def under(blocks: list[Node], heading: str, level: int = 3) -> list[Node]:
+    """The blocks after the level-`level` heading `heading`, up to the next heading
+    of that level or higher; deeper headings stay inside, as the narrative's own do."""
+
+    body: list[Node] = []
+    inside = False
+    for block in blocks:
+        depth = HEADINGS.get(block.tag, 0)
+        if not inside:
+            inside = depth == level and heading_text(block) == heading
+            continue
+        if 0 < depth <= level:
             break
-        body.append(line)
-    return "\n".join(body)
+        body.append(block)
+    return body
 
 
-def subsystem_page(docs: Path, sid: str) -> str:
-    pages = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.md"))
-    return read(pages[0]) if pages else ""
+def subsystem_page(docs: Path, sid: str) -> Node | None:
+    pages = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))
+    return parse_html(read(pages[0])) if pages else None
 
 
-def h3s(text: str) -> list[str]:
-    return [ln[4:].strip() for ln in text.splitlines() if ln.startswith("### ")]
+def h3s(blocks: list[Node]) -> list[str]:
+    return [heading_text(b) for b in blocks if b.tag == "h3"]
 
 
 def placement_helper() -> Callable[..., str] | None:
@@ -263,7 +340,7 @@ def main() -> int:
             if outcome.get("returncode") != 0:
                 return f"the materializer failed — {outcome.get('diagnostic')}"
             for sid, page in pages.items():
-                if not page:
+                if page is None:
                     return f"the {sid} subsystem page could not be read"
             return None
 
@@ -280,14 +357,14 @@ def main() -> int:
                 return f"{RED_EXPECT}: more than one `### Survey narrative`"
             if heads.index("Survey narrative") != len(heads) - 1 or len(heads) < 3:
                 return f"{RED_EXPECT}: it does not follow the claim groups {heads}"
-            body = section(structure, "Survey narrative", level=3)
-            if sentinel("B-01") not in body:
+            body = under(structure, "Survey narrative")
+            if sentinel("B-01") not in flat(body):
                 return f"{RED_EXPECT}: the artifact's prose is not under `### Survey narrative`"
-            lead = next((ln for ln in body.splitlines() if ln.strip()), "")
-            want = f"*{NARRATIVE_LABEL}.* Its source is {provenance('B-01')}."
+            lead = next((flat([b]) for b in body if flat([b])), "")
+            want = f"{NARRATIVE_LABEL}. Its source is {provenance('B-01')}."
             if lead != want:
                 return f"the narrative opens `{lead}`, not `{want}`"
-            if "##### Details" not in body:
+            if not any(b.tag == "h5" and heading_text(b) == "Details" for b in body):
                 return "the artifact's own headings are not nested beneath the narrative"
             return None
 
@@ -298,17 +375,17 @@ def main() -> int:
             if (why := published()):
                 return why
             page = pages["B-01"]
-            n = page.count(sentinel("B-01"))
+            n = page.text().count(sentinel("B-01"))
             if n != 1:
                 return f"the artifact's prose appears {n} times on the page, not once"
             record = section(page, "Survey record")
             if "Survey artifact" not in h3s(record):
                 return "the survey record has no `### Survey artifact`"
-            body = section(record, "Survey artifact", level=3)
+            body = under(record, "Survey artifact")
             want = f"{POINTER} Its source is {provenance('B-01')}."
-            if want not in " ".join(body.split()):
-                return f"the survey artifact entry reads `{body.strip()}`, not `{want}`"
-            if sentinel("B-01") in body:
+            if want not in flat(body):
+                return f"the survey artifact entry reads `{flat(body)}`, not `{want}`"
+            if sentinel("B-01") in flat(body):
                 return "the survey record repeats the prose"
             return None
 
@@ -323,26 +400,26 @@ def main() -> int:
             heads = h3s(structure)
             if heads != [NO_CLAIMS_HEADING]:
                 return f"B-02's Structure headings are {heads}, not [{NO_CLAIMS_HEADING!r}]"
-            body = section(structure, NO_CLAIMS_HEADING, level=3)
+            body = under(structure, NO_CLAIMS_HEADING)
             want = (
-                f"No structural claim is recorded for this subsystem. *{NARRATIVE_LABEL}.*"
+                f"No structural claim is recorded for this subsystem. {NARRATIVE_LABEL}."
                 f" Its source is {provenance('B-02')}."
             )
-            if want not in " ".join(body.split()):
-                return f"B-02's fallback sentence reads `{body.strip()[:200]}`"
-            if sentinel("B-02") not in body:
+            if want not in flat(body):
+                return f"B-02's fallback sentence reads `{flat(body)[:200]}`"
+            if sentinel("B-02") not in flat(body):
                 return "B-02's narrative is not under the existing heading"
-            if "Survey narrative" in page:
+            if "Survey narrative" in page.text():
                 return "B-02 carries a `### Survey narrative` heading"
-            if page.count(sentinel("B-02")) != 1:
+            if page.text().count(sentinel("B-02")) != 1:
                 return "B-02's prose does not appear exactly once"
-            record = section(section(page, "Survey record"), "Survey artifact", level=3)
+            record = under(section(page, "Survey record"), "Survey artifact")
             pointer = (
                 "The survey artifact is rendered above, under Structure, because no"
                 " structural claim is recorded to stand in its place."
                 f" Its source is {provenance('B-02')}."
             )
-            if pointer not in " ".join(record.split()):
+            if pointer not in flat(record):
                 return "B-02's survey record no longer carries today's pointer"
             return None
 
@@ -354,7 +431,7 @@ def main() -> int:
                 return why
             for sid in ("B-03", "B-04"):
                 page = pages[sid]
-                if "Survey narrative" in page:
+                if "Survey narrative" in page.text():
                     return f"{sid} has no artifact and carries `### Survey narrative`"
                 if "Survey artifact" in h3s(section(page, "Survey record")):
                     return f"{sid} has no artifact and carries `### Survey artifact`"
