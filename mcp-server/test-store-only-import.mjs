@@ -562,6 +562,63 @@ async function main(mods) {
     });
   }
 
+  // ------------------------------------------- a retry reads the imported bytes
+  //
+  // A first run whose extraction cannot start still imports the bodies. When the
+  // files then change on disk, a retry must extract from the bodies it holds, or
+  // the purpose, name and runtime rows come from a file the store never imported
+  // (F3/codex, slice-S1).
+  {
+    const { ctx, storage, db } = world("self-shaped", "retry");
+    session(ctx, "retry");
+    const before = materializerReading(storage);
+    const nameBefore = codebaseLine(storage);
+    check("R2 a retry extracts from the imported bodies, not from files changed since", () => {
+      const saved = process.env.AMANUENSIS_PYTHON;
+      process.env.AMANUENSIS_PYTHON = join(storage, "no-such-python");
+      let first;
+      try {
+        first = call(TOOL, {}, ctx);
+      } finally {
+        if (saved === undefined) delete process.env.AMANUENSIS_PYTHON;
+        else process.env.AMANUENSIS_PYTHON = saved;
+      }
+      if (first?.ok !== true) return `the first run answered ${JSON.stringify(first)}`;
+      if (importedRows(db).length !== registered(db).length) return "the first run did not import every body";
+      if (db.prepare("SELECT COUNT(*) AS n FROM explanations WHERE subject_type = 'project' AND slot = 'purpose'").get().n !== 0) {
+        return "the first run wrote a purpose although its extraction could not run";
+      }
+      if (before.state !== "filled" || !nameBefore) return "the fixture carries no thesis or codebase line";
+      writeFileSync(
+        join(storage, "entry-point.md"),
+        "# Entry point\n\n## What is this codebase?\n\nA different program, written after the import.\n",
+      );
+      const report = join(storage, "onboarding-report.md");
+      writeFileSync(
+        report,
+        readFileSync(report, "utf8")
+          .replace(/^\*\*Codebase\*\*:.*$/m, "**Codebase**: Changed-after-import")
+          .replace(/^## Runtime boundary map[\s\S]*?(?=^## |(?![\s\S]))/m, ""),
+      );
+      const retry = call(TOOL, {}, ctx);
+      if (retry?.ok !== true) return `the retry answered ${JSON.stringify(retry)}`;
+      const purpose = db
+        .prepare("SELECT body FROM explanations WHERE subject_type = 'project' AND slot = 'purpose'")
+        .all()
+        .map((r) => r.body);
+      if (purpose.length !== 1 || purpose[0] !== before.text) {
+        return `the purpose is ${JSON.stringify(purpose)}, not the imported entry point's thesis`;
+      }
+      const names = db.prepare("SELECT name FROM project_profile").all().map((r) => r.name);
+      if (names.length !== 1 || names[0] !== nameBefore) {
+        return `the name is ${JSON.stringify(names)}, not the imported report's ${JSON.stringify(nameBefore)}`;
+      }
+      const edges = db.prepare("SELECT COUNT(*) AS n FROM runtime_boundaries").get().n;
+      const expected = before.table ? tableRows(before.table).length : 0;
+      return edges === expected ? null : `${edges} runtime row(s) imported, not the imported report's ${expected}`;
+    });
+  }
+
   for (const db of opened) {
     try {
       db.close();
