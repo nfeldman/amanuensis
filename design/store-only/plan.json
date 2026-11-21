@@ -82,10 +82,10 @@
         "SO25"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "337a68eb20d389493c8e02d335382abba67b71af",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "c03f8daa9832d688c8705769f4ce1321d9632938",
+        "findings": 14
       }
     }
   ],

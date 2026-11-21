@@ -44,7 +44,7 @@
 | SO20 | Read-back against the store: record marks and drawn-element census | done (1 attempt) | SO19 | `materializer/test-store-only-readback.py` | §8 SO20, §3.5 |
 | SO21 | Publication chain and copies are HTML-only | ready (2 attempts) | SO13, SO20 | `dev/test-store-only-publish-chain.mjs` | §8 SO21, §6 |
 
-## S5 · Diagrams (review: pending)
+## S5 · Diagrams (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
