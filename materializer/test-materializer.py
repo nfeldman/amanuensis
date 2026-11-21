@@ -730,9 +730,20 @@ def main() -> None:
         # empty result means "nothing was measured", not "nothing is stale".
         from amanuensis_materializer import diagrams as dmod  # noqa: E402
 
+        def staleness(db: sqlite3.Connection) -> str:
+            """The staleness section's body as text: its sentence, or `id : count` per bar."""
+
+            from amanuensis_materializer.page import Paragraph, StalenessBars  # noqa: E402
+
+            (block,) = dmod.staleness_blocks(db)
+            if isinstance(block, StalenessBars):
+                return "\n".join(f"{label} : {value:g}" for label, value in block.values)
+            assert isinstance(block, Paragraph), block
+            return block.text.plain
+
         staleness_db = sqlite3.connect(storage / "memory.db")
         try:
-            unmeasured = dmod.staleness_map(staleness_db)
+            unmeasured = staleness(staleness_db)
             assert "is fresh" not in unmeasured, (
                 "staleness map claims freshness from an empty source: " + unmeasured
             )
@@ -744,7 +755,7 @@ def main() -> None:
                 "'git-drift')"
             )
             staleness_db.commit()
-            measured = dmod.staleness_map(staleness_db)
+            measured = staleness(staleness_db)
             assert "B-01" in measured, measured
 
             # An exempt row that has drifted must not appear as an obligation.
@@ -754,13 +765,13 @@ def main() -> None:
                 "'abc1234', 1, 'git-drift')"
             )
             staleness_db.commit()
-            mixed = dmod.staleness_map(staleness_db)
+            mixed = staleness(staleness_db)
             assert "B-04" not in mixed, mixed
             assert "B-01" in mixed, mixed
 
             staleness_db.execute("UPDATE file_ledger SET stale = 0 WHERE file_path = 'src/core.ts'")
             staleness_db.commit()
-            measured_clean = dmod.staleness_map(staleness_db)
+            measured_clean = staleness(staleness_db)
             # A clean result must still carry the denominator it was measured
             # against, so "nothing stale" cannot be read as "nothing checked".
             assert "no stale files across 1 scoped file" in measured_clean.lower(), measured_clean

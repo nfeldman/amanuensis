@@ -27,14 +27,13 @@ from .diagrams import (
     RUNTIME_BOUNDARY_COLUMNS,
     boundary_blocks,
     coverage_blocks,
-    dependency_blocks,
+    dependency_section,
     depth_cell,
     runtime_boundary_blocks,
     runtime_boundary_rows,
     runtime_boundary_state,
     seam_blocks,
     staleness_blocks,
-    subsystem_dependency_view,
 )
 from .legacy_prose import (
     ImportedBody,
@@ -1821,7 +1820,7 @@ def render_architecture(
     # modules, so a change to either predicate could head an atlas "Subsystem
     # dependency graph" — a page asserting edges no row records (§9.2). The
     # `xrefs` rows above stay for the manifest source hash only.
-    dependency_heading, _dependency_body = subsystem_dependency_view(conn)
+    dependency_heading, dependency_body = dependency_section(conn, _caption)
 
     # §3.7: the project account and a line per subsystem open the page. Read by
     # the function the subsystem pages and the read-back read.
@@ -1864,7 +1863,7 @@ def render_architecture(
             "Runtime boundary map",
             *runtime_boundary_blocks(conn, _caption("Runtime boundary map")),
         ),
-        _section(dependency_heading, *dependency_blocks(conn, _caption(dependency_heading))),
+        _section(dependency_heading, *dependency_body),
         # §2.5 item 2: the HTML draws this section's table as the boundary SVG.
         _section(BOUNDARY_HEADING, *boundary_blocks(conn, _caption(BOUNDARY_HEADING))),
         _section("Seam topology", *seam_blocks(conn, _caption("Seam topology"))),

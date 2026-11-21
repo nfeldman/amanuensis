@@ -1,13 +1,13 @@
 """Architecture projection generation from recorded survey state.
 
 Every diagram is a pure function of DB rows — no relationships are inferred
-from names. Surfaces may be portable Markdown
-tables or Mermaid where a graph exists.
+from names. Each section is built as page-model blocks; no Markdown is written.
 """
 from __future__ import annotations
 
 import re
 import sqlite3
+from collections.abc import Callable
 from typing import Any
 
 from .db import rows, table_exists
@@ -24,7 +24,6 @@ from .page import (
     CoverageIndex,
     CoverageReview,
     CoverageRow,
-    DiagramSource,
     Inlines,
     Paragraph,
     RuntimeDiagram,
@@ -55,8 +54,8 @@ def _safe_label(text: str) -> str:
 # The two headings the architecture page's first topology section can carry.
 # The heading and the body are one decision (§9.2): a page headed "dependency
 # graph" over an atlas would assert edges nobody recorded, so `render_architecture`
-# takes both from `subsystem_dependency_view` rather than re-deciding on its own
-# read of `xrefs`.
+# takes both from `dependency_section` rather than re-deciding on its own read of
+# `xrefs`.
 DEPENDENCY_HEADING = "Subsystem dependency graph"
 ATLAS_HEADING = "Subsystem atlas"
 
@@ -82,65 +81,6 @@ def _edge_coverage_sentence(covered: int, total: int) -> str:
         " below is what the survey recorded, not the whole dependency surface. No edge is"
         " inferred from a name, a prefix, or a nearby seam._"
     )
-
-
-def subsystem_dependency_view(conn: sqlite3.Connection) -> tuple[str, str]:
-    """The heading and body of the architecture page's dependency section."""
-    edges = rows(
-        conn,
-        "SELECT from_id, to_id, relationship, strength, context FROM xrefs ORDER BY from_id",
-    )
-    subs = {
-        r["id"]: r
-        for r in rows(conn, "SELECT id, name, status, layer FROM subsystems")
-    }
-    if not subs and not edges:
-        return ATLAS_HEADING, "_No subsystems recorded yet._"
-    if not edges:
-        lines = [
-            "_No dependency edges are recorded in this publication. The layer map below is a subsystem atlas, not an inferred dependency graph._",
-            "",
-            "| Region | Subsystem | Survey depth |",
-            "|---|---|---|",
-        ]
-        for sid, subsystem in sorted(subs.items(), key=lambda item: ((item[1].get("layer") or "Other"), item[0])):
-            name = subsystem["name"]
-            route = subsystem_page(sid, name)
-            region = _safe_label(subsystem.get("layer") or "Other")
-            lines.append(
-                f"| {region} | **[{sid}]({route})** {_safe_label(name)} | {_DEPTH_LABELS.get(subsystem['status'], subsystem['status'])} |"
-            )
-        return ATLAS_HEADING, "\n".join(lines)
-
-    # The census counts recorded subsystems an edge names, so an edge naming an
-    # id no `subsystems` row carries cannot inflate the covered set.
-    covered = {
-        endpoint
-        for edge in edges
-        for endpoint in (edge["from_id"], edge["to_id"])
-        if endpoint in subs
-    }
-    lines = [
-        _edge_coverage_sentence(len(covered), len(subs)),
-        "",
-        "| From | Relationship | To | Strength | Context |",
-        "|---|---|---|---|---|",
-    ]
-    for edge in edges:
-        from_subsystem = subs.get(edge["from_id"], {"name": edge["from_id"]})
-        to_subsystem = subs.get(edge["to_id"], {"name": edge["to_id"]})
-        from_name = from_subsystem["name"]
-        to_name = to_subsystem["name"]
-        from_route = subsystem_page(edge["from_id"], from_name)
-        to_route = subsystem_page(edge["to_id"], to_name)
-        context = _safe_label(edge.get("context") or "No additional context recorded")
-        lines.append(
-            f"| **[{edge['from_id']}]({from_route})** {_safe_label(from_name)} "
-            f"| {_safe_label(edge['relationship'])} "
-            f"| **[{edge['to_id']}]({to_route})** {_safe_label(to_name)} "
-            f"| {edge['strength']} | {context} |"
-        )
-    return DEPENDENCY_HEADING, "\n".join(lines)
 
 
 #: The architecture page's boundary section. The HTML recognises the table by
@@ -194,111 +134,6 @@ def _no_boundary_sentence(unconnected: int, total: int) -> str:
     verb = "has" if unconnected == 1 else "have"
     noun = "subsystem" if total == 1 else "subsystems"
     return f"{unconnected} of {total} {noun} {verb} no recorded boundary."
-
-
-def boundary_view(conn: sqlite3.Connection) -> str:
-    """The boundary section: a sentence, or the census and the table the HTML draws."""
-    graph = boundary_relations(conn)
-    nodes, edges = graph["nodes"], graph["edges"]
-    if not nodes:
-        return "_No subsystems recorded yet._"
-    touching: dict[str, list[tuple[str, str]]] = {node["id"]: [] for node in nodes}
-    for edge in edges:
-        if edge["kind"] == "seam":
-            link = f"**[{edge['label']}](seams.html#{edge['label'].lower()})** seam"
-            touching[edge["from"]].append((link, edge["to"]))
-            touching[edge["to"]].append((link, edge["from"]))
-        else:
-            relationship = _safe_label(edge["label"])
-            touching[edge["from"]].append((f"{relationship} →", edge["to"]))
-            touching[edge["to"]].append((f"← {relationship}", edge["from"]))
-    census = _no_boundary_sentence(sum(1 for found in touching.values() if not found), len(nodes))
-    not_drawn = graph["not_drawn"]
-    skipped = (
-        f" {not_drawn} recorded relation{' names' if not_drawn == 1 else 's name'} one subsystem"
-        " twice or a subsystem with no record, and is not drawn."
-        if not_drawn
-        else ""
-    )
-    if not edges:
-        return f"_{BOUNDARY_NONE} {census}{skipped}_"
-
-    kinds = []
-    if any(edge["kind"] == "seam" for edge in edges):
-        kinds.append("seam")
-    if any(edge["kind"] == "xref" for edge in edges):
-        kinds.append("recorded dependency")
-    names = {node["id"]: node["name"] for node in nodes}
-
-    def subsystem_cell(sid: str) -> str:
-        return f"**[{sid}]({subsystem_page(sid, names[sid])})** {_safe_label(names[sid])}"
-
-    lines = [
-        f"_{census} Each {' and each '.join(kinds)} below joins two recorded subsystems;"
-        f" no line is inferred from a name or a layer.{skipped}_",
-        "",
-        "| " + " | ".join(BOUNDARY_COLUMNS) + " |",
-        "|---|---|---|---|",
-    ]
-    for node in nodes:
-        sid = node["id"]
-        layer = _safe_label(node["layer"])
-        for boundary, other in touching[sid] or [("none recorded", "")]:
-            other_cell = subsystem_cell(other) if other else "—"
-            lines.append(f"| {layer} | {subsystem_cell(sid)} | {boundary} | {other_cell} |")
-    return "\n".join(lines)
-
-
-def subsystem_dependency_graph(conn: sqlite3.Connection) -> str:
-    """Dependency surface from xrefs, or a truthful layer atlas without them."""
-    return subsystem_dependency_view(conn)[1]
-
-def staleness_map(conn: sqlite3.Connection) -> str:
-    """Bar chart of stale entries per subsystem.
-
-    An empty result is reported as absent measurement, not as health: a
-    projection cannot tell a conspectus with nothing stale from one where
-    nothing ever recorded staleness, so it must not assert the stronger of
-    the two. Staleness is read from `file_ledger`.
-    """
-    # The materializer reads databases it does not own and may run against a
-    # store written before staleness moved onto the ledger. A missing column is
-    # an unmeasured conspectus, not a broken projection — turning the whole
-    # publish red here would be a worse failure than reporting absence.
-    if not any(
-        column["name"] == "stale" for column in rows(conn, "PRAGMA table_info(file_ledger)")
-    ):
-        return (
-            "_No staleness data recorded. This conspectus predates ledger-derived "
-            "staleness, so this view reports absence of measurement rather than "
-            "freshness; the next reconciliation will populate it._"
-        )
-    rs = rows(
-        conn,
-        "SELECT subsystem_id, COUNT(*) AS n FROM file_ledger"
-        " WHERE stale = 1 AND " + _OBLIGATION_BEARING + " GROUP BY subsystem_id ORDER BY n DESC",
-    )
-    if not rs:
-        measured = rows(
-            conn,
-            "SELECT COUNT(*) AS n FROM file_ledger WHERE " + _OBLIGATION_BEARING,
-        )
-        scoped = measured[0]["n"] if measured else 0
-        if not scoped:
-            return (
-                "_No staleness data recorded. No files have been scoped, so this "
-                "view reports absence of measurement rather than freshness._"
-            )
-        return (
-            f"_No stale files across {scoped} scoped file"
-            f"{'' if scoped == 1 else 's'} carrying a survey obligation, at the last"
-            " reconciliation._"
-        )
-    lines = ["```mermaid", "pie showData", '    title Stale entries by subsystem']
-    for r in rs:
-        lines.append(f'    "{r["subsystem_id"]}" : {r["n"]}')
-    lines.append("```")
-    return "\n".join(lines)
 
 
 RUNTIME_BOUNDARY_COLUMNS = (
@@ -362,12 +197,6 @@ def _cell(value: object) -> str:
     return " ".join(str(value or "").replace("|", "/").split())
 
 
-def _table_text(value: object) -> str:
-    """One table cell whose pipes stay pipes, escaped as `\\|` (F2/codex, slice S2)."""
-
-    return " ".join(str(value or "").split()).replace("|", "\\|")
-
-
 def runtime_boundary_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """The effective runtime boundaries: the newest row per edge, none withdrawn.
 
@@ -413,53 +242,14 @@ def imported_runtime_line(edges: list[dict[str, Any]]) -> str | None:
     return f"{IMPORTED_RUNTIME_LABEL} {named}."
 
 
-def _recorded_runtime_table(conn: sqlite3.Connection) -> str | None:
-    """The effective boundaries as the five-column table the HTML draws, or None."""
-
-    edges = runtime_boundary_rows(conn)
-    if not edges:
-        return None
-    lines = [
-        "| " + " | ".join(RUNTIME_BOUNDARY_COLUMNS) + " |",
-        "|" + "---|" * len(RUNTIME_BOUNDARY_COLUMNS),
-    ]
-    for edge in edges:
-        cells = (
-            edge["from_runtime"],
-            edge["from_language"],
-            edge["to_runtime"],
-            edge["mechanism"],
-            edge["notes"],
-        )
-        lines.append("| " + " | ".join(_table_text(cell) for cell in cells) + " |")
-    return "\n".join(lines)
-
-
 def runtime_boundary_state(conn: sqlite3.Connection) -> str:
     """`recorded` or `absent`: the one answer the page and the census both read."""
     return "recorded" if runtime_boundary_rows(conn) else "absent"
 
 
-def runtime_boundary_map(conn: sqlite3.Connection) -> str:
-    """Project the recorded runtime boundaries into architecture output."""
-    table = _recorded_runtime_table(conn)
-    if table is None:
-        return f"_{RUNTIME_BOUNDARY_ABSENT}_"
-    label = imported_runtime_line(runtime_boundary_rows(conn))
-    return "\n\n".join(
-        [
-            "_Projected from the recorded runtime boundaries; mechanisms and targets"
-            " are preserved as recorded._",
-            table,
-            *([label] if label else []),
-        ]
-    )
-
-
 # ---------------------------------------------------------------------------
-# The same sections as page blocks (store-only PLAN §3.2 step 4). The architecture
-# page prints these; the Markdown functions above stay for the pages that
-# still hand Markdown to the parser. Each takes the caption its section names.
+# The sections as page blocks (store-only PLAN §3.1), built from the rows. The
+# architecture page prints these. Each takes the caption its section names.
 # ---------------------------------------------------------------------------
 
 
@@ -473,14 +263,33 @@ def _linked_subsystem(sid: str, name: str) -> Inlines:
     return inlines(f"**[{sid}]({subsystem_page(sid, name)})** {_safe_label(name)}")
 
 
-def dependency_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
-    """The dependency section's body: the atlas when no edge is recorded, else the edge table."""
-
+def _dependency_rows(conn: sqlite3.Connection) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
     edges = rows(
         conn,
         "SELECT from_id, to_id, relationship, strength, context FROM xrefs ORDER BY from_id",
     )
-    subs = {r["id"]: r for r in rows(conn, "SELECT id, name, status, layer FROM subsystems")}
+    return edges, {r["id"]: r for r in rows(conn, "SELECT id, name, status, layer FROM subsystems")}
+
+
+def dependency_section(
+    conn: sqlite3.Connection, caption: Callable[[str], str]
+) -> tuple[str, tuple[Block, ...]]:
+    """The dependency section's heading and body, decided by one read of the rows (§9.2)."""
+
+    edges, subs = _dependency_rows(conn)
+    heading = DEPENDENCY_HEADING if edges else ATLAS_HEADING
+    return heading, _dependency_blocks(edges, subs, caption(heading))
+
+
+def dependency_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
+    """The dependency section's body: the atlas when no edge is recorded, else the edge table."""
+
+    return _dependency_blocks(*_dependency_rows(conn), caption)
+
+
+def _dependency_blocks(
+    edges: list[dict[str, Any]], subs: dict[str, dict[str, Any]], caption: str
+) -> tuple[Block, ...]:
     if not subs and not edges:
         return (_sentence("_No subsystems recorded yet._"),)
     if not edges:
@@ -657,17 +466,51 @@ def seam_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
 
 
 def staleness_blocks(conn: sqlite3.Connection) -> tuple[Block, ...]:
-    """The staleness section's body: bars of stale files per subsystem, or what is not measured."""
+    """The staleness section's body: bars of stale files per subsystem, or what is not measured.
 
-    text = staleness_map(conn)
-    if not text.startswith("```mermaid"):
-        return (_sentence(text),)
-    values: list[tuple[str, float]] = []
-    for line in text.splitlines()[3:-1]:
-        match = re.fullmatch(r'"(.+?)"\s*:\s*([0-9.]+)', line.strip())
-        if match:
-            values.append((match.group(1), float(match.group(2))))
-    return (StalenessBars(tuple(values)),) if values else (DiagramSource(text),)
+
+    An empty result is reported as absent measurement, not as health: a
+    projection cannot tell a conspectus with nothing stale from one where
+    nothing ever recorded staleness, so it must not assert the stronger of
+    the two. Staleness is read from `file_ledger`.
+    """
+    # The materializer reads databases it does not own and may run against a
+    # store written before staleness moved onto the ledger. A missing column is
+    # an unmeasured conspectus, not a broken projection — turning the whole
+    # publish red here would be a worse failure than reporting absence.
+    if not any(
+        column["name"] == "stale" for column in rows(conn, "PRAGMA table_info(file_ledger)")
+    ):
+        return (
+            _sentence(
+                "_No staleness data recorded. This conspectus predates ledger-derived "
+                "staleness, so this view reports absence of measurement rather than "
+                "freshness; the next reconciliation will populate it._"
+            ),
+        )
+    rs = rows(
+        conn,
+        "SELECT subsystem_id, COUNT(*) AS n FROM file_ledger"
+        " WHERE stale = 1 AND " + _OBLIGATION_BEARING + " GROUP BY subsystem_id ORDER BY n DESC",
+    )
+    if rs:
+        return (StalenessBars(tuple((str(r["subsystem_id"]), float(r["n"])) for r in rs)),)
+    measured = rows(conn, "SELECT COUNT(*) AS n FROM file_ledger WHERE " + _OBLIGATION_BEARING)
+    scoped = measured[0]["n"] if measured else 0
+    if not scoped:
+        return (
+            _sentence(
+                "_No staleness data recorded. No files have been scoped, so this "
+                "view reports absence of measurement rather than freshness._"
+            ),
+        )
+    return (
+        _sentence(
+            f"_No stale files across {scoped} scoped file"
+            f"{'' if scoped == 1 else 's'} carrying a survey obligation, at the last"
+            " reconciliation._"
+        ),
+    )
 
 
 def runtime_boundary_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
