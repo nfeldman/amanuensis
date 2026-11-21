@@ -1622,7 +1622,10 @@ class ProjectionVerifier:
         something a person typed, into a file the publication says is generated.
         """
 
-        from .html_projection import README_PATH, README_TEXT  # noqa: PLC0415 — it imports this module
+        from .html_projection import (  # noqa: PLC0415 — it imports this module
+            README_PATH,
+            README_TEXT,
+        )
 
         body = projection.get(README_PATH)
         if body is None or body == README_TEXT:
@@ -2311,7 +2314,10 @@ class ProjectionVerifier:
         """
 
         from .diagrams import runtime_boundary_rows, runtime_edge_record  # noqa: PLC0415
-        from .html_projection import DISPLAY_STATUS, _HtmlWriter  # noqa: PLC0415 — it imports this module
+        from .html_projection import (  # noqa: PLC0415 — it imports this module
+            DISPLAY_STATUS,
+            _HtmlWriter,
+        )
         from .legacy_prose import body_blocks, imported_bodies  # noqa: PLC0415
         from .page import Marked, Page  # noqa: PLC0415
         from .renderers import (  # noqa: PLC0415
