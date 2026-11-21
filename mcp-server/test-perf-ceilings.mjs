@@ -31,6 +31,7 @@ import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import { ensureStorageRepo, commitStorage } from "./dist/storage-git.js";
 import { fileTools } from "./dist/tools/files.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
+import { narrativeTools } from "./dist/tools/narratives.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { vocabularyTools } from "./dist/tools/vocabulary.js";
@@ -48,6 +49,7 @@ const allTools = new Map(
     ...storageHistoryTools,
     ...fileTools,
     ...artifactTools,
+    ...narrativeTools,
     ...evidenceTools,
     ...claimTools,
     ...vocabularyTools,
@@ -143,7 +145,7 @@ for (let i = 0; i < 20; i++) {
   // the subsystem has none. A fixture subsystem coins no word of its own.
   call("decline_domain_vocabulary", { subsystem_id: id, reason: "ceiling fixture: its one file coins no term of its own", ref_sha: seedSha }, ctx);
   call("update_subsystem_status", { id, status: "structural" }, ctx);
-  call("register_artifact", { path: `${id}-survey.md`, kind: "subsystem-survey", subsystem_id: id }, ctx);
+  call("decline_narrative", { subject_type: "subsystem", subject_id: id, section: "structure", reason: "Perf fixture: its one file says nothing specific enough to narrate.", ref_sha: seedSha }, ctx);
   call("update_subsystem_status", { id, status: "concerns" }, ctx);
 }
 for (let c = 0; c < 25; c++) {

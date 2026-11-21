@@ -448,11 +448,13 @@ async function main(mods) {
   check("C2 no other advance is gated", () =>
     perWriter((writer) => {
       const toConcerns = seed("structural");
-      call(
-        "register_artifact",
-        { path: `${toConcerns}-survey.md`, kind: "subsystem-survey", subsystem_id: toConcerns },
-        ctx,
-      );
+      call("decline_narrative", {
+          subject_type: "subsystem",
+          subject_id: toConcerns,
+          section: "structure",
+          reason: "Fixture subsystem: its seeded files say nothing true and specific enough to narrate.",
+          ref_sha: head,
+        }, ctx);
       const concerns = attempt(writer, toConcerns, "concerns");
       if (concerns.refused !== null) return `concerns was refused: ${concerns.refused}`;
 
@@ -770,6 +772,7 @@ try {
       import("./dist/tools/evidence.js"),
       import("./dist/tools/explanations.js"),
       import("./dist/tools/git.js"),
+      import("./dist/tools/narratives.js"),
       import("./dist/tools/project.js"),
       import("./dist/tools/subsystems.js"),
     ]);

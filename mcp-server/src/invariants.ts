@@ -1479,6 +1479,33 @@ export function requireCompleteReconciliation(
 }
 
 /**
+ * Whether the structural phase has answered for `subsystemId`: an effective
+ * `structure` narrative (recorded or declined; a withdrawn one is not), or an
+ * imported survey body that no withdrawal has retired, so a store whose survey
+ * was written as a file is not stranded (PLAN §2.5). A legacy `artifacts` row is
+ * not an answer: only an import carries the file's text into the store.
+ */
+export function hasStructureNarrative(db: DB, subsystemId: string): boolean {
+  if (readNarratives(db, "subsystem", subsystemId, "structure").rows.length > 0) return true;
+  return importedSurveyBodies(db, subsystemId).length > 0;
+}
+
+/** The imported survey bodies of a subsystem that no withdrawal has retired, oldest first. */
+export function importedSurveyBodies(
+  db: DB,
+  subsystemId: string,
+): Array<{ id: number; path: string }> {
+  return db
+    .prepare(
+      `SELECT id, path FROM imported_artifacts
+        WHERE subsystem_id = ? AND kind = 'subsystem-survey'
+          AND path NOT IN (SELECT path FROM imported_artifact_withdrawals)
+        ORDER BY id`,
+    )
+    .all(subsystemId) as Array<{ id: number; path: string }>;
+}
+
+/**
  * Enforce that advancing a subsystem to a higher status requires evidence
  * that the prior phase ran. Called only for genuine forward transitions
  * (targetRank > currentRank); no-ops and deferred toggles are exempt.
@@ -1490,8 +1517,8 @@ export function requireCompleteReconciliation(
  * |               |   phase recorded its inventory through add_claim)      |
  * |               |   AND an anchored term scoped to it or an effective     |
  * |               |   declination — discharge or decline, never a floor     |
- * | concerns      | ≥1 artifacts row kind='subsystem-survey' (structural   |
- * |               |   phase wrote and registered its narrative document)   |
+ * | concerns      | an effective `structure` narrative, recorded or        |
+ * |               |   declined, or an imported survey body not withdrawn   |
  * | adversarial   | ≥1 dispositions row (concerns pass ran set_disposition)|
  * | mapped        | every current claim keyed `<sid>/…` carries a recorded |
  * |               |   challenge outcome — the adversarial pass ran over   |
@@ -1538,16 +1565,12 @@ export function enforcePhasePrerequisites(
       break;
     }
     case "concerns": {
-      const { n } = db
-        .prepare(
-          "SELECT COUNT(*) AS n FROM artifacts WHERE subsystem_id = ? AND kind = 'subsystem-survey'",
-        )
-        .get(subsystemId) as { n: number };
-      if (n === 0) {
+      if (!hasStructureNarrative(db, subsystemId)) {
         throw new ToolError(
-          `cannot advance ${subsystemId} to 'concerns': no subsystem-survey artifact ` +
-            `has been registered. The structural phase must write its narrative document ` +
-            `and call register_artifact(kind='subsystem-survey') before the concern pass begins.`,
+          `cannot advance ${subsystemId} to 'concerns': no structure narrative has been ` +
+            `recorded or declined. The structural phase must call record_narrative(section='structure') ` +
+            `with the evidence it was written from, or decline_narrative when the code does not ` +
+            `support one, before the concern pass begins.`,
         );
       }
       break;

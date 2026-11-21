@@ -8,10 +8,12 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
-import { requireActiveSession } from "../invariants.js";
+import { readExplanation, readNarrative, requireActiveSession } from "../invariants.js";
 import { spawnSync } from "../subprocess.js";
 
-const ITEM_KINDS = ["artifact", "commit", "test", "review-result"] as const;
+const ITEM_KINDS = ["artifact", "commit", "test", "review-result", "record"] as const;
+/** The kinds every unit manifest carries. `record` is optional: a manifest that verifies no stored prose has none (PLAN store-only §2.5). */
+const REQUIRED_UNIT_KINDS = ["artifact", "commit", "test", "review-result"] as const;
 const SCOPES = ["unit", "integral-head"] as const;
 type ItemKind = (typeof ITEM_KINDS)[number];
 type VerificationScope = (typeof SCOPES)[number];
@@ -283,7 +285,7 @@ function plan(args: Record<string, unknown>, ctx: ServerContext): Record<string,
   const specs = parseItemSpecs(args, assembledHead, ctx);
   const unit = specs.filter((item) => item.verification_scope === "unit");
   const integral = specs.filter((item) => item.verification_scope === "integral-head");
-  for (const kind of ITEM_KINDS) {
+  for (const kind of REQUIRED_UNIT_KINDS) {
     if (!unit.some((item) => item.item_kind === kind)) {
       throw new ToolError(`composition unit manifest requires a ${kind} item`);
     }
@@ -450,6 +452,91 @@ function landItem(args: Record<string, unknown>, ctx: ServerContext): Record<str
   return readComposition(ctx, runId);
 }
 
+/** A record reference: `narrative:<id>` or `explanation:<id>`, the row a worker was asked to write. */
+const RECORD_REF = /^(narrative|explanation):([1-9][0-9]*)$/;
+
+/**
+ * Why a `record` item fails, or nothing when it passes (PLAN store-only §2.5).
+ * The expected reference names a narrative or explanation row, and the row has
+ * to exist, be the effective one for its subject, hold prose rather than a
+ * declination or withdrawal, and have been recorded at the item's target commit.
+ * The worker's own report has to name the same record, as an artifact item's
+ * does its path; its success label is never read.
+ */
+function scoreRecordItem(
+  ctx: ServerContext,
+  item: CompositionItem,
+  observed: Record<string, unknown>,
+): string[] {
+  const reasons: string[] = [];
+  const match = RECORD_REF.exec(item.expected_ref);
+  if (!match) {
+    return ["expected record is not a reference of the form narrative:<id> or explanation:<id>"];
+  }
+  const kind = match[1] as "narrative" | "explanation";
+  const id = Number(match[2]);
+  if (observed.record_ref !== item.expected_ref) {
+    reasons.push("worker reported a different record");
+  }
+  let row: { disposition: string; ref_sha: string } | null;
+  let effective: boolean;
+  if (kind === "narrative") {
+    const stored = ctx.db
+      .prepare(
+        "SELECT subject_type, subject_id, section, topic, disposition, ref_sha FROM narratives WHERE id = ?",
+      )
+      .get(id) as
+      | {
+          subject_type: string;
+          subject_id: string;
+          section: string;
+          topic: string;
+          disposition: string;
+          ref_sha: string;
+        }
+      | undefined;
+    row = stored ?? null;
+    effective =
+      stored !== undefined &&
+      readNarrative(ctx.db, stored.subject_type, stored.subject_id, stored.section, stored.topic)
+        ?.id === id;
+  } else {
+    const stored = ctx.db
+      .prepare(
+        "SELECT subject_type, subject_id, slot, disposition, ref_sha FROM explanations WHERE id = ?",
+      )
+      .get(id) as
+      | {
+          subject_type: string;
+          subject_id: string;
+          slot: string;
+          disposition: string;
+          ref_sha: string;
+        }
+      | undefined;
+    row = stored ?? null;
+    effective =
+      stored !== undefined &&
+      readExplanation(
+        ctx.db,
+        ctx.project.workspacePath,
+        stored.subject_type,
+        stored.subject_id,
+        stored.slot,
+      ).row?.id === id;
+  }
+  if (!row) {
+    reasons.push("expected record does not exist");
+    return reasons;
+  }
+  if (!effective) reasons.push("expected record is not the effective row for its subject");
+  if (row.disposition !== "recorded") {
+    reasons.push(`expected record is a ${row.disposition} row, not recorded prose`);
+  }
+  if (row.ref_sha !== item.target_sha) reasons.push("record is not tied to its target commit");
+  return reasons;
+}
+
 function scoreItem(args: Record<string, unknown>, ctx: ServerContext): Record<string, unknown> {
   requireActiveSession(ctx, "score_composition_item");
   const runId = requireString(args, "run_id");
@@ -472,6 +559,8 @@ function scoreItem(args: Record<string, unknown>, ctx: ServerContext): Record<st
     }
     if (artifact?.ref_sha !== item.target_sha)
       reasons.push("artifact is not tied to its target commit");
+  } else if (item.item_kind === "record") {
+    reasons.push(...scoreRecordItem(ctx, item, observed));
   } else if (item.item_kind === "commit") {
     const observedSha = typeof observed.commit_sha === "string" ? observed.commit_sha : "";
     let resolved = "";
@@ -849,7 +938,7 @@ export const compositionTools: ToolDefinition[] = [
   {
     name: "plan_composition_run",
     description:
-      "Create an immutable fan-in manifest for artifacts, commits, tests, and A7 review results. Every item declares its verification object and target commit; integral items bind to the exact currently assembled HEAD, and impacted seams require named concern coverage.",
+      "Create an immutable fan-in manifest for artifacts, commits, tests, A7 review results and, optionally, records (a narrative:<id> or explanation:<id> the worker was asked to write). Every item declares its verification object and target commit; integral items bind to the exact currently assembled HEAD, and impacted seams require named concern coverage.",
     inputSchema: {
       type: "object",
       properties: {
@@ -892,7 +981,7 @@ export const compositionTools: ToolDefinition[] = [
   {
     name: "land_composition_item",
     description:
-      "Land a worker observation exactly once without trusting its success label. A separate scorer checks the expected artifact, commit, test identity/SHA/exit, or terminal A7 aggregation against durable state.",
+      "Land a worker observation exactly once without trusting its success label. A separate scorer checks the expected artifact, record, commit, test identity/SHA/exit, or terminal A7 aggregation against durable state.",
     inputSchema: {
       type: "object",
       properties: {

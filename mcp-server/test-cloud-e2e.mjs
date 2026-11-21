@@ -37,6 +37,7 @@ import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import { compareTools } from "./dist/tools/compare.js";
 import { fileTools } from "./dist/tools/files.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
+import { narrativeTools } from "./dist/tools/narratives.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { vocabularyTools } from "./dist/tools/vocabulary.js";
@@ -53,6 +54,7 @@ const allTools = new Map(
     ...compareTools,
     ...fileTools,
     ...artifactTools,
+    ...narrativeTools,
     ...evidenceTools,
     ...claimTools,
     ...vocabularyTools,
@@ -204,7 +206,7 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
     const readingId = seedStructuralClaim(target, ctx, "B-01");
     dischargeVocabulary(target, ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
-    call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
+    call("decline_narrative", { subject_type: "subsystem", subject_id: "B-01", section: "structure", reason: "Fixture subsystem: its files say nothing specific enough to narrate.", ref_sha: headSha(target) }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
     call("add_concern", { code: "CC-1", category: "cache", origin: "seeded" }, ctx);
 
@@ -323,7 +325,7 @@ t("workflow-shape: compare_conspectuses works on two cloud runs in the same cons
       const reading = seedStructuralClaim(ws, ctx, "B-01");
       dischargeVocabulary(ws, ctx, "B-01");
       call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
-      call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
+      call("decline_narrative", { subject_type: "subsystem", subject_id: "B-01", section: "structure", reason: "Fixture subsystem: its files say nothing specific enough to narrate.", ref_sha: headSha(ws) }, ctx);
       call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
       call("add_concern", { code: "CC-1", category: "cache", origin: "seeded" }, ctx);
       call(

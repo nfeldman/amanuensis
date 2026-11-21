@@ -418,8 +418,14 @@ function main(mods) {
     dischargeVocabulary(ctx, id);
     call("update_subsystem_status", { id, status: "structural" }, ctx);
     call(
-      "register_artifact",
-      { path: `${id}-survey.md`, kind: "subsystem-survey", subsystem_id: id },
+      "decline_narrative",
+      {
+        subject_type: "subsystem",
+        subject_id: id,
+        section: "structure",
+        reason: "Fixture subsystem: its files say nothing specific enough to narrate.",
+        ref_sha: headSha(ctx),
+      },
       ctx,
     );
     call("update_subsystem_status", { id, status: "concerns" }, ctx);
@@ -1187,6 +1193,7 @@ try {
       files,
       gitModule,
       materialize,
+      narratives,
       project,
       subsystems,
       vocabulary,
@@ -1200,6 +1207,7 @@ try {
       import("./dist/tools/files.js"),
       import("./dist/tools/git.js"),
       import("./dist/tools/materialize.js"),
+      import("./dist/tools/narratives.js"),
       import("./dist/tools/project.js"),
       import("./dist/tools/subsystems.js"),
       import("./dist/tools/vocabulary.js"),
@@ -1211,6 +1219,7 @@ try {
       dispositions.dispositionTools,
       evidence.evidenceTools,
       explanations.explanationTools,
+      narratives.narrativeTools,
       files.fileTools,
       gitModule.gitTools,
       materialize.materializeTools,

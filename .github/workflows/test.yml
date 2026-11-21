@@ -216,6 +216,13 @@ jobs:
       - name: Flow marks — record, withdraw, decline, returned by get_claims, closed claims and withdrawn marks not current
         working-directory: mcp-server
         run: node test-store-only-claim-marks.mjs
+      # GATE SO6 (design/store-only/PLAN.md §2.5, §8 SO6). The server reads no
+      # hand-written file: the concerns advance, register_artifact, the locus
+      # narrative pointer and composition's record item, over temporary git
+      # workspaces and stores the gate creates itself.
+      - name: The server stops depending on files — structure narrative prerequisite, hand-written kinds refused, locus pointer by record, composition record items
+        working-directory: mcp-server
+        run: node test-store-only-no-files.mjs
       # The orientation lint at write time (BACKLOG explanation quality item 2):
       # both writers refuse text the pages would withhold. Needs python3 and the
       # materializer, as the projection gates do.

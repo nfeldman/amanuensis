@@ -115,8 +115,10 @@ comes back in.
   anchor that resolves is enough, and so is `decline_domain_vocabulary`
   with the reason none applies; there is no quota, and "none" is a real and
   common answer that has to be said out loud.
-- To `concerns`, the structural artifact must exist: *"no subsystem-survey
-  artifact has been registered"*.
+- To `concerns`, the structural phase must have answered for its prose:
+  *"no structure narrative has been recorded or declined"* is refused.
+  `record_narrative(section="structure")` records it, and
+  `decline_narrative` says there is none to write.
 - To `adversarial`, the concern pass must have written dispositions:
   *"no concern dispositions have been recorded"*.
 - To `concerns`, `adversarial` or `mapped`, every disposition must rest on

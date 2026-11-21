@@ -35,6 +35,7 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
+import { importedSurveyBodies, readNarratives } from "../invariants.js";
 import {
   describeLocusStanding,
   type FileStandingBlock,
@@ -336,10 +337,12 @@ interface SectionBuild {
 
 /**
  * §3.4's narrative attachment, in the only shape §3.4 permits: a pointer, not
- * prose. The survey artifact is model-authored and not bound to any revision
- * item by item, so it is served as a path and a content hash a reader can
- * resolve — §9.1 renders its body on the subsystem page, where the labelling
- * travels with it, and never inside a response §4.1 bounds to 15360 bytes.
+ * prose. It names the records the structure section falls back to — the
+ * subsystem's effective structure narratives, or its imported survey bodies —
+ * by id, with the revision a recorded narrative was written at, and never a file
+ * path (PLAN store-only §2.5). §9.1 renders the bodies on the subsystem page,
+ * where the labelling travels with them, and never inside a response §4.1
+ * bounds to 15360 bytes.
  *
  * That settles the drift F7/codex left open across §4.2, §5.1 and §9.1, in one
  * place. §4.2 lists `narrative` as opt-in while §5.1 fixes this tool's
@@ -349,16 +352,20 @@ interface SectionBuild {
  * §4.2's `narrative` names the narrative **body**, which no tool response
  * serves under any option: §9.1's "on the page only" is where it is opt-in, and
  * the page is where opting in happens. What §3.4 attaches here is the locator,
- * about 200 bytes of code-authored path and hash, which travels with
+ * about 200 bytes of code-authored ids and a revision, which travels with
  * `structure` and is therefore on by default alongside it. No claim changes,
  * §5.1's input surface is not widened, and the two tools P14 adds carry no
  * narrative channel of their own — `get_attention`'s `sections` is a different
  * enum over §5.2's seven names.
  */
 interface NarrativePointer {
-  artifact_path: string;
-  content_hash: string | null;
-  revision_bound: false;
+  /** Which table `record_ids` are ids of: `narratives`, or `imported_artifacts` for a survey body written as a file. */
+  source: "narrative" | "imported_artifact";
+  record_ids: number[];
+  /** The revision of the newest recorded narrative; null for an imported body, which names none. */
+  ref_sha: string | null;
+  /** True for a recorded narrative, which is bound to the revision it was written at. */
+  revision_bound: boolean;
   label: string;
 }
 
@@ -479,34 +486,44 @@ interface ClaimRow {
  */
 const NO_CLAIMS_STATEMENT = "Structural inventory not recorded as claims";
 
-/** §3.4's label, carried verbatim beside every narrative pointer. */
-const NARRATIVE_LABEL = "Narrative from the survey artifact; not individually bound to a revision";
+/** §3.4's labels, carried verbatim beside every narrative pointer. */
+const NARRATIVE_LABEL = "Structure narrative from the survey, bound to the revision named";
+const IMPORTED_NARRATIVE_LABEL = "Survey text imported from a file; not bound to a revision";
 
 /**
  * §3.4's narrative attachment for a subsystem locus with no current claim.
  *
- * Only a subsystem has one: the `subsystem-survey` artifact is written per
- * subsystem, and attaching an owner's narrative to one of its files would
- * assert that the prose is about that file, which nothing recorded it as. A
- * subsystem that records several survey artifacts serves the first by path —
- * the pointer is a pointer, and §9.1's page renders every one of them, so
- * nothing is hidden from a reader by the choice.
+ * Only a subsystem has one: a structure narrative is written per subsystem, and
+ * attaching it to one of its files would assert that the prose is about that
+ * file, which nothing recorded it as. A recorded narrative is served first. A
+ * declination holds no prose and withdrawn rows are not effective, so neither is
+ * pointed at; an imported survey body that no withdrawal has retired is the
+ * fallback for a store whose survey was written as a file. A legacy `artifacts`
+ * row is not read at all.
  */
 function surveyNarrative(db: DB, scope: AccountScope): NarrativePointer | null {
   if (!scope.subsystemId) return null;
-  const row = db
-    .prepare(
-      `SELECT path, content_hash FROM artifacts
-        WHERE kind = 'subsystem-survey' AND subsystem_id = ?
-        ORDER BY path LIMIT 1`,
-    )
-    .get(scope.subsystemId) as { path: string; content_hash: string | null } | undefined;
-  if (!row) return null;
+  const recorded = readNarratives(db, "subsystem", scope.subsystemId, "structure").rows.filter(
+    (row) => row.disposition === "recorded",
+  );
+  if (recorded.length > 0) {
+    const newest = recorded.reduce((a, b) => (b.id > a.id ? b : a));
+    return {
+      source: "narrative",
+      record_ids: recorded.map((row) => row.id).sort((a, b) => a - b),
+      ref_sha: newest.ref_sha,
+      revision_bound: true,
+      label: NARRATIVE_LABEL,
+    };
+  }
+  const imported = importedSurveyBodies(db, scope.subsystemId);
+  if (imported.length === 0) return null;
   return {
-    artifact_path: row.path,
-    content_hash: row.content_hash,
+    source: "imported_artifact",
+    record_ids: imported.map((row) => row.id),
+    ref_sha: null,
     revision_bound: false,
-    label: NARRATIVE_LABEL,
+    label: IMPORTED_NARRATIVE_LABEL,
   };
 }
 

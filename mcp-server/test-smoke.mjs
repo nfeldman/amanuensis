@@ -28,6 +28,7 @@ import { loggingTools } from "./dist/tools/logging.js";
 import { lockTools } from "./dist/tools/locks.js";
 import { staleTools } from "./dist/tools/stale.js";
 import { dispatchTools } from "./dist/tools/dispatch.js";
+import { narrativeTools } from "./dist/tools/narratives.js";
 import { dashboardTools } from "./dist/tools/dashboard.js";
 import { seamTools } from "./dist/tools/seams.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
@@ -114,6 +115,7 @@ const allTools = new Map(
     ...compositionTools,
     ...resolutionTools,
     ...storageHistoryTools,
+    ...narrativeTools,
   ].map((t) => [t.name, t]),
 );
 
@@ -220,8 +222,10 @@ run("define_term", {
   subsystem_id: "B-01", first_seen: `claim-fixture.txt:claim-fixture@${claimSha1}`,
 }, (r) => r.ok && r.anchored === true);
 run("update_subsystem_status", { id: "B-01", status: "structural" }, (r) => r.previous_status === "scoping");
-run("register_artifact", {
-  path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01",
+run("decline_narrative", {
+  subject_type: "subsystem", subject_id: "B-01", section: "structure",
+  reason: "The smoke fixture is one text file; there is no structure to narrate.",
+  ref_sha: claimSha1,
 }, (r) => r.ok);
 run("update_subsystem_status", { id: "B-01", status: "concerns" }, (r) => r.previous_status === "structural");
 
@@ -377,13 +381,19 @@ run("list_seams", {}, (r) => r.length === 1);
 run("list_seams", { subsystem_id: "B-01" }, (r) => r.length === 1);
 run("get_seam_assessability", {}, (r) => Array.isArray(r) && r.length === 1 && r[0].assessable === 0);
 
-// 18. Artifacts — register without file, then rehash after writing one
+// 18. Artifacts — register without file, then rehash after writing one (kind other: the server's own exports)
 {
-  const path = "entry-point.md";
-  run("register_artifact", { path, kind: "entry-point" }, (r) => r.ok && r.content_hash === null);
+  const path = "export.md";
+  run("register_artifact", { path, kind: "other" }, (r) => r.ok && r.content_hash === null);
+  try {
+    allTools.get("register_artifact").handler({ path: "entry-point.md", kind: "entry-point" }, ctx);
+    throw new Error("register_artifact accepted a hand-written kind");
+  } catch (e) {
+    if (!String(e.message).startsWith("register_artifact refuses")) throw e;
+  }
   writeFileSync(`${TMP}/${path}`, "# Entry Point\n");
   run("rehash_artifact", { path, ref_sha: "deadbeef" }, (r) => r.ok && typeof r.content_hash === "string");
-  run("list_artifacts", { kind: "entry-point" }, (r) => r.length === 1 && r[0].bytes > 0);
+  run("list_artifacts", { kind: "other" }, (r) => r.length === 1 && r[0].bytes > 0);
   // written_at dates the survey notes on a subsystem page ("Written on …"), so
   // a rehash of unchanged bytes keeps it; only new content moves it.
   db.prepare("UPDATE artifacts SET written_at = '2026-01-02 03:04:05' WHERE path = ?").run(path);

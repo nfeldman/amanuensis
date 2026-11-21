@@ -11,6 +11,7 @@ import {
   enforceForwardPrerequisites,
   enforceMonotonicTransition,
   heldBeforeParking,
+  importedSurveyBodies,
   readNarratives,
   readSubsystemStatus,
   recordStatusTransition,
@@ -308,18 +309,19 @@ export const subsystemTools: ToolDefinition[] = [
   {
     name: "reset_subsystem",
     description:
-      "Discard a subsystem's survey artifacts and reset its status to " +
+      "Discard a subsystem's survey and reset its status to " +
       "an earlier phase, or re-run the phase it stands at; it never " +
       "climbs (a parked subsystem stands at the depth it was parked " +
       "from). This is the only path that regresses a " +
       "subsystem's knowledge depth — the normal update_subsystem_status " +
       "tool rejects regressions. reset_subsystem deletes dependent rows " +
-      "(dispositions, findings, field-notes, xrefs, artifact manifest " +
-      "entries for this subsystem) so the conspectus remains internally " +
-      "consistent with the new status. Explanations are append-only: " +
-      "instead of deleting them it appends a withdrawn row, with the " +
-      "reason as its body, for each slot that has one (this needs an " +
-      "active session), so the resurveyed subsystem owes a new explanation. " +
+      "(dispositions, findings, field-notes, xrefs) so the conspectus " +
+      "remains internally consistent with the new status. Explanations, " +
+      "narratives and imported survey bodies are append-only: instead of " +
+      "deleting them it appends a withdrawn row, with the reason as its " +
+      "body, for each slot, narrative or body that stands (this needs an " +
+      "active session), so the resurveyed subsystem owes a new explanation " +
+      "and a new structure narrative. " +
       "The reason is recorded for " +
       "audit; supply enough context that a future analyst understands " +
       "why the earlier survey was discarded.",
@@ -391,14 +393,7 @@ export const subsystemTools: ToolDefinition[] = [
       // body (§2.4): neither is deleted, each is withdrawn by a new row, and
       // the new row is attributed to a session.
       const narrated = readNarratives(ctx.db, "subsystem", id).rows;
-      const importedSurveys = ctx.db
-        .prepare(
-          `SELECT path FROM imported_artifacts
-            WHERE subsystem_id = ? AND kind = 'subsystem-survey'
-              AND path NOT IN (SELECT path FROM imported_artifact_withdrawals)
-            ORDER BY id`,
-        )
-        .all(id) as Array<{ path: string }>;
+      const importedSurveys = importedSurveyBodies(ctx.db, id);
       const withdrawnBy =
         explained.length > 0 || narrated.length > 0 || importedSurveys.length > 0
           ? requireActiveSession(ctx, "reset_subsystem")
@@ -437,9 +432,6 @@ export const subsystemTools: ToolDefinition[] = [
         deleted.xrefs = ctx.db
           .prepare("DELETE FROM xrefs WHERE from_id = ? OR to_id = ?")
           .run(id, id).changes;
-        deleted.artifacts = ctx.db
-          .prepare("DELETE FROM artifacts WHERE subsystem_id = ?")
-          .run(id).changes;
         // file_ledger rows are preserved unless the reset target is
         // scoping or earlier — they are the scope itself, not survey
         // output.

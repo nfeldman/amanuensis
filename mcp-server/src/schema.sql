@@ -3048,7 +3048,7 @@ CREATE TABLE IF NOT EXISTS composition_items (
     run_id              TEXT NOT NULL REFERENCES composition_runs(run_id) ON DELETE RESTRICT,
     ordinal             INTEGER NOT NULL CHECK (ordinal >= 0),
     item_kind           TEXT NOT NULL CHECK (item_kind IN (
-                              'artifact','commit','test','review-result')),
+                              'artifact','commit','test','review-result','record')),
     verification_scope  TEXT NOT NULL CHECK (verification_scope IN ('unit','integral-head')),
     subject             TEXT NOT NULL,
     expected_ref        TEXT NOT NULL,

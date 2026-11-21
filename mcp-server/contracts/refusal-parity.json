@@ -138,11 +138,11 @@
       ]
     },
     {
-      "id": "ladder-no-survey-artifact",
-      "note": "Existing.",
+      "id": "ladder-no-structure-narrative",
+      "note": "PLAN store-only §2.5. Replaces the registered survey artifact; an imported survey body also admits the advance.",
       "refuses": ["update_subsystem_status"],
-      "instructs": [],
-      "server": { "file": "src/invariants.ts", "phrase": "no subsystem-survey artifact has been registered" },
+      "instructs": ["record_narrative", "decline_narrative"],
+      "server": { "file": "src/invariants.ts", "phrase": "no structure narrative has been recorded or declined" },
       "references": [
         { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
       ]

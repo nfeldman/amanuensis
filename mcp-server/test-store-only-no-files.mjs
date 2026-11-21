@@ -198,8 +198,14 @@ async function main(mods) {
       }
     });
     ctx.sessionId = call("start_session", { intent: `so6-${label}` }, ctx).session_id;
+    // The files the server itself puts in storage when it creates it (identity,
+    // initialisation record, storage-git ignore list): what the run adds to them
+    // is what it wrote by hand.
+    ctx.storageAtStart = storageFiles(project.storagePath);
     return ctx;
   }
+  const filesAdded = (ctx) =>
+    storageFiles(ctx.project.storagePath).filter((file) => !ctx.storageAtStart.includes(file));
   const headSha = (ctx) => git(ctx.project.workspacePath, "rev-parse", "HEAD");
   const statusOf = (ctx, id) =>
     ctx.db.prepare("SELECT status FROM subsystems WHERE id = ?").get(id)?.status ?? null;
@@ -368,7 +374,7 @@ async function main(mods) {
     recordStructure(ctx, "B-01");
     toMapped(ctx, "B-01");
     if (statusOf(ctx, "B-01") !== "mapped") return `the subsystem is ${statusOf(ctx, "B-01")}, not mapped`;
-    const files = storageFiles(ctx.project.storagePath);
+    const files = filesAdded(ctx);
     return files.length === 0
       ? null
       : `the run left ${files.length} file(s) in storage besides the database and storage-git files: ${files.join(", ")}`;
@@ -378,7 +384,7 @@ async function main(mods) {
     const ctx = structuralWorld("c2");
     declineStructure(ctx, "B-01");
     toMapped(ctx, "B-01");
-    const files = storageFiles(ctx.project.storagePath);
+    const files = filesAdded(ctx);
     if (files.length > 0) return `the run left file(s) in storage: ${files.join(", ")}`;
     return statusOf(ctx, "B-01") === "mapped" ? null : `the subsystem is ${statusOf(ctx, "B-01")}`;
   });
