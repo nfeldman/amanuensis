@@ -10,7 +10,7 @@ import {
 } from "../helpers.js";
 import { readRuntimeBoundaries, requireActiveSession } from "../invariants.js";
 import { TERRITORY_DISPOSITIONS } from "../vocabulary.js";
-import { TERRITORY_ID } from "./concerns.js";
+import { isTerritoryId, TERRITORY_IDS } from "./concerns.js";
 import {
   byteLength,
   EVIDENCE_CAP,
@@ -60,7 +60,7 @@ const WITHDRAW_REFUSALS = {
 
 const TERRITORY_REFUSALS = {
   territory: () =>
-    "record_territory_disposition refuses: territory is the id of a territory in concern-territories.md, such as T7. Name it by id, not in words.",
+    `record_territory_disposition refuses: territory is the id of a territory in concern-territories.md, ${TERRITORY_IDS[0]} to ${TERRITORY_IDS.at(-1)}, such as T7. Name it by id, not in words.`,
   needsCondition: () =>
     "record_territory_disposition refuses: a disqualified territory names the condition that rules it out. Pass condition, one paragraph.",
   condition: () =>
@@ -288,7 +288,7 @@ export const projectRecordTools: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        territory: { type: "string", pattern: "^T[1-9][0-9]*$" },
+        territory: { type: "string", enum: [...TERRITORY_IDS] },
         disposition: { type: "string", enum: [...TERRITORY_DISPOSITIONS] },
         condition: { type: "string" },
         open_question_id: { type: "integer" },
@@ -300,7 +300,7 @@ export const projectRecordTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       const sessionId = requireActiveSession(ctx, "record_territory_disposition");
       const territory = requireString(args, "territory").trim();
-      if (!TERRITORY_ID.test(territory)) throw new ToolError(TERRITORY_REFUSALS.territory());
+      if (!isTerritoryId(territory)) throw new ToolError(TERRITORY_REFUSALS.territory());
       const disposition = requireEnum(args, "disposition", TERRITORY_DISPOSITIONS);
       const condition = optTrimmed(args, "condition");
       if (disposition === "disqualified" && condition === null) {

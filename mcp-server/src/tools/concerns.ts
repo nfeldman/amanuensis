@@ -7,8 +7,13 @@ import {
   ToolError,
 } from "../helpers.js";
 
-/** A territory of `concern-territories.md`, named by its id: T1, T2, … */
-export const TERRITORY_ID = /^T[1-9]\d*$/;
+/**
+ * The territories `concern-territories.md` declares, by id: T1 to T11. An id
+ * of the same spelling that the catalog does not declare names nothing
+ * (F4/codex, slice-S1); SO4's gate holds this list to the catalog's headings.
+ */
+export const TERRITORY_IDS: readonly string[] = Array.from({ length: 11 }, (_, i) => `T${i + 1}`);
+export const isTerritoryId = (value: string) => TERRITORY_IDS.includes(value);
 /** A probe is a sentence or two; the cap keeps `list_concerns`, which serves every row, bounded. */
 const PROBE_CAP = 1200;
 
@@ -50,7 +55,7 @@ export const concernTools: ToolDefinition[] = [
         origin: { type: "string", enum: ["seeded", "discovered"] },
         discovered_in: { type: "string" },
         notes: { type: "string" },
-        territory: { type: "string", pattern: "^T[1-9][0-9]*$" },
+        territory: { type: "string", enum: [...TERRITORY_IDS] },
         probe: { type: "string" },
       },
       required: ["code", "origin"],
@@ -64,9 +69,9 @@ export const concernTools: ToolDefinition[] = [
       const notes = optString(args, "notes");
       const territory = optString(args, "territory");
       const probe = optString(args, "probe");
-      if (territory !== null && !TERRITORY_ID.test(territory)) {
+      if (territory !== null && !isTerritoryId(territory)) {
         throw new ToolError(
-          "add_concern refuses: territory is the id of a territory in concern-territories.md, such as T7. Name it by id, not in words.",
+          `add_concern refuses: territory is the id of a territory in concern-territories.md, ${TERRITORY_IDS[0]} to ${TERRITORY_IDS.at(-1)}, such as T7. Name it by id, not in words.`,
         );
       }
       if (probe !== null && Buffer.byteLength(probe, "utf8") > PROBE_CAP) {
