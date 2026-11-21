@@ -15,7 +15,7 @@
 | SO6 | The server stops depending on hand-written files (prerequisite, locus, artifacts, composition) | done (1 attempt) | SO3 | `mcp-server/test-store-only-no-files.mjs` | §8 SO6, §2.5 |
 | SO7 | Import every artifact's bytes into the store | done (1 attempt) | SO3, SO4 | `mcp-server/test-store-only-import.mjs` | §8 SO7, §5.2, §5.3 |
 
-## S2 · Pages from the store, and the skill (review: pending)
+## S2 · Pages from the store, and the skill (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|

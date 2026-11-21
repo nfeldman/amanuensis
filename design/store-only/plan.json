@@ -31,10 +31,10 @@
         "SO10"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "53fb1f063329e4b48546a15eb4834209ddfaf781",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "fbb2eca0ea1cc3d7cf5e2bf96df818e3b1d06c38",
+        "findings": 12
       }
     },
     {
