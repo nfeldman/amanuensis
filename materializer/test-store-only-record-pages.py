@@ -155,11 +155,23 @@ TOPICS = {
 
 # Concerns and territories.
 PROBE = "PROBEXI check that two readers never share one slot unlocked"
-TERRITORY = "shared-state"
-DISQUALIFIED = "event-sourcing"
+# Territories are named by the ids `record_territory_disposition` accepts (T1 to
+# T11); the page owes each id its name from concern-territories.md (F6/codex).
+TERRITORY = "T8"
+DISQUALIFIED = "T5"
 DISQUALIFIED_CONDITION = "CONDITIONOMICRON the project keeps no event log"
-APPLIES = "caching"
-SUPERSEDED_TERRITORY = "networking"
+APPLIES = "T2"
+SUPERSEDED_TERRITORY = "T3"
+# A condition may hold a pipe mid-line (the server refuses only a line that
+# starts with one); the page must print it as written (F2/codex).
+PIPE_TERRITORY = "T10"
+PIPE_CONDITION = "CONDITIONPIPE neither A | B mode is supported"
+TERRITORY_DOC = REPO / ".claude" / "skills" / "amanuensis" / "references" / "concern-territories.md"
+# A withdrawal recorded at a revision the workspace cannot resolve still
+# withdraws: the older row must not come back (F1/codex).
+RECANTED_TOPIC = "Recanted reading"
+RECANTED_BODY = "NARRRECANTEDPI the writer used to retry forever."
+UNRESOLVABLE_SHA = "e" * 40
 SUPERSEDED_CONDITION = "CONDITIONSUPERSEDED the service never leaves the host"
 
 # Runtime boundaries.
@@ -342,6 +354,7 @@ class Seed:
         self.territory_row(SUPERSEDED_TERRITORY, "disqualified", SUPERSEDED_CONDITION)
         self.territory_row(SUPERSEDED_TERRITORY, "applies", None)
         self.territory_row(TERRITORY, "applies", None)
+        self.territory_row(PIPE_TERRITORY, "disqualified", PIPE_CONDITION)
         if with_import:
             self.db.execute(
                 "INSERT INTO imported_artifacts (path, kind, subsystem_id, body, body_sha256,"
@@ -381,6 +394,11 @@ def seed_store(root: Path, name: str, shas: dict[str, str], *, with_import: bool
     )
     # B-02: no claims and no import, so the narrative is the only structure text.
     s.narrative("subsystem", "B-02", "structure", TOPICS["solo"], SOLO_BODY, cites=(WRITER,))
+    s.narrative("subsystem", "B-02", "structure", RECANTED_TOPIC, RECANTED_BODY, cites=(WRITER,))
+    s.narrative(
+        "subsystem", "B-02", "structure", RECANTED_TOPIC, "The reading was retracted.",
+        disposition="withdrawn", ref=UNRESOLVABLE_SHA,
+    )
     # B-03: a declination.
     s.narrative(
         "subsystem", "B-03", "structure", TOPICS["declined"], DECLINED_REASON,
@@ -474,6 +492,40 @@ def ageing_segment(text: str, body: str) -> str:
         return ""
     end = text.find("since", at)
     return text[at : end + 40] if 0 <= end - at < 600 else text[at : at + 600]
+
+
+def territory_names() -> dict[str, str]:
+    """`T<n>` to its name, from the headings of the skill's territory catalog."""
+
+    found = re.findall(r"(?m)^## Territory (\d+) — (.+?)\s*$", read(TERRITORY_DOC))
+    return {f"T{n}": name for n, name in found}
+
+
+def md_rows(text: str, first: str) -> list[list[str]]:
+    """The cells of every Markdown table row whose first cell starts with `first`."""
+
+    out = []
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip().replace("\\|", "|") for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+        if cells and cells[0].startswith(first):
+            out.append(cells)
+    return out
+
+
+def html_rows(markup: str, first: str) -> list[list[str]]:
+    """The visible cells of every HTML table row whose first cell starts with `first`."""
+
+    out = []
+    for tr in re.findall(r"(?is)<tr\b.*?</tr>", markup):
+        cells = [
+            squash(htmllib.unescape(re.sub(r"<[^>]+>", " ", c)))
+            for c in re.findall(r"(?is)<t[dh]\b[^>]*>(.*?)</t[dh]>", tr)
+        ]
+        if cells and cells[0].startswith(first):
+            out.append(cells)
+    return out
 
 
 def reseal(docs: Path, rel: str) -> None:
@@ -578,19 +630,26 @@ def run(work: Path) -> int:
     check("each topic is a subheading", topics_are_subheadings)
 
     def concern_reasoning_and_challenge() -> str | None:
+        # PLAN §8 SO9: concern reasoning under Review coverage (`concerns.md`),
+        # under its subsystem, in both views (F8/codex).
+        coverage_md = read(docs_a / "concerns.md")
+        coverage_html = read(docs_a / "concerns.html")
+        reasoning = md_section(coverage_md, "Concern reasoning", 2)
+        if REASONING_BODY.split()[0] not in reasoning:
+            return "the concern-reasoning narrative is not under Concern reasoning on Review coverage (Markdown)"
+        if "B-01" not in reasoning.split(REASONING_BODY.split()[0])[0]:
+            return "the concern-reasoning narrative on Review coverage is not under its subsystem"
+        if REASONING_BODY.split()[0] not in html_sections(coverage_html).get("Concern reasoning", ""):
+            return "the concern-reasoning narrative is not under Concern reasoning on Review coverage (HTML)"
         record = md_section(b01_md, "Survey record", 2)
-        review = md_section(record, "Concern review", 3)
-        if REASONING_BODY.split()[0] not in review:
-            return "the concern-reasoning narrative is not under Concern review (Markdown)"
         challenge = md_section(record, "Challenge", 3)
         if CHALLENGE_BODY.split()[0] not in challenge:
             return "the challenge narrative is not under Challenge (Markdown)"
         if f"{TOPICS['challenge']}" not in challenge:
             return "the challenge topic is not printed under Challenge"
         html_record = b01_sections.get("Survey record", "")
-        for body in (REASONING_BODY, CHALLENGE_BODY):
-            if body.split()[0] not in html_record:
-                return f"{body.split()[0]} is not in the HTML Survey record"
+        if CHALLENGE_BODY.split()[0] not in html_record:
+            return f"{CHALLENGE_BODY.split()[0]} is not in the HTML Survey record"
         if "Challenge" not in html_record:
             return "the HTML Survey record has no Challenge heading"
         if REASONING_BODY.split()[0] in md_section(b01_md, "Structure", 2):
@@ -626,6 +685,13 @@ def run(work: Path) -> int:
                     return f"{sentinel} renders on {name}"
         if "Dropped topic" in b01_md or "Dropped topic" in b01_html_text:
             return "a withdrawn narrative's topic still renders as a heading"
+        for path in subsystem_files(docs_a, "B-02"):
+            text = read(path)
+            if RECANTED_BODY.split()[0] in text or RECANTED_TOPIC in text:
+                return (
+                    f"{path.suffix} B-02: a narrative withdrawn at a revision the workspace"
+                    " cannot resolve came back as its older recorded row"
+                )
         return None
 
     check("a superseded or withdrawn narrative does not render", superseded_and_withdrawn)
@@ -707,6 +773,41 @@ def run(work: Path) -> int:
                 if SUPERSEDED_TERRITORY not in text:
                     return f"store {label}: the newer disposition of {SUPERSEDED_TERRITORY} is missing ({view})"
         return None
+
+    def territories_named_and_disposed() -> str | None:
+        names = territory_names()
+        if len(names) != 11:
+            return f"concern-territories.md names {len(names)} territories, not T1 to T11"
+        expected = {
+            DISQUALIFIED: ("disqualified", DISQUALIFIED_CONDITION),
+            SUPERSEDED_TERRITORY: ("applies", "—"),
+            TERRITORY: ("applies", "—"),
+            PIPE_TERRITORY: ("disqualified", PIPE_CONDITION),
+        }
+        for label, docs in (("A", docs_a), ("B", docs_b)):
+            md = read(docs / "concern-checklist.md")
+            markup = read(docs / "concern-checklist.html")
+            for view, finder in (("Markdown", lambda t: md_rows(md, t)), ("HTML", lambda t: html_rows(markup, t))):
+                for territory, (disposition, condition) in expected.items():
+                    found = finder(territory)
+                    if len(found) != 1:
+                        return f"store {label}: {len(found)} Territories rows for {territory} ({view})"
+                    cells = found[0]
+                    if names[territory] not in cells[0]:
+                        return f"store {label}: {territory} is printed without its name {names[territory]!r} ({view})"
+                    if len(cells) < 3 or cells[1].lower() != disposition or squash(cells[2]) != condition:
+                        return f"store {label}: {territory} reads {cells[1:]!r}, not {disposition!r} and {condition!r} ({view})"
+                for territory in (TERRITORY, APPLIES):
+                    if f"{territory} ({names[territory]})" not in squash(md if view == "Markdown" else html_words(markup)):
+                        return f"store {label}: the concern territory {territory} is printed without its name ({view})"
+            for heading in re.findall(r'(?is)<h3 class="concern-family-heading".*?</h3>', markup):
+                ids = re.findall(r"\bT\d+\b", html_words(heading))
+                for territory in ids:
+                    if names.get(territory, "\0") not in html_words(heading):
+                        return f"store {label}: the concern-family heading prints {territory} without its name"
+        return None
+
+    check("each territory carries its name and its own disposition, in both views", territories_named_and_disposed)
 
     check("Review checklist prints territory, probe and territory dispositions", review_checklist)
 
@@ -791,6 +892,10 @@ def run(work: Path) -> int:
         reason = sabotage("onboarding-report.html", "NARRRUNTIMEIOTA", "NARRRUNTIMEIOTB", "narrative")
         if reason:
             return reason
+        for rel in ("concerns.md", "concerns.html"):
+            reason = sabotage(rel, "NARRREASONDELTA", "NARRREASONDELTB", "narrative")
+            if reason:
+                return reason
         return sabotage("entry-point.md", "NARRSTARTNU", "NARRSTARTNV", "narrative")
 
     check("altering a narrative on a page turns the resealed read-back red", narrative_sabotage)
@@ -800,7 +905,20 @@ def run(work: Path) -> int:
             reason = sabotage(rel, "CONDITIONOMICRON", "CONDITIONOMICRXN", "territory")
             if reason:
                 return reason
-        return None
+        # The verdict itself: a ruled-out territory printed as applying (F11/codex).
+        md = read(docs_a / "concern-checklist.md")
+        row = next((ln for ln in md.splitlines() if ln.startswith(f"| {DISQUALIFIED} ")), "")
+        if "| disqualified |" not in row:
+            return f"concern-checklist.md has no disqualified row for {DISQUALIFIED} to alter"
+        reason = sabotage("concern-checklist.md", row, row.replace("| disqualified |", "| applies |"), "territory")
+        if reason:
+            return reason
+        markup = read(docs_a / "concern-checklist.html")
+        tr = next((t for t in re.findall(r"(?is)<tr\b.*?</tr>", markup) if f">{DISQUALIFIED} " in t or f">{DISQUALIFIED}<" in t), "")
+        if "disqualified" not in tr.lower():
+            return f"concern-checklist.html has no disqualified row for {DISQUALIFIED} to alter"
+        flipped = re.sub(r"(?i)disqualified", "applies", tr, count=1)
+        return sabotage("concern-checklist.html", tr, flipped, "territory")
 
     check("altering a territory disposition turns the resealed read-back red", territory_sabotage)
 
