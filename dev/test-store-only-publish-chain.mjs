@@ -21,6 +21,11 @@
 //     destination holding a file no manifest claims (a `.txt` and a `.md`);
 //   - any of the six `dev/` readers of `docs/` still opens a `.md` page (a
 //     `docs/…​.md` path, an `.md` filter, or a bare page name ending `.md`);
+//   - the republish chain's promote step (`dev/republish-docs.mjs`) stops on the
+//     generated README, or lets a new page beside it through: EX7's check of that
+//     step (`dev/test-republish-chain.mjs`) is absent, not run, or not ok;
+//   - `dev/read-html-page.mjs`'s `articleOf` stops at the close of a record
+//     article inside the page's own, or reads past the page's article;
 //   - `dev/measure-reader-prose.mjs` counts a `.md` beside the HTML pages it is
 //     given, counts the rail or a figure's drawing, or reports other than the
 //     hand-worked counts of the HTML fixture below.
@@ -449,6 +454,48 @@ for (const reader of READERS) {
     return null;
   });
 }
+
+// The republish chain's promote step accepts the generated README and nothing beside it
+// (D10). EX7 drives that step through its stubbed world; SO21 requires its check to pass.
+const README_CHECK = "a promotion that adds only the generated README does not stop the run, and a page beside it still does";
+check("the republish chain's promote step accepts the generated README and still stops on a new page beside it", () => {
+  const chainTest = join(REPO, "dev/test-republish-chain.mjs");
+  if (!existsSync(chainTest)) return "dev/test-republish-chain.mjs is absent";
+  if (!readFileSync(chainTest, "utf8").includes(README_CHECK)) return "dev/test-republish-chain.mjs no longer checks the README promotion";
+  const result = run(process.execPath, [chainTest]);
+  const lines = result.stdout.split("\n").map((line) => line.trim());
+  if (lines.includes(`ok      ${README_CHECK}`)) return null;
+  return lines.includes(`not ok  ${README_CHECK}`)
+    ? `the README promotion check failed: ${result.stdout.split("\n").filter((line) => line.startsWith("GATE ")).pop() ?? "(no gate line)"}`
+    : "the README promotion check did not run";
+});
+
+// A page's article holds record articles of its own (findings, dispositions, runtime
+// boundaries); the reader must return the outer article whole, not stop at the first close.
+const NESTED_ARTICLE = [
+  '<main><article class="content content-fixture">',
+  "<p>Before the records.</p>",
+  '<article class="record" data-record="finding:F-1"><p>The first record.</p></article>',
+  '<article class="record" data-record="finding:F-2"><p>The second record.</p></article>',
+  "<p>No purpose statement is recorded for this subsystem.</p>",
+  "</article></main><footer><article><p>Not the page.</p></article></footer>",
+].join("\n");
+let pageReader = null;
+try {
+  pageReader = await import(join(REPO, "dev/read-html-page.mjs"));
+} catch (error) {
+  pageReader = { error: error instanceof Error ? error.message : String(error) };
+}
+check("the page reader returns an article holding record articles whole, and nothing after it", () => {
+  if (typeof pageReader?.articleOf !== "function") return `dev/read-html-page.mjs gives no articleOf (${pageReader?.error ?? "not exported"})`;
+  const article = pageReader.articleOf(NESTED_ARTICLE);
+  if (article === null) return "articleOf found no article";
+  const text = pageReader.textOf(article);
+  for (const line of ["Before the records.", "The first record.", "The second record.", "No purpose statement is recorded for this subsystem."]) {
+    if (!text.includes(line)) return `the article read back without ${JSON.stringify(line)}: ${JSON.stringify(text)}`;
+  }
+  return text.includes("Not the page.") ? "the article read on past its own close into the footer" : null;
+});
 
 const HTML_FIXTURE = [
   '<!doctype html><html><body><nav class="rail"><p>Rail text that is not the page.</p></nav><main>',
