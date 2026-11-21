@@ -56,6 +56,7 @@ from .page import (
     Chip,
     CodeSpan,
     Details,
+    Emph,
     EnumTable,
     Fact,
     Heading,
@@ -75,6 +76,7 @@ from .page import (
     SummaryList,
     Table,
     Text,
+    Topology,
 )
 from .prose import _plain, inlines, render_prose
 from .readback import (
@@ -215,37 +217,78 @@ def _status_cell(status: str) -> Inlines:
     return Inlines((Chip("status", status),), badge)
 
 
-def _lint_text(page: Page) -> str:
-    """The page's words, a line to a block row, for the overview's composite-index lint."""
+def _words(text: Inlines) -> str:
+    """An inline run as text, a code span between backticks and a link as `[label](href)`."""
 
-    def words(text: Inlines) -> str:
-        def one(node: Inline) -> str:
-            if isinstance(node, CodeSpan):
-                return f"`{node.text}`"
-            if isinstance(node, Chip):
-                return node.value
-            if isinstance(node, Link):
-                return node.label
-            if hasattr(node, "children"):
-                return "".join(one(child) for child in node.children)
-            return getattr(node, "text", "")
+    def one(node: Inline) -> str:
+        if isinstance(node, CodeSpan):
+            return f"`{node.text}`"
+        if isinstance(node, Chip):
+            return node.value
+        if isinstance(node, Link):
+            return f"[{node.label}]({node.href})"
+        if isinstance(node, Strong):
+            return f"**{''.join(one(child) for child in node.children)}**"
+        if isinstance(node, Emph):
+            return f"*{''.join(one(child) for child in node.children)}*"
+        return getattr(node, "text", "")
 
-        return "".join(one(node) for node in text.nodes)
+    return "".join(one(node) for node in text.nodes)
+
+
+def page_text(page: Page) -> str:
+    """The page's words, a line to a heading, paragraph, list item or table row.
+
+    The overview's composite-index lint reads it (it works on lines), and so do
+    the tests that check what a page says of the record. It is a reading aid, not
+    a format anyone publishes: no `.md` is written from it.
+    """
 
     lines: list[str] = []
+
+    def row(*cells: Inlines | str) -> str:
+        return "| " + " | ".join(cell if isinstance(cell, str) else _words(cell) for cell in cells) + " |"
+
+    def table(headers: Sequence[Inlines | str], body: Sequence[Sequence[Inlines | str]]) -> None:
+        lines.extend([row(*headers), "|" + "---|" * len(headers), *(row(*cells) for cells in body)])
 
     def walk(blocks: Sequence[Block]) -> None:
         for block in blocks:
             if isinstance(block, Section | Details):
                 walk(block.blocks)
             elif isinstance(block, Heading):
-                lines.append(f"{'#' * block.level} {words(block.text)}")
+                lines.extend(["", f"{'#' * block.level} {_words(block.text)}", ""])
             elif isinstance(block, Paragraph):
-                lines.append(words(block.text))
+                lines.extend([_words(block.text), ""])
             elif isinstance(block, List):
-                lines.extend(f"- {words(item.text)}" for item in block.items)
+                lines.extend(f"- {_words(item.text)}" for item in block.items)
+                lines.append("")
             elif isinstance(block, SummaryList):
-                lines.extend(f"| {words(item.key)} | {words(item.value)} |" for item in block.items)
+                table(["Metric", "Value"], [(item.key, item.value) for item in block.items])
+            elif isinstance(block, Table | EnumTable):
+                table(block.headers, [row_.cells for row_ in block.rows])
+            elif isinstance(block, Atlas):
+                table(
+                    ["Region", "Subsystem", "Survey depth"],
+                    [(region.name, item.subsystem, item.depth) for region in block.regions for item in region.items],
+                )
+            elif isinstance(block, Topology):
+                if block.kind == "seam":
+                    table(
+                        ["Seam", "Party A", "Shared object", "Party B"],
+                        [(e.key, e.left, e.detail, e.right) for e in block.edges],
+                    )
+                else:
+                    table(
+                        ["From", "Relationship", "To", "Strength", "Context"],
+                        [(e.left, e.key, e.right, e.qualifier, e.detail) for e in block.edges],
+                    )
+            elif isinstance(block, RecordList):
+                for record in block.records:
+                    lines.append(f"- {_words(record.key)}: " + "; ".join(
+                        f"{fact.key} {_words(fact.value)}" for fact in (*record.facts, *record.fields)
+                    ))
+                lines.append("")
 
     lines.append(f"# {page.title}")
     walk(page.blocks)
@@ -1521,17 +1564,21 @@ def render_index(
         files_read = f"{examined_tracked} of {standing.obligation_paths}"
     else:
         files_read = "no tracked path carries a survey obligation"
-    coverage_pairs = [
-        (
-            "Subsystems by survey depth",
-            depth if depth else "no subsystem is registered",
-        ),
-        (COVERAGE_ROW_FILES_READ, files_read),
-        (
-            COVERAGE_ROW_UNLEDGERED,
-            unmeasured if not standing.stands else str(standing.unledgered),
-        ),
-    ]
+    caption = _caption("Where the record stands")
+    coverage_summary = _summary(
+        caption,
+        [
+            (
+                "Subsystems by survey depth",
+                depth if depth else "no subsystem is registered",
+            ),
+            (COVERAGE_ROW_FILES_READ, files_read),
+            (
+                COVERAGE_ROW_UNLEDGERED,
+                unmeasured if not standing.stands else str(standing.unledgered),
+            ),
+        ],
+    )
     # A defect this store confirmed and a defect it inherited and has not looked
     # at are different facts, so the carried count is its own row and is never
     # summed into `Findings open` (§5.6). The row is published when a carry is
@@ -1549,7 +1596,6 @@ def render_index(
         ("Contradictions unresolved", str(unresolved["n"] or 0)),
         ("Decisions open", str(decisions["n"] or 0)),
     ]
-    caption = _caption("Where the record stands")
     if verification:
         integrity: tuple[Block, ...] = (
             _paragraph(PUBLICATION_INTEGRITY_LAG),
@@ -1585,7 +1631,7 @@ def render_index(
             _heading(3, "Source alignment"),
             _summary(caption, alignment_pairs),
             _heading(3, "Survey coverage"),
-            _summary(caption, coverage_pairs),
+            coverage_summary,
             _heading(3, "Open engineering work"),
             _summary(caption, work),
             _heading(3, "Publication integrity"),
@@ -1646,7 +1692,7 @@ def render_index(
     # lived in the packet's gate, where it could report on a publish it could
     # not stop (F5/codex).
     if warn is not None:
-        for message in composite_index_violations(_lint_text(page)):
+        for message in composite_index_violations(page_text(page)):
             warn(f"index.md: the overview may not publish a composite index — {message}")
 
     sources = {

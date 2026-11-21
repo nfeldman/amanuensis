@@ -799,9 +799,10 @@ check("the master plan counts open findings from finding_state_current", () => {
       "import json, pathlib, sys",
       `sys.path.insert(0, ${JSON.stringify(join(REPO, "materializer"))})`,
       "from amanuensis_materializer.db import open_ro",
-      "from amanuensis_materializer.renderers import render_master_plan",
+      "from amanuensis_materializer.renderers import page_text, render_master_plan",
       `conn = open_ro(pathlib.Path(${JSON.stringify(fixture.project.dbPath)}))`,
-      `text, _sources = render_master_plan(conn, pathlib.Path(${JSON.stringify(fixture.project.storagePath)}))`,
+      `page, _sources = render_master_plan(conn, pathlib.Path(${JSON.stringify(fixture.project.storagePath)}))`,
+      "text = page_text(page)",
       "print(json.dumps({'text': text}))",
     ].join("\n"),
   );

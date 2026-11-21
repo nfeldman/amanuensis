@@ -730,7 +730,7 @@ const SCHEMA_ABS = join(REPO, SCHEMA_REL);
 const RENDER_SCRIPT = `
 import json, sqlite3, sys
 from pathlib import Path
-from amanuensis_materializer.renderers import render_architecture
+from amanuensis_materializer.renderers import page_text, render_architecture
 
 spec = json.loads(sys.stdin.read())
 db = Path(spec["db"])
@@ -755,7 +755,9 @@ for sid, obj, a, b in spec["seams"]:
     )
 conn.commit()
 conn.row_factory = sqlite3.Row
-text, sources = render_architecture(conn, Path(spec["storage"]))
+page, sources = render_architecture(conn, Path(spec["storage"]))
+# The page is a model (store-only SO14); its words, a line to a table row, are what these checks read.
+text = page_text(page)
 print(json.dumps({"markdown": text, "sources": sorted(sources)}))
 `;
 
