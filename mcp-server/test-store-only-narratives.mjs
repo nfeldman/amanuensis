@@ -777,6 +777,32 @@ async function main(mods) {
     return afterRecord.length === 2 ? null : `${afterRecord.length} effective rows after three corrections`;
   });
 
+  // The contract states the rule the reader applies. readNarratives takes the
+  // newest row per (subject, section, topic) and does not resolve its revision
+  // again on read; the contract said "the newest row that resolves" (F8/codex,
+  // slice-S1). A newest row whose revision no longer resolves stays effective.
+  check("S3 the effective rule the contract states is the one readNarratives applies", () => {
+    const ctx = world("s3");
+    seedSubsystem(ctx, "S-01", "mapped");
+    const ev = evidence(ctx);
+    const first = refusal(() => record(ctx, { evidence_ids: [ev], body: bodyFor("structure", 1) }));
+    if (first) return `recording was refused: ${first}`;
+    const second = refusal(() => record(ctx, { evidence_ids: [ev], body: bodyFor("structure", 2) }));
+    if (second) return `recording was refused: ${second}`;
+    ctx.db.exec("DROP TRIGGER IF EXISTS narrative_is_immutable");
+    ctx.db.prepare("UPDATE narratives SET ref_sha = ? WHERE id = (SELECT MAX(id) FROM narratives)").run("f".repeat(40));
+    const rows = effective(ctx, { subject_type: "subsystem", subject_id: "S-01", section: "structure" });
+    if (rows.length !== 1 || rows[0].body !== bodyFor("structure", 2)) {
+      return `the newest row with an unresolvable revision is not effective: ${JSON.stringify(rows.map((r) => r.body))}`;
+    }
+    const note = String(mods.vocabulary?.enums?.narrative_disposition?.note ?? "");
+    if (!note) return "the contract's narrative_disposition carries no note";
+    if (/newest row that resolves/.test(note)) return `the contract says "${note}", which readNarratives does not apply`;
+    return /newest row per subject, section and topic/.test(note)
+      ? null
+      : `the contract's note does not state the per-topic rule: "${note}"`;
+  });
+
   check("S2 narratives of one subject do not leak into another", () => {
     const ctx = world("s2");
     seedSubsystem(ctx, "S-01", "mapped");
