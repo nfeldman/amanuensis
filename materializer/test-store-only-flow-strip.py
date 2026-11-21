@@ -33,7 +33,8 @@ Turns red when:
   - an SVG lacks `role="img"`, a `<title>` or a `<desc>` that counts its boxes and arrows,
     states a font size under 11, uses a literal colour, runs a script, is not 960 wide, or a
     mark has no `data-node` or `data-edge`; a figure has no readable account listing every
-    step and every mark, no statement of the revision it was read at, or a link that reaches
+    step and every mark, no statement of the revision it was read at (a sentence in place of a
+    strip included), or a link that reaches
     no anchor, or an account anchor is not unique;
   - two publications of one store print different figures;
   - a sabotage that edits the subsystem page and reseals `.projection-contract.json` is not
@@ -869,6 +870,18 @@ def main() -> int:
             return None
 
         check("a flow of fewer than three steps is a sentence that counts them", sentences)
+
+        def sentence_provenance() -> str | None:
+            # A sentence in place of a strip still says what it was read at (Appendix B rule 3).
+            for flow in ("B-02/flow/refresh", "B-01/flow/huge", "F-01/flow/render"):
+                said = sentence_of(text_of(flow.split("/", 1)[0]), flow)
+                if said is None:
+                    return f"{flow} has no sentence"
+                if f"revision {SHA}" not in said:
+                    return f"the sentence for {flow} does not print the revision it was read at ({SHA}): {said!r}"
+            return None
+
+        check("a flow drawn as a sentence prints the revision it was read at", sentence_provenance)
 
         def two_publications() -> str | None:
             storage2 = build_store(root / "a2")
