@@ -445,10 +445,10 @@ def prose_checks(docs: Path) -> None:
 
     def tables_with_names() -> str | None:
         rows = (
-            ("master-plan.html", r'<li class="atlas-item">.*?</li>'),
+            ("master-plan.html", r'<li class="atlas-item"[^>]*>.*?</li>'),
             ("master-plan.html", r'<article class="record record-subsystem".*?</article>'),
             ("hot-spots.html", r"<tr\b.*?</tr>"),
-            ("architecture.html", r'<li class="atlas-item">.*?</li>'),
+            ("architecture.html", r'<li class="atlas-item"[^>]*>.*?</li>'),
         )
         for page, pattern in rows:
             row = next((b for b in re.findall(pattern, read(docs / page), re.S) if "r06-rule-evaluation.html" in b), None)

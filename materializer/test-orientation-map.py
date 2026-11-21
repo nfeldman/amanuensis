@@ -253,7 +253,7 @@ def html_atlas(page: str) -> list[tuple[str, int, list[tuple[str, str, str]]]] |
         name = html_text(re.search(r"<h3>(.*?)</h3>", region, re.S).group(1))  # type: ignore[union-attr]
         count = re.search(r'class="atlas-region-count">(\d+) subsystem', region)
         items: list[tuple[str, str, str]] = []
-        for item in re.findall(r'<li class="atlas-item">(.*?)</li>', region, re.S):
+        for item in re.findall(r'<li class="atlas-item"[^>]*>(.*?)</li>', region, re.S):
             link = re.search(r'<a\b[^>]*href="([^"]*)"', item)
             subsystem = re.search(r'<div class="atlas-subsystem"[^>]*>(.*?)</div>', item, re.S)
             depth = re.search(r'<div class="atlas-depth">(.*?)</div>', item, re.S)
