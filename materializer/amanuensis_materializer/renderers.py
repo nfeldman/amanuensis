@@ -61,6 +61,9 @@ from .page import (
     Chip,
     Code,
     CodeSpan,
+    ConcernChecklist,
+    ConcernFamily,
+    ConcernItem,
     Details,
     Emph,
     EnumTable,
@@ -117,7 +120,6 @@ from .readback import (
     effective_explanations,
     effective_narratives,
     effective_territory_dispositions,
-    escaped_cell,
     explanation_rows,
     finding_marker,
     finding_page,
@@ -131,7 +133,6 @@ from .readback import (
     resolve_workspace,
     revision_resolves,
     territory_label,
-    territory_row,
     workspace_is_bound,
 )
 from .slugs import matrix_page, matrix_slug, slugify, subsystem_page
@@ -1241,40 +1242,72 @@ def _project_narratives(
     return sorted(chosen, key=lambda r: (order.index(str(r["section"])), int(r["first_id"])))
 
 
-def _checklist_lines(
+def _flat_cell(text: Any) -> str:
+    """An authored value as one line, its pipes kept: a table cell as the page prints it."""
+
+    return " ".join(str(text).split())
+
+
+def _checklist_blocks(
     concerns: Sequence[Mapping[str, Any]], territories: Sequence[Mapping[str, Any]]
-) -> list[str]:
-    out: list[str] = []
+) -> list[Block]:
+    out: list[Block] = []
     if concerns:
-        out += [
-            "## Concerns",
-            "",
-            "Each concern the survey checks, the kind of territory it came from, and"
-            " the probe that tests it in this codebase.",
-            "",
-            "| " + " | ".join(CHECKLIST_HEADERS) + " |",
-            "|" + "---|" * len(CHECKLIST_HEADERS),
-        ]
+        groups: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
         for c in concerns:
-            where = ", ".join(f"**{sid}**" for sid in c["subsystems"]) or "—"
-            out.append(
-                f"| **{c['code']}** | {_table_cell(c['category'] or '—')}"
-                f" | {escaped_cell(territory_label(c['territory']) or '—')}"
-                f" | {escaped_cell(c['probe'] or '—')} | {where} |"
+            category = _plain(_table_cell(c["category"] or "—"))
+            territory = _plain(_flat_cell(territory_label(c["territory"]) or "—"))
+            groups.setdefault((category, territory), []).append(c)
+        families: list[ConcernFamily] = []
+        for (category, territory), members in groups.items():
+            name = category.replace("-", " ").capitalize()
+            items: list[ConcernItem] = []
+            for number, c in enumerate(members, start=1):
+                code = f"**{c['code']}**"
+                code_text = _plain(code) or f"Concern {number}"
+                where = ", ".join(f"**{sid}**" for sid in c["subsystems"]) or "—"
+                items.append(
+                    ConcernItem(
+                        code=inlines(code),
+                        code_text=code_text,
+                        slug_text=_plain(f"concern-checklist-{code_text}"),
+                        primary_subsystems=inlines(where),
+                        probe=inlines(_flat_cell(c["probe"] or "—")),
+                    )
+                )
+            families.append(ConcernFamily(name, territory, _plain(f"{name} concerns"), tuple(items)))
+        out.append(
+            _section(
+                "Concerns",
+                _paragraph(
+                    "Each concern the survey checks, the kind of territory it came from, and"
+                    " the probe that tests it in this codebase."
+                ),
+                ConcernChecklist(_caption("Concerns"), tuple(families)),
             )
-        out.append("")
+        )
     if territories:
-        out += [
-            "## Territories",
-            "",
-            "Whether each kind of territory applies to this project. A territory that"
-            " does not apply names the condition that rules it out.",
-            "",
-            "| Territory | Disposition | Condition |",
-            "|---|---|---|",
-        ]
-        out += [territory_row(dict(t)) for t in territories]
-        out.append("")
+        out.append(
+            _section(
+                "Territories",
+                _paragraph(
+                    "Whether each kind of territory applies to this project. A territory that"
+                    " does not apply names the condition that rules it out."
+                ),
+                _table(
+                    _caption("Territories"),
+                    ("Territory", "Disposition", "Condition"),
+                    [
+                        [
+                            _flat_cell(territory_label(t["territory"])),
+                            str(t["disposition"]),
+                            _flat_cell(t["condition"] or "—"),
+                        ]
+                        for t in territories
+                    ],
+                ),
+            )
+        )
     return out
 
 
@@ -1307,29 +1340,33 @@ def record_page(
     narratives = _project_narratives(conn, storage, kind)
     extra = _record_page_sources(conn, kind)
     concerns, territories = extra.get("concerns", []), extra.get("territories", [])
+    path = f"{kind}.html"
     if not (narratives or concerns or territories):
-        return imported_page(conn, kind, title)
+        return imported_page(conn, kind, title, path)
     workspace = resolve_workspace(storage)
     bound = workspace_is_bound(workspace)
     head = _checked_head(conn)
-    out = [f"# {title}", ""]
-    section = None
+    blocks: list[Block] = []
+    section: str | None = None
+    held: list[Block] = []
     for record in narratives:
         if record["section"] != section:
+            if section is not None:
+                blocks.append(_section(NARRATIVE_LABELS.get(section, section), *held))
             section = str(record["section"])
-            out += [f"## {NARRATIVE_LABELS.get(section, section)}", ""]
-        out += _narrative_lines([record], 3, workspace, bound, head, warn, untitled=False)
-    out += _checklist_lines(concerns, territories)
+            held = []
+        held += _narrative_blocks([record], 3, workspace, bound, head, warn, untitled=False)
+    if section is not None:
+        blocks.append(_section(NARRATIVE_LABELS.get(section, section), *held))
+    blocks += _checklist_blocks(concerns, territories)
     if bodies:
-        out += [f"## {AS_WRITTEN_HEADING}", ""]
-        for body in bodies:
-            out += [body.label(), "", nest_headings(body.body.strip(), 2), ""]
+        blocks.append(_section(AS_WRITTEN_HEADING, *_imported_blocks(bodies, 2, AS_WRITTEN_HEADING, path)))
     sources = (
         _narrative_source(f"narratives:{kind}", head, narratives)
         | _db_source(f"checklist:{kind}", extra)
         | imports_source(f"imports:{kind}", bodies)
     )
-    return "\n".join(out).rstrip() + "\n", sources
+    return Page(title, path, tuple(blocks)), sources
 
 
 def _survey_notes_line(artifact: Mapping[str, Any], account: Mapping[str, Any]) -> str:

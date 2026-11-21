@@ -35,7 +35,7 @@ from typing import Any
 from .db import rows, table_exists
 from .html_projection import _MarkdownParser
 from .manifest import sha256_json
-from .page import Block, Section
+from .page import Block, Page, Section
 
 # CommonMark fences: three or more backticks or tildes, indented at most three
 # spaces.  Tracking only the backtick form let a `~~~` block's contents through
@@ -221,15 +221,16 @@ _H1 = re.compile(r"#[ \t]")
 
 
 def imported_page(
-    conn: sqlite3.Connection, kind: str, title: str
-) -> tuple[str, dict[str, str]] | None:
+    conn: sqlite3.Connection, kind: str, title: str, path: str
+) -> tuple[Page, dict[str, str]] | None:
     """A page of the three imported ones, or None when no body of its kind is printed.
 
     The page is the body as written, its headings where its author put them, with
     its label as the first thing under the page's heading (D1, §5.4). A body that
     does not open with a heading of its own is given the page's title. A second
     body of the same kind follows the first behind its own label, its headings
-    moved beneath the page's.
+    moved beneath the page's. The whole document is read once, as one page of
+    `path`.
     """
 
     bodies = imported_bodies(conn, kind=kind)
@@ -245,4 +246,4 @@ def imported_page(
             out += [heading, "", body.label(), "", rest.strip(), ""]
         else:
             out += [f"# {title}", "", body.label(), "", text, ""]
-    return "\n".join(out), imports_source(f"imports:{kind}", bodies)
+    return _MarkdownParser(path).parse("\n".join(out)), imports_source(f"imports:{kind}", bodies)
