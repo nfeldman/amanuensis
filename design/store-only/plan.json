@@ -1452,7 +1452,7 @@
     {
       "needs_mcp": false,
       "status": "ready",
-      "attempts": 1,
+      "attempts": 2,
       "start_sha": "7ef7a30671b0f3ec09f6f38f00df1fd8b1ad5c12",
       "red_sha": "12d361a",
       "green_sha": "993e39d",
