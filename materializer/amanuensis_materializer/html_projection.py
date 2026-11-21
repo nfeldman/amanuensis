@@ -1,7 +1,7 @@
 """Self-contained HTML projection for the human-facing conspectus.
 
-Markdown remains a useful portable projection, but it is not the primary
-reading surface.  This module turns the post-xref Markdown bytes into a
+HTML is the only published view (store-only PLAN §3.2).  This module turns each
+page's post-xref Markdown, held in memory and never written, into a
 dependency-free HTML site with global navigation, reader hints, semantic
 status labels, and local-link integrity.  Every page embeds the same compact
 CSS and JavaScript so the projection works from ``file://`` as well as from a
@@ -138,7 +138,7 @@ def assert_nav_groups(groups: Sequence[tuple[str, str]]) -> None:
 
 @dataclass(frozen=True)
 class SitePage:
-    """Human-facing identity for one Markdown/HTML page pair."""
+    """Human-facing identity for one page; `markdown_path` is its plan id until SO19."""
 
     markdown_path: str
     title: str
@@ -204,16 +204,12 @@ def notice_paragraph(notice: str) -> str:
     return f"*{notice}*"
 
 
-def append_notice(markdown: str, notice: str) -> str:
-    """End the Markdown page with the notice as its last paragraph."""
-
-    if not notice:
-        return markdown
-    return markdown.rstrip("\n") + "\n\n" + notice_paragraph(notice) + "\n"
-
-
 def strip_notice(markdown: str, notice: str) -> str:
-    """The inverse of `append_notice`: the HTML prints the notice in its page head."""
+    """Remove the notice paragraph a Markdown text ends with: the HTML prints it in its page head.
+
+    The run no longer appends it (store-only PLAN §3.2); SO11's golden Markdown
+    still ends with it.
+    """
 
     paragraph = notice_paragraph(notice)
     body = markdown.rstrip("\n")
@@ -3793,7 +3789,6 @@ def _shell(
     notice_para = (
         f'<p class="page-notice" role="note">{html.escape(notice)}</p>' if notice else ""
     )
-    md_link = _rel_link(page.html_path, page.markdown_path)
     home_link = _rel_link(page.html_path, "index.html")
     record_status = _status_html(page.status) if page.status else ""
     status_meta = f'<span class="snapshot-item">Survey depth&nbsp; {record_status}</span>' if record_status else ""
@@ -3848,7 +3843,7 @@ def _shell(
     <p class="search-status" data-search-status role="status" aria-live="polite"></p>
     <nav class="rail-nav">{nav}</nav>
     <div class="rail-foot">
-      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="{html.escape(md_link, quote=True)}">Markdown source</a></div>
+      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button></div>
     </div>
   </aside>
   <main class="document" id="content">
@@ -3870,7 +3865,6 @@ def _shell(
         </div>
       </header>
       <article class="content content-{html.escape(slugify(page.kind), quote=True)}"{filter_attrs}>{body}</article>
-      <footer class="page-foot"><p><a href="{html.escape(md_link, quote=True)}">Inspect Markdown</a></p></footer>
     </div>
   </main>
 </div>
@@ -3911,11 +3905,15 @@ def render_html_projection(
     previous_files: dict[str, str] | None = None,
     locus_index: dict[str, Any] | None = None,
     notice: str = "",
+    markdown: dict[str, str] | None = None,
 ) -> HtmlProjectionResult:
-    """Render HTML companions from finished Markdown and retire old HTML.
+    """Render each page's HTML from its finished Markdown and retire old HTML.
 
-    `notice` is the command-line render notice the Markdown ends with; the HTML
-    moves it from the end of the body into the page head.
+    `markdown` holds each page's post-xref Markdown by plan id, in memory: the
+    run writes no `.md` (store-only PLAN §3.2 step 3). Without it the Markdown
+    is read from `output`, which only the golden corpus's recorded inputs use.
+    `notice` is the command-line render notice; the HTML prints it in the page
+    head, and a Markdown text that still ends with it has it removed first.
     """
 
     previous_files = previous_files or {}
@@ -3943,13 +3941,17 @@ def render_html_projection(
         index_target.write_text(index_text)
 
     for page in pages:
-        source = output / page.markdown_path
-        if not source.is_file():
+        if markdown is not None:
+            text = markdown.get(page.markdown_path)
+        else:
+            source = output / page.markdown_path
+            text = source.read_text() if source.is_file() else None
+        if text is None:
             warnings.append(f"HTML source missing for {page.markdown_path}")
             continue
         model = parse_markdown(
             strip_page_head(
-                strip_notice(source.read_text(), notice),
+                strip_notice(text, notice),
                 page.hint,
                 page.use_when,
                 terms_line(page.markdown_path, page.terms),

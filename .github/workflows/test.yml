@@ -434,6 +434,9 @@ jobs:
         python-version: ["3.11", "3.12.13"]
     steps:
       - uses: actions/checkout@v6
+        with:
+          # GATE SO13 reads SO11's golden corpus from git at its start commit.
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -520,6 +523,12 @@ jobs:
       - name: Markdown → page model → HTML, byte-identical on the golden corpus
         working-directory: materializer
         run: python3 test-store-only-model.py
+      # GATE SO13 (design/store-only/PLAN.md §3.2, §3.5, §6, §8 SO13). Seeds its own
+      # store; publishes in place and clean, over a .md + .html output, and reads
+      # back with the receipt resealed over each sabotage.
+      - name: HTML is the only output — no .md written, claimed .md removed, unmanaged .md refused
+        working-directory: materializer
+        run: python3 test-store-only-html-only.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py

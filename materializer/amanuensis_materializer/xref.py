@@ -1,9 +1,9 @@
 """Cross-reference resolution.
 
 Builds a global ID → relative-path map once per materialization, then
-passes over every rendered markdown file and replaces bare IDs with
-working links. Respects fenced code blocks (leaves IDs inside them
-alone).
+passes over every page's rendered Markdown, held in memory, and replaces bare
+IDs with working links. Respects fenced code blocks (leaves IDs inside them
+alone). No file is read or written here (store-only PLAN §3.2 step 3).
 
 The match pattern is built from the index's own keys, so any ID the store
 holds links, whatever its shape (`B04-R6`, a lowercase `auth`), and nothing
@@ -16,7 +16,6 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from pathlib import Path
 
 
 @dataclass
@@ -101,14 +100,10 @@ def _relative(from_rel: str, to_rel: str) -> str:
     return "/".join(up + down) if (up or down) else to_rel
 
 
-def resolve_file(abs_path: Path, rel_path: str, index: XrefIndex) -> bool:
-    """Rewrite IDs in a file. Returns True if the file changed."""
-    original = abs_path.read_text()
-    text = resolve_text(original, rel_path, index)
-    if text != original:
-        abs_path.write_text(text)
-        return True
-    return False
+def resolve_pages(texts: dict[str, str], index: XrefIndex) -> dict[str, str]:
+    """Resolve every page's fresh Markdown, keyed by page id; returns the linked text."""
+
+    return {rel_path: resolve_text(text, rel_path, index) for rel_path, text in texts.items()}
 
 
 def resolve_text(text: str, rel_path: str, index: XrefIndex) -> str:
@@ -266,28 +261,3 @@ def _resolve_line(
         return pre + linked + post + _name_after(id_, m.start(), m.end())
 
     return pattern.sub(_replace, line)
-
-
-def resolve_all(output_root: Path, rel_paths: Iterable[str], index: XrefIndex) -> int:
-    """Apply cross-ref resolution across every rendered page. Returns
-    the number of files that changed.
-
-    Every candidate path is resolved and verified to stay within
-    `output_root`. All current callers pass slug-derived paths that
-    cannot escape, so this is defense in depth — a future refactor
-    that feeds DB-derived or user-supplied paths in will not silently
-    rewrite files outside the output tree.
-    """
-    root = output_root.resolve()
-    changed = 0
-    for rel in rel_paths:
-        abs_path = (root / rel).resolve()
-        try:
-            abs_path.relative_to(root)
-        except ValueError:
-            continue
-        if not abs_path.is_file():
-            continue
-        if resolve_file(abs_path, rel, index):
-            changed += 1
-    return changed

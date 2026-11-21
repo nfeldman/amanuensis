@@ -46,9 +46,8 @@ from .vocabulary import (
 
 CONTRACT_NAME = ".projection-contract.json"
 CONTRACT_VERSION = "2"
-LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 HTML_SUFFIXES = {".html", ".htm"}
-LINKED_SUFFIXES = {".md", ".html", ".htm"}
+LINKED_SUFFIXES = HTML_SUFFIXES
 
 # The generated locus index (spec §8.1.1). It is a projection file like any
 # page: inventoried, hashed into the receipt, and — unlike a page — read back
@@ -170,10 +169,8 @@ COVERAGE_ROW_UNLEDGERED = "Paths in scope with no ledger row"
 NO_OBLIGATION_SENTENCE = "no tracked path carries a survey obligation"
 COVERAGE_ROW_CARRIED = "Carried defects undecided"
 
-OVERVIEW_PAGE_MD = "index.md"
 OVERVIEW_PAGE_HTML = "index.html"
 
-_MD_ROW_RE = re.compile(r"^\s*\|(?P<cells>.*)\|\s*$")
 # The HTML view renders a metric table as a description list, and a data table
 # as a table; both shapes are read, so this axis does not depend on which one
 # the shared template happens to use.
@@ -189,29 +186,14 @@ def _plain(fragment: str) -> str:
     return unescape(_TAG_RE.sub("", fragment)).strip()
 
 
-def _metric_cell(text: str, label: str, suffix: str) -> str | None:
-    """The value cell of one `| label | value |` metric row, in either format.
+def _metric_cell(text: str, label: str) -> str | None:
+    """The value cell of one metric row on an HTML page, as a pair or a table row."""
 
-    The HTML view is derived from the finished Markdown bytes, so the same row
-    is checkable in both corpora — and both are checked, because a healthy
-    Markdown page must not stand in for its companion (§11.3's rule, applied to
-    a reading rather than to a marker).
-    """
-
-    if suffix in HTML_SUFFIXES:
-        for pair in _HTML_PAIR_RE.finditer(text):
-            if _plain(pair.group("label")).strip("*` ") == label:
-                return _plain(pair.group("value"))
-        for match in _HTML_ROW_RE.finditer(text):
-            cells = [_plain(c.group("cell")) for c in _HTML_CELL_RE.finditer(match.group("body"))]
-            if len(cells) >= 2 and cells[0].strip("*` ") == label:
-                return cells[1]
-        return None
-    for line in text.splitlines():
-        match = _MD_ROW_RE.match(line)
-        if not match:
-            continue
-        cells = [cell.strip() for cell in match.group("cells").split("|")]
+    for pair in _HTML_PAIR_RE.finditer(text):
+        if _plain(pair.group("label")).strip("*` ") == label:
+            return _plain(pair.group("value"))
+    for match in _HTML_ROW_RE.finditer(text):
+        cells = [_plain(c.group("cell")) for c in _HTML_CELL_RE.finditer(match.group("body"))]
         if len(cells) >= 2 and cells[0].strip("*` ") == label:
             return cells[1]
     return None
@@ -1159,39 +1141,29 @@ class _HtmlInventory(HTMLParser):
             self.links.append(str(values["href"]))
 
 
-def _links(text: str, suffix: str) -> list[str]:
-    if suffix in HTML_SUFFIXES:
-        parser = _HtmlInventory()
-        parser.feed(text)
-        return parser.links
-    return LINK_RE.findall(text)
+def _links(text: str) -> list[str]:
+    parser = _HtmlInventory()
+    parser.feed(text)
+    return parser.links
 
 
 def _anchors(text: str, suffix: str) -> set[str]:
-    if suffix in HTML_SUFFIXES:
-        parser = _HtmlInventory()
-        parser.feed(text)
-        return parser.anchors
-    anchors = set(re.findall(r'<a\s+id="([^"]+)"', text))
-    # GitHub-style heading anchors are a useful fallback for authored prose.
-    for heading in re.findall(r"^#{1,6}\s+(.+?)\s*$", text, flags=re.MULTILINE):
-        value = re.sub(r"[`*_\[\]()]", "", heading).lower()
-        value = re.sub(r"[^a-z0-9 -]", "", value)
-        value = re.sub(r"[\s-]+", "-", value).strip("-")
-        if value:
-            anchors.add(value)
-    return anchors
+    if suffix not in HTML_SUFFIXES:
+        return set()
+    parser = _HtmlInventory()
+    parser.feed(text)
+    return parser.anchors
 
 
-def _local_links(text: str, suffix: str = ".md") -> list[str]:
-    # Only the two prose formats carry cross-links. The generated index is
-    # JavaScript, and running a Markdown link pattern over a JSON payload would
-    # invent link targets for the coverage axis to fail to resolve.
+def _local_links(text: str, suffix: str) -> list[str]:
+    # Only HTML pages carry cross-links. The generated index is JavaScript, and
+    # reading links out of a JSON payload would invent link targets for the
+    # coverage axis to fail to resolve.
     if suffix not in LINKED_SUFFIXES:
         return []
     return [
         target
-        for target in _links(text, suffix)
+        for target in _links(text)
         if not target.startswith(("http://", "https://", "mailto:", "#"))
     ]
 
@@ -1285,7 +1257,9 @@ class ProjectionVerifier:
         # `*.js` joins the inventory so the generated index is a page the
         # coverage axis can find. Without it the file is present, expected, and
         # reported missing — the wrong red, which is as much a defect as the
-        # wrong green (§8.2).
+        # wrong green (§8.2). `*.md` is inventoried though no run writes one
+        # (store-only PLAN §3.2 step 3): a `.md` left in the output is an
+        # unplanned page, and coverage reports it.
         projection = {
             str(path.relative_to(self.output)): path.read_text()
             for pattern in ("*.md", "*.html", "*.js")
@@ -1307,24 +1281,23 @@ class ProjectionVerifier:
             mismatches.extend(self._record_page_census(conn, projection))
         finally:
             conn.close()
-        # The Markdown and HTML views must each carry authoritative markers.
-        # One healthy format cannot mask drift in its companion.
-        for suffix, label in ((".md", "markdown"), (".html", "html")):
-            format_text = "\n".join(
-                body for rel, body in projection.items() if Path(rel).suffix == suffix
-            )
-            for finding in findings:
-                marker = finding_marker(str(finding["finding_id"]))
-                count = format_text.count(marker)
-                if count != 1:
-                    mismatches.append(
-                        {
-                            "axis": "state",
-                            "object_type": "finding" if label == "markdown" else "finding-html",
-                            "object_id": str(finding["finding_id"]),
-                            "detail": f"expected exactly one {label} state marker, found {count}",
-                        }
-                    )
+        # Every finding carries exactly one authoritative marker across the
+        # HTML pages, the only view (store-only PLAN §3.2 step 3).
+        html_text = "\n".join(
+            body for rel, body in projection.items() if Path(rel).suffix in HTML_SUFFIXES
+        )
+        for finding in findings:
+            marker = finding_marker(str(finding["finding_id"]))
+            count = html_text.count(marker)
+            if count != 1:
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "finding-html",
+                        "object_id": str(finding["finding_id"]),
+                        "detail": f"expected exactly one html state marker, found {count}",
+                    }
+                )
 
         # Coverage compares both the current page plan and the link receipt to
         # the completed output.  This catches retired/missing pages and links
@@ -1461,10 +1434,7 @@ class ProjectionVerifier:
         receipt it just wrote; `--readback-only` takes the receipt's word.
         """
 
-        from .html_projection import (  # noqa: PLC0415 — it imports this module
-            CLI_RENDER_NOTICES,
-            notice_paragraph,
-        )
+        from .html_projection import CLI_RENDER_NOTICES  # noqa: PLC0415 — it imports this module
 
         mismatches: list[dict[str, str]] = []
         stated = str(contract.get("render_notice") or "")
@@ -1479,26 +1449,16 @@ class ProjectionVerifier:
                 }
             )
         others = [n for n in CLI_RENDER_NOTICES if n != expected]
+        forms = [escape(n) for n in others]
         for rel in self.expected_pages:
-            suffix = Path(rel).suffix
             body = projection.get(rel)
-            if body is None or suffix not in (".md", ".html"):
-                continue  # coverage owns a missing page
-            if suffix == ".md":
-                # The sentence, not its italic paragraph: emphasis is presentation,
-                # and a plain copy says the same thing to a reader.
-                forms = list(others)
-                count = body.count(expected) if expected else 0
-                placed = not expected or (
-                    count == 1 and body.rstrip("\n").endswith("\n" + notice_paragraph(expected))
-                )
-            else:
-                forms = [escape(n) for n in others]
-                count = body.count(escape(expected)) if expected else 0
-                head = re.search(r'<header class="page-head">(.*?)</header>', body, re.S)
-                placed = not expected or (
-                    count == 1 and head is not None and escape(expected) in head.group(1)
-                )
+            if body is None or Path(rel).suffix not in HTML_SUFFIXES:
+                continue  # coverage owns a missing page; the search index has no head
+            count = body.count(escape(expected)) if expected else 0
+            head = re.search(r'<header class="page-head">(.*?)</header>', body, re.S)
+            placed = not expected or (
+                count == 1 and head is not None and escape(expected) in head.group(1)
+            )
             if not placed:
                 detail = (
                     "page lacks the command-line render notice"
@@ -1536,7 +1496,7 @@ class ProjectionVerifier:
         * `finding_state_current` returns exactly one row per `findings` row,
           and each row lands in exactly one lens membership query.  A row in
           both or in neither is reported by id;
-        * the row's marker is on the page its lens selects, in both corpora.
+        * the row's marker is on the HTML page its lens selects.
           The marker count check above proves a finding renders once; this
           proves it renders in the right lens.
         """
@@ -1631,21 +1591,20 @@ class ProjectionVerifier:
             if expected is None:
                 continue
             marker = finding_marker(finding_id)
-            for suffix in (".md", ".html"):
-                page = str(Path(expected).with_suffix(suffix))
-                count = projection.get(page, "").count(marker)
-                if count != 1:
-                    mismatches.append(
-                        {
-                            "axis": "state",
-                            "object_type": "finding-partition",
-                            "object_id": finding_id,
-                            "detail": (
-                                f"{states.get(finding_id)} selects {page}, which carries the"
-                                f" state marker {count} times"
-                            ),
-                        }
-                    )
+            page = str(Path(expected).with_suffix(".html"))
+            count = projection.get(page, "").count(marker)
+            if count != 1:
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "finding-partition",
+                        "object_id": finding_id,
+                        "detail": (
+                            f"{states.get(finding_id)} selects {page}, which carries the"
+                            f" state marker {count} times"
+                        ),
+                    }
+                )
         return mismatches
 
     def _ledger_stale_census(
@@ -1666,8 +1625,7 @@ class ProjectionVerifier:
           section of `stale.md` — a new classification with no section is a
           partition hole, not a rendering detail;
         * each obligation-bearing stale row carries exactly one marker in the
-          Markdown corpus and exactly one in the HTML corpus, both on the page
-          §6.2 selects;
+          HTML corpus, on the page §6.2 selects;
         * a row exempt from the survey obligation carries none.  Recording one
           would report drift in generated or vendored territory as survey
           staleness, which is the reading §11.2 keeps separate.
@@ -1718,12 +1676,9 @@ class ProjectionVerifier:
                     }
                 )
 
-        corpora = {
-            suffix: "\n".join(
-                body for rel, body in projection.items() if Path(rel).suffix == suffix
-            )
-            for suffix in (".md", ".html")
-        }
+        corpus = "\n".join(
+            body for rel, body in projection.items() if Path(rel).suffix in HTML_SUFFIXES
+        )
         for ledger_row in rows(
             conn,
             "SELECT subsystem_id, file_path,"
@@ -1734,25 +1689,22 @@ class ProjectionVerifier:
             subsystem_id = str(ledger_row["subsystem_id"])
             file_path = str(ledger_row["file_path"])
             marker = ledger_stale_marker(subsystem_id, file_path)
-            for suffix, label in ((".md", "markdown"), (".html", "html")):
-                page = str(Path(LEDGER_STALE_PAGE).with_suffix(suffix))
-                page_count = projection.get(page, "").count(marker)
-                corpus_count = corpora[suffix].count(marker)
-                if page_count != 1 or corpus_count != 1:
-                    mismatches.append(
-                        {
-                            "axis": "state",
-                            "object_type": (
-                                "ledger-stale" if label == "markdown" else "ledger-stale-html"
-                            ),
-                            "object_id": f"{subsystem_id}:{file_path}",
-                            "detail": (
-                                f"expected exactly one {label} record on {page};"
-                                f" found {page_count} there and {corpus_count} in the"
-                                f" {label} corpus"
-                            ),
-                        }
-                    )
+            page = str(Path(LEDGER_STALE_PAGE).with_suffix(".html"))
+            page_count = projection.get(page, "").count(marker)
+            corpus_count = corpus.count(marker)
+            if page_count != 1 or corpus_count != 1:
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "ledger-stale-html",
+                        "object_id": f"{subsystem_id}:{file_path}",
+                        "detail": (
+                            f"expected exactly one html record on {page};"
+                            f" found {page_count} there and {corpus_count} in the"
+                            " html corpus"
+                        ),
+                    }
+                )
         for ledger_row in rows(
             conn,
             "SELECT subsystem_id, file_path FROM file_ledger"
@@ -1762,24 +1714,19 @@ class ProjectionVerifier:
             subsystem_id = str(ledger_row["subsystem_id"])
             file_path = str(ledger_row["file_path"])
             marker = ledger_stale_marker(subsystem_id, file_path)
-            for suffix, label in ((".md", "markdown"), (".html", "html")):
-                count = corpora[suffix].count(marker)
-                if count:
-                    mismatches.append(
-                        {
-                            "axis": "state",
-                            "object_type": (
-                                "ledger-stale-exempt"
-                                if label == "markdown"
-                                else "ledger-stale-exempt-html"
-                            ),
-                            "object_id": f"{subsystem_id}:{file_path}",
-                            "detail": (
-                                "a row exempt from the survey obligation carries"
-                                f" {count} {label} stale record(s)"
-                            ),
-                        }
-                    )
+            count = corpus.count(marker)
+            if count:
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "ledger-stale-exempt-html",
+                        "object_id": f"{subsystem_id}:{file_path}",
+                        "detail": (
+                            "a row exempt from the survey obligation carries"
+                            f" {count} html stale record(s)"
+                        ),
+                    }
+                )
         return mismatches
 
     def _locus_index_census(
@@ -1912,9 +1859,8 @@ class ProjectionVerifier:
         * every `carried_finding_outcome` value, and the word `undecided`, is
           claimed by exactly one lens — an outcome with no lens is a partition
           hole, not a rendering detail;
-        * each carried record carries exactly one marker in the Markdown corpus
-          and exactly one in the HTML corpus, both on the page its outcome
-          selects.  One healthy format cannot mask drift in its companion.
+        * each carried record carries exactly one marker in the HTML corpus, on
+          the page its outcome selects.
 
         A store that carried nothing has no denominator here and reports
         nothing, which is the honest reading: `carry_runs` is where "nobody ran
@@ -1957,12 +1903,9 @@ class ProjectionVerifier:
         records = carried_records(conn)
         if not records:
             return mismatches
-        corpora = {
-            suffix: "\n".join(
-                body for rel, body in projection.items() if Path(rel).suffix == suffix
-            )
-            for suffix in (".md", ".html")
-        }
+        corpus = "\n".join(
+            body for rel, body in projection.items() if Path(rel).suffix in HTML_SUFFIXES
+        )
         for record in records:
             store_id = str(record["archived_store_id"])
             archived_id = str(record["archived_finding_id"])
@@ -1980,38 +1923,35 @@ class ProjectionVerifier:
                     }
                 )
                 continue
-            for suffix, label in ((".md", "markdown"), (".html", "html")):
-                page = str(Path(expected).with_suffix(suffix))
-                page_count = projection.get(page, "").count(marker)
-                corpus_count = corpora[suffix].count(marker)
-                if page_count != 1 or corpus_count != 1:
-                    mismatches.append(
-                        {
-                            "axis": "state",
-                            "object_type": (
-                                "carried-record" if label == "markdown" else "carried-record-html"
-                            ),
-                            "object_id": f"{store_id}:{archived_id}",
-                            "detail": (
-                                f"outcome {record['outcome']} selects {page}, which carries"
-                                f" the {label} record {page_count} time(s); the {label}"
-                                f" corpus carries it {corpus_count} time(s)"
-                            ),
-                        }
-                    )
+            page = str(Path(expected).with_suffix(".html"))
+            page_count = projection.get(page, "").count(marker)
+            corpus_count = corpus.count(marker)
+            if page_count != 1 or corpus_count != 1:
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "carried-record-html",
+                        "object_id": f"{store_id}:{archived_id}",
+                        "detail": (
+                            f"outcome {record['outcome']} selects {page}, which carries"
+                            f" the html record {page_count} time(s); the html"
+                            f" corpus carries it {corpus_count} time(s)"
+                        ),
+                    }
+                )
         return mismatches
 
     def _explanation_census(
         self, conn: Any, projection: dict[str, str]
     ) -> list[dict[str, str]]:
-        """Every effective explanation is on the page that owes it, in both views (§3.6).
+        """Every effective explanation is on the HTML page that owes it (§3.6).
 
         The effective row comes from `effective_explanations`, the function the
         renderer reads, and the body or declination reason is searched for on the
         subsystem's own page. A text the orientation lint refuses is not printed
         by design, so the page owes the refusal sentence in its place. The project
-        account is owed by the architecture page. The Markdown and HTML views are
-        each checked: one healthy format cannot mask drift in its companion.
+        account is owed by the architecture page. HTML is the only view
+        (store-only PLAN §3.2 step 3), so it is the one checked.
         """
 
         mismatches: list[dict[str, str]] = []
@@ -2032,19 +1972,6 @@ class ProjectionVerifier:
             else:
                 # The project account is owed by the architecture page (§3.7).
                 page = "architecture.md"
-            if not _resolver_pattern(_flat(owed), named, concerns).search(
-                _flat(projection.get(page, ""))
-            ):
-                mismatches.append(
-                    {
-                        "axis": "state",
-                        "object_type": "explanation",
-                        "object_id": f"{subject_id}:{slot}",
-                        "detail": (
-                            f"the effective {reading.state} {slot} (row {reading.row['id']}) is not on {page}"
-                        ),
-                    }
-                )
             html_page = str(Path(page).with_suffix(".html"))
             absent = _missing_html_line(
                 owed, _html_words(projection.get(html_page, "")), named, concerns
@@ -2066,7 +1993,7 @@ class ProjectionVerifier:
     def _record_page_census(
         self, conn: Any, projection: dict[str, str]
     ) -> list[dict[str, str]]:
-        """Each narrative, territory disposition and runtime boundary is on its page, in both views.
+        """Each narrative, territory disposition and runtime boundary is on its HTML page.
 
         The rows in force come from the functions the renderer reads
         (`effective_narratives`, `effective_territory_dispositions`,
@@ -2074,7 +2001,7 @@ class ProjectionVerifier:
         rows. A narrative is owed its topic and its body (or the refusal sentence
         in its place), a territory its whole row (its id and name, its
         disposition and its condition), a runtime boundary its runtimes, mechanism and notes. The
-        Markdown and HTML views are each checked, and a page's hash is not what is
+        HTML view, the only one, is checked, and a page's hash is not what is
         trusted here: a page edited with its receipt rewritten still fails.
         """
 
@@ -2084,22 +2011,10 @@ class ProjectionVerifier:
         names, named, concerns = _resolver_names(conn)
 
         def absent(kind: str, identifier: str, page: str, owed: list[str], label: str) -> None:
-            """Report each view of `page` that lacks any of the `owed` text."""
+            """Report the HTML twin of `page` if it lacks any of the `owed` text."""
 
-            flat_page = _flat(projection.get(page, ""))
             html_page = str(Path(page).with_suffix(".html"))
             html_words = _html_words(projection.get(html_page, ""))
-            for text in owed:
-                if not _resolver_pattern(_flat(text), named, concerns).search(flat_page):
-                    mismatches.append(
-                        {
-                            "axis": "state",
-                            "object_type": kind,
-                            "object_id": identifier,
-                            "detail": f"{label} is not on {page}: {_flat(text)[:80]!r}",
-                        }
-                    )
-                    break
             for text in owed:
                 lost = _missing_html_line(text, html_words, named, concerns)
                 if lost is not None:
@@ -2200,12 +2115,12 @@ class ProjectionVerifier:
             ),
             COVERAGE_ROW_FILES_READ: files_read,
         }
-        for rel in (OVERVIEW_PAGE_MD, OVERVIEW_PAGE_HTML):
+        for rel in (OVERVIEW_PAGE_HTML,):
             text = projection.get(rel)
             if text is None:
                 continue  # coverage already owns the missing-page diagnostic
             for label, wanted in expected.items():
-                cell = _metric_cell(text, label, Path(rel).suffix.lower())
+                cell = _metric_cell(text, label)
                 if cell is None:
                     mismatches.append(
                         {

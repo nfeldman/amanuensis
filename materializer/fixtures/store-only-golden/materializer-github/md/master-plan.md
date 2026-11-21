@@ -23,4 +23,3 @@ Terms on this page: [Subsystem](how-to-read.md#term-subsystem) · [Layer](how-to
 |---|---|---|---|---|---|---|---|
 | — | **[F-01](subsystems/f01-web-ui.md)** | Web UI | 🔵 scoping | Not recorded | web/** | web/main.tsx | 0 (0 open) |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

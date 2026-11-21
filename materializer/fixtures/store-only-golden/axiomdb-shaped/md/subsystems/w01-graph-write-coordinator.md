@@ -107,5 +107,3 @@ core.commit(batch)?;
 | Concern | Classification | Evidence |
 |---|---|---|
 | [concern CC-1](../concerns.md#cc-1) | confirmed-acceptable | `coordinator.rs:1170` |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

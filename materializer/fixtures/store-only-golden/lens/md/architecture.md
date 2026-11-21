@@ -57,5 +57,3 @@ pie showData
     title Stale entries by subsystem
     "B-02" : 1
 ```
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

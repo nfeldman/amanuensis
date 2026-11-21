@@ -28,4 +28,3 @@ _Rows are ordered by open critical and high defects, then open medium and low, t
 
 No **Access heat** column is shown: no recorded access reaches a subsystem, and a column of zeros would read as a measurement that was taken.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

@@ -32,4 +32,3 @@ _Unsanitized input flows to SQL_
 
 _Docstring claims sanitization_
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

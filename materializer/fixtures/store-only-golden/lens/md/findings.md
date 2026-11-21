@@ -30,4 +30,3 @@ _1 repair(s) recorded against a commit, with no evidence yet that they hold._
 <!-- amanuensis:finding:47d5c6eae5b99f1bfe21308db51867ae17da48ba25d361eb042149ccdbe0f877 -->
 | <a id="b02-1"></a>**B02-1** | fixed-pending-verification | **B02-1** drops a row under load |  | the buffer is reused before the reader is done with it | `aaaaaaaa` |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

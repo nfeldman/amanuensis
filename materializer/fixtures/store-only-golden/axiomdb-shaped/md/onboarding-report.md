@@ -28,5 +28,3 @@ Terms on this page: [Conspectus](how-to-read.md#term-conspectus) · [Subsystem](
 ## Stateful entities
 
 The store keeps quads in five index permutations and a dictionary of terms.
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

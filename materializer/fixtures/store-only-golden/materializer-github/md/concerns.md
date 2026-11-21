@@ -22,4 +22,3 @@ Terms on this page: [Evidence](how-to-read.md#term-evidence) · [Concern](how-to
 | <a id="cc-1"></a>**concern CC-1** | cache-coherence | seeded | — |  |
 | <a id="tc-1"></a>**concern TC-1** | trust-boundary | seeded | — |  |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

@@ -16,5 +16,3 @@ Terms on this page: [Conspectus](how-to-read.md#term-conspectus) · [Subsystem](
 |---|---|---|---|---|
 | MCP server | TypeScript | Agent host | stdio JSON-RPC | One process per session. |
 | MCP server | TypeScript | Materializer | Subprocess | Spawned per publish. |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

@@ -8,6 +8,5 @@ No disagreement between findings has been settled. 0 pairs still stand undiscrim
 
 - **Scope** — pairs of findings that made incompatible claims about one locus, and the evidence or argument that chose between them.
 - **Basis** — `contradictions` whose resolution is recorded, with `contradiction_resolution_events` for the account of how.
-- **Checked revision** — `cfc2c80635e9` on `main`, recorded 2026-09-11 12:00 UTC.
+- **Checked revision** — `0e5ac6940690` on `main`, recorded 2026-09-11 12:00 UTC.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

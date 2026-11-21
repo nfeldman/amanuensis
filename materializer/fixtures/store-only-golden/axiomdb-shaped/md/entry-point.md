@@ -21,5 +21,3 @@ Two ideas explain most of the design: visibility is metadata carried on each ind
 |---|---|
 | `crates/quad-core/src/storage` | Index permutations and the term dictionary |
 | `crates/quad-core/src/write` | The write coordinator and its fences |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

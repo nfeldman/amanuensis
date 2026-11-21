@@ -18,4 +18,3 @@ Terms on this page: [Subsystem](how-to-read.md#term-subsystem) · [Layer](how-to
 | — | **[B-02](subsystems/b02-record-store.md)** | Record store | 🟠 structural | [B-02](subsystems/b02-record-store.md) holds every record the survey writes. | — | — | 0 (0 open) |
 | — | **[B-03](subsystems/b03-page-materializer.md)** | Page materializer | 🔵 scoping | Not recorded | — | — | 0 (0 open) |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

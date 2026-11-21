@@ -990,7 +990,7 @@ INSERT INTO "explanations" VALUES(2,'project','project','account','recorded','Th
 INSERT INTO "explanations" VALUES(3,'subsystem','B-02','purpose','recorded','B-02 holds every record the survey writes.','c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','survey-1','2026-09-14 00:00:01');
 INSERT INTO "explanations" VALUES(4,'subsystem','B-02','account','recorded','Opening a store migrates it and applies the schema.','c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','survey-1','2026-09-14 00:00:02');
 INSERT INTO "explanations" VALUES(5,'subsystem','B-01','purpose','recorded','B-01 tells the agent what to read and what to record.','c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','survey-1','2026-09-14 00:00:03');
-INSERT INTO "explanations" VALUES(6,'project','project','purpose','imported','Scribe records what a survey of a codebase read, in a database, and publishes pages from it.','d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','mwpuzkrr-x3gfznj3','2026-11-21 03:39:07');
+INSERT INTO "explanations" VALUES(6,'project','project','purpose','imported','Scribe records what a survey of a codebase read, in a database, and publishes pages from it.','d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','mwpxqq6j-toaeyfz7','2026-11-21 04:56:13');
 CREATE TABLE field_notes (
     id              INTEGER PRIMARY KEY,
     category        TEXT    NOT NULL CHECK (category IN (
@@ -1128,27 +1128,27 @@ INSERT INTO "imported_artifacts" VALUES(1,'concern-checklist.md','concern-checkl
 | Code | Territory |
 |---|---|
 | CC-1 | T01 |
-','b60b5fb27d35ed6cf6b98ae30e3c03527a1f155f54efb11cf6d6ecf22ac612a4','b60b5fb27d35ed6cf6b98ae30e3c03527a1f155f54efb11cf6d6ecf22ac612a4',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:04','2026-11-21 03:39:07','mwpuzkrr-x3gfznj3');
+','b60b5fb27d35ed6cf6b98ae30e3c03527a1f155f54efb11cf6d6ecf22ac612a4','b60b5fb27d35ed6cf6b98ae30e3c03527a1f155f54efb11cf6d6ecf22ac612a4',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:04','2026-11-21 04:56:13','mwpxqq6j-toaeyfz7');
 INSERT INTO "imported_artifacts" VALUES(2,'entry-point.md','entry-point',NULL,'# Entry point
 
 ## What is this codebase?
 
 Scribe records what a survey of a codebase read, in a database, and publishes pages from it.
-','fbbeada114545a8d2b87b037561906c72efe58cd6649ca518095b2cbf1f21f71','fbbeada114545a8d2b87b037561906c72efe58cd6649ca518095b2cbf1f21f71',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:01','2026-11-21 03:39:07','mwpuzkrr-x3gfznj3');
+','fbbeada114545a8d2b87b037561906c72efe58cd6649ca518095b2cbf1f21f71','fbbeada114545a8d2b87b037561906c72efe58cd6649ca518095b2cbf1f21f71',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:01','2026-11-21 04:56:13','mwpxqq6j-toaeyfz7');
 INSERT INTO "imported_artifacts" VALUES(3,'field-notes.md','field-notes',NULL,'# Field notes
 
 1. The schema is applied on every open.
-','b6dbd185b09d7bbd1bb88ce46c042c6bb2e4f0ca3278c82c941886cabdb69480','b6dbd185b09d7bbd1bb88ce46c042c6bb2e4f0ca3278c82c941886cabdb69480',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:05','2026-11-21 03:39:07','mwpuzkrr-x3gfznj3');
+','b6dbd185b09d7bbd1bb88ce46c042c6bb2e4f0ca3278c82c941886cabdb69480','b6dbd185b09d7bbd1bb88ce46c042c6bb2e4f0ca3278c82c941886cabdb69480',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:05','2026-11-21 04:56:13','mwpxqq6j-toaeyfz7');
 INSERT INTO "imported_artifacts" VALUES(4,'findings-index.md','findings-index',NULL,'# Findings index
 
 No open finding.
-','38e44865aeb3ad8115c84cd7457cb0359505b51bdbfe61cf2471aadd435f10c4','38e44865aeb3ad8115c84cd7457cb0359505b51bdbfe61cf2471aadd435f10c4',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:03','2026-11-21 03:39:07','mwpuzkrr-x3gfznj3');
+','38e44865aeb3ad8115c84cd7457cb0359505b51bdbfe61cf2471aadd435f10c4','38e44865aeb3ad8115c84cd7457cb0359505b51bdbfe61cf2471aadd435f10c4',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:03','2026-11-21 04:56:13','mwpxqq6j-toaeyfz7');
 INSERT INTO "imported_artifacts" VALUES(5,'master-plan.md','master-plan',NULL,'# Master plan
 
 | ID | Name |
 |---|---|
 | B-01 | Survey method |
-','396ee8ef7f51f5ea7fafa28999ff9af84a32764547dd8606c6f40e41aefdd799','396ee8ef7f51f5ea7fafa28999ff9af84a32764547dd8606c6f40e41aefdd799',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:02','2026-11-21 03:39:07','mwpuzkrr-x3gfznj3');
+','396ee8ef7f51f5ea7fafa28999ff9af84a32764547dd8606c6f40e41aefdd799','396ee8ef7f51f5ea7fafa28999ff9af84a32764547dd8606c6f40e41aefdd799',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:02','2026-11-21 04:56:13','mwpxqq6j-toaeyfz7');
 INSERT INTO "imported_artifacts" VALUES(6,'onboarding-report.md','onboarding-report',NULL,'# Onboarding report
 
 **Codebase**: Scribe — a survey server and the pages it publishes
@@ -1161,7 +1161,7 @@ INSERT INTO "imported_artifacts" VALUES(6,'onboarding-report.md','onboarding-rep
 |---|---|---|---|---|
 | MCP server | TypeScript | Agent host | stdio JSON-RPC | One process per session. |
 | MCP server | TypeScript | Materializer | Subprocess | Spawned per publish. |
-','034071b9baabe120dfdffbc1139709d938d65bac1aa7ca01bf104621881cae33','034071b9baabe120dfdffbc1139709d938d65bac1aa7ca01bf104621881cae33',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:00','2026-11-21 03:39:07','mwpuzkrr-x3gfznj3');
+','034071b9baabe120dfdffbc1139709d938d65bac1aa7ca01bf104621881cae33','034071b9baabe120dfdffbc1139709d938d65bac1aa7ca01bf104621881cae33',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-12 10:00:00','2026-11-21 04:56:13','mwpxqq6j-toaeyfz7');
 INSERT INTO "imported_artifacts" VALUES(7,'subsystems/B-01-structural.md','subsystem-survey','B-01','# B-01 — Survey method
 
 Structural account, read at `d395c4d`.
@@ -1173,7 +1173,7 @@ Structural account, read at `d395c4d`.
 | File | Role |
 |---|---|
 | `SKILL.md` | Routing |
-','0470e75c6150916a9f1758e357a58e3c805773d2e31fd77cfef3992c7cbd4f62','0470e75c6150916a9f1758e357a58e3c805773d2e31fd77cfef3992c7cbd4f62',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-13 10:00:00','2026-11-21 03:39:07','mwpuzkrr-x3gfznj3');
+','0470e75c6150916a9f1758e357a58e3c805773d2e31fd77cfef3992c7cbd4f62','0470e75c6150916a9f1758e357a58e3c805773d2e31fd77cfef3992c7cbd4f62',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-13 10:00:00','2026-11-21 04:56:13','mwpxqq6j-toaeyfz7');
 INSERT INTO "imported_artifacts" VALUES(8,'subsystems/B-02-structural.md','subsystem-survey','B-02','# B-02 — Record store
 
 Structural account, read at `d395c4d`.
@@ -1181,7 +1181,7 @@ Structural account, read at `d395c4d`.
 ## Observed
 
 The server applies the schema on every open and migrates additive columns first.
-','231786480a559c4a214b42655303256c81daac6cefa4c479e22d39b82101423d','231786480a559c4a214b42655303256c81daac6cefa4c479e22d39b82101423d',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-13 10:00:01','2026-11-21 03:39:07','mwpuzkrr-x3gfznj3');
+','231786480a559c4a214b42655303256c81daac6cefa4c479e22d39b82101423d','231786480a559c4a214b42655303256c81daac6cefa4c479e22d39b82101423d',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-13 10:00:01','2026-11-21 04:56:13','mwpxqq6j-toaeyfz7');
 CREATE TABLE learning_evaluations (
     evaluation_id       TEXT PRIMARY KEY,
     lesson_id           TEXT NOT NULL UNIQUE REFERENCES learning_lessons(lesson_id) ON DELETE RESTRICT,
@@ -1445,7 +1445,7 @@ CREATE TABLE project_profile (
     session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "project_profile" VALUES(1,'Scribe','d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','mwpuzkrr-x3gfznj3','2026-11-21 03:39:07');
+INSERT INTO "project_profile" VALUES(1,'Scribe','d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','mwpxqq6j-toaeyfz7','2026-11-21 04:56:13');
 CREATE TABLE projection_mismatches (
     id              INTEGER PRIMARY KEY,
     run_id          TEXT NOT NULL REFERENCES projection_verification_runs(run_id) ON DELETE CASCADE,
@@ -2101,8 +2101,8 @@ CREATE TABLE runtime_boundaries (
     session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "runtime_boundaries" VALUES(1,'MCP server','TypeScript','Agent host','stdio JSON-RPC','One process per session.','imported',0,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','mwpuzkrr-x3gfznj3','2026-11-21 03:39:07');
-INSERT INTO "runtime_boundaries" VALUES(2,'MCP server','TypeScript','Materializer','Subprocess','Spawned per publish.','imported',0,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','mwpuzkrr-x3gfznj3','2026-11-21 03:39:07');
+INSERT INTO "runtime_boundaries" VALUES(1,'MCP server','TypeScript','Agent host','stdio JSON-RPC','One process per session.','imported',0,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','mwpxqq6j-toaeyfz7','2026-11-21 04:56:13');
+INSERT INTO "runtime_boundaries" VALUES(2,'MCP server','TypeScript','Materializer','Subprocess','Spawned per publish.','imported',0,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','mwpxqq6j-toaeyfz7','2026-11-21 04:56:13');
 CREATE TABLE runtime_boundary_evidence (
     boundary_id   INTEGER NOT NULL REFERENCES runtime_boundaries(id) ON DELETE RESTRICT,
     evidence_id   INTEGER NOT NULL REFERENCES evidence(id)           ON DELETE RESTRICT,
@@ -2158,7 +2158,7 @@ CREATE TABLE sessions (
 );
 INSERT INTO "sessions" VALUES('onboard-1','onboarding','2026-09-12 09:00:00','2026-09-12 09:00:00','completed');
 INSERT INTO "sessions" VALUES('survey-1','survey B-01','2026-09-13 09:00:00','2026-09-13 09:00:00','completed');
-INSERT INTO "sessions" VALUES('mwpuzkrr-x3gfznj3','golden corpus import','2026-11-21 03:39:07',NULL,NULL);
+INSERT INTO "sessions" VALUES('mwpxqq6j-toaeyfz7','golden corpus import','2026-11-21 04:56:13',NULL,NULL);
 CREATE TABLE staleness_clears (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     subsystem_id       TEXT    NOT NULL,

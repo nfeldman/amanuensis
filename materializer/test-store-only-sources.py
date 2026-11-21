@@ -22,8 +22,7 @@ the materializer opens:
 
 Turns red when:
 
-  - any page, Markdown or HTML, in store A carries a sentinel that only a storage
-    file holds, or lacks the one its record holds (thesis, project name, runtime
+  - any page in store A carries a sentinel that only a storage file holds, or lacks the one its record holds (thesis, project name, runtime
     rows, imported survey body);
   - the materializer opens any file under storage other than the database files
     (`memory.db` and its journals) and the three binding files
@@ -47,6 +46,9 @@ Turns red when:
     storage file in a slot its store leaves empty;
   - the publish or its read-back is not green in any store;
   - the gate does not run in CI.
+
+Since SO13 the publication is HTML only (PLAN §3.2 step 3), so every check
+reads the HTML page; before it each ran on the Markdown page as well.
 
 False green it cannot exclude: every sentinel is a word this gate chose, so a
 renderer that opens no file and prints a store's text mangled still passes the
@@ -507,44 +509,52 @@ def html_text(markup: str) -> str:
     return " ".join(htmllib.unescape(body).split())
 
 
-def squash(text: str) -> str:
-    return " ".join(text.split())
-
-
 def page_pair(docs: Path, stem: str) -> dict[str, str]:
-    """A page as Markdown (squashed) and as the reader's HTML text."""
+    """A page as the reader's HTML text, the one view a publication writes."""
 
-    return {
-        "md": squash(read(docs / f"{stem}.md")),
-        "html": html_text(read(docs / f"{stem}.html")),
-    }
+    return {"html": html_text(read(docs / f"{stem}.html"))}
 
 
 def subsystem_page(docs: Path, sid: str) -> dict[str, str]:
     stem = sid.lower().replace("-", "")
-    md = sorted((docs / "subsystems").glob(f"{stem}-*.md"))
-    page = {"md": "", "html": ""}
-    if md:
-        page["md"] = squash(read(md[0]))
-        page["html"] = html_text(read(md[0].with_suffix(".html")))
-    return page
+    found = sorted((docs / "subsystems").glob(f"{stem}-*.html"))
+    return {"html": html_text(read(found[0])) if found else ""}
 
 
-def md_section(text: str, heading: str, level: int) -> str:
-    """The Markdown section opened by `heading`, from the unsquashed page text."""
+def subsystem_markup(docs: Path, sid: str) -> str:
+    stem = sid.lower().replace("-", "")
+    found = sorted((docs / "subsystems").glob(f"{stem}-*.html"))
+    return read(found[0]) if found else ""
 
-    marker = "#" * level + " "
-    body: list[str] = []
-    inside = False
-    for line in text.splitlines():
-        if line.startswith(marker + heading):
-            inside = True
+
+def html_section(markup: str, heading: str, level: int) -> str:
+    """The HTML section opened by an `<h{level}>` whose text begins with `heading`,
+    up to the next heading of that level or above."""
+
+    for match in re.finditer(rf"(?is)<h{level}\b[^>]*>(.*?)</h{level}>", markup):
+        if html_text(match.group(1)).lstrip("§ ").startswith(heading):
+            rest = markup[match.end():]
+            stop = re.search(rf"(?i)<h[1-{level}]\b", rest)
+            return rest[: stop.start()] if stop else rest
+    return ""
+
+
+def runtime_detail(markup: str, runtime: str) -> dict[str, str] | None:
+    """One entry of the architecture page's runtime boundary details, by runtime."""
+
+    for article in re.findall(r'(?is)<article class="runtime-detail"[^>]*>(.*?)</article>', markup):
+        title = re.search(r"(?is)<h3>(.*?)</h3>", article)
+        if not title or html_text(title.group(1)) != runtime:
             continue
-        if inside and re.match(rf"^#{{1,{level}}} ", line):
-            break
-        if inside:
-            body.append(line)
-    return "\n".join(body)
+        fields = {"runtime": runtime}
+        language = re.search(r'(?is)<span class="runtime-detail-language">(.*?)</span>', article)
+        fields["language"] = html_text(language.group(1)) if language else ""
+        for label, value in re.findall(
+            r'(?is)<p[^>]*><span class="runtime-detail-label">(.*?)</span>(.*?)</p>', article
+        ):
+            fields[html_text(label)] = html_text(value)
+        return fields
+    return None
 
 
 def all_pages(docs: Path) -> dict[str, str]:
@@ -610,7 +620,7 @@ def run(work: Path) -> int:
         index = page_pair(docs_a, "index")
         architecture = page_pair(docs_a, "architecture")
         survey = subsystem_page(docs_a, "B-01")
-        for view in ("md", "html"):
+        for view in ("html",):
             for label, page, want in (
                 ("the recorded purpose", index, "RECORDEDTHESISMARKER"),
                 ("a recorded runtime", architecture, "RecordedRuntimeAlpha"),
@@ -626,11 +636,11 @@ def run(work: Path) -> int:
             return "the profile's project name is missing from the overview's HTML"
         return None
 
-    check("records reach their pages in both views", a_records)
+    check("records reach their pages", a_records)
 
     def a_edges() -> str | None:
         architecture = page_pair(docs_a, "architecture")
-        for view in ("md", "html"):
+        for view in ("html",):
             for gone in ("OLDNOTESMARKER", "WithdrawnRuntimeGamma", "WITHDRAWNNOTEMARKER"):
                 if gone in architecture[view]:
                     return f"{gone} is printed in the {view} view of the runtime map"
@@ -639,16 +649,22 @@ def run(work: Path) -> int:
     check("a superseded or withdrawn runtime edge is not printed", a_edges)
 
     def a_table_shape() -> str | None:
-        text = read(docs_a / "architecture.md")
-        header = "| Runtime / Process | Language | Communicates with | Mechanism | Notes |"
-        if header not in text:
-            return "the runtime map is not the five-column table the page draws from"
-        rows = [line for line in text.splitlines() if "Runtime" in line and "Alpha" in line]
-        if not any("RecordedRuntimeAlpha" in line and "Rust" in line and "unix socket" in line for line in rows):
-            return f"the recorded edge's row does not carry its runtime, language and mechanism: {rows}"
+        markup = read(docs_a / "architecture.html")
+        if 'aria-label="Complete runtime boundary details"' not in markup:
+            return "the runtime map has no list of complete boundary details"
+        detail = runtime_detail(markup, "RecordedRuntimeAlpha")
+        wanted = {
+            "runtime": "RecordedRuntimeAlpha",
+            "language": "Rust",
+            "Communicates with": "RecordedPeerBeta",
+            "Mechanism": "unix socket",
+            "Recorded note": "RECORDEDNOTE",
+        }
+        if detail != wanted:
+            return f"the recorded edge does not carry its five fields: {detail}"
         return None
 
-    check("the runtime map keeps its five columns", a_table_shape)
+    check("the runtime map keeps its five fields", a_table_shape)
 
     def a_opens() -> str | None:
         stray = opened_under_storage(a, log_a)
@@ -686,7 +702,7 @@ def run(work: Path) -> int:
 
     def b_overview() -> str | None:
         index = page_pair(docs_b, "index")
-        for view in ("md", "html"):
+        for view in ("html",):
             if "IMPORTEDTHESISMARKER" not in index[view]:
                 return f"the imported thesis is missing from the {view} overview"
         if IMPORTED_NAME not in index["html"]:
@@ -696,10 +712,14 @@ def run(work: Path) -> int:
     check("the import-only overview keeps its thesis and name", b_overview)
 
     def b_architecture() -> str | None:
-        text = read(docs_b / "architecture.md")
-        if "| ImportedRuntimeAlpha | Go | ImportedPeerBeta | pipe | IMPORTEDRUNTIMENOTE |" not in text:
-            return "the imported runtime row is not in the architecture table"
         markup = read(docs_b / "architecture.html")
+        detail = runtime_detail(markup, "ImportedRuntimeAlpha") or {}
+        if (detail.get("language"), detail.get("Communicates with"), detail.get("Mechanism")) != (
+            "Go",
+            "ImportedPeerBeta",
+            "pipe",
+        ) or "IMPORTEDRUNTIMENOTE" not in " ".join(detail.values()):
+            return f"the imported runtime row is not in the architecture page's boundary details: {detail}"
         if "<svg" not in markup or "ImportedRuntimeAlpha" not in markup.split("<svg", 1)[1]:
             return "the runtime diagram was not drawn from the imported row"
         return None
@@ -709,11 +729,11 @@ def run(work: Path) -> int:
     def placement(sid: str, heading: str, level: int) -> str | None:
         page = subsystem_page(docs_b, sid)
         marker = survey_marker(sid)
-        md_text = read(next(iter(sorted((docs_b / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.md"))), docs_b / "x"))
-        for view in ("md", "html"):
+        markup = subsystem_markup(docs_b, sid)
+        for view in ("html",):
             if page[view].count(marker) != 1:
                 return f"{marker} is on the {view} page {page[view].count(marker)} times, wanted once"
-        if marker not in md_section(md_text, heading, level):
+        if marker not in html_section(markup, heading, level):
             return f"{marker} is not under the '{heading}' heading"
         return None
 
@@ -732,10 +752,10 @@ def run(work: Path) -> int:
 
     def b_withdrawn() -> str | None:
         page = subsystem_page(docs_b, "B-04")
-        for view in ("md", "html"):
+        for view in ("html",):
             if survey_marker("B-04") in page[view]:
                 return f"a withdrawn import renders in the {view} view"
-        if not page["md"]:
+        if not page["html"]:
             return "the page of the subsystem with a withdrawn import was not published"
         return None
 
@@ -745,7 +765,7 @@ def run(work: Path) -> int:
         for sid in ("B-01", "B-02", "B-03"):
             page = subsystem_page(docs_b, sid)
             wanted = label_for(WRITTEN, WRITTEN_SHA)
-            for view in ("md", "html"):
+            for view in ("html",):
                 if wanted not in page[view].replace("`", ""):
                     return f"{sid}'s {view} page lacks the label '{wanted}'"
         return None
@@ -759,7 +779,7 @@ def run(work: Path) -> int:
             ("concern-checklist", "IMPORTEDCHECKLISTMARKER", WRITTEN, WRITTEN_SHA),
         ):
             page = page_pair(docs_b, stem)
-            for view in ("md", "html"):
+            for view in ("html",):
                 if marker not in page[view]:
                     return f"{stem} is missing its imported body ({marker}) in the {view} view"
                 if page[view].count(marker) != 1:
@@ -773,7 +793,7 @@ def run(work: Path) -> int:
     def b_edited() -> str | None:
         entry = page_pair(docs_b, "entry-point")
         other = page_pair(docs_b, "onboarding-report")
-        for view in ("md", "html"):
+        for view in ("html",):
             if EDITED_SENTENCE not in entry[view]:
                 return f"an import whose bytes differ from its registered hash lacks '{EDITED_SENTENCE}' in the {view} view"
             if EDITED_SENTENCE in other[view]:
@@ -826,10 +846,10 @@ def run(work: Path) -> int:
         if result_b2.get("ok") is not True:
             return f"the second publish was not green: {result_b2}"
         page = subsystem_page(docs_b2, "B-02")
-        for view in ("md", "html"):
+        for view in ("html",):
             if survey_marker("B-02") in page[view]:
                 return f"a withdrawal appended before an incremental publish left the body in the {view} view"
-        if survey_marker("B-01") not in subsystem_page(docs_b2, "B-01")["md"]:
+        if survey_marker("B-01") not in subsystem_page(docs_b2, "B-01")["html"]:
             return "the incremental publish dropped a body that was not withdrawn"
         return None
 
@@ -849,9 +869,9 @@ def run(work: Path) -> int:
         for name, text in all_pages(c / "docs").items():
             if FILE_MARKER.search(text):
                 return f"a storage file filled a slot the store leaves empty, on {name}"
-        if "No thesis section is recorded" not in index["md"]:
+        if "No thesis section is recorded" not in index["html"]:
             return "with no purpose recorded the overview does not say so"
-        if "No structured runtime boundary map is recorded yet" not in page_pair(c / "docs", "architecture")["md"]:
+        if "No structured runtime boundary map is recorded yet" not in page_pair(c / "docs", "architecture")["html"]:
             return "with no runtime boundary recorded the architecture page does not say so"
         stray = opened_under_storage(c, log_c)
         if stray:
@@ -887,7 +907,7 @@ def run(work: Path) -> int:
                 return f"store {label} did not publish green: {str(result)[:200]}"
         index_d = page_pair(d / "docs", "index")
         index_e = page_pair(e / "docs", "index")
-        for view in ("md", "html"):
+        for view in ("html",):
             if PROFILE_WINS not in index_d[view]:
                 return f"with a profile and an imported name, the profile's name is not the overview's ({view})"
             if IMPORT_LOSES in index_d[view]:

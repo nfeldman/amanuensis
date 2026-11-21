@@ -16,4 +16,3 @@ Terms on this page: [Concern](how-to-read.md#term-concern) · [System boundary](
 | <a id="sm-2"></a>**SM-2** | the queue handle | — | **[B-02](subsystems/b02-write-path.md)** ↔ **[B-03](subsystems/b03-queue.md)** | ⏳ |  |
 | <a id="sm-3"></a>**SM-3** | the console bridge | — | **[B-01](subsystems/b01-read-path.md)** ↔ **[F-01](subsystems/f01-console.md)** | ⏳ |  |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

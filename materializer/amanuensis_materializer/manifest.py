@@ -1,7 +1,8 @@
 """Manifest tracking for diff-aware rendering.
 
-The manifest (`<output>/.manifest.json`) records, for every rendered
-page, the sources it was derived from and their hashes. On subsequent
+The manifest (`<output>/.manifest.json`) records, for every planned page
+(by its plan id), the sources it was derived from and their hashes, and the
+files the publication wrote (`projection_files`). On subsequent
 runs we re-hash each source and only re-render pages whose inputs
 changed.
 
@@ -45,6 +46,9 @@ class PageManifest:
     sources: dict[str, str] = field(default_factory=dict)  # source_id -> hash
     content_hash: str = ""
     rendered_at: str = ""
+    # The hash of the page's Markdown after cross-reference resolution, so a
+    # page whose own text is unchanged but whose links changed is counted.
+    linked_hash: str = ""
 
 
 @dataclass
@@ -52,11 +56,15 @@ class Manifest:
     version: str = MATERIALIZER_VERSION
     generated_at: str = ""
     pages: dict[str, PageManifest] = field(default_factory=dict)
-    # Generated companions that are derived from the finished Markdown
-    # projection rather than directly from DB sources.  Keeping them in
-    # the same custody manifest lets clean publication distinguish our HTML
-    # from unrelated files a human placed beside the docs.
+    # The files a publication writes: every HTML page and `search-index.js`.
+    # Keeping them in the custody manifest lets clean publication distinguish
+    # our HTML from unrelated files a human placed beside the docs.
     projection_files: dict[str, str] = field(default_factory=dict)
+    # True when loaded from a manifest written before HTML became the only view
+    # (it has no `views` key): its `pages` paths are `.md` files that run wrote
+    # beside the HTML. Since then `pages` holds page ids and their source
+    # hashes only, and no `.md` is written (store-only PLAN §3.2 step 3).
+    markdown_pages: bool = False
 
     @classmethod
     def load(cls, path: Path) -> Manifest:
@@ -83,6 +91,7 @@ class Manifest:
                     sources=dict(p.get("sources", {})),
                     content_hash=p.get("content_hash", ""),
                     rendered_at=p.get("rendered_at", ""),
+                    linked_hash=p.get("linked_hash", ""),
                 )
                 for p in data.get("pages", [])
             },
@@ -91,6 +100,7 @@ class Manifest:
                 for p in data.get("projection_files", [])
                 if "path" in p
             },
+            markdown_pages="views" not in data,
         )
         return m
 
@@ -100,12 +110,14 @@ class Manifest:
         serialized = {
             "version": MATERIALIZER_VERSION,
             "generated_at": self.generated_at,
+            "views": ["html"],
             "pages": [
                 {
                     "path": p.path,
                     "sources": dict(sorted(p.sources.items())),
                     "content_hash": p.content_hash,
                     "rendered_at": p.rendered_at,
+                    "linked_hash": p.linked_hash,
                 }
                 for _, p in sorted(self.pages.items())
             ],
@@ -146,15 +158,39 @@ def sources_differ(prev: dict[str, str], curr: dict[str, str]) -> bool:
     return any(prev.get(k) != v for k, v in curr.items())
 
 
-def prune_retired(manifest: Manifest, alive_paths: set[str], output_root: Path) -> list[str]:
-    """Remove files that used to be rendered but no longer have an
-    owning page. Returns the relative paths that were deleted."""
-    retired: list[str] = []
-    for path in list(manifest.pages):
-        if path not in alive_paths:
-            abs_path = output_root / path
-            if abs_path.is_file():
-                abs_path.unlink()
-            manifest.drop(path)
-            retired.append(path)
+def prune_retired(manifest: Manifest, alive_paths: set[str]) -> list[str]:
+    """Drop the page ids no plan holds any more. Returns the ids dropped.
+
+    A page id names no file: a retired page's HTML is removed with the
+    publication's projection files (`render_html_projection`).
+    """
+    retired = [path for path in manifest.pages if path not in alive_paths]
+    for path in retired:
+        manifest.drop(path)
     return retired
+
+
+def remove_markdown_pages(manifest: Manifest, output_root: Path) -> list[str]:
+    """Delete the `.md` pages a manifest from before HTML-only output claims.
+
+    Only files that manifest names are removed; any other `.md` in the output
+    is not ours, and a clean publish refuses it (`unmanaged_output_files`).
+    Returns the paths deleted, and marks the manifest as holding ids only.
+    """
+    if not manifest.markdown_pages:
+        return []
+    root = output_root.resolve()
+    removed: list[str] = []
+    for path in sorted(manifest.pages):
+        if not path.endswith(".md"):
+            continue
+        target = (root / path).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError:
+            continue
+        if target.is_file():
+            target.unlink()
+            removed.append(path)
+    manifest.markdown_pages = False
+    return removed

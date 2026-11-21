@@ -10,4 +10,3 @@ No finding has reached a terminal state.
 - **Basis** — `finding_state_current` over `findings` and `finding_resolution_events`.
 - **Checked revision** — `d395c4d5a9e1` on `main`.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

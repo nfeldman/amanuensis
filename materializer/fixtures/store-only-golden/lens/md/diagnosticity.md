@@ -8,6 +8,5 @@ _When two or more concerns could each explain the same symptom, we open a [diagn
 
 | ID | Subsystem | Symptom | Outcome | Leading concern | Opened |
 |---|---|---|---|---|---|
-| [**DM-7**](diagnosticity/dm-7.md) | **[B-01](subsystems/b01-read-path.md)** (Read path) | rows appear twice after a restart | open | — | 2026-11-21 03:39 UTC |
+| [**DM-7**](diagnosticity/dm-7.md) | **[B-01](subsystems/b01-read-path.md)** (Read path) | rows appear twice after a restart | open | — | 2026-11-21 04:56 UTC |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

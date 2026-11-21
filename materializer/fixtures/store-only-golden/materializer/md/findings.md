@@ -17,4 +17,3 @@ _1 defect(s) with no recorded repair._
 <!-- amanuensis:finding:47d5c6eae5b99f1bfe21308db51867ae17da48ba25d361eb042149ccdbe0f877 -->
 | <a id="b02-1"></a>**B02-1** | open | Unvalidated query params reach SQL | Affects all auth flows | parse trusts client claim | `deadbeef` |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

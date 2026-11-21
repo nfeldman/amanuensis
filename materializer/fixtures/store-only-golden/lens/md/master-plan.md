@@ -27,4 +27,3 @@ Terms on this page: [Subsystem](how-to-read.md#term-subsystem) · [Layer](how-to
 | — | **[F-01](subsystems/f01-console.md)** | Console | ⚫ deferred | Not recorded | ui/console.ts | — | 0 (0 open) |
 | — | **[F-02](subsystems/f02-widgets.md)** | Widgets | ⚫ deferred | Not recorded | — | — | 0 (0 open) |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

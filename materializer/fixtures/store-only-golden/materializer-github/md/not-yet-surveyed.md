@@ -39,4 +39,3 @@ Binding: per-party-proxy; no seam-bound disposition is recorded. An `SC-%` dispo
 | [Auth Service](subsystems/b02-auth-service.md) **[B-02](subsystems/b02-auth-service.md)** | 2 of 3 | **[concern CB-1](concerns.md#cb-1)**, **[concern CC-1](concerns.md#cc-1)** |
 | [Web UI](subsystems/f01-web-ui.md) **[F-01](subsystems/f01-web-ui.md)** | 3 of 3 | **[concern CB-1](concerns.md#cb-1)**, **[concern CC-1](concerns.md#cc-1)**, **[concern TC-1](concerns.md#tc-1)** |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

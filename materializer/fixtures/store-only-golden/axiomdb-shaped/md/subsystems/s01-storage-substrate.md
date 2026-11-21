@@ -81,5 +81,3 @@ No concern has been dispositioned in this subsystem.
 ### Survey artifact
 
 The survey artifact is rendered above, under Structure, because no structural claim is recorded to stand in its place. Its source is `S-01-storage-substrate.md` at content hash `c664dfe0af48`, recorded at `c3b1492c0da8`, written on 2026-08-21.
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

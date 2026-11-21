@@ -987,7 +987,7 @@ INSERT INTO "explanations" VALUES(3,'subsystem','W-01','account','recorded','A w
 INSERT INTO "explanations" VALUES(4,'subsystem','S-01','purpose','recorded','S-01 stores each quad under five key orders.','c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','survey-1','2026-09-01 00:00:03');
 INSERT INTO "explanations" VALUES(5,'project','project','purpose','imported','Quadstore is an RDF quad store written in Rust. It answers SPARQL queries over named graphs, refusing at planning the algebra it does not support, and keeps the inferences its rules derive beside the asserted quads.
 
-Two ideas explain most of the design: visibility is metadata carried on each index entry, and every write passes one coordinator per graph.','c711feb70e1d2c3b4a5968778695a4b3c2d1e0f9','mwpuzi6w-f2thts4b','2026-11-21 03:39:04');
+Two ideas explain most of the design: visibility is metadata carried on each index entry, and every write passes one coordinator per graph.','c711feb70e1d2c3b4a5968778695a4b3c2d1e0f9','mwpxqnm0-n12rln9v','2026-11-21 04:56:10');
 CREATE TABLE field_notes (
     id              INTEGER PRIMARY KEY,
     category        TEXT    NOT NULL CHECK (category IN (
@@ -1127,7 +1127,7 @@ INSERT INTO "imported_artifacts" VALUES(1,'Q-01-query-front-end.md','subsystem-s
 ## Structural inventory (Phase 2)
 
 The parser hands an algebra tree to the planner, which refuses `SERVICE`.
-','9ebf2bb437878ea9f908a834ba451689a774f0bf65751ae0acfb79ecc2680f68','9ebf2bb437878ea9f908a834ba451689a774f0bf65751ae0acfb79ecc2680f68',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 03:34:22','2026-11-21 03:39:04','mwpuzi6w-f2thts4b');
+','9ebf2bb437878ea9f908a834ba451689a774f0bf65751ae0acfb79ecc2680f68','9ebf2bb437878ea9f908a834ba451689a774f0bf65751ae0acfb79ecc2680f68',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 03:34:22','2026-11-21 04:56:10','mwpxqnm0-n12rln9v');
 INSERT INTO "imported_artifacts" VALUES(2,'S-01-storage-substrate.md','subsystem-survey','S-01','# S-01 — Storage substrate
 
 ## Structural inventory (Phase 2)
@@ -1139,7 +1139,7 @@ INSERT INTO "imported_artifacts" VALUES(2,'S-01-storage-substrate.md','subsystem
 ```text
 spog posg ogsp gspo gpos
 ```
-','c664dfe0af484fb5810ec03cba5d903c62cea8336737fdff5ba3cb630ccbc906','c664dfe0af484fb5810ec03cba5d903c62cea8336737fdff5ba3cb630ccbc906',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 03:30:48','2026-11-21 03:39:04','mwpuzi6w-f2thts4b');
+','c664dfe0af484fb5810ec03cba5d903c62cea8336737fdff5ba3cb630ccbc906','c664dfe0af484fb5810ec03cba5d903c62cea8336737fdff5ba3cb630ccbc906',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 03:30:48','2026-11-21 04:56:10','mwpxqnm0-n12rln9v');
 INSERT INTO "imported_artifacts" VALUES(3,'W-01-graph-write-coordinator.md','subsystem-survey','W-01','# W-01 — Graph write coordinator
 
 ## Structural inventory (Phase 2)
@@ -1168,13 +1168,13 @@ core.commit(batch)?;
 | Concern | Classification | Evidence |
 |---|---|---|
 | CC-1 | confirmed-acceptable | `coordinator.rs:1170` |
-','669e0ceddf41995f032297193117eee391af2e46dbfa7b2f0565bb516e3c0883','669e0ceddf41995f032297193117eee391af2e46dbfa7b2f0565bb516e3c0883',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-09-26 01:48:44','2026-11-21 03:39:04','mwpuzi6w-f2thts4b');
+','669e0ceddf41995f032297193117eee391af2e46dbfa7b2f0565bb516e3c0883','669e0ceddf41995f032297193117eee391af2e46dbfa7b2f0565bb516e3c0883',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-09-26 01:48:44','2026-11-21 04:56:10','mwpxqnm0-n12rln9v');
 INSERT INTO "imported_artifacts" VALUES(4,'concern-checklist.md','concern-checklist',NULL,'# Concern checklist
 
 | Code | Territory |
 |---|---|
 | CC-1 | T03 |
-','0f3b8009b6af05fbc860fafdbc1551a22e3462b1f5a6a6b1f95184d9cecc0eef','0f3b8009b6af05fbc860fafdbc1551a22e3462b1f5a6a6b1f95184d9cecc0eef',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 02:27:26','2026-11-21 03:39:04','mwpuzi6w-f2thts4b');
+','0f3b8009b6af05fbc860fafdbc1551a22e3462b1f5a6a6b1f95184d9cecc0eef','0f3b8009b6af05fbc860fafdbc1551a22e3462b1f5a6a6b1f95184d9cecc0eef',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 02:27:26','2026-11-21 04:56:10','mwpxqnm0-n12rln9v');
 INSERT INTO "imported_artifacts" VALUES(5,'entry-point.md','entry-point',NULL,'# Entry point
 
 **Canonical branch**: main
@@ -1192,21 +1192,21 @@ Two ideas explain most of the design: visibility is metadata carried on each ind
 |---|---|
 | `crates/quad-core/src/storage` | Index permutations and the term dictionary |
 | `crates/quad-core/src/write` | The write coordinator and its fences |
-','b8715c3d41e5b468bd475e2fb3fe4c838c3063903708b1a2a9699e638cf384ee','f58cfcbfce87be9bf427b303429f8d2c9052b5cca0d222adc832f2fa59d73692',0,'c711feb70e1d2c3b4a5968778695a4b3c2d1e0f9','2026-11-04 05:33:58','2026-11-21 03:39:04','mwpuzi6w-f2thts4b');
+','b8715c3d41e5b468bd475e2fb3fe4c838c3063903708b1a2a9699e638cf384ee','f58cfcbfce87be9bf427b303429f8d2c9052b5cca0d222adc832f2fa59d73692',0,'c711feb70e1d2c3b4a5968778695a4b3c2d1e0f9','2026-11-04 05:33:58','2026-11-21 04:56:10','mwpxqnm0-n12rln9v');
 INSERT INTO "imported_artifacts" VALUES(6,'field-notes.md','field-notes',NULL,'# Field notes
 
 1. The fence and the lock are separate mechanisms.
-','b5e75c5117aed4d62182336a06a54c22c3b3ab5968adf523ad3f093263901864','b5e75c5117aed4d62182336a06a54c22c3b3ab5968adf523ad3f093263901864',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 02:27:30','2026-11-21 03:39:04','mwpuzi6w-f2thts4b');
+','b5e75c5117aed4d62182336a06a54c22c3b3ab5968adf523ad3f093263901864','b5e75c5117aed4d62182336a06a54c22c3b3ab5968adf523ad3f093263901864',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 02:27:30','2026-11-21 04:56:10','mwpxqnm0-n12rln9v');
 INSERT INTO "imported_artifacts" VALUES(7,'findings-index.md','findings-index',NULL,'# Findings index
 
 No open finding.
-','38e44865aeb3ad8115c84cd7457cb0359505b51bdbfe61cf2471aadd435f10c4','38e44865aeb3ad8115c84cd7457cb0359505b51bdbfe61cf2471aadd435f10c4',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-30 01:44:28','2026-11-21 03:39:04','mwpuzi6w-f2thts4b');
+','38e44865aeb3ad8115c84cd7457cb0359505b51bdbfe61cf2471aadd435f10c4','38e44865aeb3ad8115c84cd7457cb0359505b51bdbfe61cf2471aadd435f10c4',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-09-30 01:44:28','2026-11-21 04:56:10','mwpxqnm0-n12rln9v');
 INSERT INTO "imported_artifacts" VALUES(8,'master-plan.md','master-plan',NULL,'# Master plan
 
 | ID | Name |
 |---|---|
 | W-01 | Graph write coordinator |
-','37958fc4b71012fef03a20bd8645f1e7cb0b622d0f3b2d059a13bd63b49c9bc1','37958fc4b71012fef03a20bd8645f1e7cb0b622d0f3b2d059a13bd63b49c9bc1',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-10-21 03:06:39','2026-11-21 03:39:04','mwpuzi6w-f2thts4b');
+','37958fc4b71012fef03a20bd8645f1e7cb0b622d0f3b2d059a13bd63b49c9bc1','37958fc4b71012fef03a20bd8645f1e7cb0b622d0f3b2d059a13bd63b49c9bc1',1,'d395c4d5a9e1f0b2c3d4e5f60718293a4b5c6d7e','2026-10-21 03:06:39','2026-11-21 04:56:10','mwpxqnm0-n12rln9v');
 INSERT INTO "imported_artifacts" VALUES(9,'onboarding-report.md','onboarding-report',NULL,'# Onboarding report
 
 **Codebase**: Quadstore — an embedded RDF store with a query planner and a rule engine
@@ -1231,7 +1231,7 @@ INSERT INTO "imported_artifacts" VALUES(9,'onboarding-report.md','onboarding-rep
 ## Stateful entities
 
 The store keeps quads in five index permutations and a dictionary of terms.
-','9a71ea2acf17e2eedda50f6fdb96cf6aa6c6b6f7995822df7e3fa64a5fc4ca45','9a71ea2acf17e2eedda50f6fdb96cf6aa6c6b6f7995822df7e3fa64a5fc4ca45',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 02:27:21','2026-11-21 03:39:04','mwpuzi6w-f2thts4b');
+','9a71ea2acf17e2eedda50f6fdb96cf6aa6c6b6f7995822df7e3fa64a5fc4ca45','9a71ea2acf17e2eedda50f6fdb96cf6aa6c6b6f7995822df7e3fa64a5fc4ca45',1,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','2026-08-21 02:27:21','2026-11-21 04:56:10','mwpxqnm0-n12rln9v');
 CREATE TABLE learning_evaluations (
     evaluation_id       TEXT PRIMARY KEY,
     lesson_id           TEXT NOT NULL UNIQUE REFERENCES learning_lessons(lesson_id) ON DELETE RESTRICT,
@@ -1495,7 +1495,7 @@ CREATE TABLE project_profile (
     session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "project_profile" VALUES(1,'Quadstore','c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','mwpuzi6w-f2thts4b','2026-11-21 03:39:04');
+INSERT INTO "project_profile" VALUES(1,'Quadstore','c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','mwpxqnm0-n12rln9v','2026-11-21 04:56:10');
 CREATE TABLE projection_mismatches (
     id              INTEGER PRIMARY KEY,
     run_id          TEXT NOT NULL REFERENCES projection_verification_runs(run_id) ON DELETE CASCADE,
@@ -2151,9 +2151,9 @@ CREATE TABLE runtime_boundaries (
     session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "runtime_boundaries" VALUES(1,'Embedded `quad-core`','Rust','Host application (in-process)','Direct API','The primary deployment.','imported',0,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','mwpuzi6w-f2thts4b','2026-11-21 03:39:04');
-INSERT INTO "runtime_boundaries" VALUES(2,'`quad-server`','Rust','Clients','gRPC over HTTP/2','Optional TLS.','imported',0,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','mwpuzi6w-f2thts4b','2026-11-21 03:39:04');
-INSERT INTO "runtime_boundaries" VALUES(3,'`quad-server`','Rust','Clients','HTTP (SPARQL protocol)','Plaintext unless terminated upstream.','imported',0,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','mwpuzi6w-f2thts4b','2026-11-21 03:39:04');
+INSERT INTO "runtime_boundaries" VALUES(1,'Embedded `quad-core`','Rust','Host application (in-process)','Direct API','The primary deployment.','imported',0,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','mwpxqnm0-n12rln9v','2026-11-21 04:56:10');
+INSERT INTO "runtime_boundaries" VALUES(2,'`quad-server`','Rust','Clients','gRPC over HTTP/2','Optional TLS.','imported',0,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','mwpxqnm0-n12rln9v','2026-11-21 04:56:10');
+INSERT INTO "runtime_boundaries" VALUES(3,'`quad-server`','Rust','Clients','HTTP (SPARQL protocol)','Plaintext unless terminated upstream.','imported',0,'c3b1492c0da8168c125930d03a8dc4a40dfcc7fe','mwpxqnm0-n12rln9v','2026-11-21 04:56:10');
 CREATE TABLE runtime_boundary_evidence (
     boundary_id   INTEGER NOT NULL REFERENCES runtime_boundaries(id) ON DELETE RESTRICT,
     evidence_id   INTEGER NOT NULL REFERENCES evidence(id)           ON DELETE RESTRICT,
@@ -2211,7 +2211,7 @@ CREATE TABLE sessions (
 );
 INSERT INTO "sessions" VALUES('onboard-1','onboarding','2026-08-20 10:00:00','2026-08-20 10:00:00','completed');
 INSERT INTO "sessions" VALUES('survey-1','survey W-01','2026-08-21 03:00:00','2026-08-21 03:00:00','completed');
-INSERT INTO "sessions" VALUES('mwpuzi6w-f2thts4b','golden corpus import','2026-11-21 03:39:04',NULL,NULL);
+INSERT INTO "sessions" VALUES('mwpxqnm0-n12rln9v','golden corpus import','2026-11-21 04:56:10',NULL,NULL);
 CREATE TABLE staleness_clears (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     subsystem_id       TEXT    NOT NULL,

@@ -10,4 +10,3 @@ _the shared page the writer fills and the reader drains_
 
 First seen: `src/reader.ts`
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

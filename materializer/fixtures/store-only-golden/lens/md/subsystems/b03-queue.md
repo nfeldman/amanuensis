@@ -62,5 +62,3 @@ No defect here is open or awaiting verification.
 | Concern | Classification | Evidence quality | Linchpin? | Rationale |
 |---|---|---|---|---|
 | **[concern SC-1](../concerns.md#sc-1)** | confirmed-acceptable | code-verified |  | fixture |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

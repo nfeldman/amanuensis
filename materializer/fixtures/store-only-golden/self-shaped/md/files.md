@@ -11,4 +11,3 @@ Terms on this page: [Scope](how-to-read.md#term-scope) · [Finding](how-to-read.
 | <a id="f-a7c652762b"></a>`.claude/skills/amanuensis/SKILL.md` | [Survey method](subsystems/b01-survey-method.md#le-017d152868) | Examined | `c3b1492c` | 0 |
 | <a id="f-706a59b679"></a>`mcp-server/src/db.ts` | [Record store](subsystems/b02-record-store.md#le-28d2d6d8a8) | Examined | `c3b1492c` | 0 |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

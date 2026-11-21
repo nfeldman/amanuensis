@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Gate for orientation packet O14 — say what the Markdown view leaves out
-(design/orientation/PLAN.md §4 O14, "Publishing defects", §7.2).
+"""Gate for orientation packet O14 — say what the views paragraph says
+(design/orientation/PLAN.md §4 O14, "Publishing defects", §7.2). Store-only
+SO13 left HTML as the only view and rewrote the paragraph for it
+(design/store-only/PLAN.md §6, §8 SO13); this gate holds the new wording.
 
 Turns red when, on a seeded store:
 
   - the publish does not write index.html or the guide (how-to-read.html);
   - the guide's "What this site is" section does not end with the paragraph
-    "Each page is written twice from the same record: ... A copy of the
-    Markdown alone leaves those out.", word for word, as its last paragraph
-    and after Appendix C's own paragraph, or that paragraph carries a code
-    element or a backtick;
+    "Each page is HTML, written to one directory that starts at index.html.
+    ... reads the same.", word for word, as its last paragraph and after
+    Appendix C's own paragraph, or that paragraph carries a code element or a
+    backtick;
   - the paragraph appears anywhere but the guide's "What this site is" section
     (the overview must stay unchanged, §7.2), or appears twice;
   - the first 600 bytes of the guide's visible text carry a backtick or code;
@@ -103,9 +105,9 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # ---------------------------------------------------------------------------
 SECTION = "What this site is"
 VIEWS_PARAGRAPH = (
-    "Each page is written twice from the same record: as HTML, which adds the diagrams, the"
-    " search and the definitions shown on hover, and as Markdown. Both are written to the same"
-    " directory; the HTML starts at index.html. A copy of the Markdown alone leaves those out."
+    "Each page is HTML, written to one directory that starts at index.html. The diagrams, the"
+    " search and the definitions shown on hover need nothing outside that directory, so a copy"
+    " of the whole directory reads the same."
 )
 SITE_OPENING = "This site is the record of an AI agent's survey of"
 BYTES_WITHOUT_CODE = 600
@@ -236,7 +238,7 @@ def html_section_markup(text: str, title: str) -> str | None:
 
 
 def main() -> int:
-    emit("GATE O14 — what the Markdown view leaves out")
+    emit("GATE O14 — what the views paragraph says, for the one view left")
     emit("")
 
     with tempfile.TemporaryDirectory(prefix="o14-gate-") as tmp:
@@ -328,7 +330,7 @@ def main() -> int:
 
         def overview_unchanged() -> str | None:
             flat = html_text(index_html or "")
-            for probe in ("written twice", "Markdown alone", "leaves those out"):
+            for probe in ("Each page is HTML", "nothing outside that directory", "reads the same"):
                 if probe in flat:
                     return f"index.html carries {probe!r}; the overview is not changed (§7.2)"
             return None
@@ -344,7 +346,7 @@ def main() -> int:
                     continue
                 body = read(path) or ""
                 flat = html_text(body)
-                for probe in ("written twice", "Markdown alone", "leaves those out"):
+                for probe in ("Each page is HTML", "nothing outside that directory", "reads the same"):
                     if probe in flat:
                         return f"{path.relative_to(docs)} repeats the paragraph ({probe!r})"
             return None

@@ -73,5 +73,3 @@ No concern has been dispositioned in this subsystem.
 ### Survey artifact
 
 The survey artifact is rendered above, under Structure, because no structural claim is recorded to stand in its place. Its source is `subsystems/B-01-structural.md` at content hash `0470e75c6150`, recorded at `d395c4d5a9e1`, written on 2026-09-13.
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

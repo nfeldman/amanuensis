@@ -10,7 +10,7 @@ _What ran against this conspectus, and what each run produced. A session still w
 
 | Session | Intent | Started | Ended | Outcome |
 |---|---|---|---|---|
-| `p8` | `fixture` | 2026-11-21 03:39 UTC | not closed | not recorded |
+| `p8` | `fixture` | 2026-11-21 04:56 UTC | not closed | not recorded |
 
 ## Refresh runs
 
@@ -20,4 +20,3 @@ No refresh run is recorded.
 
 No publication read-back is recorded, so none of the three axes has a result to report.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

@@ -18,4 +18,3 @@ Terms on this page: [Subsystem](how-to-read.md#term-subsystem) · [Layer](how-to
 | — | **[S-01](subsystems/s01-storage-substrate.md)** | Storage substrate | 🟢 mapped | [S-01](subsystems/s01-storage-substrate.md) stores each quad under five key orders. | — | — | 0 (0 open) |
 | — | **[W-01](subsystems/w01-graph-write-coordinator.md)** | Graph write coordinator | 🟢 mapped | [W-01](subsystems/w01-graph-write-coordinator.md) serializes writes to one graph and holds them back while a rebuild runs. | — | — | 0 (0 open) |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

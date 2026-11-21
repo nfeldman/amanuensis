@@ -34,4 +34,3 @@ Binding: per-party-proxy; no seam-bound disposition is recorded. An `SC-%` dispo
 | [Record store](subsystems/b02-record-store.md) **[B-02](subsystems/b02-record-store.md)** | 1 of 1 | **[concern CC-1](concerns.md#cc-1)** |
 | [Page materializer](subsystems/b03-page-materializer.md) **[B-03](subsystems/b03-page-materializer.md)** | 1 of 1 | **[concern CC-1](concerns.md#cc-1)** |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

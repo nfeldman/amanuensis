@@ -18,8 +18,8 @@ This thesis was imported from the entry point, not tied to evidence; a recorded 
 
 | Metric | Value |
 |---|---|
-| Checked at | `cfc2c80635e9` on `main`, 2026-09-11 12:00 UTC |
-| Repository head | `bb271f9468a9` — a different revision from the one the survey checked |
+| Checked at | `0e5ac6940690` on `main`, 2026-09-11 12:00 UTC |
+| Repository head | `31237e8211c6` — a different revision from the one the survey checked |
 | Upstream head | not known here |
 | Files carrying a survey obligation marked stale | 1 of 13 |
 | Scoped files exempt from that obligation, marked stale | 0 of 2 |
@@ -64,6 +64,5 @@ No publication read-back is recorded for this store, so none of the three axes h
 
 ## Latest session
 
-`fixture` — started 2026-11-21 03:39 UTC · **active**
+`fixture` — started 2026-11-21 04:56 UTC · **active**
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

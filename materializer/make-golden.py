@@ -9,7 +9,8 @@ and what it printed:
   <fixture>/inputs.json   the page plan, the shell's context, the locus index
                           and the render notice, as `render_html_projection`
                           received them
-  <fixture>/md/…          each page's finished Markdown at that moment
+  <fixture>/md/…          each page's finished Markdown, as the run held it in
+                          memory (no run writes it to disk since SO13)
   <fixture>/html/…        each page's HTML, its inline stylesheet and script
                           folded to `@@golden-asset <sha256>@@`
   assets/<sha256>         each folded stylesheet or script, once
@@ -77,18 +78,24 @@ def capture_publish(storage: Path, argv: list[str]) -> dict[str, Any]:
     seen: dict[str, Any] = {}
     real = core.render_html_projection
 
-    def recording(output, pages, context, previous_files=None, locus_index=None, notice=""):
+    def recording(output, pages, context, previous_files=None, locus_index=None, notice="", markdown=None):
         if "pages" not in seen:
             seen["pages"] = [asdict(page) for page in pages]
             seen["context"] = _json_ready(context)
             seen["locus_index"] = _json_ready(locus_index)
             seen["notice"] = notice
-            seen["md"] = {
-                page.markdown_path: (Path(output) / page.markdown_path).read_text()
-                for page in pages
-                if (Path(output) / page.markdown_path).is_file()
-            }
-        result = real(output, pages, context, previous_files, locus_index, notice)
+            # The run holds each page's Markdown in memory and writes no `.md`
+            # (store-only SO13); before SO13 it was read back from `output`.
+            seen["md"] = (
+                dict(markdown)
+                if markdown is not None
+                else {
+                    page.markdown_path: (Path(output) / page.markdown_path).read_text()
+                    for page in pages
+                    if (Path(output) / page.markdown_path).is_file()
+                }
+            )
+        result = real(output, pages, context, previous_files, locus_index, notice, markdown)
         if "html" not in seen:
             seen["html"] = {
                 page.html_path: (Path(output) / page.html_path).read_text()

@@ -9,5 +9,3 @@ Terms on this page: [Concern](how-to-read.md#term-concern)
 | Code | Territory |
 |---|---|
 | [concern CC-1](concerns.md#cc-1) | T03 |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

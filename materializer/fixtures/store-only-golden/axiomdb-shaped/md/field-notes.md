@@ -18,4 +18,3 @@ _1 open lead._
 
 - <a id="lead-1"></a>The fence and the lock are separate mechanisms. @ `W-01` · _recorded 2026-08-21 00:00 UTC_
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

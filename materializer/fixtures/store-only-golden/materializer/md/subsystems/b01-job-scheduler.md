@@ -78,5 +78,3 @@ No file is recorded in this subsystem's ledger.
 |---|---|---|---|---|
 | **[concern CB-1](../concerns.md#cb-1)** | confirmed-acceptable | code-verified |  | Single goroutine per job. |
 | **[concern CC-1](../concerns.md#cc-1)** | ruled-out | code-verified |  | No cache in **B-01**. |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

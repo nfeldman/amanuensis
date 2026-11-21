@@ -8,6 +8,5 @@ _When two or more concerns could each explain the same symptom, we open a [diagn
 
 | ID | Subsystem | Symptom | Outcome | Leading concern | Opened |
 |---|---|---|---|---|---|
-| [**DM-1**](diagnosticity/dm-1.md) | **[B-02](subsystems/b02-auth-service.md)** (Auth Service) | Intermittent auth bypass | resolved | [concern TC-1](concerns.md#tc-1) | 2026-11-21 03:38 UTC |
+| [**DM-1**](diagnosticity/dm-1.md) | **[B-02](subsystems/b02-auth-service.md)** (Auth Service) | Intermittent auth bypass | resolved | [concern TC-1](concerns.md#tc-1) | 2026-11-21 04:56 UTC |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

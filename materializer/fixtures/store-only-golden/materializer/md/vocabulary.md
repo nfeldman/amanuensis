@@ -18,4 +18,3 @@ _per-job entry point in the scheduler_
 
 First seen: `scheduler/main.ts:runJob@deadbeef`
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

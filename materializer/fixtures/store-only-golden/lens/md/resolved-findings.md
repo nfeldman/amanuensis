@@ -19,7 +19,6 @@ _1 record where the behaviour is the intended design rather than a defect._
 **B02-2** drops a row under load
 
 - **Root cause** — the buffer is reused before the reader is done with it
-- **Resolution** — `accepted`, recorded 2026-11-21 03:39 UTC.
+- **Resolution** — `accepted`, recorded 2026-11-21 04:56 UTC.
 - **Basis** — `authorized-dismissal`: fixture Recorded by session `p8`. No revision is recorded for the dismissal itself; the finding was recorded at `aaaaaaaaaaaa`.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

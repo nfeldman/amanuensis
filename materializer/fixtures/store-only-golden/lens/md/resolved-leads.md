@@ -8,6 +8,5 @@ No question has been settled and no lead has been closed.
 
 - **Scope** — questions answered, dismissed, or superseded, and leads closed either by becoming a finding or by being dismissed.
 - **Basis** — `open_questions.resolution` and `field_notes.follow_up`, both mutable columns with no event table behind them.
-- **Checked revision** — `cfc2c80635e9` on `main`, recorded 2026-09-11 12:00 UTC.
+- **Checked revision** — `0e5ac6940690` on `main`, recorded 2026-09-11 12:00 UTC.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

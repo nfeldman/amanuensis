@@ -14,4 +14,3 @@ No question is open. 0 settled questions are on [Resolved leads and questions](r
 - **Basis** — `open_questions` whose resolution is still `open`.
 - **Checked revision** — `d395c4d5a9e1` on `main`.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

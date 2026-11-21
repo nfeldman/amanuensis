@@ -10,4 +10,3 @@ No question has been settled and no lead has been closed.
 - **Basis** — `open_questions.resolution` and `field_notes.follow_up`, both mutable columns with no event table behind them.
 - **Checked revision** — `d395c4d5a9e1` on `main`.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

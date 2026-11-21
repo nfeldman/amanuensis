@@ -87,5 +87,3 @@ No structural claim is recorded for this subsystem, and no narrative was left in
 |---|---|---|---|---|
 | **[concern CC-1](../concerns.md#cc-1)** | confirmed-bug | code-verified |  | fixture |
 | **[concern SC-1](../concerns.md#sc-1)** | confirmed-acceptable | code-verified |  | fixture |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

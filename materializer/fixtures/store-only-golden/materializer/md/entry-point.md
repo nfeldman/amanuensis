@@ -25,5 +25,3 @@ This is a fictional test codebase with three subsystems: [B-01](subsystems/b01-j
 | Territory | Attenuating condition |
 |---|---|
 | Native memory | The runtime owns allocation for this service. |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

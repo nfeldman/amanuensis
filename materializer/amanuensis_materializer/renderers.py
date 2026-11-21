@@ -3658,8 +3658,9 @@ HOW_TO_READ_INTRO = f"# {GUIDE_TITLE}\n"
 HOW_TO_READ_CLOSING = ""
 
 # Appendix C, "What this site is". The project name is the only variable. The
-# second paragraph (PLAN §4 O14) says what the Markdown view leaves out; it has
-# no code span, since the guide's first 600 bytes carry none.
+# second paragraph (PLAN §4 O14, rewritten by store-only SO13 for the one view
+# left) says where the site starts and what a copy must keep; it has no code
+# span, since the guide's first 600 bytes carry none.
 SITE_IS = (
     "This site is the record of an AI agent's survey of {name}. The agent read the code,"
     " recorded what it concluded and the code each conclusion rests on, and listed what it"
@@ -3667,9 +3668,9 @@ SITE_IS = (
     " at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
 )
 SITE_VIEWS = (
-    "Each page is written twice from the same record: as HTML, which adds the diagrams, the"
-    " search and the definitions shown on hover, and as Markdown. Both are written to the same"
-    " directory; the HTML starts at index.html. A copy of the Markdown alone leaves those out."
+    "Each page is HTML, written to one directory that starts at index.html. The diagrams, the"
+    " search and the definitions shown on hover need nothing outside that directory, so a copy"
+    " of the whole directory reads the same."
 )
 
 # A term's `pages` may name a family; the family's listing page stands for it.

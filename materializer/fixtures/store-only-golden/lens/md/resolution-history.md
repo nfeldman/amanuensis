@@ -8,8 +8,7 @@ _Every state a finding or a contradiction was recorded in, and every re-grade of
 
 | Recorded | Record | State | Session | Account |
 |---|---|---|---|---|
-| 2026-11-21 03:39 UTC | [B02-2](resolved-findings.md#b02-2) | `accepted` | `p8` | fixture |
-| 2026-11-21 03:39 UTC | [B02-1](findings.md#b02-1) | `fixed-pending-verification` | `p8` | Repair at `src/writer.ts`, `bbbbbbbbbbbb`. fixture |
-| 2026-11-21 03:39 UTC | [B01-1](findings.md#b01-1) | `open` | `p8` | fixture |
+| 2026-11-21 04:56 UTC | [B02-2](resolved-findings.md#b02-2) | `accepted` | `p8` | fixture |
+| 2026-11-21 04:56 UTC | [B02-1](findings.md#b02-1) | `fixed-pending-verification` | `p8` | Repair at `src/writer.ts`, `bbbbbbbbbbbb`. fixture |
+| 2026-11-21 04:56 UTC | [B01-1](findings.md#b01-1) | `open` | `p8` | fixture |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

@@ -12,8 +12,7 @@ evidence cites, and published:
 
 Turns red when:
 
-  - a recorded narrative is missing from its page, in the Markdown view or the
-    HTML view: a structure narrative from its subsystem's Structure section, a
+  - a recorded narrative is missing from its HTML page: a structure narrative from its subsystem's Structure section, a
     concern-reasoning narrative from its Concern review, a challenge narrative
     from its Challenge section, a project narrative from Onboarding record or
     Where to begin;
@@ -31,10 +30,13 @@ Turns red when:
     store that holds records and no import, or the imported entry point is not
     still printed, labelled "As written", beside the records;
   - the read-back stays green after a narrative's text, a territory disposition's
-    condition or a runtime boundary's mechanism is altered on a page, in either
-    view, with `.projection-contract.json` resealed over the edited bytes (so
+    condition or a runtime boundary's mechanism is altered on a page, with
+    `.projection-contract.json` resealed over the edited bytes (so
     the hash check cannot be what turns it red), or is not green before the edit;
   - the gate does not run in CI.
+
+Since SO13 the publication is HTML only (PLAN §3.2 step 3), so every check
+reads the HTML page; before it each ran on the Markdown page as well.
 
 False green it cannot exclude: every sentinel is a word this gate chose, so a
 renderer that prints the stored prose mangled but keeps the sentinels passes the
@@ -451,19 +453,21 @@ def html_words(markup: str) -> str:
     return squash(htmllib.unescape(body))
 
 
-def md_section(text: str, heading: str, level: int) -> str:
-    marker = "#" * level + " "
-    body: list[str] = []
-    inside = False
-    for line in text.splitlines():
-        if not inside:
-            inside = line.startswith(marker) and line[len(marker):].strip() == heading
-            continue
-        depth = len(line) - len(line.lstrip("#"))
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body)
+def heading_text(fragment: str) -> str:
+    fragment = re.sub(r'(?is)<a class="heading-anchor"[^>]*>.*?</a>', " ", fragment)
+    return squash(htmllib.unescape(re.sub(r"<[^>]+>", " ", fragment))).lstrip("§ ")
+
+
+def raw_section(markup: str, heading: str, level: int) -> str:
+    """The markup after the `<h{level}>` whose text is `heading`, up to the next
+    heading of that level or above."""
+
+    for match in re.finditer(rf"(?is)<h{level}\b(?![^>]*nav-group-title)[^>]*>(.*?)</h{level}>", markup):
+        if heading_text(match.group(1)) == heading:
+            rest = markup[match.end():]
+            stop = re.search(rf"(?i)<h[1-{level}]\b", rest)
+            return rest[: stop.start()] if stop else rest
+    return ""
 
 
 def html_sections(text: str) -> dict[str, str]:
@@ -474,11 +478,10 @@ def html_sections(text: str) -> dict[str, str]:
     return {plain(parts[i]): plain(parts[i + 1]) for i in range(1, len(parts) - 1, 2)}
 
 
-def subsystem_files(docs: Path, sid: str) -> tuple[Path, Path]:
+def subsystem_file(docs: Path, sid: str) -> Path:
     stem = sid.lower().replace("-", "")
-    found = sorted((docs / "subsystems").glob(f"{stem}-*.md"))
-    md = found[0] if found else docs / "subsystems" / f"{stem}-absent.md"
-    return md, md.with_suffix(".html")
+    found = sorted((docs / "subsystems").glob(f"{stem}-*.html"))
+    return found[0] if found else docs / "subsystems" / f"{stem}-absent.html"
 
 
 def window(text: str, needle: str, after: int = 420) -> str:
@@ -501,19 +504,6 @@ def territory_names() -> dict[str, str]:
 
     found = re.findall(r"(?m)^## Territory (\d+) — (.+?)\s*$", read(TERRITORY_DOC))
     return {f"T{n}": name for n, name in found}
-
-
-def md_rows(text: str, first: str) -> list[list[str]]:
-    """The cells of every Markdown table row whose first cell starts with `first`."""
-
-    out = []
-    for line in text.splitlines():
-        if not line.startswith("|"):
-            continue
-        cells = [c.strip().replace("\\|", "|") for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
-        if cells and cells[0].startswith(first):
-            out.append(cells)
-    return out
 
 
 def html_rows(markup: str, first: str) -> list[list[str]]:
@@ -596,72 +586,54 @@ def run(work: Path) -> int:
     check("both stores publish, and the read-back is green", published)
 
     # ---- Subsystem narratives -------------------------------------------
-    b01_md_path, b01_html_path = subsystem_files(docs_a, "B-01")
-    b01_md, b01_html = read(b01_md_path), read(b01_html_path)
+    b01_html_path = subsystem_file(docs_a, "B-01")
+    b01_html = read(b01_html_path)
     b01_html_text = html_words(b01_html)
     b01_sections = html_sections(b01_html)
 
     def structure_narratives() -> str | None:
-        structure = md_section(b01_md, "Structure", 2)
         html_structure = b01_sections.get("Structure", "")
         for label, body in (("Request flow", FLOW_NEW), ("Snapshot lifetime", LIFE_BODY)):
             sentinel = body.split()[0]
-            if sentinel not in structure:
-                return f"the {label} narrative is not in the Markdown Structure section"
             if sentinel not in html_structure:
                 return f"the {label} narrative is not in the HTML Structure section"
         return None
 
-    check("structure narratives print under Structure, in both views", structure_narratives)
-
     def topics_are_subheadings() -> str | None:
-        structure = md_section(b01_md, "Structure", 2)
+        structure = raw_section(b01_html, "Structure", 2)
         for key in ("flow", "life"):
-            if f"### {TOPICS[key]}" not in structure:
+            if not raw_section(structure, TOPICS[key], 3) and not raw_section(structure, TOPICS[key], 4):
                 return f"the topic {TOPICS[key]!r} is not a subheading of Structure"
-        if not re.search(
-            rf"(?s)### {re.escape(TOPICS['flow'])}\s+{re.escape(FLOW_NEW)}", structure
-        ):
+        under = raw_section(structure, TOPICS["flow"], 3) or raw_section(structure, TOPICS["flow"], 4)
+        if not html_words(under).startswith(FLOW_NEW.split()[0]):
             return "the narrative does not follow its topic's subheading"
-        for key, heading in (("flow", TOPICS["flow"]), ("life", TOPICS["life"])):
-            if heading not in b01_sections.get("Structure", ""):
-                return f"the HTML Structure section lacks the topic {heading!r}"
-            del key
         return None
 
+    check("structure narratives print under Structure", structure_narratives)
     check("each topic is a subheading", topics_are_subheadings)
 
     def concern_reasoning_and_challenge() -> str | None:
-        # PLAN §8 SO9: concern reasoning under Review coverage (`concerns.md`),
-        # under its subsystem, in both views (F8/codex).
-        coverage_md = read(docs_a / "concerns.md")
+        # PLAN §8 SO9: concern reasoning under Review coverage (`concerns.html`),
+        # under its subsystem (F8/codex).
         coverage_html = read(docs_a / "concerns.html")
-        reasoning = md_section(coverage_md, "Concern reasoning", 2)
+        reasoning = html_sections(coverage_html).get("Concern reasoning", "")
         if REASONING_BODY.split()[0] not in reasoning:
-            return "the concern-reasoning narrative is not under Concern reasoning on Review coverage (Markdown)"
+            return "the concern-reasoning narrative is not under Concern reasoning on Review coverage"
         if "B-01" not in reasoning.split(REASONING_BODY.split()[0])[0]:
             return "the concern-reasoning narrative on Review coverage is not under its subsystem"
-        if REASONING_BODY.split()[0] not in html_sections(coverage_html).get("Concern reasoning", ""):
-            return "the concern-reasoning narrative is not under Concern reasoning on Review coverage (HTML)"
-        record = md_section(b01_md, "Survey record", 2)
-        challenge = md_section(record, "Challenge", 3)
+        challenge = html_words(raw_section(raw_section(b01_html, "Survey record", 2), "Challenge", 3))
         if CHALLENGE_BODY.split()[0] not in challenge:
-            return "the challenge narrative is not under Challenge (Markdown)"
+            return "the challenge narrative is not under Challenge in the Survey record"
         if f"{TOPICS['challenge']}" not in challenge:
             return "the challenge topic is not printed under Challenge"
-        html_record = b01_sections.get("Survey record", "")
-        if CHALLENGE_BODY.split()[0] not in html_record:
-            return f"{CHALLENGE_BODY.split()[0]} is not in the HTML Survey record"
-        if "Challenge" not in html_record:
-            return "the HTML Survey record has no Challenge heading"
-        if REASONING_BODY.split()[0] in md_section(b01_md, "Structure", 2):
+        if REASONING_BODY.split()[0] in b01_sections.get("Structure", ""):
             return "the concern-reasoning narrative also prints under Structure"
         return None
 
     check("concern reasoning and challenge print where the plan puts them", concern_reasoning_and_challenge)
 
     def dated_and_aged() -> str | None:
-        for view, text in (("Markdown", squash(b01_md)), ("HTML", b01_html_text)):
+        for view, text in (("HTML", b01_html_text),):
             aged = ageing_segment(text, FLOW_NEW)
             if NARRATIVE_DATE not in aged or shas["c1"][:8] not in aged:
                 return f"{view}: the aged narrative carries no date and revision beside it"
@@ -678,16 +650,15 @@ def run(work: Path) -> int:
 
     def superseded_and_withdrawn() -> str | None:
         for name, text in (
-            ("B-01 Markdown", b01_md),
             ("B-01 HTML", b01_html_text),
             ("B-01 HTML source", b01_html),
         ):
             for sentinel in (FLOW_OLD.split()[0], WITHDRAWN_BODY.split()[0]):
                 if sentinel in text:
                     return f"{sentinel} renders on {name}"
-        if "Dropped topic" in b01_md or "Dropped topic" in b01_html_text:
+        if "Dropped topic" in b01_html_text:
             return "a withdrawn narrative's topic still renders as a heading"
-        for path in subsystem_files(docs_a, "B-02"):
+        for path in (subsystem_file(docs_a, "B-02"),):
             text = read(path)
             if RECANTED_BODY.split()[0] in text or RECANTED_TOPIC in text:
                 return (
@@ -699,15 +670,15 @@ def run(work: Path) -> int:
     check("a superseded or withdrawn narrative does not render", superseded_and_withdrawn)
 
     def solo_and_declined() -> str | None:
-        b02_md, b02_html = subsystem_files(docs_a, "B-02")
-        b03_md, b03_html = subsystem_files(docs_a, "B-03")
-        for label, path in (("B-02 Markdown", b02_md), ("B-02 HTML", b02_html)):
+        b02_html = subsystem_file(docs_a, "B-02")
+        b03_html = subsystem_file(docs_a, "B-03")
+        for label, path in (("B-02 HTML", b02_html),):
             text = read(path)
             if SOLO_BODY.split()[0] not in text:
                 return f"the structure narrative is missing from {label}"
             if "no narrative was left in its place" in text:
                 return f"{label} says no narrative exists although one is recorded"
-        for label, path in (("B-03 Markdown", b03_md), ("B-03 HTML", b03_html)):
+        for label, path in (("B-03 HTML", b03_html),):
             if DECLINED_REASON.split()[0] not in read(path):
                 return f"the declined narrative's reason is missing from {label}"
         return None
@@ -717,37 +688,34 @@ def run(work: Path) -> int:
     # ---- Project pages ---------------------------------------------------
     def onboarding_record() -> str | None:
         for label, docs in (("A", docs_a), ("B", docs_b)):
-            md = read(docs / "onboarding-report.md")
             html = html_words(read(docs / "onboarding-report.html"))
-            if not md or not html:
+            if not html:
                 return f"store {label} publishes no Onboarding record"
             for section in ("repository-shape", "runtime", "stateful-entities", "concern-calibration", "survey-plan"):
                 sentinel = PROJECT_BODIES[section].split()[0]
-                if sentinel not in md or sentinel not in html:
+                if sentinel not in html:
                     return f"store {label}: the {section} narrative is missing from Onboarding record"
-            if PROJECT_OLD.split()[0] in md or PROJECT_OLD.split()[0] in html:
+            if PROJECT_OLD.split()[0] in html:
                 return f"store {label}: a superseded project narrative renders"
-            if PROJECT_BODIES["start-here"].split()[0] in md:
+            if PROJECT_BODIES["start-here"].split()[0] in html:
                 return f"store {label}: the start-here narrative is on Onboarding record"
         return None
 
-    check("Onboarding record prints the project narratives, in both views", onboarding_record)
+    check("Onboarding record prints the project narratives", onboarding_record)
 
     def where_to_begin() -> str | None:
         for label, docs in (("A", docs_a), ("B", docs_b)):
-            md = read(docs / "entry-point.md")
             html = html_words(read(docs / "entry-point.html"))
             sentinel = PROJECT_BODIES["start-here"].split()[0]
-            if sentinel not in md or sentinel not in html:
+            if sentinel not in html:
                 return f"store {label}: the start-here narrative is missing from Where to begin"
-        md = read(docs_a / "entry-point.md")
         html = html_words(read(docs_a / "entry-point.html"))
-        for view, text in (("Markdown", md), ("HTML", html)):
+        for view, text in (("HTML", html),):
             if "IMPORTEDENTRYPSI" not in text:
                 return f"the imported entry point is gone from Where to begin ({view})"
             if "As written at 2026-10-02" not in text:
                 return f"the imported entry point lost its 'As written' label ({view})"
-        if "IMPORTEDENTRYPSI" in read(docs_b / "entry-point.md"):
+        if "IMPORTEDENTRYPSI" in read(docs_b / "entry-point.html"):
             return "store B prints an imported body it does not hold"
         return None
 
@@ -755,11 +723,10 @@ def run(work: Path) -> int:
 
     def review_checklist() -> str | None:
         for label, docs in (("A", docs_a), ("B", docs_b)):
-            md = read(docs / "concern-checklist.md")
             html = html_words(read(docs / "concern-checklist.html"))
-            if not md or not html:
+            if not html:
                 return f"store {label} publishes no Review checklist"
-            for view, text in (("Markdown", squash(md)), ("HTML", html)):
+            for view, text in (("HTML", html),):
                 for needle in (
                     PROBE.split()[0],
                     "PROBEUPSILON",
@@ -787,11 +754,10 @@ def run(work: Path) -> int:
             PIPE_TERRITORY: ("disqualified", PIPE_CONDITION),
         }
         for label, docs in (("A", docs_a), ("B", docs_b)):
-            md = read(docs / "concern-checklist.md")
             markup = read(docs / "concern-checklist.html")
-            for view in ("Markdown", "HTML"):
+            for view in ("HTML",):
                 for territory, (disposition, condition) in expected.items():
-                    found = md_rows(md, territory) if view == "Markdown" else html_rows(markup, territory)
+                    found = html_rows(markup, territory)
                     if len(found) != 1:
                         return f"store {label}: {len(found)} Territories rows for {territory} ({view})"
                     cells = found[0]
@@ -800,7 +766,7 @@ def run(work: Path) -> int:
                     if len(cells) < 3 or cells[1].lower() != disposition or squash(cells[2]) != condition:
                         return f"store {label}: {territory} reads {cells[1:]!r}, not {disposition!r} and {condition!r} ({view})"
                 for territory in (TERRITORY, APPLIES):
-                    if f"{territory} ({names[territory]})" not in squash(md if view == "Markdown" else html_words(markup)):
+                    if f"{territory} ({names[territory]})" not in html_words(markup):
                         return f"store {label}: the concern territory {territory} is printed without its name ({view})"
             for heading in re.findall(r'(?is)<h3 class="concern-family-heading".*?</h3>', markup):
                 ids = re.findall(r"\bT\d+\b", html_words(heading))
@@ -809,16 +775,15 @@ def run(work: Path) -> int:
                         return f"store {label}: the concern-family heading prints {territory} without its name"
         return None
 
-    check("each territory carries its name and its own disposition, in both views", territories_named_and_disposed)
+    check("each territory carries its name and its own disposition", territories_named_and_disposed)
 
     check("Review checklist prints territory, probe and territory dispositions", review_checklist)
 
     # ---- Runtime ---------------------------------------------------------
     def runtime_boundaries() -> str | None:
-        md = squash(read(docs_a / "architecture.md"))
         raw_html = read(docs_a / "architecture.html")
         text = html_words(raw_html)
-        for view, page in (("Markdown", md), ("HTML", text)):
+        for view, page in (("HTML", text),):
             for needle in (*RUNTIME_RECORDED[:4], RUNTIME_RECORDED[4], *RUNTIME_IMPORTED[:3], "NEWNOTEOMEGA"):
                 if needle and needle not in page:
                     return f"{needle!r} is missing from the architecture page ({view})"
@@ -840,9 +805,8 @@ def run(work: Path) -> int:
 
     def imported_rows_labelled() -> str | None:
         label = "Imported from the onboarding report"
-        md = squash(read(docs_a / "architecture.md"))
         text = html_words(read(docs_a / "architecture.html"))
-        for view, page in (("Markdown", md), ("HTML", text)):
+        for view, page in (("HTML", text),):
             at = page.find(label)
             if at < 0:
                 return f"the imported runtime row is not labelled as imported ({view})"
@@ -887,36 +851,25 @@ def run(work: Path) -> int:
         return None
 
     def narrative_sabotage() -> str | None:
-        rel_md = str(b01_md_path.relative_to(docs_a))
         rel_html = str(b01_html_path.relative_to(docs_a))
-        for rel in (rel_md, rel_html):
-            reason = sabotage(rel, "NARRFLOWALPHA", "NARRFLOWOMEGA", "narrative")
-            if reason:
-                return reason
+        reason = sabotage(rel_html, "NARRFLOWALPHA", "NARRFLOWOMEGA", "narrative")
+        if reason:
+            return reason
         reason = sabotage("onboarding-report.html", "NARRRUNTIMEIOTA", "NARRRUNTIMEIOTB", "narrative")
         if reason:
             return reason
-        for rel in ("concerns.md", "concerns.html"):
-            reason = sabotage(rel, "NARRREASONDELTA", "NARRREASONDELTB", "narrative")
-            if reason:
-                return reason
-        return sabotage("entry-point.md", "NARRSTARTNU", "NARRSTARTNV", "narrative")
+        reason = sabotage("concerns.html", "NARRREASONDELTA", "NARRREASONDELTB", "narrative")
+        if reason:
+            return reason
+        return sabotage("entry-point.html", "NARRSTARTNU", "NARRSTARTNV", "narrative")
 
     check("altering a narrative on a page turns the resealed read-back red", narrative_sabotage)
 
     def territory_sabotage() -> str | None:
-        for rel in ("concern-checklist.md", "concern-checklist.html"):
-            reason = sabotage(rel, "CONDITIONOMICRON", "CONDITIONOMICRXN", "territory")
-            if reason:
-                return reason
-        # The verdict itself: a ruled-out territory printed as applying (F11/codex).
-        md = read(docs_a / "concern-checklist.md")
-        row = next((ln for ln in md.splitlines() if ln.startswith(f"| {DISQUALIFIED} ")), "")
-        if "| disqualified |" not in row:
-            return f"concern-checklist.md has no disqualified row for {DISQUALIFIED} to alter"
-        reason = sabotage("concern-checklist.md", row, row.replace("| disqualified |", "| applies |"), "territory")
+        reason = sabotage("concern-checklist.html", "CONDITIONOMICRON", "CONDITIONOMICRXN", "territory")
         if reason:
             return reason
+        # The verdict itself: a ruled-out territory printed as applying (F11/codex).
         markup = read(docs_a / "concern-checklist.html")
         tr = next((t for t in re.findall(r"(?is)<tr\b.*?</tr>", markup) if f">{DISQUALIFIED} " in t or f">{DISQUALIFIED}<" in t), "")
         if "disqualified" not in tr.lower():
@@ -927,11 +880,7 @@ def run(work: Path) -> int:
     check("altering a territory disposition turns the resealed read-back red", territory_sabotage)
 
     def runtime_sabotage() -> str | None:
-        for rel in ("architecture.md", "architecture.html"):
-            reason = sabotage(rel, "unix socket", "unix sockex", "runtime")
-            if reason:
-                return reason
-        return None
+        return sabotage("architecture.html", "unix socket", "unix sockex", "runtime")
 
     check("altering a runtime boundary turns the resealed read-back red", runtime_sabotage)
 
@@ -949,10 +898,10 @@ def run(work: Path) -> int:
         outcome = run_materializer(a, repo)
         if outcome.get("ok") is not True:
             return f"the incremental publish failed: {outcome.get('_diagnostic')}"
-        md = read(subsystem_files(docs_a, "B-01")[0])
-        if LIFE_BODY.split()[0] in md:
+        page = read(subsystem_file(docs_a, "B-01"))
+        if LIFE_BODY.split()[0] in page:
             return "a narrative withdrawn after the first publish is still on its page"
-        if FLOW_NEW.split()[0] not in md:
+        if FLOW_NEW.split()[0] not in page:
             return "the incremental publish dropped a narrative that was not withdrawn"
         return None
 

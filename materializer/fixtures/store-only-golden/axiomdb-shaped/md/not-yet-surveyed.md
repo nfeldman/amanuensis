@@ -41,4 +41,3 @@ Binding: per-party-proxy; no seam-bound disposition is recorded. An `SC-%` dispo
 | [Storage substrate](subsystems/s01-storage-substrate.md) **[S-01](subsystems/s01-storage-substrate.md)** | 2 of 2 | **[concern CC-1](concerns.md#cc-1)**, **[concern CC-2](concerns.md#cc-2)** |
 | [Graph write coordinator](subsystems/w01-graph-write-coordinator.md) **[W-01](subsystems/w01-graph-write-coordinator.md)** | 1 of 2 | **[concern CC-2](concerns.md#cc-2)** |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

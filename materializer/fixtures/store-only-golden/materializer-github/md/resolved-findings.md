@@ -26,4 +26,3 @@ race on job start
 - **Resolution** — `accepted`, carried by the legacy status with no resolution event recorded.
 - **Basis** — `none-recorded`: No basis is recorded for this resolution.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

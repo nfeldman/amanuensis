@@ -120,9 +120,9 @@ The advance to `mapped` above has already read that reconciliation, so
 this call finds the store reconciled.
 
 The materializer builds every page from the store's records and reads no
-prose file. The cross-reference resolver re-links every ID across pages. It then publishes synchronized HTML and
-Markdown views and reads both back. Treat the returned `html_entrypoint` as
-the primary human handoff; Markdown remains the portable audit companion.
+prose file. The cross-reference resolver re-links every ID across pages. It then publishes the HTML
+pages and reads them back against the store. Treat the returned
+`html_entrypoint` as the human handoff; no Markdown page is written.
 
 The result also carries `unfilled_slots`, a list of rows
 `{slot, page, subject, state, discharge}`, one for each slot that applies and

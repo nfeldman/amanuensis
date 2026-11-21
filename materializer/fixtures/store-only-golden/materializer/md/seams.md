@@ -12,4 +12,3 @@ Terms on this page: [Concern](how-to-read.md#term-concern) · [System boundary](
 |---|---|---|---|---|---|
 | <a id="sm-01"></a>**SM-01** | jobs_queue | queue | **[B-01](subsystems/b01-job-scheduler.md)** ↔ **[B-02](subsystems/b02-auth-service.md)** | ✅ |  |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

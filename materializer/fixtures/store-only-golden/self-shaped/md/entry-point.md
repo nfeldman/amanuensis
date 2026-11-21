@@ -9,5 +9,3 @@ Terms on this page: [Session](how-to-read.md#term-session)
 ## What is this codebase?
 
 Scribe records what a survey of a codebase read, in a database, and publishes pages from it.
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

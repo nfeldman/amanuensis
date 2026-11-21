@@ -85,5 +85,3 @@ Structural account, read at `d395c4d`.
 ##### Observed
 
 The server applies the schema on every open and migrates additive columns first.
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

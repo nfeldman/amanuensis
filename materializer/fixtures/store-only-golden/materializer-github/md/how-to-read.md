@@ -7,7 +7,7 @@
 
 This site is the record of an AI agent's survey of FictionalProject. The agent read the code, recorded what it concluded and the code each conclusion rests on, and listed what it could not settle. It does not change the code. Every page is as of one commit, shown at the top of each HTML page as *Checked* and in the overview's *Checked at* row.
 
-Each page is written twice from the same record: as HTML, which adds the diagrams, the search and the definitions shown on hover, and as Markdown. Both are written to the same directory; the HTML starts at index.html. A copy of the Markdown alone leaves those out.
+Each page is HTML, written to one directory that starts at index.html. The diagrams, the search and the definitions shown on hover need nothing outside that directory, so a copy of the whole directory reads the same.
 
 ## Pages on this site
 
@@ -805,4 +805,3 @@ Stored as `runtime_boundary_origin` · runtime axis
 | `recorded` | Recorded | A survey session recorded the boundary over cited evidence. | that the boundary is complete; it records one crossing the session read |
 | `imported` | Imported | Copied from the survey notes of an earlier version, with no evidence attached. | that anyone has checked the boundary against the code; the copy carries the old notes as they were |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

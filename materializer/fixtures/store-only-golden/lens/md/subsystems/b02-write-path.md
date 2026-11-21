@@ -76,5 +76,3 @@ No structural claim is recorded for this subsystem, and no narrative was left in
 | Concern | Classification | Evidence quality | Linchpin? | Rationale |
 |---|---|---|---|---|
 | **[concern CC-2](../concerns.md#cc-2)** | ruled-out | code-verified |  | fixture |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

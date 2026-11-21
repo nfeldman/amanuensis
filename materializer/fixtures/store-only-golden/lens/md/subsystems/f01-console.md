@@ -67,5 +67,3 @@ No defect here is open or awaiting verification.
 | Concern | Classification | Evidence quality | Linchpin? | Rationale |
 |---|---|---|---|---|
 | **[concern CC-3](../concerns.md#cc-3)** | out-of-scope | code-verified |  | fixture |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

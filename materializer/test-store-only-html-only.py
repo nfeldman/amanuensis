@@ -27,10 +27,14 @@ Turns red when:
   - the reader's guide still mentions a Markdown view, or a page carries the
     command-line render notice anywhere but its page head;
   - any local link in any page (or in the golden corpus) targets a `.md`;
-  - the golden corpus's `VERSION` is not SO13, or its HTML differs from the
-    corpus SO11 wrote (read from git at the packet's start commit) anywhere but
-    the removed Markdown links and the guide's views paragraph (PLAN §3.2's
-    update rule);
+  - SO11's recorded golden inputs (read from git at the packet's start
+    commit), printed through today's HTML stage from memory, differ from SO11's
+    golden HTML anywhere but the two removed Markdown links, or the stage
+    writes a `.md`;
+  - the golden corpus's `VERSION` is not SO13, it holds a different page set,
+    or its HTML differs from SO11's anywhere but the removed Markdown links, the
+    guide's views paragraph, and the clock and commit values a re-seeded store
+    carries (PLAN §3.2's update rule);
   - the gate does not run in CI.
 
 False green it cannot exclude: the sabotage covers the finding marker census
@@ -263,23 +267,85 @@ def normalise(text: str) -> str:
     return _VIEWS_PARAGRAPH.sub("<p>@@views@@</p>", text)
 
 
-def git_show(path: str) -> str | None:
-    proc = subprocess.run(
-        ["git", "-C", str(REPO), "show", f"{START_SHA}:{path}"],
+def without_md_links(text: str) -> str:
+    return _MD_FOOTER.sub("", _MD_RAIL_LINK.sub("", text))
+
+
+# A regenerated corpus re-seeds its stores, so the clock, the lens fixture's
+# git commits and the server's session ids differ from SO11's run. Timestamps,
+# commit ids (7 to 40 hex digits; a marker digest is 64 and stays) and session
+# ids (two runs of 8 base-36 characters) are masked; nothing else is.
+_VOLATILE = re.compile(
+    r"\b\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?Z?(?: UTC)?"
+    r"|\b[0-9a-f]{7,40}\b|\b[0-9a-z]{8}-[0-9a-z]{8}\b"
+)
+
+
+def masked(text: str) -> str:
+    return _VOLATILE.sub("@@volatile@@", normalise(text))
+
+
+def so11_corpus(into: Path) -> Path | None:
+    """SO11's golden corpus, extracted from git at the packet's start commit."""
+
+    archive = subprocess.run(
+        ["git", "-C", str(REPO), "archive", START_SHA, "materializer/fixtures/store-only-golden"],
         capture_output=True,
-        text=True,
     )
-    return proc.stdout if proc.returncode == 0 else None
+    if archive.returncode != 0 or not archive.stdout:
+        return None
+    tar = into / "so11.tar"
+    tar.write_bytes(archive.stdout)
+    unpacked = subprocess.run(["tar", "-xf", str(tar), "-C", str(into)], capture_output=True)
+    corpus = into / "materializer" / "fixtures" / "store-only-golden"
+    return corpus if unpacked.returncode == 0 and (corpus / "VERSION").is_file() else None
 
 
-def unfold_with(text: str, read_asset: Callable[[str], str | None]) -> str:
+def unfold_from(corpus: Path, text: str) -> str:
     def replace(match: re.Match[str]) -> str:
-        body = read_asset(match.group(1))
-        if body is None:
+        asset = corpus / "assets" / match.group(1)
+        if not asset.is_file():
             raise RuntimeError(f"golden asset {match.group(1)[:12]} is absent")
-        return body
+        return asset.read_text()
 
     return re.sub(r"@@golden-asset ([0-9a-f]{64})@@", replace, text)
+
+
+def html_pages(corpus: Path, name: str) -> dict[str, str]:
+    base = corpus / name / "html"
+    return {
+        p.relative_to(base).as_posix(): unfold_from(corpus, p.read_text())
+        for p in sorted(base.rglob("*.html"))
+    } if base.is_dir() else {}
+
+
+def print_recorded(corpus: Path, name: str) -> dict[str, str]:
+    """Print one fixture's recorded inputs through today's HTML stage, in memory."""
+
+    sys.path.insert(0, str(ROOT))
+    from amanuensis_materializer import html_projection as hp  # noqa: PLC0415
+
+    base = corpus / name
+    inputs = json.loads((base / "inputs.json").read_text())
+    markdown = {p.relative_to(base / "md").as_posix(): p.read_text() for p in sorted((base / "md").rglob("*.md"))}
+    pages = [
+        hp.SitePage(**{**page, "terms": tuple(tuple(term) for term in page["terms"])})
+        for page in inputs["pages"]
+    ]
+    with tempfile.TemporaryDirectory(prefix="amanuensis-so13-print-") as tmp:
+        output = Path(tmp)
+        hp.render_html_projection(
+            output,
+            pages,
+            inputs["context"],
+            locus_index=inputs["locus_index"],
+            notice=inputs["notice"],
+            markdown=markdown,
+        )
+        written = [p.relative_to(output).as_posix() for p in output.rglob("*") if p.is_file()]
+        if any(rel.endswith(".md") for rel in written):
+            raise RuntimeError(f"the HTML stage wrote a .md for {name}")
+        return {page.html_path: (output / page.html_path).read_text() for page in pages if (output / page.html_path).is_file()}
 
 
 def main() -> int:
@@ -534,33 +600,53 @@ def main() -> int:
         check("a clean publish over an index.md no manifest claims is refused", lambda: refuses("index.md"))
 
     # -- the golden corpus --------------------------------------------------------
-    def golden_regenerated() -> str | None:
-        version = GOLDEN / "VERSION"
-        if not version.is_file() or version.read_text().strip() != PACKET:
-            return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET}"
-        compared = 0
-        for name in GOLDEN_FIXTURES:
-            html_dir = GOLDEN / name / "html"
-            pages = sorted(p for p in html_dir.rglob("*.html")) if html_dir.is_dir() else []
-            if not pages:
-                return f"the golden fixture {name} has no HTML"
-            for path in pages:
-                rel = path.relative_to(GOLDEN).as_posix()
-                new = unfold_with(path.read_text(), lambda d: (GOLDEN / "assets" / d).read_text() if (GOLDEN / "assets" / d).is_file() else None)
-                if md_targets(new):
-                    return f"golden {rel} links {md_targets(new)[:3]}"
-                old_folded = git_show(f"materializer/fixtures/store-only-golden/{rel}")
-                if old_folded is None:
-                    return f"SO11's golden {rel} cannot be read from git at {START_SHA[:12]}"
-                old = unfold_with(old_folded, lambda d: git_show(f"materializer/fixtures/store-only-golden/assets/{d}"))
-                if normalise(old) != normalise(new):
-                    return f"golden {rel} differs from SO11's outside the Markdown links and the views paragraph"
-                compared += 1
-        if compared < 140:
-            return f"only {compared} golden pages were compared"
-        return None
+    with tempfile.TemporaryDirectory(prefix="amanuensis-so13-golden-") as tmp:
+        previous = so11_corpus(Path(tmp))
 
-    check("the golden corpus is SO13's and differs from SO11's only where HTML-only output changes it", golden_regenerated)
+        def html_stage_confined() -> str | None:
+            if previous is None:
+                return f"SO11's golden corpus cannot be read from git at {START_SHA[:12]}"
+            compared = 0
+            for name in GOLDEN_FIXTURES:
+                before = html_pages(previous, name)
+                printed = print_recorded(previous, name)
+                if sorted(printed) != sorted(before):
+                    return f"{name}: today's HTML stage prints {len(printed)} pages for SO11's {len(before)}"
+                for rel, old in before.items():
+                    if printed[rel] != without_md_links(old):
+                        return f"{name}/{rel}: SO11's recorded inputs print differently today, beyond the removed Markdown links"
+                    compared += 1
+            return None if compared >= 140 else f"only {compared} pages were compared"
+
+        check(
+            "SO11's recorded inputs print through today's HTML stage byte for byte but for the two Markdown links",
+            html_stage_confined,
+        )
+
+        def golden_regenerated() -> str | None:
+            version = GOLDEN / "VERSION"
+            if not version.is_file() or version.read_text().strip() != PACKET:
+                return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET}"
+            if previous is None:
+                return f"SO11's golden corpus cannot be read from git at {START_SHA[:12]}"
+            compared = 0
+            for name in GOLDEN_FIXTURES:
+                before = html_pages(previous, name)
+                after = html_pages(GOLDEN, name)
+                if not after or sorted(after) != sorted(before):
+                    return f"the golden fixture {name} holds {len(after)} pages for SO11's {len(before)}"
+                md_now = sorted(p.relative_to(GOLDEN / name / "md").as_posix() for p in (GOLDEN / name / "md").rglob("*.md"))
+                if len(md_now) != len(after):
+                    return f"the golden fixture {name} records {len(md_now)} in-memory Markdown texts for {len(after)} pages"
+                for rel, new in after.items():
+                    if md_targets(new):
+                        return f"golden {name}/{rel} links {md_targets(new)[:3]}"
+                    if masked(before[rel]) != masked(new):
+                        return f"golden {name}/{rel} differs from SO11's outside the Markdown links and the views paragraph"
+                    compared += 1
+            return None if compared >= 140 else f"only {compared} golden pages were compared"
+
+        check("the golden corpus is SO13's and differs from SO11's only where HTML-only output changes it", golden_regenerated)
 
     def in_ci() -> str | None:
         text = CI_FILE.read_text() if CI_FILE.is_file() else ""

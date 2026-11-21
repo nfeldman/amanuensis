@@ -22,8 +22,8 @@ CREATE TABLE artifacts (
     bytes            INTEGER,
     notes            TEXT
 );
-INSERT INTO "artifacts" VALUES('entry-point.md','entry-point',NULL,NULL,'deadbeef','s1','2026-11-21 03:38:58',NULL,NULL);
-INSERT INTO "artifacts" VALUES('onboarding-report.md','onboarding-report',NULL,NULL,'deadbeef','s1','2026-11-21 03:38:58',NULL,NULL);
+INSERT INTO "artifacts" VALUES('entry-point.md','entry-point',NULL,NULL,'deadbeef','s1','2026-11-21 04:56:04',NULL,NULL);
+INSERT INTO "artifacts" VALUES('onboarding-report.md','onboarding-report',NULL,NULL,'deadbeef','s1','2026-11-21 04:56:04',NULL,NULL);
 CREATE TABLE carried_finding_evidence (
     carried_id    INTEGER NOT NULL REFERENCES carried_findings(carried_id) ON DELETE RESTRICT,
     evidence_id   INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
@@ -471,9 +471,9 @@ CREATE TABLE concerns (
     probe         TEXT,
     FOREIGN KEY (merged_into) REFERENCES concerns(code)
 );
-INSERT INTO "concerns" VALUES('CC-1','cache-coherence','seeded',NULL,'2026-11-21 03:38:58',NULL,'active',NULL,NULL,NULL,NULL);
-INSERT INTO "concerns" VALUES('CB-1','concurrency','seeded',NULL,'2026-11-21 03:38:58',NULL,'active',NULL,NULL,NULL,NULL);
-INSERT INTO "concerns" VALUES('TC-1','trust-boundary','seeded',NULL,'2026-11-21 03:38:58',NULL,'active',NULL,NULL,NULL,NULL);
+INSERT INTO "concerns" VALUES('CC-1','cache-coherence','seeded',NULL,'2026-11-21 04:56:04',NULL,'active',NULL,NULL,NULL,NULL);
+INSERT INTO "concerns" VALUES('CB-1','concurrency','seeded',NULL,'2026-11-21 04:56:04',NULL,'active',NULL,NULL,NULL,NULL);
+INSERT INTO "concerns" VALUES('TC-1','trust-boundary','seeded',NULL,'2026-11-21 04:56:04',NULL,'active',NULL,NULL,NULL,NULL);
 CREATE TABLE contradiction_resolution_events (
     id              INTEGER PRIMARY KEY,
     contradiction_id INTEGER NOT NULL REFERENCES contradictions(id) ON DELETE CASCADE,
@@ -809,7 +809,7 @@ CREATE TABLE diagnosticity_sessions (
     created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
     resolved_at       TEXT
 );
-INSERT INTO "diagnosticity_sessions" VALUES(1,'B-02','Intermittent auth bypass','auth/gateway.ts:parse@deadbeef','TC-1',NULL,'resolved','s1','2026-11-21 03:38:58',NULL);
+INSERT INTO "diagnosticity_sessions" VALUES(1,'B-02','Intermittent auth bypass','auth/gateway.ts:parse@deadbeef','TC-1',NULL,'resolved','s1','2026-11-21 04:56:04',NULL);
 CREATE TABLE disposition_evidence (
     subsystem_id     TEXT    NOT NULL,
     concern_code     TEXT    NOT NULL,
@@ -850,9 +850,9 @@ CREATE TABLE dispositions (
                               'onboarding','survey','adversarial','refresh')),
     PRIMARY KEY (subsystem_id, concern_code)
 );
-INSERT INTO "dispositions" VALUES('B-01','CC-1','ruled-out','scheduler/main.ts:runJob@deadbeef','code-verified',0,'No cache in B-01.','2026-11-21 03:38:58','deadbeef','s1','survey');
-INSERT INTO "dispositions" VALUES('B-01','CB-1','confirmed-acceptable','scheduler/main.ts:runJob@deadbeef','code-verified',0,'Single goroutine per job.','2026-11-21 03:38:58','deadbeef','s1','survey');
-INSERT INTO "dispositions" VALUES('B-02','TC-1','confirmed-bug','auth/gateway.ts:parse@deadbeef','code-verified',0,'Gateway trusts unvalidated client input.','2026-11-21 03:38:58','deadbeef','s1','survey');
+INSERT INTO "dispositions" VALUES('B-01','CC-1','ruled-out','scheduler/main.ts:runJob@deadbeef','code-verified',0,'No cache in B-01.','2026-11-21 04:56:04','deadbeef','s1','survey');
+INSERT INTO "dispositions" VALUES('B-01','CB-1','confirmed-acceptable','scheduler/main.ts:runJob@deadbeef','code-verified',0,'Single goroutine per job.','2026-11-21 04:56:04','deadbeef','s1','survey');
+INSERT INTO "dispositions" VALUES('B-02','TC-1','confirmed-bug','auth/gateway.ts:parse@deadbeef','code-verified',0,'Gateway trusts unvalidated client input.','2026-11-21 04:56:04','deadbeef','s1','survey');
 CREATE TABLE entries (
     id            TEXT    NOT NULL,
     tier          INTEGER NOT NULL CHECK (tier BETWEEN 0 AND 2),
@@ -966,8 +966,8 @@ CREATE TABLE evidence (
     session_id       TEXT,
     collected_at     TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "evidence" VALUES(1,'auth/gateway.ts','parse',NULL,'deadbeef','code-verified',NULL,'Unsanitized input flows to SQL',NULL,'2026-11-21 03:38:58');
-INSERT INTO "evidence" VALUES(2,'auth/gateway.ts','parse',NULL,'deadbeef','comment-asserted',NULL,'Docstring claims sanitization',NULL,'2026-11-21 03:38:58');
+INSERT INTO "evidence" VALUES(1,'auth/gateway.ts','parse',NULL,'deadbeef','code-verified',NULL,'Unsanitized input flows to SQL',NULL,'2026-11-21 04:56:04');
+INSERT INTO "evidence" VALUES(2,'auth/gateway.ts','parse',NULL,'deadbeef','comment-asserted',NULL,'Docstring claims sanitization',NULL,'2026-11-21 04:56:04');
 CREATE TABLE explanation_evidence (
     explanation_id INTEGER NOT NULL REFERENCES explanations(id) ON DELETE RESTRICT,
     evidence_id    INTEGER NOT NULL REFERENCES evidence(id)     ON DELETE RESTRICT,
@@ -999,8 +999,8 @@ CREATE TABLE field_notes (
     session_id      TEXT,
     created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "field_notes" VALUES(1,'anomaly','Auth error paths rarely tested','auth/gateway.ts','deadbeef','open','s1','2026-11-21 03:38:58');
-INSERT INTO "field_notes" VALUES(2,'tension','Scheduler and auth share a queue that assumes single consumer','SM-01','deadbeef','open','s1','2026-11-21 03:38:58');
+INSERT INTO "field_notes" VALUES(1,'anomaly','Auth error paths rarely tested','auth/gateway.ts','deadbeef','open','s1','2026-11-21 04:56:04');
+INSERT INTO "field_notes" VALUES(2,'tension','Scheduler and auth share a queue that assumes single consumer','SM-01','deadbeef','open','s1','2026-11-21 04:56:04');
 CREATE TABLE file_ledger (
     subsystem_id    TEXT    NOT NULL,
     file_path       TEXT    NOT NULL,
@@ -1084,8 +1084,8 @@ CREATE TABLE findings (
     created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "findings" VALUES('B02-1','B-02','Unvalidated query params reach SQL','parse trusts client claim','HIGH','confirmed-bug',NULL,'["auth/gateway.ts:parse@deadbeef"]','Affects all auth flows','deadbeef','s1','adversarial','2026-11-21 03:38:58','2026-11-21 03:38:58');
-INSERT INTO "findings" VALUES('B01-1','B-01','race on job start','lock released between check and start','MEDIUM','confirmed-acceptable',NULL,NULL,NULL,'deadbeef','s1','survey','2026-11-21 03:38:58','2026-11-21 03:38:58');
+INSERT INTO "findings" VALUES('B02-1','B-02','Unvalidated query params reach SQL','parse trusts client claim','HIGH','confirmed-bug',NULL,'["auth/gateway.ts:parse@deadbeef"]','Affects all auth flows','deadbeef','s1','adversarial','2026-11-21 04:56:04','2026-11-21 04:56:04');
+INSERT INTO "findings" VALUES('B01-1','B-01','race on job start','lock released between check and start','MEDIUM','confirmed-acceptable',NULL,NULL,NULL,'deadbeef','s1','survey','2026-11-21 04:56:04','2026-11-21 04:56:04');
 CREATE TABLE git_state (
     repo_id          TEXT    PRIMARY KEY DEFAULT 'default',
     canonical_branch TEXT    NOT NULL,              -- detected during onboarding: main, master, trunk, etc.
@@ -1142,7 +1142,7 @@ This is a fictional test codebase with three subsystems: B-01 (scheduler), B-02 
 | Territory | Attenuating condition |
 |---|---|
 | Native memory | The runtime owns allocation for this service. |
-','2aa89920d2370bbb70e412c3f9e461fab27acedbc00f2c9b97e9bb309c41decc','0123456789abcdef0123456789abcdef',1,'deadbeef','2026-10-02 09:30:00','2026-11-21 03:38:58','s1');
+','2aa89920d2370bbb70e412c3f9e461fab27acedbc00f2c9b97e9bb309c41decc','0123456789abcdef0123456789abcdef',1,'deadbeef','2026-10-02 09:30:00','2026-11-21 04:56:04','s1');
 INSERT INTO "imported_artifacts" VALUES(2,'onboarding-report.md','onboarding-report',NULL,'# Onboarding report
 
 **Codebase**: FictionalProject — materializer fixture
@@ -1160,7 +1160,7 @@ INSERT INTO "imported_artifacts" VALUES(2,'onboarding-report.md','onboarding-rep
 | Host agent | external | scheduler service | stdio RPC | Starts the scheduler process. |
 | Scheduler service | Python | auth service | HTTPS request | Dispatches authenticated jobs. |
 | Auth service | TypeScript | policy database | SQL transaction | Owns authorization decisions. |
-','7c9d36cf945b464b851709ac19ebae39bc2d4cdbc306a20123d28378f120258e','0123456789abcdef0123456789abcdef',1,'deadbeef','2026-10-02 09:30:00','2026-11-21 03:38:58','s1');
+','7c9d36cf945b464b851709ac19ebae39bc2d4cdbc306a20123d28378f120258e','0123456789abcdef0123456789abcdef',1,'deadbeef','2026-10-02 09:30:00','2026-11-21 04:56:04','s1');
 INSERT INTO "imported_artifacts" VALUES(3,'concern-checklist.md','concern-checklist',NULL,'# Concern checklist (calibrated)
 
 ## Active concerns (3)
@@ -1170,7 +1170,7 @@ INSERT INTO "imported_artifacts" VALUES(3,'concern-checklist.md','concern-checkl
 | CC-1 | cache-coherence | T2 | Does the scheduler retain stale authorization state after a policy change? | B-01, B-02 |
 | CC-2 | cache-coherence | T2 | Trace every holder of the shared policy snapshot. | B-02 |
 | TC-1 | trust-boundary | T10 | Verify that every public request path validates its caller. | B-02, F-01 |
-','a0b0998281a42ce2d76866c67b69173fd48fbb8cecd8a501a77ed9f3a783ffb8','0123456789abcdef0123456789abcdef',1,'deadbeef','2026-10-02 09:30:00','2026-11-21 03:38:58','s1');
+','a0b0998281a42ce2d76866c67b69173fd48fbb8cecd8a501a77ed9f3a783ffb8','0123456789abcdef0123456789abcdef',1,'deadbeef','2026-10-02 09:30:00','2026-11-21 04:56:04','s1');
 CREATE TABLE learning_evaluations (
     evaluation_id       TEXT PRIMARY KEY,
     lesson_id           TEXT NOT NULL UNIQUE REFERENCES learning_lessons(lesson_id) ON DELETE RESTRICT,
@@ -1434,7 +1434,7 @@ CREATE TABLE project_profile (
     session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "project_profile" VALUES(1,'FictionalProject','deadbeef','s1','2026-11-21 03:38:58');
+INSERT INTO "project_profile" VALUES(1,'FictionalProject','deadbeef','s1','2026-11-21 04:56:04');
 CREATE TABLE projection_mismatches (
     id              INTEGER PRIMARY KEY,
     run_id          TEXT NOT NULL REFERENCES projection_verification_runs(run_id) ON DELETE CASCADE,
@@ -2090,9 +2090,9 @@ CREATE TABLE runtime_boundaries (
     session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "runtime_boundaries" VALUES(1,'Host agent','external','scheduler service','stdio RPC','Starts the scheduler process.','imported',0,'deadbeef','s1','2026-11-21 03:38:58');
-INSERT INTO "runtime_boundaries" VALUES(2,'Scheduler service','Python','auth service','HTTPS request','Dispatches authenticated jobs.','imported',0,'deadbeef','s1','2026-11-21 03:38:58');
-INSERT INTO "runtime_boundaries" VALUES(3,'Auth service','TypeScript','policy database','SQL transaction','Owns authorization decisions.','imported',0,'deadbeef','s1','2026-11-21 03:38:58');
+INSERT INTO "runtime_boundaries" VALUES(1,'Host agent','external','scheduler service','stdio RPC','Starts the scheduler process.','imported',0,'deadbeef','s1','2026-11-21 04:56:04');
+INSERT INTO "runtime_boundaries" VALUES(2,'Scheduler service','Python','auth service','HTTPS request','Dispatches authenticated jobs.','imported',0,'deadbeef','s1','2026-11-21 04:56:04');
+INSERT INTO "runtime_boundaries" VALUES(3,'Auth service','TypeScript','policy database','SQL transaction','Owns authorization decisions.','imported',0,'deadbeef','s1','2026-11-21 04:56:04');
 CREATE TABLE runtime_boundary_evidence (
     boundary_id   INTEGER NOT NULL REFERENCES runtime_boundaries(id) ON DELETE RESTRICT,
     evidence_id   INTEGER NOT NULL REFERENCES evidence(id)           ON DELETE RESTRICT,
@@ -2139,7 +2139,7 @@ CREATE TABLE seams (
     created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at          TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "seams" VALUES('SM-01','jobs_queue','queue','B-01','B-02','enqueue job',NULL,NULL,'dequeue','fifo','single-consumer','strong-consistent',NULL,NULL,'2026-11-21 03:38:58','2026-11-21 03:38:58');
+INSERT INTO "seams" VALUES('SM-01','jobs_queue','queue','B-01','B-02','enqueue job',NULL,NULL,'dequeue','fifo','single-consumer','strong-consistent',NULL,NULL,'2026-11-21 04:56:04','2026-11-21 04:56:04');
 CREATE TABLE sessions (
     session_id   TEXT    PRIMARY KEY,
     intent       TEXT    NOT NULL,                -- 'onboarding', 'survey B-01', 'refresh', 'adversarial-sweep'
@@ -2147,7 +2147,7 @@ CREATE TABLE sessions (
     ended_at     TEXT,                            -- NULL while active; set by end_session
     outcome      TEXT                             -- free text note — 'completed', 'deferred', 'superseded', etc.
 );
-INSERT INTO "sessions" VALUES('s1','onboarding','2026-11-21 03:38:58',NULL,NULL);
+INSERT INTO "sessions" VALUES('s1','onboarding','2026-11-21 04:56:04',NULL,NULL);
 CREATE TABLE staleness_clears (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     subsystem_id       TEXT    NOT NULL,
@@ -2213,9 +2213,9 @@ CREATE TABLE subsystems (
     created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at       TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "subsystems" VALUES('B-01','Job Scheduler','mapped','backend','scheduler/**','scheduler/main.ts','Note about B-01',NULL,'2026-11-21 03:38:58','2026-11-21 03:38:58');
-INSERT INTO "subsystems" VALUES('B-02','Auth Service','mapped','backend','auth/**','auth/index.ts','',NULL,'2026-11-21 03:38:58','2026-11-21 03:38:58');
-INSERT INTO "subsystems" VALUES('F-01','Web UI','scoping','frontend','web/**','web/main.tsx','',NULL,'2026-11-21 03:38:58','2026-11-21 03:38:58');
+INSERT INTO "subsystems" VALUES('B-01','Job Scheduler','mapped','backend','scheduler/**','scheduler/main.ts','Note about B-01',NULL,'2026-11-21 04:56:04','2026-11-21 04:56:04');
+INSERT INTO "subsystems" VALUES('B-02','Auth Service','mapped','backend','auth/**','auth/index.ts','',NULL,'2026-11-21 04:56:04','2026-11-21 04:56:04');
+INSERT INTO "subsystems" VALUES('F-01','Web UI','scoping','frontend','web/**','web/main.tsx','',NULL,'2026-11-21 04:56:04','2026-11-21 04:56:04');
 CREATE TABLE territory_dispositions (
     id               INTEGER PRIMARY KEY,
     territory        TEXT    NOT NULL CHECK (length(territory) > 0),
@@ -2247,8 +2247,8 @@ CREATE TABLE vocabulary (
     created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "vocabulary" VALUES('runJob','per-job entry point in the scheduler',NULL,'B-01','scheduler/main.ts:runJob@deadbeef','deadbeef','2026-11-21 03:38:58','2026-11-21 03:38:58');
-INSERT INTO "vocabulary" VALUES('gateway','request entry-point service in front of auth',NULL,NULL,'auth/gateway.ts:main@deadbeef','deadbeef','2026-11-21 03:38:58','2026-11-21 03:38:58');
+INSERT INTO "vocabulary" VALUES('runJob','per-job entry point in the scheduler',NULL,'B-01','scheduler/main.ts:runJob@deadbeef','deadbeef','2026-11-21 04:56:04','2026-11-21 04:56:04');
+INSERT INTO "vocabulary" VALUES('gateway','request entry-point service in front of auth',NULL,NULL,'auth/gateway.ts:main@deadbeef','deadbeef','2026-11-21 04:56:04','2026-11-21 04:56:04');
 CREATE TABLE vocabulary_declinations (
     id            INTEGER PRIMARY KEY,
     subsystem_id  TEXT    NOT NULL,
@@ -2281,7 +2281,7 @@ CREATE TABLE xrefs (
     context       TEXT,              -- one-line: why this link matters
     PRIMARY KEY (from_id, to_id, relationship)
 );
-INSERT INTO "xrefs" VALUES('B-01','B-02','dependency','confirmed','2026-11-21 03:38:58','B-01 calls B-02 on job start');
+INSERT INTO "xrefs" VALUES('B-01','B-02','dependency','confirmed','2026-11-21 04:56:04','B-01 calls B-02 on job start');
 CREATE INDEX idx_entries_subsystem ON entries(subsystem_id);
 CREATE INDEX idx_entries_tier      ON entries(tier);
 CREATE INDEX idx_entries_stale     ON entries(stale) WHERE stale = 1;

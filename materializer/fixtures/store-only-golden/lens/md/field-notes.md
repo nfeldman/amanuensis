@@ -10,6 +10,5 @@ No lead is open. 0 closed leads are on [Resolved leads and questions](resolved-l
 
 - **Scope** — observations a survey pass recorded that are not yet findings and have not been closed.
 - **Basis** — `field_notes` whose `follow_up` is still `open`.
-- **Checked revision** — `cfc2c80635e9` on `main`, recorded 2026-09-11 12:00 UTC.
+- **Checked revision** — `0e5ac6940690` on `main`, recorded 2026-09-11 12:00 UTC.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

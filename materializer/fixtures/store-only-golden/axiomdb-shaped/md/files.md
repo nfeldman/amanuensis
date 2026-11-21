@@ -12,4 +12,3 @@ Terms on this page: [Scope](how-to-read.md#term-scope) · [Finding](how-to-read.
 | <a id="f-c962b6417d"></a>`crates/quad-core/src/query/parse.rs` | [Query front end](subsystems/q01-query-front-end.md#le-9dbd55d5f0) | Examined | `c3b1492c` | 0 |
 | <a id="f-12ada624a7"></a>`crates/quad-core/src/write/coordinator.rs` | [Graph write coordinator](subsystems/w01-graph-write-coordinator.md#le-c0468ac389) | Examined | `c3b1492c` | 0 |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

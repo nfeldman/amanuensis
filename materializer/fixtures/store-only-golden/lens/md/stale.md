@@ -4,7 +4,7 @@
 
 Terms on this page: [Stale](how-to-read.md#term-stale) · [Checked at](how-to-read.md#term-checked-at) · [Standing](how-to-read.md#term-standing)
 
-1 of 13 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `cfc2c80635e9` on `main`. 0 of 2 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
+1 of 13 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `0e5ac6940690` on `main`. 0 of 2 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
 
 ## Examined files the repository has changed under
 
@@ -23,4 +23,3 @@ Terms on this page: [Stale](how-to-read.md#term-stale) · [Checked at](how-to-re
 
 0 of 1 file deferred with a recorded reason have changed since they were set aside.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

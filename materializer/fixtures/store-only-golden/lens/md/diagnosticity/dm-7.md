@@ -11,5 +11,3 @@ Terms on this page: [Subsystem](../how-to-read.md#term-subsystem) · [Competing 
 ## Matrix
 
 _Matrix has no concerns or evidence rows._
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

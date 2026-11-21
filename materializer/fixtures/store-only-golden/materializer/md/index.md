@@ -62,6 +62,5 @@ No publication read-back is recorded for this store, so none of the three axes h
 
 ## Latest session
 
-`onboarding` — started 2026-11-21 03:38 UTC · **active**
+`onboarding` — started 2026-11-21 04:56 UTC · **active**
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

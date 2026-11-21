@@ -53,5 +53,3 @@ _1 of 3 subsystems has no recorded boundary. Each seam and each recorded depende
 ## Staleness map
 
 _No staleness data recorded. No files have been scoped, so this view reports absence of measurement rather than freshness._
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

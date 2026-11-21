@@ -10,4 +10,3 @@ No resolution event is recorded.
 - **Basis** — `finding_resolution_events` and `contradiction_resolution_events`, the two tables nothing updates or deletes.
 - **Checked revision** — `d395c4d5a9e1` on `main`.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

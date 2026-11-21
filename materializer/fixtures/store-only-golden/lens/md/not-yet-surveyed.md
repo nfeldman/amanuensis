@@ -4,7 +4,7 @@
 
 Terms on this page: [Survey](how-to-read.md#term-survey) · [Subsystem](how-to-read.md#term-subsystem) · [Survey depth](how-to-read.md#term-survey-depth) · [Mapped](how-to-read.md#term-mapped) · [Scope](how-to-read.md#term-scope) · [Concern](how-to-read.md#term-concern)
 
-Counted at `cfc2c80635e9` on `main`.
+Counted at `0e5ac6940690` on `main`.
 
 ## Paths with no ledger row
 
@@ -78,4 +78,3 @@ Binding: per-party-proxy; no seam-bound disposition is recorded. An `SC-%` dispo
 | [Console](subsystems/f01-console.md) **[F-01](subsystems/f01-console.md)** | 3 of 4 | **[concern CC-1](concerns.md#cc-1)**, **[concern CC-2](concerns.md#cc-2)**, **[concern SC-1](concerns.md#sc-1)** |
 | [Widgets](subsystems/f02-widgets.md) **[F-02](subsystems/f02-widgets.md)** | 4 of 4 | **[concern CC-1](concerns.md#cc-1)**, **[concern CC-2](concerns.md#cc-2)**, **[concern CC-3](concerns.md#cc-3)**, **[concern SC-1](concerns.md#sc-1)** |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

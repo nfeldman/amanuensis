@@ -16,10 +16,9 @@ _1 matrix still open or recorded as unresolved competition. The full matrix is o
 
 | Matrix | Subsystem | Symptom | Outcome | Opened |
 |---|---|---|---|---|
-| [DM-7](diagnosticity/dm-7.md) | [Read path](subsystems/b01-read-path.md) | rows appear twice after a restart | `open` | 2026-11-21 03:39 UTC |
+| [DM-7](diagnosticity/dm-7.md) | [Read path](subsystems/b01-read-path.md) | rows appear twice after a restart | `open` | 2026-11-21 04:56 UTC |
 
 ## Concern reviews that recorded a competition
 
 No concern review recorded an unresolved competition.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

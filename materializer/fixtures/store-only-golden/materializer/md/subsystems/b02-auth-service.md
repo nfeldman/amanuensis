@@ -69,5 +69,3 @@ No file is recorded in this subsystem's ledger.
 | Concern | Classification | Evidence quality | Linchpin? | Rationale |
 |---|---|---|---|---|
 | **[concern TC-1](../concerns.md#tc-1)** | confirmed-bug | code-verified |  | Gateway trusts unvalidated client input. |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

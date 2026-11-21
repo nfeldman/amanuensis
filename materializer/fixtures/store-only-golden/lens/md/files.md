@@ -4,7 +4,7 @@
 
 Terms on this page: [Scope](how-to-read.md#term-scope) · [Finding](how-to-read.md#term-finding) · [Stale](how-to-read.md#term-stale) · [Standing](how-to-read.md#term-standing)
 
-12 distinct paths across 15 ledger rows, read at `cfc2c80635e9`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
+12 distinct paths across 15 ledger rows, read at `0e5ac6940690`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
 
 | File | Owners | Standing | Examined at | Open defects |
 |---|---|---|---|---|
@@ -21,4 +21,3 @@ Terms on this page: [Scope](how-to-read.md#term-scope) · [Finding](how-to-read.
 | <a id="f-d8c4ecbac2"></a>`ui/console.ts` | [Console](subsystems/f01-console.md#le-3dc3ee5456) | Excluded | `aaaaaaaa` | 0 |
 | <a id="f-e3c499b66a"></a>`vendor/lib.js` | [Read path](subsystems/b01-read-path.md#le-2583a17df8) | Excluded | `aaaaaaaa` | 0 |
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

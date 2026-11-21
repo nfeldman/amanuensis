@@ -12,6 +12,5 @@ No question is open. 0 settled questions are on [Resolved leads and questions](r
 
 - **Scope** — questions the survey could not settle, with what each one blocked and the assumption used to keep moving.
 - **Basis** — `open_questions` whose resolution is still `open`.
-- **Checked revision** — `cfc2c80635e9` on `main`, recorded 2026-09-11 12:00 UTC.
+- **Checked revision** — `0e5ac6940690` on `main`, recorded 2026-09-11 12:00 UTC.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

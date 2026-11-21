@@ -469,11 +469,11 @@ CREATE TABLE concerns (
     probe         TEXT,
     FOREIGN KEY (merged_into) REFERENCES concerns(code)
 );
-INSERT INTO "concerns" VALUES('SC-1','composition','seeded',NULL,'2026-11-21 03:39:00',NULL,'active',NULL,NULL,NULL,NULL);
-INSERT INTO "concerns" VALUES('CC-1','concurrency','seeded',NULL,'2026-11-21 03:39:00',NULL,'active',NULL,NULL,NULL,NULL);
-INSERT INTO "concerns" VALUES('CC-2','data-integrity','seeded',NULL,'2026-11-21 03:39:00',NULL,'active',NULL,NULL,NULL,NULL);
-INSERT INTO "concerns" VALUES('CC-3','error-handling','seeded',NULL,'2026-11-21 03:39:00',NULL,'active',NULL,NULL,NULL,NULL);
-INSERT INTO "concerns" VALUES('CC-9','legacy','seeded',NULL,'2026-11-21 03:39:00',NULL,'retired',NULL,NULL,NULL,NULL);
+INSERT INTO "concerns" VALUES('SC-1','composition','seeded',NULL,'2026-11-21 04:56:06',NULL,'active',NULL,NULL,NULL,NULL);
+INSERT INTO "concerns" VALUES('CC-1','concurrency','seeded',NULL,'2026-11-21 04:56:06',NULL,'active',NULL,NULL,NULL,NULL);
+INSERT INTO "concerns" VALUES('CC-2','data-integrity','seeded',NULL,'2026-11-21 04:56:06',NULL,'active',NULL,NULL,NULL,NULL);
+INSERT INTO "concerns" VALUES('CC-3','error-handling','seeded',NULL,'2026-11-21 04:56:06',NULL,'active',NULL,NULL,NULL,NULL);
+INSERT INTO "concerns" VALUES('CC-9','legacy','seeded',NULL,'2026-11-21 04:56:06',NULL,'retired',NULL,NULL,NULL,NULL);
 CREATE TABLE contradiction_resolution_events (
     id              INTEGER PRIMARY KEY,
     contradiction_id INTEGER NOT NULL REFERENCES contradictions(id) ON DELETE CASCADE,
@@ -801,7 +801,7 @@ CREATE TABLE diagnosticity_sessions (
     created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
     resolved_at       TEXT
 );
-INSERT INTO "diagnosticity_sessions" VALUES(7,'B-01','rows appear twice after a restart',NULL,NULL,NULL,'open','p8','2026-11-21 03:39:00',NULL);
+INSERT INTO "diagnosticity_sessions" VALUES(7,'B-01','rows appear twice after a restart',NULL,NULL,NULL,'open','p8','2026-11-21 04:56:06',NULL);
 CREATE TABLE disposition_evidence (
     subsystem_id     TEXT    NOT NULL,
     concern_code     TEXT    NOT NULL,
@@ -841,11 +841,11 @@ CREATE TABLE dispositions (
                               'onboarding','survey','adversarial','refresh')),
     PRIMARY KEY (subsystem_id, concern_code)
 );
-INSERT INTO "dispositions" VALUES('B-01','SC-1','confirmed-acceptable',NULL,'code-verified',0,'fixture','2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
-INSERT INTO "dispositions" VALUES('B-03','SC-1','confirmed-acceptable',NULL,'code-verified',0,'fixture','2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
-INSERT INTO "dispositions" VALUES('B-01','CC-1','confirmed-bug',NULL,'code-verified',0,'fixture','2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
-INSERT INTO "dispositions" VALUES('B-02','CC-2','ruled-out',NULL,'code-verified',0,'fixture','2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
-INSERT INTO "dispositions" VALUES('F-01','CC-3','out-of-scope',NULL,'code-verified',0,'fixture','2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
+INSERT INTO "dispositions" VALUES('B-01','SC-1','confirmed-acceptable',NULL,'code-verified',0,'fixture','2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
+INSERT INTO "dispositions" VALUES('B-03','SC-1','confirmed-acceptable',NULL,'code-verified',0,'fixture','2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
+INSERT INTO "dispositions" VALUES('B-01','CC-1','confirmed-bug',NULL,'code-verified',0,'fixture','2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
+INSERT INTO "dispositions" VALUES('B-02','CC-2','ruled-out',NULL,'code-verified',0,'fixture','2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
+INSERT INTO "dispositions" VALUES('F-01','CC-3','out-of-scope',NULL,'code-verified',0,'fixture','2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey');
 CREATE TABLE entries (
     id            TEXT    NOT NULL,
     tier          INTEGER NOT NULL CHECK (tier BETWEEN 0 AND 2),
@@ -978,11 +978,11 @@ CREATE TABLE explanations (
     CHECK (subject_type <> 'project' OR subject_id = 'project'),
     CHECK (disposition <> 'imported' OR (subject_type = 'project' AND slot = 'purpose'))
 );
-INSERT INTO "explanations" VALUES(1,'subsystem','F-01','purpose','recorded','LENS-PURPOSE-NOT-EFFECTIVE the console prints status.','cfc2c80635e9c62252455d99fea92f32df125876','p8','2026-11-21 03:39:00');
-INSERT INTO "explanations" VALUES(2,'subsystem','B-03','purpose','recorded','LENS-PURPOSE-NOT-EFFECTIVE the console prints status.','cfc2c80635e9c62252455d99fea92f32df125876','p8','2026-11-21 03:39:00');
-INSERT INTO "explanations" VALUES(3,'subsystem','B-02','purpose','recorded','LENS-PURPOSE-NOT-EFFECTIVE the console prints status.','cfc2c80635e9c62252455d99fea92f32df125876','p8','2026-11-21 03:39:00');
-INSERT INTO "explanations" VALUES(4,'subsystem','B-02','purpose','withdrawn','reset: the subsystem was resurveyed','cfc2c80635e9c62252455d99fea92f32df125876','p8','2026-11-21 03:39:00');
-INSERT INTO "explanations" VALUES(5,'project','project','purpose','imported','LensFixture records rows on one path and serves them on another, with a shared buffer between them.','cfc2c80635e9c62252455d99fea92f32df125876','p8','2026-11-21 03:39:00');
+INSERT INTO "explanations" VALUES(1,'subsystem','F-01','purpose','recorded','LENS-PURPOSE-NOT-EFFECTIVE the console prints status.','0e5ac6940690be78954049d81682906deb671336','p8','2026-11-21 04:56:06');
+INSERT INTO "explanations" VALUES(2,'subsystem','B-03','purpose','recorded','LENS-PURPOSE-NOT-EFFECTIVE the console prints status.','0e5ac6940690be78954049d81682906deb671336','p8','2026-11-21 04:56:06');
+INSERT INTO "explanations" VALUES(3,'subsystem','B-02','purpose','recorded','LENS-PURPOSE-NOT-EFFECTIVE the console prints status.','0e5ac6940690be78954049d81682906deb671336','p8','2026-11-21 04:56:06');
+INSERT INTO "explanations" VALUES(4,'subsystem','B-02','purpose','withdrawn','reset: the subsystem was resurveyed','0e5ac6940690be78954049d81682906deb671336','p8','2026-11-21 04:56:06');
+INSERT INTO "explanations" VALUES(5,'project','project','purpose','imported','LensFixture records rows on one path and serves them on another, with a shared buffer between them.','0e5ac6940690be78954049d81682906deb671336','p8','2026-11-21 04:56:06');
 CREATE TABLE field_notes (
     id              INTEGER PRIMARY KEY,
     category        TEXT    NOT NULL CHECK (category IN (
@@ -1061,9 +1061,9 @@ CREATE TABLE finding_resolution_events (
            OR (fix_location IS NOT NULL AND fix_sha IS NOT NULL)),
     CHECK (resolution_state != 'verified-fixed' OR evidence_id IS NOT NULL)
 );
-INSERT INTO "finding_resolution_events" VALUES(1,NULL,'B01-1','open',NULL,NULL,NULL,NULL,'fixture','p8','2026-11-21 03:39:00');
-INSERT INTO "finding_resolution_events" VALUES(2,NULL,'B02-1','fixed-pending-verification','src/writer.ts','bbbbbbbbbbbb2222bbbbbbbbbbbb2222bbbbbbbb',NULL,NULL,'fixture','p8','2026-11-21 03:39:00');
-INSERT INTO "finding_resolution_events" VALUES(3,NULL,'B02-2','accepted',NULL,NULL,NULL,NULL,'fixture','p8','2026-11-21 03:39:00');
+INSERT INTO "finding_resolution_events" VALUES(1,NULL,'B01-1','open',NULL,NULL,NULL,NULL,'fixture','p8','2026-11-21 04:56:06');
+INSERT INTO "finding_resolution_events" VALUES(2,NULL,'B02-1','fixed-pending-verification','src/writer.ts','bbbbbbbbbbbb2222bbbbbbbbbbbb2222bbbbbbbb',NULL,NULL,'fixture','p8','2026-11-21 04:56:06');
+INSERT INTO "finding_resolution_events" VALUES(3,NULL,'B02-2','accepted',NULL,NULL,NULL,NULL,'fixture','p8','2026-11-21 04:56:06');
 CREATE TABLE finding_severity_events (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     finding_id         TEXT NOT NULL REFERENCES findings(finding_id) ON DELETE CASCADE,
@@ -1095,9 +1095,9 @@ CREATE TABLE findings (
     created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "findings" VALUES('B01-1','B-01','B01-1 drops a row under load','the buffer is reused before the reader is done with it','CRITICAL','confirmed-bug',NULL,'["src/a/b.ts", "src/shared.ts:writeRow@aaaa1111"]',NULL,'aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey','2026-11-21 03:39:00','2026-11-21 03:39:00');
-INSERT INTO "findings" VALUES('B02-1','B-02','B02-1 drops a row under load','the buffer is reused before the reader is done with it','HIGH','fixed',NULL,'["src/shared.ts"]',NULL,'aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey','2026-11-21 03:39:00','2026-11-21 03:39:00');
-INSERT INTO "findings" VALUES('B02-2','B-02','B02-2 drops a row under load','the buffer is reused before the reader is done with it','LOW','confirmed-acceptable',NULL,'["src/shared.ts"]',NULL,'aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey','2026-11-21 03:39:00','2026-11-21 03:39:00');
+INSERT INTO "findings" VALUES('B01-1','B-01','B01-1 drops a row under load','the buffer is reused before the reader is done with it','CRITICAL','confirmed-bug',NULL,'["src/a/b.ts", "src/shared.ts:writeRow@aaaa1111"]',NULL,'aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey','2026-11-21 04:56:06','2026-11-21 04:56:06');
+INSERT INTO "findings" VALUES('B02-1','B-02','B02-1 drops a row under load','the buffer is reused before the reader is done with it','HIGH','fixed',NULL,'["src/shared.ts"]',NULL,'aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey','2026-11-21 04:56:06','2026-11-21 04:56:06');
+INSERT INTO "findings" VALUES('B02-2','B-02','B02-2 drops a row under load','the buffer is reused before the reader is done with it','LOW','confirmed-acceptable',NULL,'["src/shared.ts"]',NULL,'aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','p8','survey','2026-11-21 04:56:06','2026-11-21 04:56:06');
 CREATE TABLE git_state (
     repo_id          TEXT    PRIMARY KEY DEFAULT 'default',
     canonical_branch TEXT    NOT NULL,              -- detected during onboarding: main, master, trunk, etc.
@@ -1108,7 +1108,7 @@ CREATE TABLE git_state (
     detected_branches TEXT,                          -- JSON array of branches seen at onboarding
     notes            TEXT
 );
-INSERT INTO "git_state" VALUES('default','main',NULL,'cfc2c80635e9c62252455d99fea92f32df125876','2026-09-11T12:00:00Z','cfc2c80635e9c62252455d99fea92f32df125876',NULL,NULL);
+INSERT INTO "git_state" VALUES('default','main',NULL,'0e5ac6940690be78954049d81682906deb671336','2026-09-11T12:00:00Z','0e5ac6940690be78954049d81682906deb671336',NULL,NULL);
 CREATE TABLE imported_artifact_withdrawals (
     id            INTEGER PRIMARY KEY,
     path          TEXT    NOT NULL REFERENCES imported_artifacts(path) ON DELETE RESTRICT,
@@ -1140,7 +1140,7 @@ A dated reading path recorded by an earlier session.
 ## What is this codebase?
 
 LensFixture records rows on one path and serves them on another, with a shared buffer between them.
-','472f6016bf80439d2b701d6bf94e1f1928953ed38c0a06a69479e15b02755283','0123456789abcdef0123456789abcdef',1,'cfc2c80635e9c62252455d99fea92f32df125876','2026-10-02 09:30:00','2026-11-21 03:39:00','p8');
+','472f6016bf80439d2b701d6bf94e1f1928953ed38c0a06a69479e15b02755283','0123456789abcdef0123456789abcdef',1,'0e5ac6940690be78954049d81682906deb671336','2026-10-02 09:30:00','2026-11-21 04:56:06','p8');
 INSERT INTO "imported_artifacts" VALUES(2,'onboarding-report.md','onboarding-report',NULL,'# Onboarding report
 
 **Codebase**: LensFixture — P8 gate fixture
@@ -1148,11 +1148,11 @@ INSERT INTO "imported_artifacts" VALUES(2,'onboarding-report.md','onboarding-rep
 ## Directory clusters
 
 - src/ — the read and write paths
-','77d125aac4a7b8e890daa4b0fb675f0cd0f66bb54921c6a81895af38eb1abb08','0123456789abcdef0123456789abcdef',1,'cfc2c80635e9c62252455d99fea92f32df125876','2026-10-02 09:30:00','2026-11-21 03:39:00','p8');
+','77d125aac4a7b8e890daa4b0fb675f0cd0f66bb54921c6a81895af38eb1abb08','0123456789abcdef0123456789abcdef',1,'0e5ac6940690be78954049d81682906deb671336','2026-10-02 09:30:00','2026-11-21 04:56:06','p8');
 INSERT INTO "imported_artifacts" VALUES(3,'concern-checklist.md','concern-checklist',NULL,'# Concern checklist
 
 Seeded from the calibrated set.
-','be3f3959c3d4fc906142455e88d36d67a670fb3f8a8dc651a97f04f7fc916f27','0123456789abcdef0123456789abcdef',1,'cfc2c80635e9c62252455d99fea92f32df125876','2026-10-02 09:30:00','2026-11-21 03:39:00','p8');
+','be3f3959c3d4fc906142455e88d36d67a670fb3f8a8dc651a97f04f7fc916f27','0123456789abcdef0123456789abcdef',1,'0e5ac6940690be78954049d81682906deb671336','2026-10-02 09:30:00','2026-11-21 04:56:06','p8');
 CREATE TABLE learning_evaluations (
     evaluation_id       TEXT PRIMARY KEY,
     lesson_id           TEXT NOT NULL UNIQUE REFERENCES learning_lessons(lesson_id) ON DELETE RESTRICT,
@@ -1416,7 +1416,7 @@ CREATE TABLE project_profile (
     session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "project_profile" VALUES(1,'LensFixture','cfc2c80635e9c62252455d99fea92f32df125876','p8','2026-11-21 03:39:00');
+INSERT INTO "project_profile" VALUES(1,'LensFixture','0e5ac6940690be78954049d81682906deb671336','p8','2026-11-21 04:56:06');
 CREATE TABLE projection_mismatches (
     id              INTEGER PRIMARY KEY,
     run_id          TEXT NOT NULL REFERENCES projection_verification_runs(run_id) ON DELETE CASCADE,
@@ -2085,11 +2085,11 @@ CREATE TABLE scope_gaps (
     detected_sha    TEXT,
     PRIMARY KEY (file_path, kind)
 );
-INSERT INTO "scope_gaps" VALUES('README.md','unledgered',NULL,'2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
-INSERT INTO "scope_gaps" VALUES('docs/guide.md','unledgered',NULL,'2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
-INSERT INTO "scope_gaps" VALUES('src/new.ts','unledgered',NULL,'2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
-INSERT INTO "scope_gaps" VALUES('tools/build.sh','unledgered',NULL,'2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
-INSERT INTO "scope_gaps" VALUES('src/gone.ts','absent','B-02','2026-11-21 03:39:00','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
+INSERT INTO "scope_gaps" VALUES('README.md','unledgered',NULL,'2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
+INSERT INTO "scope_gaps" VALUES('docs/guide.md','unledgered',NULL,'2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
+INSERT INTO "scope_gaps" VALUES('src/new.ts','unledgered',NULL,'2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
+INSERT INTO "scope_gaps" VALUES('tools/build.sh','unledgered',NULL,'2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
+INSERT INTO "scope_gaps" VALUES('src/gone.ts','absent','B-02','2026-11-21 04:56:06','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa');
 CREATE TABLE scope_reconciliations (
     id              INTEGER PRIMARY KEY,
     detected_sha    TEXT    NOT NULL,   -- resolved, 40 hex, from rev-parse <R>^{commit}
@@ -2103,7 +2103,7 @@ CREATE TABLE scope_reconciliations (
     session_id      TEXT,
     detected_at     TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "scope_reconciliations" VALUES(1,'cfc2c80635e9c62252455d99fea92f32df125876','b004630bc3160c2e947cfe007f0888c80af945c347ba1ae0105a2a4301f25908','f2ad9f29266210778e28859acbacddea1e33c96a51aaed6a64752a66bd4ae5ea',15,12,4,1,2,'p8','2026-11-21 03:39:00');
+INSERT INTO "scope_reconciliations" VALUES(1,'0e5ac6940690be78954049d81682906deb671336','b004630bc3160c2e947cfe007f0888c80af945c347ba1ae0105a2a4301f25908','f2ad9f29266210778e28859acbacddea1e33c96a51aaed6a64752a66bd4ae5ea',15,12,4,1,2,'p8','2026-11-21 04:56:06');
 CREATE TABLE seams (
     id                  TEXT    PRIMARY KEY,       -- e.g. 'SM-01'
     shared_object       TEXT    NOT NULL,          -- 'user_cache', 'jobs_queue', 'orders table'
@@ -2124,9 +2124,9 @@ CREATE TABLE seams (
     created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at          TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "seams" VALUES('SM-1','the row buffer',NULL,'B-01','B-02',NULL,NULL,NULL,NULL,'the buffer is written before it is read',NULL,NULL,NULL,NULL,'2026-11-21 03:39:00','2026-11-21 03:39:00');
-INSERT INTO "seams" VALUES('SM-2','the queue handle',NULL,'B-02','B-03',NULL,NULL,NULL,NULL,'the buffer is written before it is read',NULL,NULL,NULL,NULL,'2026-11-21 03:39:00','2026-11-21 03:39:00');
-INSERT INTO "seams" VALUES('SM-3','the console bridge',NULL,'B-01','F-01',NULL,NULL,NULL,NULL,'the buffer is written before it is read',NULL,NULL,NULL,NULL,'2026-11-21 03:39:00','2026-11-21 03:39:00');
+INSERT INTO "seams" VALUES('SM-1','the row buffer',NULL,'B-01','B-02',NULL,NULL,NULL,NULL,'the buffer is written before it is read',NULL,NULL,NULL,NULL,'2026-11-21 04:56:06','2026-11-21 04:56:06');
+INSERT INTO "seams" VALUES('SM-2','the queue handle',NULL,'B-02','B-03',NULL,NULL,NULL,NULL,'the buffer is written before it is read',NULL,NULL,NULL,NULL,'2026-11-21 04:56:06','2026-11-21 04:56:06');
+INSERT INTO "seams" VALUES('SM-3','the console bridge',NULL,'B-01','F-01',NULL,NULL,NULL,NULL,'the buffer is written before it is read',NULL,NULL,NULL,NULL,'2026-11-21 04:56:06','2026-11-21 04:56:06');
 CREATE TABLE sessions (
     session_id   TEXT    PRIMARY KEY,
     intent       TEXT    NOT NULL,                -- 'onboarding', 'survey B-01', 'refresh', 'adversarial-sweep'
@@ -2134,7 +2134,7 @@ CREATE TABLE sessions (
     ended_at     TEXT,                            -- NULL while active; set by end_session
     outcome      TEXT                             -- free text note — 'completed', 'deferred', 'superseded', etc.
 );
-INSERT INTO "sessions" VALUES('p8','fixture','2026-11-21 03:39:00',NULL,NULL);
+INSERT INTO "sessions" VALUES('p8','fixture','2026-11-21 04:56:06',NULL,NULL);
 CREATE TABLE staleness_clears (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     subsystem_id       TEXT    NOT NULL,
@@ -2200,11 +2200,11 @@ CREATE TABLE subsystems (
     created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at       TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "subsystems" VALUES('B-01','Read path','mapped','backend','src/reader.ts and the two files it re-exports','Open src/reader.ts first; it names every other file in this region.',NULL,NULL,'2026-11-21 03:39:00','2026-11-21 03:39:00');
-INSERT INTO "subsystems" VALUES('B-02','Write path','mapped','backend','src/writer.ts, src/shared.ts',NULL,NULL,NULL,'2026-11-21 03:39:00','2026-11-21 03:39:00');
-INSERT INTO "subsystems" VALUES('B-03','Queue','scoping','backend',NULL,NULL,NULL,NULL,'2026-11-21 03:39:00','2026-11-21 03:39:00');
-INSERT INTO "subsystems" VALUES('F-01','Console','deferred','frontend','ui/console.ts',NULL,'Set aside: the console is vendored from upstream and is not read here.',NULL,'2026-11-21 03:39:00','2026-11-21 03:39:00');
-INSERT INTO "subsystems" VALUES('F-02','Widgets','deferred','frontend',NULL,NULL,NULL,NULL,'2026-11-21 03:39:00','2026-11-21 03:39:00');
+INSERT INTO "subsystems" VALUES('B-01','Read path','mapped','backend','src/reader.ts and the two files it re-exports','Open src/reader.ts first; it names every other file in this region.',NULL,NULL,'2026-11-21 04:56:06','2026-11-21 04:56:06');
+INSERT INTO "subsystems" VALUES('B-02','Write path','mapped','backend','src/writer.ts, src/shared.ts',NULL,NULL,NULL,'2026-11-21 04:56:06','2026-11-21 04:56:06');
+INSERT INTO "subsystems" VALUES('B-03','Queue','scoping','backend',NULL,NULL,NULL,NULL,'2026-11-21 04:56:06','2026-11-21 04:56:06');
+INSERT INTO "subsystems" VALUES('F-01','Console','deferred','frontend','ui/console.ts',NULL,'Set aside: the console is vendored from upstream and is not read here.',NULL,'2026-11-21 04:56:06','2026-11-21 04:56:06');
+INSERT INTO "subsystems" VALUES('F-02','Widgets','deferred','frontend',NULL,NULL,NULL,NULL,'2026-11-21 04:56:06','2026-11-21 04:56:06');
 CREATE TABLE territory_dispositions (
     id               INTEGER PRIMARY KEY,
     territory        TEXT    NOT NULL CHECK (length(territory) > 0),
@@ -2236,7 +2236,7 @@ CREATE TABLE vocabulary (
     created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO "vocabulary" VALUES('row buffer','the shared page the writer fills and the reader drains',NULL,'B-01','src/reader.ts','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','2026-11-21 03:39:00','2026-11-21 03:39:00');
+INSERT INTO "vocabulary" VALUES('row buffer','the shared page the writer fills and the reader drains',NULL,'B-01','src/reader.ts','aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa','2026-11-21 04:56:06','2026-11-21 04:56:06');
 CREATE TABLE vocabulary_declinations (
     id            INTEGER PRIMARY KEY,
     subsystem_id  TEXT    NOT NULL,
@@ -2269,7 +2269,7 @@ CREATE TABLE xrefs (
     context       TEXT,              -- one-line: why this link matters
     PRIMARY KEY (from_id, to_id, relationship)
 );
-INSERT INTO "xrefs" VALUES('B-01','B-02','depends-on','confirmed','2026-11-21 03:39:00','the reader drains the buffer');
+INSERT INTO "xrefs" VALUES('B-01','B-02','depends-on','confirmed','2026-11-21 04:56:06','the reader drains the buffer');
 CREATE INDEX idx_entries_subsystem ON entries(subsystem_id);
 CREATE INDEX idx_entries_tier      ON entries(tier);
 CREATE INDEX idx_entries_stale     ON entries(stale) WHERE stale = 1;

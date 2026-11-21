@@ -21,5 +21,3 @@ Terms on this page: [Conspectus](how-to-read.md#term-conspectus) · [Subsystem](
 | Host agent | external | scheduler service | stdio RPC | Starts the scheduler process. |
 | Scheduler service | Python | auth service | HTTPS request | Dispatches authenticated jobs. |
 | Auth service | TypeScript | policy database | SQL transaction | Owns authorization decisions. |
-
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*

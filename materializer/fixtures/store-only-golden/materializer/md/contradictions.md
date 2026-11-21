@@ -10,4 +10,3 @@ No disagreement between findings has been settled. 0 pairs still stand undiscrim
 - **Basis** — `contradictions` whose resolution is recorded, with `contradiction_resolution_events` for the account of how.
 - **Checked revision** — `deadbeefdead` on `main`.
 
-*Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.*
