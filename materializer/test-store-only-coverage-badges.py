@@ -374,8 +374,8 @@ def wanted_badges(storage: Path, hot: dict[str, dict[str, int]]) -> dict[tuple[s
 # ---------------------------------------------------------------------------
 
 _ADDED = re.compile(
-    r'<figure\b[^>]*data-diagram="(?:coverage-bars|seam-contract)"[^>]*>.*?</figure>\n?'
-    r'|<p class="diagram-below"[^>]*data-diagram="(?:coverage-bars|seam-contract)"[^>]*>.*?</p>\n?'
+    r'<figure\b[^>]*data-diagram="(?:coverage-bars|seam-contract|flow-strip)"[^>]*>.*?</figure>\n?'
+    r'|<p class="diagram-below"[^>]*data-diagram="(?:coverage-bars|seam-contract|flow-strip)"[^>]*>.*?</p>\n?'
     r'|<div class="atlas-badges"[^>]*>.*?</div>'
     r'|<g class="boundary-svg-badge"[^>]*>.*?</g>'
     r'|<p class="finding-badge-note"[^>]*>.*?</p>\n?',
@@ -383,8 +383,8 @@ _ADDED = re.compile(
 )
 
 
-# SO24 adds seam contracts to the System boundaries page (PLAN §3.2's update rule); taking them out
-# can leave the wrapper that held a run of paragraphs empty.
+# SO24 adds seam contracts to the System boundaries page and SO25 flow strips to the subsystem pages
+# (PLAN §3.2's update rule); taking them out can leave the wrapper that held a run of paragraphs empty.
 _EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 
 

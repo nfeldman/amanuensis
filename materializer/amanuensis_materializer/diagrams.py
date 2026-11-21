@@ -33,9 +33,11 @@ from .page import (
     DiagramNode,
     Inlines,
     Paragraph,
+    Row,
     RuntimeDiagram,
     RuntimeRow,
     StalenessBars,
+    Table,
     Topology,
     TopologyEdge,
 )
@@ -833,6 +835,7 @@ def badge_note(conn: sqlite3.Connection, badges: dict[str, tuple[Badge, ...]]) -
 
 VIEW_WIDTH = 960
 KIND_SEAM = "seam-contract"
+KIND_FLOW = "flow-strip"
 #: Marks a diagram needs before it is worth drawing (Appendix B rule 11).
 MIN_PASSES = 2
 MIN_RUNGS = 2
@@ -1304,6 +1307,299 @@ def _seam_party_detail(names: dict[str, tuple[str, str]], sid: str, depth: str) 
     return f"{name}\n{shown}" + ("" if depth in SEAM_HALVES_FROM else "\nhalf not drawn")
 
 
+# -- A3: the flow strip -------------------------------------------------------
+
+#: Appendix B rule 2: a flow is drawn from `structural` up; below it the flow is a sentence.
+FLOW_FROM = ("structural", "concerns", "adversarial", "mapped")
+#: A strip needs this many steps to be worth drawing, wraps after FLOW_BAND, and past MAX_FLOW_STEPS is a table.
+MIN_FLOW_STEPS = 3
+FLOW_BAND = 12
+MAX_FLOW_STEPS = 20
+#: A step with more exits than this lists them in the account and draws none.
+MAX_EXITS_DRAWN = 2
+FLOW_MARKS_NOT_RECORDED = (
+    "Marks not recorded: no commit point, crash point, exit or seam crossing is recorded for this flow,"
+    " and the survey did not say it has none."
+)
+_FLOW_KEY = re.compile(r"^([^/\s]+)/flow/([a-z0-9]+(?:-[a-z0-9]+)*)$")
+_FLOW_STEP_KEY = re.compile(r"^([^/\s]+)/flow/([a-z0-9]+(?:-[a-z0-9]+)*)/([0-9]{2,})$")
+#: How sure a step's claim is, as the line its box is drawn with (Appendix B rule 7).
+_STEP_STYLE = {"inference": "dashed", "hypothesis": "dotted", "open-question": "dotted"}
+_STEP_KIND_PHRASE = {"observation": "an observation", "inference": "an inference", "hypothesis": "a hypothesis", "open-question": "an open question"}
+#: The marks drawn below their step; every other kind but the commit point is drawn above.
+_MARKS_BELOW = ("exit",)
+_LEAVES_FLOW = "leaves-flow"
+
+
+def _like_escaped(text: str) -> str:
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def flow_steps(conn: sqlite3.Connection, flow_key: str) -> list[dict[str, Any]]:
+    """A flow's current step claims (`<sid>/flow/<slug>/<nn>`), in step-number order."""
+
+    found = rows(
+        conn,
+        "SELECT claim_id, claim_key, statement, epistemic_kind, asserted_at_sha FROM claims"
+        " WHERE valid_until_sha IS NULL AND claim_key LIKE ? ESCAPE '\\'",
+        (f"{_like_escaped(flow_key)}/%",),
+    )
+    steps = []
+    for claim in found:
+        match = _FLOW_STEP_KEY.match(str(claim["claim_key"]))
+        if match and f"{match.group(1)}/flow/{match.group(2)}" == flow_key:
+            steps.append({**claim, "step": match.group(3)})
+    return sorted(steps, key=lambda c: (int(c["step"]), str(c["step"])))
+
+
+def flow_keys(conn: sqlite3.Connection, subsystem_id: str) -> list[str]:
+    """The flows (`<sid>/flow/<slug>`) a subsystem has a current step claim for, in name order."""
+
+    found = rows(
+        conn,
+        "SELECT claim_key FROM claims WHERE valid_until_sha IS NULL AND claim_key LIKE ? ESCAPE '\\'",
+        (f"{_like_escaped(subsystem_id)}/flow/%",),
+    )
+    keys = set()
+    for claim in found:
+        match = _FLOW_STEP_KEY.match(str(claim["claim_key"]))
+        if match and match.group(1) == subsystem_id:
+            keys.add(f"{match.group(1)}/flow/{match.group(2)}")
+    return sorted(keys)
+
+
+def _flow_marks(conn: sqlite3.Connection, flow_key: str) -> list[dict[str, Any]]:
+    """The current, unwithdrawn marks of a flow's current steps, oldest first.
+
+    A closed claim's marks are not current (§7.2): only a mark on a step that is still current is read.
+    """
+
+    if not table_exists(conn, "claim_marks"):
+        return []
+    withdrawn = (
+        " AND NOT EXISTS (SELECT 1 FROM claim_mark_withdrawals w WHERE w.mark_id = m.id)"
+        if table_exists(conn, "claim_mark_withdrawals") else ""
+    )
+    found = rows(
+        conn,
+        "SELECT m.id, m.claim_id, m.kind, m.label, m.target, c.claim_key FROM claim_marks m"
+        " JOIN claims c ON c.claim_id = m.claim_id"
+        f" WHERE c.valid_until_sha IS NULL AND c.claim_key LIKE ? ESCAPE '\\'{withdrawn} ORDER BY m.id",
+        (f"{_like_escaped(flow_key)}/%",),
+    )
+    marks = []
+    for mark in found:
+        match = _FLOW_STEP_KEY.match(str(mark["claim_key"]))
+        if match and f"{match.group(1)}/flow/{match.group(2)}" == flow_key:
+            marks.append({**mark, "step": match.group(3)})
+    return marks
+
+
+def _flow_declination(conn: sqlite3.Connection, flow_key: str) -> str:
+    if not table_exists(conn, "claim_mark_declinations"):
+        return ""
+    found = row(conn, "SELECT reason FROM claim_mark_declinations WHERE flow_key = ? ORDER BY id DESC LIMIT 1", (flow_key,))
+    return " ".join(str(found["reason"]).split()) if found else ""
+
+
+def _flow_marks_note(marks: Sequence[dict[str, Any]], declination: str) -> list[str]:
+    """What the store says about a flow's marks: none recorded, declined, or present without a commit point."""
+
+    if not marks and declination:
+        return [f"The survey recorded no marks for this flow and said why: {declination}"]
+    if not marks:
+        return [FLOW_MARKS_NOT_RECORDED]
+    out = []
+    if not any(m["kind"] == "commit-point" for m in marks):
+        out.append(
+            "The survey declined to name a commit point and said why: " + declination
+            if declination else "No commit point is recorded for this flow."
+        )
+    elif declination:
+        out.append(f"A declination is also on record: {declination}")
+    return out
+
+
+def _flow_mark_text(mark: dict[str, Any]) -> str:
+    """One mark as a reader's line: the account's item and the words in its box."""
+
+    step, label, target = mark["step"], str(mark["label"] or "").strip(), str(mark["target"] or "").strip()
+    kind = str(mark["kind"])
+    if kind == "commit-point":
+        return f"Commit point after step {step}: the flow's effect is kept from here."
+    if kind == "crash-point":
+        return f"Crash point at step {step}: {label or 'no label recorded'}."
+    if kind == "exit":
+        where = "leaves the flow" if target == _LEAVES_FLOW else f"unwinds to step {target}"
+        return f"Exit at step {step}: {label or 'no label recorded'}, {where}."
+    if kind == "crosses-seam":
+        return f"Crosses seam {target} at step {step}."
+    return f"Trigger at step {step}: the flow starts here."
+
+
+def _flow_mark_box(mark: dict[str, Any]) -> str:
+    """What a mark's box says, shorter than its account line."""
+
+    kind, label, target = str(mark["kind"]), str(mark["label"] or "").strip(), str(mark["target"] or "").strip()
+    if kind == "crash-point":
+        return f"Crash: {label}"
+    if kind == "exit":
+        return f"Exit: {label} → " + ("leaves flow" if target == _LEAVES_FLOW else f"step {target}")
+    if kind == "crosses-seam":
+        return f"Seam {target}"
+    if kind == "commit-point":
+        return "Kept"
+    return "Trigger"
+
+
+def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
+    """A3: one flow as a strip of its steps in `<nn>` order, with the marks the survey recorded on them.
+
+    A step is a box (solid for an observation, dashed for an inference, dotted for a hypothesis
+    or an open question), joined to its neighbour on the same row. A commit point is a line just
+    after its step; a trigger, a crash point and a seam crossing sit above their step and an exit
+    below it. A flow of fewer than three steps, or one below `structural`, is a sentence; one
+    of more than twenty is a sentence and a table (`flow_step_table`); one of more than twelve
+    wraps. A flow with no marks and no declination says its marks were not recorded.
+    """
+
+    found = _FLOW_KEY.match(flow_key)
+    sid, slug = found.groups() if found else (flow_key.split("/", 1)[0], flow_key)
+    title = f"Flow {slug} of {sid}"
+    caption = f"In what order does {slug} run, where is its effect kept, and where can it stop?"
+    steps = flow_steps(conn, flow_key)
+    marks = _flow_marks(conn, flow_key)
+    declination = _flow_declination(conn, flow_key)
+    note = " ".join(_flow_marks_note(marks, declination))
+    shas = sorted({str(s["asserted_at_sha"]) for s in steps if s["asserted_at_sha"]})
+    read_at = (
+        f"Read at revision {shas[0][:8]}, the one its steps were asserted at." if len(shas) == 1
+        else f"Its steps were asserted at revisions {', '.join(sha[:8] for sha in shas)}." if shas
+        else "No revision is recorded for these steps, so none is printed."
+    )
+    n = len(steps)
+    if n == 0:
+        return Diagram(KIND_FLOW, flow_key, title, caption, below=f"No current step is recorded for {flow_key}, so no strip is drawn.", read_at=read_at)
+    found_status = row(conn, "SELECT status FROM subsystems WHERE id = ?", (sid,))
+    depth = str(found_status["status"]) if found_status and found_status["status"] else "unmapped"
+    if depth not in FLOW_FROM:
+        return Diagram(
+            KIND_FLOW, flow_key, title, caption,
+            below=(
+                f"{flow_key} has {_count(n, 'step')}, but {sid} is at {_DEPTH_LABELS.get(depth, depth)},"
+                " and a flow is drawn from Structural up, so no strip is drawn."
+            ),
+            read_at=read_at,
+        )
+    if n < MIN_FLOW_STEPS:
+        return Diagram(
+            KIND_FLOW, flow_key, title, caption,
+            below=f"{flow_key} has {_count(n, 'step')}, and a strip is drawn from {MIN_FLOW_STEPS}, so none is drawn. {note}",
+            read_at=read_at,
+        )
+    if n > MAX_FLOW_STEPS:
+        return Diagram(
+            KIND_FLOW, flow_key, title, caption,
+            below=(
+                f"{flow_key} has {_count(n, 'step')}, more than the {MAX_FLOW_STEPS} a strip draws,"
+                f" so they are numbered in the table below. {note}"
+            ),
+            read_at=read_at,
+        )
+    slug_id = _id_part(slug)
+    exits_at: dict[str, int] = {}
+    for mark in marks:
+        if mark["kind"] == "exit":
+            exits_at[mark["step"]] = exits_at.get(mark["step"], 0) + 1
+    column_of = {s["step"]: i for i, s in enumerate(steps)}
+    nodes: list[DiagramNode] = []
+    edges: list[DiagramEdge] = []
+    items: list[tuple[str, str]] = []
+    for index, s in enumerate(steps):
+        kind = str(s["epistemic_kind"] or "")
+        anchor = f"flow-strip-{slug_id}-{s['step']}"
+        nodes.append(DiagramNode(
+            f"flow-step:{s['claim_id']}", str(s["step"]), index // FLOW_BAND, index % FLOW_BAND, " ".join(str(s["statement"]).split()),
+            _STEP_STYLE.get(kind, "solid"), f"#{anchor}",
+        ))
+        items.append((anchor, f"Step {s['step']}: {' '.join(str(s['statement']).split())} ({_STEP_KIND_PHRASE.get(kind, kind or 'kind not recorded')})."))
+        if index and index // FLOW_BAND == (index - 1) // FLOW_BAND:
+            before = steps[index - 1]
+            edges.append(DiagramEdge(f"flow-next:{before['claim_id']}:{s['claim_id']}", f"flow-step:{before['claim_id']}", f"flow-step:{s['claim_id']}"))
+    crowded = sorted(step for step, count in exits_at.items() if count > MAX_EXITS_DRAWN)
+    for mark in marks:
+        anchor = f"flow-strip-{slug_id}-mark-{mark['id']}"
+        items.append((anchor, _flow_mark_text(mark)))
+        if mark["kind"] == "exit" and mark["step"] in crowded:
+            continue
+        position = column_of[mark["step"]]
+        href = f"../seams.html#{str(mark['target']).lower()}" if mark["kind"] == "crosses-seam" and mark["target"] else f"#{anchor}"
+        nodes.append(DiagramNode(f"flow-mark:{mark['id']}", _flow_mark_box(mark), position // FLOW_BAND, position % FLOW_BAND, str(mark["kind"]), "solid", href))
+    bands = (n + FLOW_BAND - 1) // FLOW_BAND
+    kinds_present = [str(v["value"]) for v in VOCABULARY["claim_mark_kind"]["values"] if any(m["kind"] == v["value"] for m in marks)]  # type: ignore[index,union-attr]
+    contract = {str(v["value"]): v for v in VOCABULARY["claim_mark_kind"]["values"]}  # type: ignore[index,union-attr]
+    marked = {m["step"] for m in marks}
+    bare = n - len(marked)
+    account = [
+        f"{_count(n, 'step')}, in number order, left to right"
+        + (f", then down: the strip wraps after {FLOW_BAND} steps. Rows are not joined by an arrow." if bands > 1 else ".")
+        + " An arrow joins a step to the next one on its row. A solid box rests on an observation, a dashed one on an inference,"
+        " a dotted one on a hypothesis or an open question.",
+    ]
+    if marks:
+        key = {
+            "commit-point": "a vertical line just after a step is a commit point",
+            "trigger": "a box above step 00 is its trigger",
+            "crash-point": "a box above a step is a crash point",
+            "crosses-seam": "a box above a step that names a seam crosses it, and links it",
+            "exit": "a box below a step is an exit",
+        }
+        account.append(f"{_count(len(marks), 'mark')} recorded: " + "; ".join(key[k] for k in kinds_present) + ".")
+    account.append(f"{bare} of {n} steps {'has' if bare == 1 else 'have'} no recorded mark.")
+    account.extend(_flow_marks_note(marks, declination))
+    for step in crowded:
+        account.append(
+            f"Step {step} has {exits_at[step]} exits, more than {_count_word(MAX_EXITS_DRAWN)}, so they are listed here and not drawn."
+        )
+    for kind in kinds_present:
+        account.append(f"A {str(contract[kind]['label']).lower()} cannot justify {contract[kind]['cannot_justify']}.")
+    return Diagram(KIND_FLOW, flow_key, title, caption, (), tuple(nodes), tuple(edges), tuple(account), tuple(items), read_at=read_at)
+
+
+def _count_word(n: int) -> str:
+    return {1: "one", 2: "two"}.get(n, str(n))
+
+
+def flow_step_table(conn: sqlite3.Connection, flow_key: str) -> Table | None:
+    """A flow past the strip's size: every step, numbered, with the marks recorded on it."""
+
+    steps = flow_steps(conn, flow_key)
+    if len(steps) <= MAX_FLOW_STEPS:
+        return None
+    marks = _flow_marks(conn, flow_key)
+    body = []
+    for s in steps:
+        here = " ".join(_flow_mark_text(m) for m in marks if m["step"] == s["step"])
+        body.append((str(s["step"]), " ".join(str(s["statement"]).split()), here or "none recorded"))
+    return Table(
+        f"steps of {flow_key}",
+        (inlines("Step"), inlines("What it does"), inlines("Marks")),
+        tuple(Row(tuple(inlines(cell) for cell in cells)) for cells in body),
+    )
+
+
+def flow_strip_blocks(conn: sqlite3.Connection, subsystem_id: str) -> list[Block]:
+    """Each flow of a subsystem, as the strip or sentence its model says, and the table when it is too long to draw."""
+
+    out: list[Block] = []
+    for key in flow_keys(conn, subsystem_id):
+        model = flow_strip_model(conn, key)
+        out.append(model)
+        if not model.nodes and (table := flow_step_table(conn, key)) is not None and "table below" in model.below:
+            out.append(table)
+    return out
+
+
 # -- drawing ----------------------------------------------------------------
 
 _GRID: dict[str, tuple[float, float, float, float, float, float]] = {
@@ -1401,6 +1697,8 @@ def draw_svg(diagram: Diagram) -> str:
         return _draw_bars(diagram)
     if diagram.kind == KIND_SEAM:
         return _draw_seam(diagram)
+    if diagram.kind == KIND_FLOW:
+        return _draw_flow(diagram)
     left, top, colw, rowh, boxw, boxh = _GRID.get(diagram.kind, _GRID["status-ladder"])
     centres: dict[str, tuple[float, float]] = {}
     for node in diagram.nodes:
@@ -1585,3 +1883,103 @@ def _draw_seam(diagram: Diagram) -> str:
         + "".join(body)
         + "</svg>"
     )
+
+
+_FLOW_LEFT, _FLOW_RIGHT = 14.0, 946.0
+_FLOW_BOX_H, _FLOW_MARK_H, _FLOW_SLOT, _FLOW_GAP = 52.0, 32.0, 40.0, 24.0
+#: Room above a row for the commit line's label, and below it for the next row.
+_FLOW_HEAD, _FLOW_FOOT = 18.0, 14.0
+
+
+def _flow_label(text: str, width: int, limit: int) -> list[str]:
+    lines = _wrap(text, max(width, 4))
+    if len(lines) > limit:
+        lines = lines[:limit]
+        lines[-1] = lines[-1][: max(width - 1, 1)].rstrip() + "…"
+    return [line if len(line) <= width else line[: max(width - 1, 1)] + "…" for line in lines]
+
+
+def _draw_flow(diagram: Diagram) -> str:
+    """A flow as one inline SVG: its steps in rows of twelve, a commit line, marks above and exits below."""
+
+    title_id, desc_id = svg_ids(diagram)
+    steps = [n for n in diagram.nodes if n.record.startswith("flow-step:")]
+    marks = [n for n in diagram.nodes if n.record.startswith("flow-mark:")]
+    per_row = max(min(len(steps), FLOW_BAND), 6)
+    colw = (_FLOW_RIGHT - _FLOW_LEFT) / per_row
+    boxw = colw - _FLOW_GAP
+    chars = int((boxw - 8) / 6.1)
+    bands = max(n.row for n in steps) + 1
+    above: dict[tuple[int, int], list[DiagramNode]] = {}
+    below: dict[tuple[int, int], list[DiagramNode]] = {}
+    commits: list[DiagramNode] = []
+    for mark in marks:
+        if mark.detail == "commit-point":
+            commits.append(mark)
+        elif mark.detail in _MARKS_BELOW:
+            below.setdefault((mark.row, mark.column), []).append(mark)
+        else:
+            above.setdefault((mark.row, mark.column), []).append(mark)
+    top_of: list[float] = []
+    box_top: list[float] = []
+    cursor = 8.0
+    for band in range(bands):
+        tall_above = max((len(v) for (b, _), v in above.items() if b == band), default=0)
+        tall_below = max((len(v) for (b, _), v in below.items() if b == band), default=0)
+        top_of.append(cursor)
+        box_top.append(cursor + _FLOW_HEAD + tall_above * _FLOW_SLOT)
+        cursor = box_top[-1] + _FLOW_BOX_H + tall_below * _FLOW_SLOT + _FLOW_FOOT
+    height = cursor
+    body: list[str] = []
+    centre = {n.record: (_FLOW_LEFT + n.column * colw + colw / 2, box_top[n.row] + _FLOW_BOX_H / 2) for n in steps}
+    for edge in diagram.edges:
+        (sx, sy), (tx, ty) = centre[edge.source], centre[edge.target]
+        body.append(svg_arrow(edge.record, (sx + boxw / 2 + 3, sy), ((sx + tx) / 2, sy), (tx - boxw / 2 - 3, ty), style=edge.style))
+    for node in steps:
+        cx, cy = centre[node.record]
+        lines = _flow_label(node.detail, chars, 2) if chars >= 14 else []
+        text = svg_text([node.label], cx, cy - 14 if lines else cy, size=12, weight="600")
+        if lines:
+            text += svg_text(lines, cx, cy + 9, size=11, fill="var(--text-muted)")
+        inner = svg_box(cx - boxw / 2, cy - _FLOW_BOX_H / 2, boxw, _FLOW_BOX_H, style=node.style) + text
+        name = escape(f"Step {node.label}: {node.detail}", quote=True)
+        body.append(f'<g data-node="{escape(node.record, quote=True)}"><a href="{escape(node.href, quote=True)}" aria-label="{name}">{inner}</a></g>')
+    for (band, column), group in sorted(above.items()):
+        cx = _FLOW_LEFT + column * colw + colw / 2
+        for slot, mark in enumerate(group):
+            bottom = box_top[band] - 8 - slot * _FLOW_SLOT
+            body.append(_flow_mark(mark, cx, bottom - _FLOW_MARK_H, boxw, chars, bottom, bottom + 8))
+    for (band, column), group in sorted(below.items()):
+        cx = _FLOW_LEFT + column * colw + colw / 2
+        for slot, mark in enumerate(group):
+            top = box_top[band] + _FLOW_BOX_H + 8 + slot * _FLOW_SLOT
+            body.append(_flow_mark(mark, cx, top, boxw, chars, top - 8, top))
+    for mark in commits:
+        x = _FLOW_LEFT + (mark.column + 1) * colw
+        y1, y2 = top_of[mark.row] + _FLOW_HEAD - 2, box_top[mark.row] + _FLOW_BOX_H + 4
+        label = svg_text(["Kept"], x, top_of[mark.row] + 6, size=11, weight="600", fill="var(--accent)")
+        line = f'<rect x="{_n(x - 1.5)}" y="{_n(y1)}" width="3" height="{_n(y2 - y1)}" fill="var(--accent)"/>'
+        name = escape(f"Commit point: {mark.label}", quote=True)
+        body.append(f'<g data-node="{escape(mark.record, quote=True)}"><a href="{escape(mark.href, quote=True)}" aria-label="{name}">{line}{label}</a></g>')
+    boxes, arrows = len(diagram.nodes), len(diagram.edges)
+    description = f"{boxes} {'box' if boxes == 1 else 'boxes'} and {arrows} {'arrow' if arrows == 1 else 'arrows'}: {diagram.caption}"
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
+        f'width="{VIEW_WIDTH}" role="img" aria-labelledby="{title_id} {desc_id}">'
+        f'<title id="{title_id}">{escape(diagram.title, quote=False)}</title>'
+        f'<desc id="{desc_id}">{escape(description, quote=False)}</desc>'
+        + "".join(body)
+        + "</svg>"
+    )
+
+
+def _flow_mark(mark: DiagramNode, cx: float, top: float, boxw: float, chars: int, from_y: float, to_y: float) -> str:
+    """A mark's box over or under its step, a short stub joining them, and its words; a link to what it names."""
+
+    lines = _flow_label(mark.label, max(chars, 7), 2)
+    # Thin rectangles, not lines: the read-back counts every `<line>` of a figure as an arrow.
+    stub = f'<rect x="{_n(cx - 0.75)}" y="{_n(from_y)}" width="1.5" height="{_n(to_y - from_y)}" fill="var(--rule-strong)"/>'
+    box = svg_box(cx - boxw / 2, top, boxw, _FLOW_MARK_H)
+    text = svg_text(lines, cx, top + _FLOW_MARK_H / 2, size=11)
+    name = escape(mark.label, quote=True)
+    return f'<g data-node="{escape(mark.record, quote=True)}"><a href="{escape(mark.href, quote=True)}" aria-label="{name}">{stub}{box}{text}</a></g>'

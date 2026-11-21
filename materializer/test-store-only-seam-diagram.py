@@ -301,9 +301,10 @@ def wanted(storage: Path) -> dict[str, dict[str, Any]]:
 # The golden corpus.
 # ---------------------------------------------------------------------------
 
+# SO25 adds flow strips to the subsystem pages; they are let go of as well.
 _ADDED = re.compile(
-    rf'<figure\b[^>]*data-diagram="{KIND}"[^>]*>.*?</figure>\n?'
-    rf'|<p class="diagram-below"[^>]*data-diagram="{KIND}"[^>]*>.*?</p>\n?',
+    rf'<figure\b[^>]*data-diagram="(?:{KIND}|flow-strip)"[^>]*>.*?</figure>\n?'
+    rf'|<p class="diagram-below"[^>]*data-diagram="(?:{KIND}|flow-strip)"[^>]*>.*?</p>\n?',
     re.S,
 )
 # Consecutive paragraphs share a wrapper; taking the figures out can leave it empty.
@@ -327,8 +328,8 @@ def start_corpus(into: Path) -> Path | None:
 
 def golden_additions_only(previous: Path | None) -> str | None:
     version = GOLDEN / "VERSION"
-    if not version.is_file() or version.read_text().strip() != PACKET:
-        return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET}"
+    if not version.is_file() or version.read_text().strip() not in (PACKET, "SO25"):
+        return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET} or a later diagram packet"
     if previous is None:
         return f"the golden corpus cannot be read from git at {START_SHA[:12]}"
     before = {str(p.relative_to(previous)): p for p in previous.rglob("*.html") if "/html/" in str(p)}
@@ -666,7 +667,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="amanuensis-so24-golden-") as tmp:
         previous = start_corpus(Path(tmp))
-        check("the golden corpus is SO24's and differs from the start's only where this packet adds",
+        check("the golden corpus is SO24's or a later diagram packet's and differs from the start's only where this packet adds",
               lambda: golden_additions_only(previous))
 
     def in_ci() -> str | None:

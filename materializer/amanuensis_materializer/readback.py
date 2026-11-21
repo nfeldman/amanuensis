@@ -2586,6 +2586,8 @@ class ProjectionVerifier:
 
         from .diagrams import (  # noqa: PLC0415 — it imports this module
             coverage_bars_model,
+            flow_keys,
+            flow_strip_model,
             seam_contract_model,
             status_ladder_model,
             survey_workflow_model,
@@ -2607,6 +2609,7 @@ class ProjectionVerifier:
                 models[page] = [
                     (("status-ladder", str(sub["id"])), status_ladder_model(conn, str(sub["id"]))),
                     (("coverage-bars", str(sub["id"])), coverage_bars_model(conn, str(sub["id"]))),
+                    *((("flow-strip", key), flow_strip_model(conn, key)) for key in flow_keys(conn, str(sub["id"]))),
                 ]
         mismatches: list[dict[str, str]] = []
         for rel, text in sorted(projection.items()):

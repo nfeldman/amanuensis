@@ -526,9 +526,8 @@ def main() -> int:
                     return f"{flow} has {len(spots)} steps and draws {len(rows_y)} row(s), not {expected_rows}"
                 if sorted(range(len(spots)), key=lambda i: (round(spots[i][1], 1), spots[i][0])) != list(range(len(spots))):
                     return f"{flow}: the boxes are not in step order, left to right and then down"
-                for i in range(len(spots)):
-                    if len([r for r in spots if round(r[1], 1) == rows_y[0]]) > BAND:
-                        return f"{flow} puts more than {BAND} steps on a row"
+                if len([r for r in spots if round(r[1], 1) == rows_y[0]]) > BAND:
+                    return f"{flow} puts more than {BAND} steps on a row"
             return None
 
         check("steps run in number order, left to right, and wrap after twelve", order_and_wrap)
@@ -546,13 +545,18 @@ def main() -> int:
                     step = f"flow-step:{m['claim_id']}"
                     rect = rect_of(figure, step)
                     body = node_body(figure, f"flow-mark:{m['id']}")
-                    line = re.search(r'<line\b[^>]*\bx1="(-?[\d.]+)"[^>]*\by1="(-?[\d.]+)"[^>]*\bx2="(-?[\d.]+)"[^>]*\by2="(-?[\d.]+)"', body)
-                    if rect is None or line is None:
+                    thin = [
+                        tuple(float(v) for v in r.groups())
+                        for r in re.finditer(r'<rect\b[^>]*\bx="(-?[\d.]+)"[^>]*\by="(-?[\d.]+)"[^>]*\bwidth="([\d.]+)"[^>]*\bheight="([\d.]+)"', body)
+                        if float(r.group(3)) <= 4
+                    ]
+                    if rect is None or not thin:
                         return f"{flow}: the commit point on {step} is not a line"
-                    x1, y1, x2, y2 = (float(v) for v in line.groups())
-                    if abs(x1 - x2) > 0.05 or abs(y1 - y2) < rect[3]:
+                    lx, ly, lw, lh = thin[0]
+                    x1 = lx + lw / 2
+                    if lh < rect[3]:
                         return f"{flow}: the commit point is not a vertical line at least as tall as its step"
-                    if not (rect[0] + rect[2] < x1 and min(y1, y2) <= rect[1] and max(y1, y2) >= rect[1] + rect[3]):
+                    if not (rect[0] + rect[2] < x1 and ly <= rect[1] and ly + lh >= rect[1] + rect[3]):
                         return f"{flow}: the commit line is not after its step"
                     # No other step's box lies between the step and its line.
                     for s in w["steps"]:

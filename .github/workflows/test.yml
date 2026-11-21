@@ -582,6 +582,9 @@ jobs:
       - name: The seam contract is drawn from the seam's four fields (GATE SO24)
         working-directory: materializer
         run: python3 test-store-only-seam-diagram.py
+      - name: The flow strip is drawn from a flow's steps and marks (GATE SO25)
+        working-directory: materializer
+        run: python3 test-store-only-flow-strip.py
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py

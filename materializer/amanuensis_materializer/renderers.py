@@ -32,6 +32,7 @@ from .diagrams import (
     dependency_section,
     depth_cell,
     finding_badges,
+    flow_strip_blocks,
     hot_spot_access,
     hot_spot_measures,
     runtime_boundary_blocks,
@@ -2306,6 +2307,8 @@ def render_subsystem(
         claim_evidence = _claim_evidence(conn, [str(c["claim_id"]) for c in claims])
         for heading, group in _claim_groups(str(sid), claims):
             structure.append(_heading(3, heading))
+            if heading == _CLAIM_KIND_HEADING["flow"]:
+                structure.extend(flow_strip_blocks(conn, str(sid)))
             # The statement is the item's first text and its coordinates are
             # one nested item, so a reader meets the sentence before the key
             # (§2.2).  Whitespace runs collapse because a line break inside the
