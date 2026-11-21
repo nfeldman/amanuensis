@@ -519,6 +519,83 @@ async function main(mods) {
     return after?.row?.id === next.id ? null : `the newer purpose was not effective: ${JSON.stringify(after?.row)}`;
   });
 
+  // §2.2: a purpose recorded at onboarding "must be readable and must render";
+  // §3.3 and D2 put it on the overview, an imported one labelled. Reading it in
+  // Python is not enough: the read-back owed it on architecture.md, which no
+  // renderer filled, so a store with a purpose could not publish (F1/codex,
+  // slice-S1).
+  check("Q4 a recorded and an imported purpose render on the overview, and the read-back holds them there", () => {
+    const LABEL = "imported from the entry point, not tied to evidence";
+    const cases = [
+      ["recorded", "It records which file does what, read from the code itself.", (ctx, body) => purpose(ctx, { args: { body } })],
+      [
+        "imported",
+        "It records which file does what, as an earlier version wrote it.",
+        (ctx, body) =>
+          ctx.db
+            .prepare(
+              `INSERT INTO explanations (subject_type, subject_id, slot, disposition, body, ref_sha, session_id)
+               VALUES ('project', 'project', 'purpose', 'imported', ?, ?, ?)`,
+            )
+            .run(body, headSha(ctx), ctx.sessionId),
+      ],
+    ];
+    for (const [kind, body, write] of cases) {
+      const ctx = world(`q4-${kind}`);
+      write(ctx, body);
+      const out = join(ctx.project.storagePath, "docs");
+      const run = (...extra) =>
+        spawnSync(
+          "python3",
+          [
+            join(materializerDir, "materialize.py"),
+            "--storage", ctx.project.storagePath,
+            "--workspace", ctx.project.workspacePath,
+            "--output", out,
+            ...extra,
+          ],
+          { encoding: "utf8", timeout: 120_000 },
+        );
+      const published = run();
+      if (published.status !== 0) {
+        const said = String(published.stdout ?? "").trim().split("\n").at(-1) ?? "";
+        let mismatches = said.slice(-400);
+        try {
+          const summary = JSON.parse(said);
+          mismatches = JSON.stringify(summary.readback?.mismatches ?? summary.mismatches ?? []).slice(0, 600);
+        } catch {
+          /* not a summary line: the tail is the evidence */
+        }
+        return `the ${kind} purpose's store did not publish (exit ${published.status}): ${mismatches}`;
+      }
+      for (const page of ["index.md", "index.html"]) {
+        const text = existsSync(join(out, page)) ? readFileSync(join(out, page), "utf8") : "";
+        if (!text.includes(body)) return `the ${kind} purpose is not on ${page}`;
+        if ((kind === "imported") !== text.includes(LABEL)) {
+          return `${page} ${kind === "imported" ? "lacks" : "carries"} the imported label for a ${kind} purpose`;
+        }
+      }
+      // The census must look for it there: remove it from the overview and the
+      // read-back's state axis turns red on the purpose.
+      const html = join(out, "index.html");
+      const original = readFileSync(html, "utf8");
+      writeFileSync(html, original.split(body).join(""));
+      const verdict = run("--readback-only");
+      writeFileSync(html, original);
+      if (verdict.status === 0) return `the read-back passed with the ${kind} purpose removed from index.html`;
+      if (!String(verdict.stdout ?? "").includes("project:purpose")) {
+        return `the read-back did not name the purpose: ${String(verdict.stdout ?? "").slice(-300)}`;
+      }
+      if (kind === "imported") {
+        writeFileSync(html, original.split(LABEL).join(""));
+        const unlabelled = run("--readback-only");
+        writeFileSync(html, original);
+        if (unlabelled.status === 0) return "the read-back passed with the imported label removed from index.html";
+      }
+    }
+    return null;
+  });
+
   check("Q3 an imported row is not admitted where the schema forbids it", () => {
     const ctx = world("q3");
     seedSubsystem(ctx, "S-01", "structural");
