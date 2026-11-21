@@ -18,7 +18,8 @@ Turns red when:
     below `concerns` (here `scoping`) draws one; a "clean" badge is drawn anywhere; a badge on
     a subsystem at `concerns` or `adversarial` is not marked "under review", or one at `mapped` is;
   - a coverage bar's segments differ from `file_standing`'s counts for its subsystem, a bar is
-    drawn for a subsystem at `unmapped` or `deferred`, a state with a zero count is drawn, or the
+    drawn for a subsystem at `unmapped` or `deferred` (tested where it holds ledger rows and a
+    reconciliation is recorded, so only its depth can stop the bar), a state with a zero count is drawn, or the
     account omits a state's count, the denominator, the revision the bar was read at, or the
     repository's tracked-path count from the latest reconciliation;
   - the Files page's repository bar differs from the latest `scope_reconciliations` row
@@ -624,6 +625,37 @@ def main() -> int:
                 return "a subsystem with no ledger row is drawn, not said in a sentence"
             if not top.nodes or top.below:
                 return "B-01 holds a ledger and a reconciliation and is not drawn"
+            # The depth guard on its own: a copy of store A, where a reconciliation is recorded, with
+            # F-01 `unmapped` and B-02 `deferred`, each holding ledger rows. Only depth can stop their bars.
+            parked = root / "parked.db"
+            shutil.copyfile(store_a / "memory.db", parked)
+            db = sqlite3.connect(parked)
+            db.row_factory = sqlite3.Row
+            try:
+                db.execute("UPDATE subsystems SET status = 'unmapped' WHERE id = 'F-01'")
+                db.execute("UPDATE subsystems SET status = 'deferred' WHERE id = 'B-02'")
+                for path, classification, stale, reason in LEDGER_F01:
+                    db.execute(
+                        "INSERT INTO file_ledger (subsystem_id, file_path, classification, ref_sha, stale, stale_reason)"
+                        " VALUES ('F-01', ?, ?, NULL, ?, ?)",
+                        (path, classification, stale, reason),
+                    )
+                db.commit()
+                if not db.execute("SELECT 1 FROM scope_reconciliations").fetchone():
+                    return "the depth fixture lost its reconciliation"
+                whole = diagrams.coverage_bars_model(db)
+                for sid, depth in (("F-01", "Unmapped"), ("B-02", "Deferred")):
+                    if not db.execute("SELECT 1 FROM file_standing WHERE subsystem_id = ?", (sid,)).fetchone():
+                        return f"the depth fixture gives {sid} no ledger row"
+                    one = diagrams.coverage_bars_model(db, sid)
+                    if one.nodes or not one.below.strip():
+                        return f"{sid} is {depth.lower()}, holds ledger rows and a reconciliation, and its bar is drawn"
+                    if depth not in one.below:
+                        return f"{sid}'s sentence does not say it is at {depth}: {one.below[:160]!r}"
+                    if any(n.record.startswith(f"coverage:{sid}:") for n in whole.nodes):
+                        return f"{sid} is {depth.lower()} and the repository's figure draws its bar"
+            finally:
+                db.close()
             return None
 
         check("below its minimum, or at a depth that authorizes none, a bar is a sentence", depth_gate)
