@@ -6,20 +6,23 @@
 //     `artifact-templates`, a hand-written file (`onboarding-report.md`, `entry-point.md`,
 //     `master-plan.md`, `findings-index.md`, `concern-checklist.md`, `field-notes.md`,
 //     `<id>-<slug>.md`, `_meta/prompts`), tells the agent to write, append or update a `.md`
-//     file, or still talks of "prose artifacts";
+//     file, named in a code span or in plain prose, or still talks of "prose artifacts";
 //   - `references/artifact-templates.md` still exists, or `references/records.md` is missing, does
 //     not have a section for each record family naming the tools that hold it, or does not say
 //     what each of the contract's `narrative_section` values contains;
 //   - a reference does not call its record tool at the step §4 names, with every argument the
 //     tool requires: onboarding Phase 7 (`record_project_profile`,
 //     `record_explanation(subject_type="project", slot="purpose")`, `record_runtime_boundary`,
-//     `record_narrative` for repository-shape, stateful-entities, concern-calibration, start-here
-//     and survey-plan, `add_concern` with territory and probe, `record_territory_disposition`);
+//     `record_narrative` for repository-shape, runtime, stateful-entities, concern-calibration,
+//     start-here and survey-plan, `add_concern` with territory and probe, `record_territory_disposition`);
 //     Phase 2 step 3 (`record_claim_mark` or `decline_claim_marks`) and its narrative step
-//     (`record_narrative` for `structure` with a topic, or `decline_narrative`); Phase 3
-//     (`record_narrative` for `concern-reasoning`, and `get_narratives` instead of reading a file);
+//     (`record_narrative` for `structure` with a topic, or `decline_narrative`), and no promise that
+//     a page shows a flow's marks before SO25 draws them; Phase 3 (`record_narrative` for
+//     `concern-reasoning`, `get_narratives` instead of reading a file, and
+//     `get_imported_artifacts` for an imported survey body);
 //     Phase 4 (`record_narrative` for `challenge` with a topic); Phase 5 ("Settle the narratives"
-//     with `get_narratives` and `record_narrative`, after "Settle the explanations"); the survey
+//     with `get_narratives(history=true)`, `record_narrative` and a `decline_narrative` that keeps
+//     the topic, after "Settle the explanations"); the survey
 //     loop (a lock on the subsystem id, not a path); the memory audit (`get_narratives`, no
 //     `list_artifacts`); explanations.md and onboarding.md (the thesis is a recorded project
 //     purpose, not a `## What is this codebase?` section);
@@ -242,19 +245,39 @@ const FORBIDDEN = [
   [/## What is this codebase\?/, "the `## What is this codebase?` heading"],
 ];
 
-// An instruction to write a file: a verb of writing within a few words of a `.md` code span that
-// is not one of the skill's own references or a design document.
+// An instruction to write a file: a verb of writing on a line that names a `.md` file, in a code
+// span or in ordinary prose (F12/codex, slice S2), that is not one of the skill's own references or
+// a design document.
 const WRITE_VERB = /\b(?:writ(?:e|es|ing|ten)|append(?:s|ed|ing)?|updat(?:e|es|ing)|edit(?:s|ing)?)\b/i;
+const MD_NAME = /(?<![\w.\/-])((?:[\w.<>-]+\/)*[\w.<>-]+\.md)(?![\w-])/g;
+/** The `.md` files a line tells the agent to write: none unless it has a verb of writing. */
+function writtenFiles(line) {
+  if (!WRITE_VERB.test(line)) return [];
+  return [...line.matchAll(MD_NAME)]
+    .map((match) => match[1])
+    .filter(
+      (name) => !/^(?:references\/|\.\.\/|design\/|docs\/)/.test(name) && !/^(?:SKILL|AGENTS|CLAUDE)\.md$/.test(name),
+    );
+}
+// The detector's own cases: a write in a code span and one in plain prose are both caught; a
+// reference to the skill's own file is not.
+for (const [line, want] of [
+  ["Write `.amanuensis/review-notes.md`.", ".amanuensis/review-notes.md"],
+  ["Write .amanuensis/review-notes.md.", ".amanuensis/review-notes.md"],
+  ["Then append the result to notes.md and stop.", "notes.md"],
+  ["Read references/records.md before you write.", null],
+]) {
+  const found = writtenFiles(line);
+  if (want === null ? found.length > 0 : !found.includes(want)) {
+    fail(`the write detector reads ${JSON.stringify(line)} as ${JSON.stringify(found)}`);
+  }
+}
 for (const [file, text] of texts) {
   for (const [pattern, label] of FORBIDDEN) {
     if (pattern.test(text)) fail(`${file} names ${label}`);
   }
   text.split("\n").forEach((line, index) => {
-    if (!WRITE_VERB.test(line)) return;
-    for (const span of line.matchAll(/`([^`]*\.md)`/g)) {
-      if (/^(?:references\/|\.\.\/|design\/|docs\/)/.test(span[1]) || /^(?:SKILL|AGENTS|CLAUDE)\.md$/.test(span[1])) continue;
-      fail(`${file}:${index + 1} tells the agent to write ${span[1]}`);
-    }
+    for (const name of writtenFiles(line)) fail(`${file}:${index + 1} tells the agent to write ${name}`);
   });
 }
 
@@ -323,7 +346,8 @@ else {
     (args) => hasValue(args, "subject_type", /^project$/) && hasValue(args, "slot", /^purpose$/),
   );
   requireCalls("onboarding.md Phase 7", phase7, "record_runtime_boundary");
-  for (const wanted of ["repository-shape", "stateful-entities", "concern-calibration", "start-here", "survey-plan"]) {
+  // All six project sections are written at onboarding, runtime among them (F7/codex, slice S2).
+  for (const wanted of ["repository-shape", "runtime", "stateful-entities", "concern-calibration", "start-here", "survey-plan"]) {
     requireCalls(
       `onboarding.md Phase 7 (${wanted})`,
       phase7,
@@ -358,6 +382,11 @@ else {
   requireCalls("phase-2-structural.md step 3", flows, "decline_claim_marks");
 }
 if (/^## Output artifact/m.test(structural)) fail("phase-2-structural.md still ends in an output artifact");
+// No page draws claim marks until the flow strip lands (SO25), so the skill may not promise one
+// shows them (F9/codex, slice S2).
+if (!existsSync(join(root, "materializer", "test-store-only-flow-strip.py")) && /on its page|the page shows/i.test(flows) && !/SO25|not yet/i.test(flows)) {
+  fail("phase-2-structural.md step 3 says a page shows a flow's marks, which no page draws before SO25");
+}
 const structure = section(structural, /^Record the narrative/);
 if (structure === "") fail("phase-2-structural.md has no \"Record the narrative\" section");
 else {
@@ -388,6 +417,11 @@ requireCalls("phase-3-concerns.md inputs", section(concerns, /^Inputs/), "get_na
   hasValue(args, "subject_type", /^subsystem$/),
 );
 if (/survey artifact/i.test(concerns)) fail("phase-3-concerns.md still reads a survey artifact");
+// The server's prerequisite also accepts an unwithdrawn imported survey body (PLAN §2.5), so the
+// inputs read it before stopping (F3/codex, slice S2).
+requireCalls("phase-3-concerns.md inputs", section(concerns, /^Inputs/), "get_imported_artifacts", (args) =>
+  hasValue(args, "kind", /^subsystem-survey$/) && "subsystem_id" in args,
+);
 
 // Phase 4.
 const adversarial = load("references/phase-4-adversarial.md");
@@ -416,6 +450,11 @@ requireCalls("phase-5-packaging.md Settle the narratives", settled, "get_narrati
   hasValue(args, "subject_type", /^subsystem$/),
 );
 requireCalls("phase-5-packaging.md Settle the narratives", settled, "record_narrative");
+// A withdrawn key is discharged at its own topic, which history names (F5/codex, slice S2).
+requireCalls("phase-5-packaging.md Settle the narratives", settled, "decline_narrative", (args) => "topic" in args);
+requireCalls("phase-5-packaging.md Settle the narratives", settled, "get_narratives", (args) =>
+  hasValue(args, "history", /^true$/),
+);
 if (/^### \d+\. (?:Update|Register)/m.test(packaging)) fail("phase-5-packaging.md still has the file-update steps");
 if (/materializer reads to decide whether to re-render/.test(packaging)) {
   fail("phase-5-packaging.md still says rehashing is what the materializer reads to re-render");
