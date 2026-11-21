@@ -815,6 +815,36 @@ async function main(mods) {
     return current.verdict === "pass" ? null : `the effective explanation scored ${current.verdict}`;
   });
 
+  // K4's wrong-commit case for the other record kind: an effective explanation
+  // is still not tied to a target commit it was not recorded at. Restricting the
+  // commit comparison to narratives stayed green (F14/codex, slice-S1).
+  check("K8 an effective explanation recorded at another commit scores fail", () => {
+    const { ctx, head, base } = composition;
+    const cited = [evidence(ctx, "src/producer.mjs", "1-1")];
+    const recorded = call(
+      "record_explanation",
+      {
+        subject_type: "subsystem",
+        subject_id: "P",
+        slot: "purpose",
+        body: "The producer turns each job into one event.",
+        evidence_ids: cited,
+        ref_sha: head,
+      },
+      ctx,
+    );
+    planWith("k8", [
+      ["here", `explanation:${recorded.id}`],
+      ["there", `explanation:${recorded.id}`, base],
+    ]);
+    const control = verdictOf("k8", "here", `explanation:${recorded.id}`);
+    if (control.verdict !== "pass") return `the explanation scored ${control.verdict} at its own commit`;
+    const score = verdictOf("k8", "there", `explanation:${recorded.id}`);
+    return score.verdict === "fail"
+      ? null
+      : `an explanation recorded at ${head.slice(0, 8)}, scored against ${base.slice(0, 8)}, passed`;
+  });
+
   check("K7 a store opened from a legacy fixture accepts the record item kind", () => {
     const dump = join(here, "fixtures", "legacy-stores", "axiomdb-shaped", "memory.sql");
     if (!existsSync(dump)) return "fixtures/legacy-stores/axiomdb-shaped/memory.sql is absent";
