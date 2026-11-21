@@ -22,7 +22,8 @@ Turns red when:
     arrays, or the per-value metadata the contract carries;
   - the generator accepts a broken copy of the contract (run on a scratch copy of
     the tree, one sabotage at a time) carrying: a subsystem section without a
-    `min_status`; one whose `min_status` is not on the subsystem_status ladder; a
+    `min_status`; one whose `min_status` is not on the subsystem_status ladder
+    (including `deferred`, a status that is not a rung); a
     project section with a `min_status`; a mark kind whose `applies_to` is missing or
     not a claim key family; a duplicate label (as spelled, or in other case and
     padded with whitespace); a `requires` naming a column a mark does not have, or
@@ -458,6 +459,13 @@ def _requires_missing(doc: dict[str, Any]) -> None:
     del mark(doc, "exit")["requires"]
 
 
+def _min_status_deferred(doc: dict[str, Any]) -> None:
+    # `deferred` is a subsystem_status value but not a rung: STATUS_ORDER
+    # (invariants.ts) leaves it off the ladder, so no subsystem ever reaches it
+    # and the section could never be written (F7/codex, slice-S1).
+    section(doc, "challenge")["min_status"] = "deferred"
+
+
 def _evidence_other(doc: dict[str, Any]) -> None:
     section(doc, "start-here")["evidence"] = "sometimes"
 
@@ -488,6 +496,7 @@ SABOTAGE: tuple[tuple[str, Callable[[dict[str, Any]], None], str], ...] = (
     ("a duplicate mark label", _duplicate_mark_label, "label"),
     ("a requires naming a column a mark lacks", _requires_unknown_column, "requires"),
     ("a mark kind without requires", _requires_missing, "requires"),
+    ("a subsystem section whose min_status is deferred, which is off the ladder", _min_status_deferred, "min_status"),
     ("an evidence other than required or optional", _evidence_other, "evidence"),
     ("a section for a subject type other than subsystem or project", _subject_type_other, "subject_type"),
     ("a section without a subject_type", _subject_type_missing, "subject_type"),
