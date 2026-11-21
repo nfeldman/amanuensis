@@ -51,7 +51,7 @@
 | SO22 | Diagram primitives, survey workflow (B1) and status ladder (B2) | done (1 attempt) | SO20 | `materializer/test-store-only-method-diagrams.py` | §8 SO22, §7.3, Appendix B |
 | SO23 | Coverage bars (A5) and finding badges (A4) | done (1 attempt) | SO22 | `materializer/test-store-only-coverage-badges.py` | §8 SO23, Appendix B |
 | SO24 | Seam contract diagram (A2) | done (1 attempt) | SO22 | `materializer/test-store-only-seam-diagram.py` | §8 SO24, Appendix B |
-| SO25 | Flow strip (A3) | ready | SO5, SO22 | `materializer/test-store-only-flow-strip.py` | §8 SO25, §7.2, Appendix B |
+| SO25 | Flow strip (A3) | ready (1 attempt) | SO5, SO22 | `materializer/test-store-only-flow-strip.py` | §8 SO25, §7.2, Appendix B |
 
 ## Completion
 
