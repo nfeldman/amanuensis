@@ -392,6 +392,35 @@ def seed_c(root: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
+# Stores D and E: the name's precedence, profile over import over binding
+# (PLAN §3.3; F10/codex, slice S2)
+# ---------------------------------------------------------------------------
+PROFILE_WINS = "ProfileWinsName"
+IMPORT_LOSES = "ImportLosesName"
+IMPORT_WINS = "ImportWinsName"
+
+
+def seed_named(root: Path, name: str, *, profile: str | None, imported: str) -> Path:
+    storage, db = new_store(root, name)
+    add_subsystem(db, "B-01", "Read path")
+    add_purpose(db, RECORDED_THESIS, "recorded")
+    if profile is not None:
+        add_profile(db, profile)
+    add_import(
+        db,
+        "onboarding-report.md",
+        "onboarding-report",
+        f"# Onboarding\n\n**Codebase**: {imported} — a fixture\n\nIMPORTEDONBOARDINGMARKER one repository.\n",
+    )
+    db.commit()
+    db.close()
+    (storage / "initialization.json").write_text(
+        json.dumps({"projectIdentity": "remote:github.com/acme/bindrepo", "projectKey": "github.com/acme/bindrepo"})
+    )
+    return storage
+
+
+# ---------------------------------------------------------------------------
 # Publishing under an audit of every open
 # ---------------------------------------------------------------------------
 DRIVER = """
@@ -830,6 +859,46 @@ def run(work: Path) -> int:
         return None
 
     check("with no profile the name comes from the binding", c_name)
+
+    def c_thesis_discharge() -> str | None:
+        # The server refuses to decline the project's purpose (`explanations.ts`),
+        # so the census must not recommend it (F4/codex, slice S2).
+        rows = [r for r in result_c.get("unfilled_slots") or [] if isinstance(r, dict) and r.get("slot") == "thesis"]
+        if len(rows) != 1:
+            return f"store C reports {len(rows)} unfilled thesis slots, not one"
+        discharge = str(rows[0].get("discharge"))
+        if "record_explanation" not in discharge:
+            return f"the thesis discharge does not name record_explanation: {discharge!r}"
+        if "decline_explanation" in discharge:
+            return f"the thesis discharge recommends decline_explanation, which the server refuses: {discharge!r}"
+        return None
+
+    check("an absent thesis is discharged by recording it, never by declining it", c_thesis_discharge)
+
+    # ---- Stores D and E: the name's precedence ---------------------------------
+    d = seed_named(work, "d", profile=PROFILE_WINS, imported=IMPORT_LOSES)
+    e = seed_named(work, "e", profile=None, imported=IMPORT_WINS)
+    result_d = publish(d, work / "d-opened.log")
+    result_e = publish(e, work / "e-opened.log")
+
+    def name_precedence() -> str | None:
+        for label, result in (("D", result_d), ("E", result_e)):
+            if result.get("ok") is not True:
+                return f"store {label} did not publish green: {str(result)[:200]}"
+        index_d = page_pair(d / "docs", "index")
+        index_e = page_pair(e / "docs", "index")
+        for view in ("md", "html"):
+            if PROFILE_WINS not in index_d[view]:
+                return f"with a profile and an imported name, the profile's name is not the overview's ({view})"
+            if IMPORT_LOSES in index_d[view]:
+                return f"with a profile recorded, the overview names the project from the import ({view})"
+            if IMPORT_WINS not in index_e[view]:
+                return f"with no profile, the imported name does not name the project ({view})"
+            if "bindrepo" in index_e[view]:
+                return f"with an imported name, the overview names the project from its binding ({view})"
+        return None
+
+    check("the project name is the profile's, else the import's, else the binding's", name_precedence)
 
     # ---- CI ----------------------------------------------------------------
     def in_ci() -> str | None:
