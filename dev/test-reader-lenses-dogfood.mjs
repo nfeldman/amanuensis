@@ -664,8 +664,8 @@ check("it refuses a source carrying no projection contract, and leaves the desti
   const destination = join(sandbox, "no-contract-destination");
   mkdirSync(source, { recursive: true });
   mkdirSync(destination, { recursive: true });
-  writeFileSync(join(source, "index.md"), "# unverified\n");
-  writeFileSync(join(destination, "keep.md"), "# previous contents\n");
+  writeFileSync(join(source, "index.html"), "<h1>unverified</h1>\n");
+  writeFileSync(join(destination, "keep.html"), "<h1>previous contents</h1>\n");
   const run = runPromotion(source, destination);
   if (run.error) return `the promotion script could not be run — ${run.error.message}`;
   if (run.status === 0) {
@@ -676,10 +676,10 @@ check("it refuses a source carrying no projection contract, and leaves the desti
     return `the refusal does not name the missing contract: ${output.trim().split("\n").pop() ?? "(no output)"}`;
   }
   const after = walk(destination);
-  if (after.length !== 1 || after[0] !== "keep.md") {
+  if (after.length !== 1 || after[0] !== "keep.html") {
     return `the refused promotion changed the destination: it now holds ${after.join(", ") || "nothing"}`;
   }
-  if (readFileSync(join(destination, "keep.md"), "utf8") !== "# previous contents\n") {
+  if (readFileSync(join(destination, "keep.html"), "utf8") !== "<h1>previous contents</h1>\n") {
     return "the refused promotion rewrote the destination's previous contents";
   }
   return null;
@@ -692,32 +692,36 @@ check("it refuses a source whose pages do not match the contract it carries", ()
   const destination = join(sandbox, "drifted-destination");
   mkdirSync(source, { recursive: true });
   mkdirSync(destination, { recursive: true });
-  const body = "# rendered\n";
-  writeFileSync(join(source, "index.md"), body);
+  const body = "<h1>rendered</h1>\n";
+  writeFileSync(join(source, "index.html"), body);
+  writeFileSync(join(source, "README.md"), "# Documentation\n");
   writeFileSync(
     join(source, CONTRACT_NAME),
     `${JSON.stringify(
       {
         version: 2,
-        pages: [{ path: "index.md", content_hash: sha256(Buffer.from(body, "utf8")) }],
+        pages: [
+          { path: "index.html", content_hash: sha256(Buffer.from(body, "utf8")) },
+          { path: "README.md", content_hash: sha256(Buffer.from("# Documentation\n", "utf8")) },
+        ],
         local_links: [],
       },
       null,
       2,
     )}\n`,
   );
-  writeFileSync(join(source, MANIFEST_NAME), `${JSON.stringify({ pages: [{ path: "index.md" }] }, null, 2)}\n`);
+  writeFileSync(join(source, MANIFEST_NAME), `${JSON.stringify({ views: ["html"], pages: [{ path: "index.html" }], projection_files: [{ path: "index.html" }, { path: "README.md" }] }, null, 2)}\n`);
   // The page drifts from the contract after it was written: the publish's own
   // receipt no longer describes the bytes on disk.
-  writeFileSync(join(source, "index.md"), "# edited after publication\n");
-  writeFileSync(join(destination, "keep.md"), "# previous contents\n");
+  writeFileSync(join(source, "index.html"), "<h1>edited after publication</h1>\n");
+  writeFileSync(join(destination, "keep.html"), "<h1>previous contents</h1>\n");
   const run = runPromotion(source, destination);
   if (run.error) return `the promotion script could not be run — ${run.error.message}`;
   if (run.status === 0) {
     return "the promotion script promoted a source whose pages do not hash to its contract";
   }
   const after = walk(destination);
-  if (after.length !== 1 || after[0] !== "keep.md") {
+  if (after.length !== 1 || after[0] !== "keep.html") {
     return `the refused promotion changed the destination: it now holds ${after.join(", ") || "nothing"}`;
   }
   return null;
@@ -732,22 +736,30 @@ check("a red read-back at the destination restores the previous contents and pro
   mkdirSync(destination, { recursive: true });
   // A source that passes every check this script can make without a store: its
   // one page hashes to its contract, and it carries a manifest.
-  const body = "# published\n";
-  writeFileSync(join(source, "index.md"), body);
+  const body = "<h1>published</h1>\n";
+  writeFileSync(join(source, "index.html"), body);
+  writeFileSync(join(source, "README.md"), "# Documentation\n");
   writeFileSync(
     join(source, CONTRACT_NAME),
     `${JSON.stringify(
-      { version: 2, pages: [{ path: "index.md", content_hash: sha256(Buffer.from(body, "utf8")) }], local_links: [] },
+      {
+        version: 2,
+        pages: [
+          { path: "index.html", content_hash: sha256(Buffer.from(body, "utf8")) },
+          { path: "README.md", content_hash: sha256(Buffer.from("# Documentation\n", "utf8")) },
+        ],
+        local_links: [],
+      },
       null,
       2,
     )}\n`,
   );
-  writeFileSync(join(source, MANIFEST_NAME), `${JSON.stringify({ pages: [{ path: "index.md" }] }, null, 2)}\n`);
+  writeFileSync(join(source, MANIFEST_NAME), `${JSON.stringify({ views: ["html"], pages: [{ path: "index.html" }], projection_files: [{ path: "index.html" }, { path: "README.md" }] }, null, 2)}\n`);
   // A destination whose own manifest claims what is in it, so the promotion is
   // replacing a managed output rather than somebody else's files.
-  const previous = "# the contents that must survive a red read-back\n";
-  writeFileSync(join(destination, "index.md"), previous);
-  writeFileSync(join(destination, MANIFEST_NAME), `${JSON.stringify({ pages: [{ path: "index.md" }] }, null, 2)}\n`);
+  const previous = "<h1>the contents that must survive a red read-back</h1>\n";
+  writeFileSync(join(destination, "index.html"), previous);
+  writeFileSync(join(destination, MANIFEST_NAME), `${JSON.stringify({ views: ["html"], pages: [{ path: "index.html" }], projection_files: [{ path: "index.html" }, { path: "README.md" }] }, null, 2)}\n`);
   // The read-back is stubbed rather than run: this arm is about what the
   // promotion does when the destination comes back red, and forcing the real
   // materializer to render a red projection would be testing the materializer.
@@ -799,7 +811,7 @@ check("a red read-back at the destination restores the previous contents and pro
   if (run.status === 0) {
     return "the promotion script reported success after the read-back at the destination came back red";
   }
-  if (readFileSync(join(destination, "index.md"), "utf8") !== previous) {
+  if (readFileSync(join(destination, "index.html"), "utf8") !== previous) {
     return "a red read-back at the destination left the promoted bytes in place instead of the previous contents";
   }
   const leftovers = readdirSync(sandbox, { withFileTypes: true })

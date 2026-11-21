@@ -38,6 +38,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -65,7 +66,7 @@ const READERS = [
 ];
 // What a reader of a published page must not open any more.
 const MARKDOWN_PAGE_USES = [
-  { what: "a docs/ path ending .md", pattern: /docs(?:-not)?\/[^\s"'`)]*\.md\b/ },
+  { what: "a docs/ path ending .md", pattern: /docs(?:-not)?\/(?!README\.md\b)[^\s"'`)]*\.md\b/ },
   { what: "an .md filter", pattern: /endsWith\(\s*["']\.md["']\s*\)|\\\.md\$|\(md\|html\)/ },
   {
     what: "a bare page name ending .md",
@@ -319,7 +320,7 @@ check("promote carries exactly the publication's files to a new destination, and
   if (!got.includes(README)) return "the copy has no README";
   const summary = JSON.parse(readFileSync(receipt, "utf8"));
   if (summary.readback?.ok !== true) return "the promotion receipt does not record a green read-back";
-  if (resolve(summary.readback?.output_dir ?? "") !== resolve(destination)) return `the recorded read-back ran at ${summary.readback?.output_dir}, not at the destination`;
+  if (!summary.readback?.output_dir || realpathSync(summary.readback.output_dir) !== realpathSync(destination)) return `the recorded read-back ran at ${summary.readback?.output_dir}, not at the destination`;
   // A second promotion replaces a destination the first one wrote.
   const again = promote(source, destination, storageA);
   return again.status === 0 ? null : `promoting over a managed destination exited ${again.status}: ${(again.stderr || "").slice(0, 200)}`;

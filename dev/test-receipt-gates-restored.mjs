@@ -28,6 +28,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { recordFieldsOf, runtimeDetailsOf, sectionOf, sectionText, textOf } from "./read-html-page.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SELF = "dev/test-receipt-gates-restored.mjs";
@@ -50,9 +51,12 @@ const THESIS_PLACEHOLDERS = [
 const RUNTIME_PLACEHOLDER = "No structured runtime boundary map is recorded yet";
 
 // spec.md §4.4 renames the heading and leaves this text as the store recorded it.
+// The page is HTML, which prints the reader's word for one phrase in it: the
+// materializer rewrites "concern dispositions" to "concern review"
+// (`amanuensis_materializer/prose.py`), so that is the word compared here.
 const THESIS_TEXT =
   "Amanuensis turns reading a codebase into a durable, evidence-backed record. An MCP server holds a " +
-  "SQLite store per workspace; a survey writes observations, evidence, claims, concern dispositions and " +
+  "SQLite store per workspace; a survey writes observations, evidence, claims, concern review and " +
   "findings into it through tools that refuse a write the record does not support; a Python " +
   "materializer projects the store into Markdown and self-contained HTML a person reads. The record " +
   "survives across sessions and agent boundaries, which is the point: the survey is the deliverable, " +
@@ -107,76 +111,43 @@ function runSubGates() {
   }
 }
 
-/** The body of a level-two section, up to the next heading of that level or higher. */
-function section(text, heading) {
-  const lines = text.split("\n");
-  const start = lines.indexOf(`## ${heading}`);
-  if (start < 0) return null;
-  const end = lines.findIndex((line, index) => index > start && /^#{1,2} /.test(line));
-  return lines.slice(start + 1, end < 0 ? undefined : end).join("\n");
-}
-
 function checkThesis() {
-  const page = committedOrRed("docs/index.md");
+  const page = committedOrRed("docs/index.html");
+  const text = textOf(page);
   for (const sentence of THESIS_PLACEHOLDERS) {
-    if (page.includes(sentence)) red(`docs/index.md carries the placeholder "${sentence}"`);
+    if (text.includes(sentence)) red(`docs/index.html carries the placeholder "${sentence}"`);
   }
-  const body = section(page, "What is this codebase?");
-  if (body === null) red("docs/index.md has no 'What is this codebase?' section");
+  const body = sectionText(page, "What is this codebase?");
+  if (body === null) red("docs/index.html has no 'What is this codebase?' section");
   if (body.replace(/\s+/g, " ").trim() !== THESIS_TEXT) {
-    red("docs/index.md's thesis is not the text entry-point.md recorded");
+    red("docs/index.html's thesis is not the text entry-point recorded");
   }
 }
 
 function checkRuntimeBoundary() {
-  const page = committedOrRed("docs/architecture.md");
-  if (page.includes(RUNTIME_PLACEHOLDER)) red("docs/architecture.md carries the runtime-boundary placeholder");
-  const body = section(page, "Runtime boundary map");
-  if (body === null) red("docs/architecture.md has no runtime boundary map section");
-  const cells = (line) =>
-    line
-      .trim()
-      .replace(/^\||\|$/g, "")
-      .split("|")
-      .map((cell) => cell.trim());
-  const rows = body.split("\n").filter((line) => line.trim().startsWith("|"));
-  if (rows.length < 3) red("docs/architecture.md's runtime boundary map has no table row");
-  if (cells(rows[0]).map((cell) => cell.toLowerCase()).join("|") !== RUNTIME_COLUMNS.join("|")) {
-    red("docs/architecture.md's runtime boundary map does not carry the five columns");
+  const page = committedOrRed("docs/architecture.html");
+  if (textOf(page).includes(RUNTIME_PLACEHOLDER)) red("docs/architecture.html carries the runtime-boundary placeholder");
+  const body = sectionOf(page, "Runtime boundary map");
+  if (body === null) red("docs/architecture.html has no runtime boundary map section");
+  const rows = runtimeDetailsOf(body);
+  if (rows.length < 1) red("docs/architecture.html's runtime boundary map has no row");
+  // The columns the map was a table of, as each entry prints them: the runtime
+  // and its language in the entry's head, the rest as labelled values.
+  const labels = ["Communicates with", "Mechanism", "Recorded note"];
+  if (rows.some((row) => labels.some((label) => !(label in row.fields)))) {
+    red("docs/architecture.html's runtime boundary map does not carry the five columns");
   }
-  if (rows.slice(2).some((row) => cells(row).length !== RUNTIME_COLUMNS.length || cells(row).some((cell) => !cell))) {
-    red("docs/architecture.md's runtime boundary map has a row with an empty or missing cell");
+  if (rows.some((row) => !row.runtime || !row.language || labels.some((label) => !row.fields[label]))) {
+    red("docs/architecture.html's runtime boundary map has a row with an empty or missing cell");
   }
 }
 
-// The field is a column of the page's tables, so its presence is a header and a
-// value under it. A header over empty cells would not tell a reader why anything
-// matters.
+// The field is printed under its label on each finding's record, so its
+// presence is the label and a value after it. A label over an empty value would
+// not tell a reader why anything matters.
 function checkFindings() {
-  const lines = committedOrRed("docs/findings.md").split("\n");
-  const cells = (line) =>
-    line
-      .trim()
-      .replace(/^\||\|$/g, "")
-      .split("|")
-      .map((cell) => cell.trim());
-  let column = -1;
-  let filled = 0;
-  for (const line of lines) {
-    // The renderer puts a finding's anchor comment between its table's rows.
-    if (line.startsWith("<!--")) continue;
-    if (!line.trim().startsWith("|")) {
-      column = -1;
-      continue;
-    }
-    const row = cells(line);
-    if (row.includes("Why it matters")) {
-      column = row.indexOf("Why it matters");
-    } else if (column >= 0 && !/^:?-{3,}:?$/.test(row[0]) && (row[column] ?? "").length > 1) {
-      filled += 1;
-    }
-  }
-  if (!filled) red("docs/findings.md carries no filled Why it matters field");
+  const filled = recordFieldsOf(committedOrRed("docs/findings.html"), "Why it matters").filter((value) => value.length > 1);
+  if (!filled.length) red("docs/findings.html carries no filled Why it matters field");
 }
 
 function checkMeasure() {
@@ -210,7 +181,9 @@ function checkMeasuredTotals(entry, revision) {
     if (archive.status !== 0) red(`reader-measure.json's '${entry?.label}' entry names a revision with no docs tree`);
     const untar = spawnSync("tar", ["-xf", join(scratch, "docs.tar"), "-C", scratch], { encoding: "utf8" });
     if (untar.status !== 0) red(`the docs tree of reader-measure.json's '${entry?.label}' entry could not be read`);
-    const measure = spawnSync(process.execPath, [join(REPO, "dev/measure-reader-prose.mjs"), join(scratch, "docs")], { cwd: REPO, encoding: "utf8" });
+    // An entry with no basis was measured before the output was HTML only.
+    const basis = entry?.basis ?? "markdown";
+    const measure = spawnSync(process.execPath, [join(REPO, "dev/measure-reader-prose.mjs"), join(scratch, "docs"), "--basis", basis], { cwd: REPO, encoding: "utf8" });
     if (measure.status !== 0) red("dev/measure-reader-prose.mjs did not measure a committed docs tree");
     const { totals } = JSON.parse(measure.stdout);
     if (JSON.stringify(totals) !== JSON.stringify(entry?.totals)) {

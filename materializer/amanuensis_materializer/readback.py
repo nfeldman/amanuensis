@@ -1607,7 +1607,30 @@ class ProjectionVerifier:
                     }
                 )
         mismatches.extend(self._render_notice_census(contract, projection))
+        mismatches.extend(self._readme_census(projection))
         return self._summary(mismatches)
+
+    @staticmethod
+    def _readme_census(projection: dict[str, str]) -> list[dict[str, str]]:
+        """The README is exactly the pointer text, the same for every store (D10).
+
+        A README carrying anything else carries something a survey recorded, or
+        something a person typed, into a file the publication says is generated.
+        """
+
+        from .html_projection import README_PATH, README_TEXT  # noqa: PLC0415 — it imports this module
+
+        body = projection.get(README_PATH)
+        if body is None or body == README_TEXT:
+            return []  # a missing README is the coverage axis's to report
+        return [
+            {
+                "axis": "content",
+                "object_type": "readme",
+                "object_id": README_PATH,
+                "detail": "the README differs from the generated pointer text",
+            }
+        ]
 
     def _render_notice_census(
         self, contract: dict[str, Any], projection: dict[str, str]

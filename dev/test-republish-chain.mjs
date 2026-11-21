@@ -198,7 +198,7 @@ const EXAMINED_OWNER = { subsystem_id: "B-01", classification: "examined", stand
 const EXAMINED_STANDING = { state: "examined", owners: [EXAMINED_OWNER] };
 const LOCI = ["fixture/only-here.ts", "fixture/also-here.py"];
 const UNFILLED_ROWS = [
-  { slot: "thesis", page: "index.md", subject: "project", state: "absent", discharge: "add a section" },
+  { slot: "thesis", page: "index.html", subject: "project", state: "absent", discharge: "add a section" },
 ];
 
 function greenPublish() {
@@ -530,8 +530,8 @@ await check("preflight stops on a build failure, an unopenable store, and a chan
   if (!said(store).includes("the fixture store does not open")) return "the stop does not say why the store failed";
   for (const [status, name] of [
     [" M mcp-server/src/index.ts\0", "mcp-server/src/index.ts"],
-    ["?? stray/untracked.md\0", "stray/untracked.md"],
-    ["R  docs/renamed.md\0dev/moved-from.mjs\0", "dev/moved-from.mjs"],
+    ["?? stray/untracked.txt\0", "stray/untracked.txt"],
+    ["R  docs/renamed.html\0dev/moved-from.mjs\0", "dev/moved-from.mjs"],
     [" M design/explanation/spec.md\0", "design/explanation/spec.md"],
   ]) {
     const w = await run({ status });
@@ -545,7 +545,7 @@ await check("preflight allows changes under docs/ and to the receipt files, and 
   const absent = notLoaded();
   if (absent) return absent;
   const status = [
-    " M docs/index.md",
+    " M docs/index.html",
     "?? docs/new-page.html",
     ` M ${DOGFOOD_REL}`,
     ` M ${DEPTH_REL}`,
@@ -556,7 +556,7 @@ await check("preflight allows changes under docs/ and to the receipt files, and 
   ].join("\0");
   const w = await run({ status });
   if (w.exit !== 0) return `the run did not complete: ${scrub(said(w))}`;
-  const lookalike = await run({ status: " M docs-not/really.md\0" });
+  const lookalike = await run({ status: " M docs-not/really.html\0" });
   if (lookalike.exit === 0) return "a path that only begins with docs is treated as docs/";
   return null;
 });
@@ -843,12 +843,24 @@ await check("--from promote refuses a publish taken at another commit", async ()
 await check("a promotion that adds an untracked page stops the run and names it", async () => {
   const absent = notLoaded();
   if (absent) return absent;
-  const w = await run({ docsStatus: " M docs/index.md\0?? docs/brand-new-page.md\0" });
+  const w = await run({ docsStatus: " M docs/index.html\0?? docs/brand-new-page.html\0" });
   if (w.exit === 0) return "the command exits 0";
   if (ran(w, DOGFOOD)) return "the recorder ran";
-  if (!said(w).includes("docs/brand-new-page.md")) return "the stop does not name the page";
-  if (said(w).includes("docs/index.md")) return "the stop names a page that is already tracked";
+  if (!said(w).includes("docs/brand-new-page.html")) return "the stop does not name the page";
+  if (said(w).includes("docs/index.html")) return "the stop names a page that is already tracked";
   return null;
+});
+
+await check("a promotion that adds only the generated README does not stop the run, and a page beside it still does", async () => {
+  const absent = notLoaded();
+  if (absent) return absent;
+  const readme = await run({ docsStatus: " M docs/index.html\0?? docs/README.md\0" });
+  if (readme.exit !== 0) return `the generated README stopped the run: ${scrub(said(readme))}`;
+  if (!ran(readme, DOGFOOD)) return "the recorder did not run after a promotion that added the README";
+  const both = await run({ docsStatus: "?? docs/README.md\0?? docs/brand-new-page.html\0" });
+  if (both.exit === 0) return "a new page beside the README did not stop the run";
+  if (!said(both).includes("docs/brand-new-page.html")) return "the stop does not name the page";
+  return said(both).includes("docs/README.md") ? "the stop names the generated README" : null;
 });
 
 await check("each failing recorder stops the run before the next", async () => {

@@ -98,6 +98,20 @@ NAV_GROUPS: tuple[str, ...] = ("Overview", "Codebase", "Unresolved", "History", 
 # `manifest.projection_files` and in the publication receipt like any page.
 SEARCH_INDEX_PATH = "search-index.js"
 
+# The one `.md` a publication holds (store-only PLAN §6, D10): a README that
+# points at `index.html`, because GitHub's directory view shows a README and shows
+# `.html` only as source. It is the same bytes for every store: nothing a survey
+# recorded is in it, so it is a pointer and not a page. It is a projection file
+# like the search index, and the read-back holds it to exactly this text.
+README_PATH = "README.md"
+README_TEXT = (
+    "# Documentation\n"
+    "\n"
+    "Open [index.html](index.html) to read this documentation.\n"
+    "\n"
+    "The pages are generated HTML. This file only points at them.\n"
+)
+
 
 class UnknownNavGroup(ValueError):
     """A planned page claims a navigation group `NAV_GROUPS` does not name."""
@@ -2899,6 +2913,11 @@ def render_html_projection(
     if not index_target.is_file() or index_target.read_text() != index_text:
         index_target.parent.mkdir(parents=True, exist_ok=True)
         index_target.write_text(index_text)
+
+    readme_target = output / README_PATH
+    files[README_PATH] = sha256_bytes(README_TEXT.encode("utf-8"))
+    if not readme_target.is_file() or readme_target.read_text() != README_TEXT:
+        readme_target.write_text(README_TEXT)
 
     for page in pages:
         model = models.get(page.path)
