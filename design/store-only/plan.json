@@ -52,10 +52,10 @@
         "SO19"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "528199fdde46ebc1947f0f04716e75c9e7fc32c5",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "7d629b878d43c328d235d6f84dda371140027f39",
+        "findings": 6
       }
     },
     {
