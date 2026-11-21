@@ -62,10 +62,14 @@ stands:
   files it cites have changed and it still holds, record the same body at the
   session revision, which moves the revision a reader sees on the page.
 
-A section that cannot be said is declined with the reason:
-`decline_narrative(subject_type="subsystem", subject_id, section, reason,
-ref_sha)`. `get_narratives` also says how many section-and-topic keys a reset
-withdrew and are owed again; record or decline each. A reason is one
+A section or topic that cannot be said is declined with the reason, at its own
+topic: `decline_narrative(subject_type="subsystem", subject_id, section, topic,
+reason, ref_sha)`. Leaving `topic` out declines the section's untitled body
+only, and a named topic stays owed. `get_narratives` also says how many
+section-and-topic keys a reset withdrew and are owed again. To name them, call
+`get_narratives(subject_type="subsystem", subject_id, history=true)`: a key
+listed in its history with no effective row is a withdrawn one. Record or
+decline each at that section and topic. A reason is one
 paragraph: *"decline_narrative refuses: a reason is one paragraph"* otherwise.
 A revision cites its evidence: *"a narrative cites the evidence it was written
 from"*.

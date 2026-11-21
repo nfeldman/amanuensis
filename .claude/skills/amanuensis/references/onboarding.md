@@ -200,7 +200,9 @@ will see the queue at the Phase 7 checkpoint.
     `record_runtime_boundary(from_runtime, from_language, to_runtime,
     mechanism, notes, evidence_ids, ref_sha=onboarding_sha)`.
   - The project narratives, one call each. `repository-shape` holds the
-    directory clusters from Phase 1; `stateful-entities` the Phase 3 entities;
+    directory clusters from Phase 1; `runtime` what runs and how the parts call
+    each other, from the Phase 2 evidence the runtime boundaries cite;
+    `stateful-entities` the Phase 3 entities;
     `concern-calibration` how the checklist was calibrated; `start-here` what to
     read first, for a bug report and for a feature request; and `survey-plan`
     the order of the survey, which needs no evidence. Put a part of a section
@@ -208,6 +210,8 @@ will see the queue at the Phase 7 checkpoint.
 
     ```
     record_narrative(subject_type="project", section="repository-shape",
+      body, evidence_ids, ref_sha=onboarding_sha)
+    record_narrative(subject_type="project", section="runtime",
       body, evidence_ids, ref_sha=onboarding_sha)
     record_narrative(subject_type="project", section="stateful-entities",
       body, evidence_ids, ref_sha=onboarding_sha)

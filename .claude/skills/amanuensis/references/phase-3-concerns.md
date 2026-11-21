@@ -18,9 +18,16 @@ The coordinator has already advanced this subsystem to `concerns`;
   for the structural-inventoried files.
 - Call `get_narratives(subject_type="subsystem", subject_id,
   section="structure")` for the structural map, and `get_claims` for the
-  inventory. **If neither holds a structure narrative or a declination, stop
-  and return to the coordinator** — concern work on a partial structural map
-  is the largest source of false confidence in the methodology.
+  inventory. A store imported from files may hold its structural map as an
+  imported survey body instead: when no structure narrative is in force, call
+  `get_imported_artifacts(kind="subsystem-survey", subsystem_id,
+  include_body=true)`
+  and read the body no withdrawal has retired. It is written as it was, not tied
+  to evidence, so check what it says against the code before relying on it.
+  **If there is no structure narrative, no declination and no unwithdrawn
+  imported survey body, stop and return to the coordinator** — concern work on
+  a partial structural map is the largest source of false confidence in the
+  methodology.
 
 ## For each concern
 

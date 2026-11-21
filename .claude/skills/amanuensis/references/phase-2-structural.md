@@ -49,8 +49,10 @@ claims (step 7), call `record_claim_mark(claim_id, kind, label, target,
 evidence_id, ref_sha)` for each commit point, crash point, exit, seam crossing
 and trigger you read, or say the flow has none with
 `decline_claim_marks(flow, reason, ref_sha)`. Step 7 lists the kinds and what
-the writers refuse. Neither refuses the advance; a flow with neither is shown
-on its page as having no marks recorded.
+the writers refuse. Neither refuses the advance. No page draws a flow's marks
+yet: the flow strip that will show them, and say when a flow has none, is
+store-only packet SO25. Until then the marks and declinations are read with
+`get_claims`.
 
 ### 4. Concurrency model
 
