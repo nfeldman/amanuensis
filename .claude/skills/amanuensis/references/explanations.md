@@ -10,7 +10,9 @@ It does not establish that the explanation is true.
 There are two slots. A **purpose** (subsystem or project) is one paragraph of at
 most 400 bytes. An **account** (subsystem or project) is prose and lists of at
 most 4096 bytes. The project's purpose is its thesis: what the codebase is, in
-one paragraph. There is no minimum length and one evidence row is enough.
+one paragraph, recorded with `record_explanation(subject_type="project",
+slot="purpose", body, evidence_ids, ref_sha)`. The overview prints that record
+and nothing else. There is no minimum length and one evidence row is enough.
 Declining is a real answer. A session that cannot say something true and
 specific says so, with the reason, and the reason is kept.
 

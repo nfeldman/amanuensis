@@ -823,7 +823,6 @@ const SURVIVING_SENTENCES = [
   ["references/refresh.md", "Never clear a row you have not read. Never clear in bulk."],
   ["references/refresh.md", "they cannot be verified in place"],
   ["references/onboarding.md", "**Rank every subsystem by survey priority**"],
-  ["references/artifact-templates.md", "## Structural inventory (Phase 2)"],
   ["../../../.claude/skills/amanuensis/SKILL.md", "Authorized claims still scale with status"],
 ];
 

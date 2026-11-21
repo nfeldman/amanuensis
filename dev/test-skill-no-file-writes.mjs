@@ -189,9 +189,11 @@ try {
 }
 
 let sections = [];
+let sectionMeanings = [];
 try {
   const contract = JSON.parse(read(join(mcp, "contracts", "conspectus-vocabulary.json")) ?? "");
-  sections = contract.enums.narrative_section.values.map((row) => row.value);
+  sectionMeanings = contract.enums.narrative_section.values.map((row) => ({ value: row.value, meaning: row.meaning }));
+  sections = sectionMeanings.map((row) => row.value);
 } catch {
   fail("the contract's narrative_section values could not be read");
 }
@@ -251,7 +253,6 @@ for (const [file, text] of texts) {
     if (!WRITE_VERB.test(line)) return;
     for (const span of line.matchAll(/`([^`]*\.md)`/g)) {
       if (/^(?:references\/|\.\.\/|design\/|docs\/)/.test(span[1]) || /^(?:SKILL|AGENTS|CLAUDE)\.md$/.test(span[1])) continue;
-      if (/^[a-z-]+\.md$/.test(span[1]) && existsSync(join(refs, span[1]))) continue;
       fail(`${file}:${index + 1} tells the agent to write ${span[1]}`);
     }
   });
@@ -290,9 +291,12 @@ for (const [heading, wanted] of FAMILIES) {
     if (!body.includes(tool)) fail(`records.md's ${heading.source.replace("^", "")} section does not name ${tool}`);
   }
 }
-const narratives = section(records, /^Narratives/i);
-for (const value of sections) {
-  if (!narratives.includes(`\`${value}\``)) fail(`records.md's narratives section does not say what \`${value}\` contains`);
+const narratives = section(records, /^Narratives/i).replace(/\s+/g, " ").toLowerCase();
+for (const row of sectionMeanings) {
+  // Each section is said in the contract's own words: "`value` holds <meaning>".
+  const meaning = row.meaning.replace(/\.$/, "").replace(/\s+/g, " ");
+  const said = `\`${row.value}\` holds ${meaning.charAt(0).toLowerCase()}${meaning.slice(1)}`.toLowerCase();
+  if (!narratives.includes(said)) fail(`records.md's narratives section does not say what \`${row.value}\` contains: "${meaning}"`);
 }
 if (/dispatch/i.test(records) && /prompt/i.test(records) && /template/i.test(records)) {
   fail("records.md still carries a dispatch-prompt template (D8)");
@@ -301,6 +305,8 @@ if (/dispatch/i.test(records) && /prompt/i.test(records) && /template/i.test(rec
 // ------------------------------------------------------------------ the steps
 
 const hasSection = (args, want) => args.section === want;
+// The server refuses a narrative that cites no evidence, except a survey plan.
+const cites = (args) => "evidence_ids" in args;
 const hasValue = (args, key, pattern) => typeof args[key] === "string" && pattern.test(args[key]);
 
 // Onboarding Phase 7: the record calls replace the files.
@@ -322,7 +328,8 @@ else {
       `onboarding.md Phase 7 (${wanted})`,
       phase7,
       "record_narrative",
-      (args) => hasValue(args, "subject_type", /^project$/) && hasSection(args, wanted),
+      (args) =>
+        hasValue(args, "subject_type", /^project$/) && hasSection(args, wanted) && (wanted === "survey-plan" || cites(args)),
     );
   }
   requireCalls("onboarding.md Phase 7", phase7, "add_concern", (args) => "territory" in args && "probe" in args);
@@ -358,7 +365,8 @@ else {
     "phase-2-structural.md narrative step",
     structure,
     "record_narrative",
-    (args) => hasValue(args, "subject_type", /^subsystem$/) && hasSection(args, "structure") && "topic" in args,
+    (args) =>
+      hasValue(args, "subject_type", /^subsystem$/) && hasSection(args, "structure") && "topic" in args && cites(args),
   );
   requireCalls(
     "phase-2-structural.md narrative step",
@@ -374,7 +382,7 @@ requireCalls(
   "phase-3-concerns.md",
   concerns,
   "record_narrative",
-  (args) => hasValue(args, "subject_type", /^subsystem$/) && hasSection(args, "concern-reasoning"),
+  (args) => hasValue(args, "subject_type", /^subsystem$/) && hasSection(args, "concern-reasoning") && cites(args),
 );
 requireCalls("phase-3-concerns.md inputs", section(concerns, /^Inputs/), "get_narratives", (args) =>
   hasValue(args, "subject_type", /^subsystem$/),
@@ -387,7 +395,8 @@ requireCalls(
   "phase-4-adversarial.md",
   adversarial,
   "record_narrative",
-  (args) => hasValue(args, "subject_type", /^subsystem$/) && hasSection(args, "challenge") && "topic" in args,
+  (args) =>
+    hasValue(args, "subject_type", /^subsystem$/) && hasSection(args, "challenge") && "topic" in args && cites(args),
 );
 if (/survey artifact|"Adversarial review" section/i.test(adversarial)) {
   fail("phase-4-adversarial.md still writes the adversarial review into a survey artifact");

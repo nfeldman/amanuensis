@@ -44,6 +44,14 @@ At least one end-to-end trace of the primary data flow, with
 file + symbol references at each step. If there are multiple
 independent flows, trace each.
 
+Each flow ends in marks or a declination. Once its steps are recorded as
+claims (step 7), call `record_claim_mark(claim_id, kind, label, target,
+evidence_id, ref_sha)` for each commit point, crash point, exit, seam crossing
+and trigger you read, or say the flow has none with
+`decline_claim_marks(flow, reason, ref_sha)`. Step 7 lists the kinds and what
+the writers refuse. Neither refuses the advance; a flow with neither is shown
+on its page as having no marks recorded.
+
 ### 4. Concurrency model
 
 Single-threaded? Pool? Async runtime? Actor? GIL? Is there shared
@@ -242,24 +250,32 @@ real and common answer that has to be said out loud. A subsystem *"cannot
 both carry domain vocabulary and declare it has none"* — the declination
 is refused where an anchored term already stands.
 
-## Output artifact
+## Record the narrative
 
-Write a prose structural summary into the subsystem's survey
-artifact at the project storage root: `<id>-<slug>.md`. Sections:
+The prose around the inventory is recorded, not written to a file. For each
+part the structure needs, call
 
-- **Key types** — table with symbol, role, source `file:symbol@sha`.
-- **State containers** — table per the list above.
-- **Data flows** — at least one end-to-end, with numbered steps.
-- **Concurrency model** — prose paragraph with evidence citations.
-- **Domain vocabulary** — the terms recorded this phase with their
-  anchors, or the declination and its reason.
-- **Seam contracts** — one sub-section per seam, this side filled
-  in.
+```
+record_narrative(subject_type="subsystem", subject_id, section="structure",
+  topic, body, evidence_ids, ref_sha=<session sha>)
+```
 
-After writing, call
-`register_artifact(path="<id>-<slug>.md", kind="subsystem-survey",
-subsystem_id, ref_sha=<session sha>)` then
-`rehash_artifact(path, ref_sha=<session sha>)`.
+The parts to consider are the key types, the state containers, one flow per
+primary trace, the concurrency model, and each seam from this side. `topic` is
+a short title for the part, at most 120 characters; the page prints it as a
+subheading. The body is prose and lists of at most 8192 bytes, with no heading
+or table line. The typed parts already have their own records (claims, seams,
+vocabulary), so say what they do not: why the parts are shaped as they are, and
+how work moves between them. Cite each symbol as `file:symbol@sha`. At least
+one of `evidence_ids` must be an `add_evidence` row for a file in the
+subsystem's ledger.
+
+Where the code supports no prose beyond the claims, say so:
+`decline_narrative(subject_type="subsystem", subject_id, section="structure",
+reason, ref_sha)`, with the reason in one paragraph of at most 400 bytes.
+Recording or declining is what the advance to `concerns` asks for, and it
+refuses with *"no structure narrative has been recorded or declined"* until one
+has. A correction is a new row; the newest row for a topic is the one served.
 
 ## Hand back
 
@@ -268,6 +284,7 @@ Return to the coordinator with a one-line summary:
 - Counts of key types, state containers, flows documented, and
   the claims recorded for them.
 - Concurrency model verdict.
+- The structure topics recorded, or the reason none was.
 - Seam contracts written + any seams where contract detail is still
   unknown.
 - Vocabulary additions.
@@ -311,8 +328,8 @@ Phase 5 revises or confirms it.
 
 - **Types before implementation.** Read class bodies for method
   signatures and invariants, not for line-by-line logic.
-- **Cite everything.** Every structural claim in the summary needs a
-  `file:symbol@sha` reference, and every one recorded through
+- **Cite everything.** Every structural statement in a narrative needs a
+  `file:symbol@sha` reference, and every claim recorded through
   `add_claim` needs its evidence rows.
 - **Do not classify concerns yet.** Phase 3 does that. If you notice
   a concern while structural reading, record a

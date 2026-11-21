@@ -16,10 +16,11 @@ The coordinator has already advanced this subsystem to `concerns`;
 - Call
   `get_subsystem_files(subsystem_id, classification_filter="examined")`
   for the structural-inventoried files.
-- Read the subsystem survey artifact (`<id>-<slug>.md`) for the
-  structural map. **If it's missing or incomplete, stop and return to
-  the coordinator** — concern work on a partial structural summary is
-  the largest source of false confidence in the methodology.
+- Call `get_narratives(subject_type="subsystem", subject_id,
+  section="structure")` for the structural map, and `get_claims` for the
+  inventory. **If neither holds a structure narrative or a declination, stop
+  and return to the coordinator** — concern work on a partial structural map
+  is the largest source of false confidence in the methodology.
 
 ## For each concern
 
@@ -174,6 +175,26 @@ add_finding(
 Attach the same evidence rows via
 `attach_evidence_to_finding(finding_id, evidence_id, role)`. Role
 ∈ `{symptom, root-cause, fix-anchor, compensating}`.
+
+## Record the reasoning
+
+A disposition's rationale is one sentence. Reasoning that did not fit it is
+recorded as a narrative:
+
+```
+record_narrative(subject_type="subsystem", subject_id,
+  section="concern-reasoning", topic, body, evidence_ids,
+  ref_sha=<session sha>)
+```
+
+The topic names what the reasoning is about, such as a concern code or a
+seam. The body says how the concern was framed, which compensating
+mechanisms were considered, and why each evidence quality was chosen. It is
+prose and lists with no heading or table line, and at least one of
+`evidence_ids` is a row for a file in the subsystem's ledger. Below `concerns`
+it is refused: *"a concern-reasoning narrative is written once a subsystem has
+reached 'concerns'"*. Where the dispositions say all there is to say, record
+nothing.
 
 ## Hand back
 

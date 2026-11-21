@@ -7,54 +7,9 @@ subsystem's contribution to the conspectus, renders the navigable
 docs, and emits the subsystem's end-of-survey summary.
 
 Under autopilot this phase flows straight into the next subsystem's
-Phase 1 if the master plan has more `unmapped` rows. No gate.
+Phase 1 if another subsystem is still `unmapped`. No gate.
 
 ## Steps
-
-### 1. Update `master-plan.md`
-
-The subsystem's row:
-
-- New status (`mapped` at the end of this phase).
-- Findings counts (confirmed bugs, by severity).
-- Post-survey priority — sometimes a subsystem reveals dependencies
-  that re-rank what should come next. Update if needed.
-
-### 2. Update `findings-index.md`
-
-For each confirmed bug from this pass:
-
-- Finding id, severity, primary file, one-line summary, link to
-  the subsystem survey artifact's Adversarial Review section.
-- Group by severity (CRITICAL first).
-
-### 3. Update `entry-point.md`
-
-This is the one-page navigator a future LLM reads cold. Touch
-three sections:
-
-- **Directory Map** — add this subsystem's primary path if it's
-  newly load-bearing.
-- **Confirmed Bugs** — add the new findings with a one-line
-  summary each.
-- **Minimal Read** — if this subsystem is now part of "the
-  smallest set of files a new analyst should read to understand
-  the system," add the load-bearing files. Don't bloat this
-  section — it loses value as it grows.
-
-### 4. Register and rehash every touched artifact
-
-For each updated file:
-
-```
-register_artifact(path, kind="<one of: master-plan |
-  findings-index | entry-point | subsystem-survey>",
-  subsystem_id, ref_sha=<session sha>)
-rehash_artifact(path, ref_sha=<session sha>)
-```
-
-This is what the materializer reads to decide whether to re-render
-the page.
 
 ### Settle the explanations
 
@@ -86,6 +41,34 @@ ref_sha)`. Declining with a reason is a complete answer.
 Do the same for the project account:
 `get_explanations(subject_type="project")`, then revise it where this pass
 changed what it says, or confirm it stands.
+
+### Settle the narratives
+
+Read what the earlier phases recorded for the subsystem's prose:
+
+```
+get_narratives(subject_type="subsystem", subject_id=<id>)
+```
+
+It returns the newest row for each section and topic. Read each against what
+Phases 3 and 4 found. Then revise it by recording a new row, or confirm it
+stands:
+
+- **Revise.** `record_narrative(subject_type="subsystem", subject_id,
+  section, topic, body, evidence_ids, ref_sha=<session sha>)`. The newest row
+  is effective and the earlier one is kept. Do the same for a topic a
+  challenge narrative has shown to be wrong.
+- **Confirm.** Leave the row and say so in the survey-pass summary. If the
+  files it cites have changed and it still holds, record the same body at the
+  session revision, which moves the revision a reader sees on the page.
+
+A section that cannot be said is declined with the reason:
+`decline_narrative(subject_type="subsystem", subject_id, section, reason,
+ref_sha)`. `get_narratives` also says how many section-and-topic keys a reset
+withdrew and are owed again; record or decline each. A reason is one
+paragraph: *"decline_narrative refuses: a reason is one paragraph"* otherwise.
+A revision cites its evidence: *"a narrative cites the evidence it was written
+from"*.
 
 ### Advance status
 
@@ -132,9 +115,8 @@ coverage published over an unreconciled ledger is a fraction of itself.
 The advance to `mapped` above has already read that reconciliation, so
 this call finds the store reconciled.
 
-The materializer is diff-aware — only pages whose DB or prose
-sources changed get re-rendered. The cross-reference resolver
-re-links every ID across pages. It then publishes synchronized HTML and
+The materializer builds every page from the store's records and reads no
+prose file. The cross-reference resolver re-links every ID across pages. It then publishes synchronized HTML and
 Markdown views and reads both back. Treat the returned `html_entrypoint` as
 the primary human handoff; Markdown remains the portable audit companion.
 

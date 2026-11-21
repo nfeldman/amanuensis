@@ -130,19 +130,25 @@ Anything with `assessable=1` whose seam row has no `SC-N`
 dispositions yet is ready for its seam assessment. Flag for the
 coordinator to run.
 
-### 7. Artifact manifest consistency
+### 7. Narratives
+
+For each `mapped` subsystem:
 
 ```
-list_artifacts()
+get_narratives(subject_type="subsystem", subject_id=<id>)
 ```
 
-For each registered artifact:
+- If a section the survey owes has no effective row (`structure` for any
+  subsystem past `scoping`, `concern-reasoning` and `challenge` for one past
+  `concerns` or `adversarial`) and no declination, flag it.
+- If an effective narrative's `ref_sha` is older than a change to a file it
+  cites, or the file is on the stale backlog (category 4), list it as ageing:
+  the prose may no longer describe the code. It is not a hard error; a refresh
+  revises it.
+- `withdrawn` counts the keys a reset withdrew and the subsystem still owes.
 
-- If the file is missing from the storage directory, flag (someone
-  deleted the prose without updating the registry).
-- If `written_at` is older than the last session's end_time, the
-  artifact may be stale relative to the current DB state — not a
-  hard error, but worth a materialize run.
+For the project, `get_narratives(subject_type="project")` should hold an
+effective row for each of the six sections the onboarding pass records.
 
 ## Output shape
 
@@ -166,6 +172,10 @@ For each registered artifact:
 
 ## Seam assessments ready
 - SM-02 (B-01 ↔ B-04) — both parties mapped; 0 SC-N dispositions.
+
+## Narratives owed or ageing
+- B-02 structure — no row and no declination.
+- B-03 challenge "B03-1" — cites a file stale since 2026-03-18.
 ```
 
 Skip any section that has nothing.
@@ -176,8 +186,5 @@ Skip any section that has nothing.
   mode. You recommend; the coordinator or phase agents execute.
 - **You may resolve field notes** explicitly as `dismissed` after
   consulting the human — but not silently.
-- **You may re-hash artifacts** that exist on disk but whose stored
-  `content_hash` is out of date. This is bookkeeping, not
-  semantics.
 - **Do not run `materialize_docs`** from here. The coordinator
   decides when to re-render.

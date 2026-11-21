@@ -25,9 +25,9 @@ Turns red when:
   - the census holds a row for an empty-state sentence that is not a slot;
   - `PLACEHOLDER_SENTENCES` is not exported, or one of the six strings in
     `dev/measure-reader-prose.mjs` occurs in none of its sentences;
-  - the heading `onboarding.md` or `artifact-templates.md` names for the thesis,
-    or the runtime table either names, is not read back by the materializer from
-    a record built out of that text;
+  - `onboarding.md` asks for the thesis under a heading, or does not record it as the
+    project purpose, or its `record_runtime_boundary` call leaves out one of the runtime
+    table's five columns (SO10 moved this from the heading and table the skill used to name);
   - an unfilled slot makes the publication fail, or the clean-publish summary
     carries different rows;
   - `phase-5-packaging.md` or `onboarding.md` lists fewer than the six slots
@@ -81,7 +81,6 @@ CI_FILE = REPO / ".github" / "workflows" / "test.yml"
 MEASURE_FILE = REPO / "dev" / "measure-reader-prose.mjs"
 SKILL = REPO / ".claude" / "skills" / "amanuensis" / "references"
 ONBOARDING = SKILL / "onboarding.md"
-TEMPLATES = SKILL / "artifact-templates.md"
 PACKAGING = SKILL / "phase-5-packaging.md"
 CENSUS_TEXT = (
     ROOT / "amanuensis_materializer" / "core.py",
@@ -677,90 +676,42 @@ def main() -> int:
 
         check("PLACEHOLDER_SENTENCES covers the six measured strings and prints", placeholder_sentences)
 
-        # -- 6. the skill text and the renderer name the same headings ----------
-        def pattern_parity() -> str | None:
-            sys.path.insert(0, str(ROOT))
-            from amanuensis_materializer.renderers import THESIS_SECTION_PATTERN  # noqa: PLC0415
-
-            for path in (ONBOARDING, TEMPLATES):
-                text = read(path)
-                if not text:
-                    return f"{path.name} is not readable"
-                named = re.findall(r"^#{1,6}\s*What is this[^\n`]*$|`(#{1,6}\s*What is this[^`\n]*)`", text, re.M | re.I)
-                headings = [h for h in named if h] + re.findall(r"^(#{1,6}\s*What is this[^\n`]*)$", text, re.M | re.I)
-                if "## What is this codebase?" not in headings:
-                    return f"{path.name} does not name the heading `## What is this codebase?` literally"
-                for heading in headings:
-                    if not THESIS_SECTION_PATTERN.match(heading):
-                        return f"THESIS_SECTION_PATTERN does not match `{heading}` from {path.name}"
+        # -- 6. the skill text asks for the records the renderer reads ------------
+        def purpose_is_recorded() -> str | None:
+            # The skill no longer writes a file, so there is no heading to match. The thesis is
+            # the project purpose, recorded with record_explanation (SO10).
+            text = read(ONBOARDING)
+            if not text:
+                return "onboarding.md is not readable"
+            if re.search(r"What is this codebase\?", text):
+                return "onboarding.md still asks for a thesis under a heading"
+            if not re.search(r'record_explanation\(\s*subject_type="project",\s*slot="purpose"', text):
+                return "onboarding.md does not record the thesis as the project's purpose"
             return None
 
-        check("THESIS_SECTION_PATTERN matches the heading both skill files name", pattern_parity)
-
-        def read_back(path: Path) -> str | None:
-            """Build the records out of the skill text and let the materializer read them."""
-
-            text = read(path)
-            heading = next(
-                iter(
-                    re.findall(r"^(#{1,6}\s*What is this[^\n`]*)$", text, re.M | re.I)
-                    + re.findall(r"`(#{1,6}\s*What is this[^`\n]*)`", text, re.I)
-                ),
-                "",
-            )
-            runtime = re.search(
-                r"^(#{1,6}\s+Runtime boundary map\s*\n\n(?:\|[^\n]*\n){2})", text, re.M | re.I
-            )
-            if not heading:
-                return f"{path.name} has no thesis heading line to build a record from"
-            if runtime is None:
-                return f"{path.name} has no `## Runtime boundary map` heading followed by a table header"
-            store = Fixture(
-                root,
-                f"parity-{path.stem}",
-                entry=f"# Entry point\n\n{heading}\n\n{THESIS_BODY}",
-                onboarding=f"# Onboarding report\n\n{runtime.group(1)}| worker | TypeScript | store | SQL | drains jobs |\n",
-                vocab={"B-01": "term", "B-02": "declined"},
-            )
-            rows = store.rows()
-            if isinstance(rows, str):
-                return rows
-            if rows != []:
-                return (
-                    f"a record built from {path.name}'s headings is not read back: "
-                    f"{[(r.get('slot'), r.get('subject')) for r in rows]}"
-                )
-            if "| worker |" not in store.page("architecture.md"):
-                return f"the runtime table built from {path.name} is not on the architecture page"
-            return None
-
-        check("the onboarding text builds a thesis and a runtime table the renderer reads", lambda: read_back(ONBOARDING))
-        check("the artifact templates build a thesis and a runtime table the renderer reads", lambda: read_back(TEMPLATES))
+        check("onboarding.md records the thesis as the project purpose, under no heading", purpose_is_recorded)
 
         def onboarding_asks() -> str | None:
             text = read(ONBOARDING)
-            if "## Runtime boundary map" not in text:
-                return "onboarding.md does not name `## Runtime boundary map`"
             sys.path.insert(0, str(ROOT))
             try:
                 from amanuensis_materializer import diagrams  # noqa: PLC0415
             except Exception as exc:
                 return f"diagrams could not be imported — {scrub(exc)}"
-            headers = getattr(diagrams, "_RUNTIME_BOUNDARY_HEADERS", ())
-            header_line = next(
-                (
-                    ln
-                    for ln in text.splitlines()
-                    if ln.lstrip().startswith("|")
-                    and tuple(c.strip().lower() for c in ln.strip().strip("|").split("|")) == tuple(headers)
-                ),
-                None,
-            )
-            if not headers or header_line is None:
-                return "onboarding.md does not carry the five column names diagrams.py requires, as one table header"
+            headers = tuple(getattr(diagrams, "_RUNTIME_BOUNDARY_HEADERS", ()))
+            # The table's five columns, each as the argument of record_runtime_boundary that holds it.
+            arguments = ("from_runtime", "from_language", "to_runtime", "mechanism", "notes")
+            if len(headers) != len(arguments):
+                return f"diagrams.py names {len(headers)} runtime columns, not {len(arguments)}"
+            call = re.search(r"record_runtime_boundary\(([^)]*)\)", text, re.S)
+            if call is None:
+                return "onboarding.md has no record_runtime_boundary call"
+            absent = [name for name in arguments if not re.search(rf"\b{name}\b", call.group(1))]
+            if absent:
+                return f"onboarding.md's record_runtime_boundary call does not name {', '.join(absent)}"
             return None
 
-        check("onboarding.md names the runtime heading and its five columns", onboarding_asks)
+        check("onboarding.md records every column of the runtime table", onboarding_asks)
 
         def no_numeric_floor() -> str | None:
             # decisions.md §7: no numeric floor on any authored field.

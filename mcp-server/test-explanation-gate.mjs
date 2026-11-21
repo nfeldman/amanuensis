@@ -718,14 +718,15 @@ function contractChecks() {
     const phase7 = section(onboarding, "## Phase 7 · Produce the conspectus");
     const problem = requirePhrases(
       phase7,
-      ["`## What is this codebase?`", "project account", "first subsystem reaches `structural`", "record_explanation", "packaging"],
+      ['slot="purpose"', "project account", "first subsystem reaches `structural`", "record_explanation", "packaging"],
       "onboarding Phase 7",
     );
     if (problem) return problem;
-    const templates = readSkill("references/artifact-templates.md");
-    if (templates.includes("## Tier 1 summary")) return "artifact-templates.md still carries the Tier 1 summary section";
-    if (!/recorded account/.test(templates) || !templates.includes("get_explanations")) {
-      return "artifact-templates.md does not point at the recorded account";
+    // SO10: artifact-templates.md became records.md; the project's purpose is recorded, not a heading.
+    const templates = readSkill("references/records.md");
+    if (templates.includes("## Tier 1 summary")) return "records.md still carries the Tier 1 summary section";
+    if (!/account/.test(templates) || !templates.includes("get_explanations") || !templates.includes("explanations.md")) {
+      return "records.md does not point at the recorded account";
     }
     const refresh = readSkill("references/refresh.md");
     const at = refresh.indexOf("get_explanations");

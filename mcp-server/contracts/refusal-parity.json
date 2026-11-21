@@ -27,7 +27,7 @@
         { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
         { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" },
         {
-          "file": "../.claude/skills/amanuensis/references/artifact-templates.md",
+          "file": "../.claude/skills/amanuensis/SKILL.md",
           "phrase": "declared that it has none"
         }
       ]
