@@ -406,6 +406,11 @@ async function main() {
     ["one"],
   );
   await refused(
+    "two quoting one on their shared line",
+    { file_path: "src/shapes.ts", symbol: "two", line_range: "7", excerpt: 'return "alpha";' },
+    ["two"],
+  );
+  await refused(
     "one quoting across into two with an elision",
     { file_path: "src/shapes.ts", symbol: "one", line_range: "7", excerpt: 'return "alpha"; ... function two' },
     ["one"],
