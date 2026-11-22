@@ -465,6 +465,7 @@ function checkInstalledJob(workflow) {
   check(job.matrixKeys.length === 2, `the installed-artifact job's matrix has keys [${job.matrixKeys.join(", ")}]; it needs exactly os and node`);
   check(job.keys["runs-on"] === `\${{ matrix.${osKey} }}`, "the installed-artifact job does not run on the matrix's os");
   check(!("continue-on-error" in job.keys), "the installed-artifact job is allowed to fail");
+  check(!("if" in job.keys), "the installed-artifact job is conditional");
   const setup = job.steps.find((s) => (s.keys.uses ?? "").startsWith("actions/setup-node"));
   check(setup && setup.with["node-version"] === `\${{ matrix.${nodeKey} }}`, "the installed-artifact job's setup-node does not use the matrix's Node version");
   const run = stepsRunning(job, "mcp-server", script)[0];
