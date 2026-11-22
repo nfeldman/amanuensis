@@ -203,25 +203,35 @@ export async function findSymbols(
 ): Promise<FindResult | Unavailable> {
   const tree = await ensureTree(index, workspace, commit);
   if ("state" in tree) return tree;
-  const found = index.use((db) => {
-    const match = options.mode === "definitions" ? matchQuery(query) : null;
-    const hits =
-      options.mode === "references"
-        ? references(db, commit, query.trim(), options)
-        : match
-          ? definitions(db, commit, match, options)
-          : { rows: [], more: false };
-    const unsupported =
-      hits.rows.length === 0 &&
-      options.pathPrefix !== null &&
-      onlyUnsupported(db, commit, options.pathPrefix);
-    return { ...hits, unsupported };
-  });
+  // One read transaction, so the completion marker and the hits come from one snapshot: another
+  // process may prune this revision or set the sidecar aside after `ensureTree`'s check.
+  const found = index.use((db) =>
+    db.transaction(() => {
+      const complete =
+        db.prepare("SELECT 1 FROM trees_complete WHERE rev = ?").get(commit) !== undefined;
+      const match = options.mode === "definitions" ? matchQuery(query) : null;
+      const hits =
+        options.mode === "references"
+          ? references(db, commit, query.trim(), options)
+          : match
+            ? definitions(db, commit, match, options)
+            : { rows: [], more: false };
+      const unsupported =
+        hits.rows.length === 0 &&
+        options.pathPrefix !== null &&
+        onlyUnsupported(db, commit, options.pathPrefix);
+      return { ...hits, unsupported, complete };
+    })(),
+  );
   if ("state" in found) return found;
+  const vanished = !tree.partial && !found.complete;
+  const reason = vanished
+    ? "the tree index was removed during this call; the next call rebuilds it"
+    : tree.reason;
   return {
     state: "ok",
-    partial: tree.partial,
-    ...(tree.reason ? { partial_reason: tree.reason } : {}),
+    partial: tree.partial || vanished,
+    ...(reason ? { partial_reason: reason } : {}),
     ...(found.unsupported ? { status: "unsupported-language" as const } : {}),
     results: found.rows as DefinitionHit[] | ReferenceHit[],
     more: found.more,
