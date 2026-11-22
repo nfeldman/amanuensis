@@ -33,15 +33,20 @@
 //     add_evidence, or the skill reference it names does not state it;
 //   - the whole describe_locus result — standing and the account's structure section — does
 //     not find an anchored row by bare name, by qname and by symbol_id; finds anything by a
-//     bare name that names two symbol_ids instead of saying so on both surfaces, naming both;
+//     bare name that names two symbol_ids instead of saying so on both surfaces, naming both
+//     in standing and in every section that reads evidence (structure, defects, reviews);
 //     stops finding an unanchored row by its exact free text; or stops matching the
-//     contract in contracts/locus-account.schema.json.
+//     contract in contracts/locus-account.schema.json;
+//   - land_review_pass's new_evidence does not do what add_evidence does: a symbol naming a
+//     definition stores its symbol_id, a filled range and an anchor row equal to the
+//     definition's; an unknown symbol is refused with its candidates and the pass writes
+//     nothing; a failed anchor insert leaves no evidence row and no judgment behind.
 //
 // Hermetic: the fixture repository and the store are built in a temporary directory, the
 // tools run in this process from dist/, and nothing reaches the network.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -84,6 +89,10 @@ function git(cwd, args) {
   const r = spawnSync("git", args, { cwd, encoding: "utf8" });
   if (r.status !== 0) fail(`git ${args.join(" ")} failed: ${oneLine(r.stderr)}`);
   return r.stdout;
+}
+function write(dir, path, content) {
+  mkdirSync(dirname(join(dir, path)), { recursive: true });
+  writeFileSync(join(dir, path), content);
 }
 /** Lines `from`..`to` (1-based) of `path` at `rev`, as git holds them. */
 function gitLines(workspace, rev, path, from, to) {
@@ -153,6 +162,9 @@ async function loadModules() {
     ["dist/tools/claims.js", "claimTools"],
     ["dist/tools/code-index.js", "codeIndexTools"],
     ["dist/tools/locus.js", "locusTools"],
+    ["dist/tools/impact.js", "impactTools"],
+    ["dist/tools/review.js", "reviewTools"],
+    ["dist/tools/review-analysis.js", "reviewAnalysisTools"],
   ]) {
     const mod = await load(path, path.replace(/^dist/, "src").replace(/\.js$/, ".ts"));
     check(Array.isArray(mod[name]), `${path} does not export ${name}`);
@@ -639,6 +651,20 @@ async function main() {
       );
     }
     same(`describe_locus ${locus}: structure claims counted`, structureClaims(r).counted, 0);
+    // Every section that reads the locus's evidence says so too, not only structure.
+    const all = await must("describe_locus", {
+      locus,
+      sections: ["purpose", "structure", "defects", "reviews", "boundaries", "terms", "leads", "history_pointer"],
+    });
+    check(validate(all), `describe_locus ${locus} (every section) breaks the locus-account contract: ${canonical(validate.errors).slice(0, 300)}`);
+    for (const section of ["structure", "defects", "reviews"]) {
+      for (const id of ["Label.render", "Button.render"]) {
+        check(
+          String(all.sections?.[section]?.statement).includes(id),
+          `describe_locus ${locus}: the ${section} section does not name ${id}: ${oneLine(all.sections?.[section]?.statement)}`,
+        );
+      }
+    }
   }
   for (const [locus, evidence, claim] of [
     ["src/shapes.ts:Label.render", label, labelClaim],
@@ -659,6 +685,123 @@ async function main() {
       .map((row) => row.id);
     same("describe_locus src/shapes.ts:add: standing cites", evidenceRows(r), want);
   }
+
+  // -------------------------------------------------------------------------------------
+  // land_review_pass: new_evidence is resolved and anchored as add_evidence anchors it.
+
+  write(workspace, "src/extra.ts", "export const extra = 1;\n");
+  git(workspace, ["add", "src/extra.ts"]);
+  git(workspace, ["-c", "core.hooksPath=/dev/null", "commit", "-q", "--no-verify", "-m", "review head"]);
+  const reviewHead = git(workspace, ["rev-parse", "HEAD"]).trim();
+  await must("predict_change_impact", { base_sha: commit, head_sha: reviewHead, run_id: "si7-impact" });
+  await must("compile_review_brief", {
+    brief_id: "si7-brief",
+    impact_run_id: "si7-impact",
+    task: "Review the shapes module.",
+    task_constraints: [
+      { constraint_id: "c1", statement: "Keep add pure.", source_kind: "direct-user", source_ref: "si7" },
+    ],
+    context_profile: "diff-scoped",
+    token_budget: 20_000,
+  });
+  await must("publish_review_brief", { brief_id: "si7-brief" });
+  const passSpec = (role, n) => ({
+    pass_id: `si7-run:${role}${n}`,
+    role,
+    replicate_id: `${role}${n}`,
+    context_profile: "diff-scoped",
+    analytical_frame: role === "generator" ? "contract-risk" : role === "refuter" ? "fair-refutation" : "evidence-verification",
+    provider: "fixture-provider",
+    model: `${role}-model`,
+    model_family: `${role}-family`,
+    runtime: "fixture-runtime",
+    planned_tokens: 10,
+    planned_cost_microusd: 0,
+  });
+  await must("plan_review_analysis", {
+    run_id: "si7-run",
+    replicate_id: "r1",
+    condition: "same-context",
+    orchestrator_model_family: "orchestrator-family",
+    provider_allowlist: ["fixture-provider"],
+    allowed_source_prefixes: ["src"],
+    max_total_tokens: 100,
+    max_total_cost_microusd: 0,
+    blind_assignment_id: "si7-run:assignment",
+    sealed_truth_hash: sha256("si7 sealed truth"),
+    brief_ids: ["si7-brief"],
+    pass_specs: ["generator", "refuter", "verifier"].flatMap((role) => [passSpec(role, 1), passSpec(role, 2)]),
+  });
+  await must("dispatch_review_pass", { run_id: "si7-run", pass_id: "si7-run:generator1" });
+  const judgmentCount = () => db.prepare("SELECT COUNT(*) AS n FROM review_judgments").get().n;
+  const land = (newEvidence) =>
+    attempt("land_review_pass", {
+      run_id: "si7-run",
+      pass_id: "si7-run:generator1",
+      judgments: [
+        {
+          finding_key: "si7-finding",
+          claim: "add returns the sum.",
+          severity: "LOW",
+          scope: "shapes",
+          rationale: "Read from the definition.",
+          new_evidence_keys: newEvidence.map((row) => row.local_key),
+        },
+      ],
+      new_evidence: newEvidence,
+      actual_tokens: 1,
+      actual_cost_microusd: 0,
+    });
+  const landRows = () => [evidenceCount(), anchorCount(), judgmentCount()];
+  {
+    const before = landRows();
+    const r = await land([
+      { local_key: "unknown", file_path: "src/shapes.ts", symbol: "ad", ref_sha: commit, kind: "code-verified" },
+    ]);
+    check(r?.ok === false, `land_review_pass accepted an unknown symbol: ${canonical(r).slice(0, 300)}`);
+    for (const words of ["ad", "add", "note"]) {
+      check(String(r.error).includes(words), `land_review_pass's refusal of an unknown symbol does not say "${words}": ${oneLine(r.error)}`);
+    }
+    same("evidence, anchor and judgment rows after refusing an unknown symbol", landRows(), before);
+  }
+  db.exec(
+    "CREATE TRIGGER si7_gate_refuse_anchor BEFORE INSERT ON evidence_anchors BEGIN SELECT RAISE(ABORT, 'si7 gate refuses the anchor'); END;",
+  );
+  try {
+    const before = landRows();
+    const r = await land([
+      { local_key: "blocked", file_path: "src/shapes.ts", symbol: "add", ref_sha: commit, kind: "code-verified" },
+    ]);
+    check(r?.ok === false, "land_review_pass succeeded although its anchor could not be written");
+    same("evidence, anchor and judgment rows after a failed review-pass anchor", landRows(), before);
+  } finally {
+    db.exec("DROP TRIGGER si7_gate_refuse_anchor");
+  }
+  {
+    // A bare name narrowed by line_range is stored as its symbol_id; an omitted range is filled.
+    const before = evidenceCount();
+    const r = await land([
+      { local_key: "bare", file_path: "src/shapes.ts", symbol: "render", line_range: "17", ref_sha: commit, kind: "code-verified" },
+      { local_key: "filled", file_path: "src/shapes.ts", symbol: "Label.render", ref_sha: "HEAD~1", kind: "code-verified" },
+    ]);
+    check(r?.ok !== false, `land_review_pass refused render and Label.render: ${oneLine(r?.error)}`);
+    check(evidenceCount() === before + 2, `land_review_pass wrote ${evidenceCount() - before} evidence rows, not 2`);
+    const [bare, filledRow] = db.prepare("SELECT id FROM evidence ORDER BY id DESC LIMIT 2").all().map((row) => row.id).reverse();
+    const row = (symbol, lineRange) => ({
+      file_path: "src/shapes.ts",
+      symbol,
+      line_range: lineRange,
+      ref_sha: commit,
+      kind: "code-verified",
+      excerpt: null,
+      note: null,
+    });
+    same("the review pass's bare-name evidence row", evidenceRow(bare), row("Button.render", "17"));
+    same("the review pass's bare-name anchor", anchorRow(bare), anchorFor(bare, "src/shapes.ts", "typescript", "Button.render", "method", 16, 18, "cited"));
+    same("the review pass's filled evidence row", evidenceRow(filledRow), row("Label.render", "10-12"));
+    same("the review pass's filled anchor", anchorRow(filledRow), anchorFor(filledRow, "src/shapes.ts", "typescript", "Label.render", "method", 10, 12, "filled"));
+  }
+
 }
 
 let status;
