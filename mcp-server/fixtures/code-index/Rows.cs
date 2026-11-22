@@ -79,3 +79,12 @@ namespace Acme.Tools
         class Helper { }
     }
 }
+
+namespace Acme.Money
+{
+    public readonly struct Cents
+    {
+        public static implicit operator long(Cents c) => 0;
+        public static explicit operator Cents(long n) => new Cents();
+    }
+}

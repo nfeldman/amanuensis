@@ -102,3 +102,16 @@ union Word {
 };
 
 enum Level { Low, High };
+
+template <typename T>
+bool geo::Buf<T>::operator==(const Buf& other) const {
+    return size_ == other.size_;
+}
+
+namespace geo::detail {
+int half(int n);
+}
+
+int geo::detail::half(int n) {
+    return n / 2;
+}

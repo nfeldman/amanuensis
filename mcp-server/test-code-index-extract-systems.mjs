@@ -19,7 +19,10 @@
 //   - C++: a qualified declarator is not relative to its lexical namespace chain, a `::`
 //     declarator is not global, a prototype or member declaration is not kind `declaration`
 //     sharing the definition's symbol_id as a second occurrence, or overloads that differ only
-//     by `const`, by ref-qualifier or by template arity share an id;
+//     by `const`, by ref-qualifier or by template arity share an id; an out-of-class
+//     operator definition is not kind `operator`, or a definition qualified by a namespace
+//     the file declares is kind `method` rather than `function`;
+//   - C#: a conversion operator (implicit or explicit) is missing;
 //   - C#: block and file-scoped namespaces are not segments, a partial class split across two
 //     files does not read as two `partial` fragments with one symbol_id, a partial method's
 //     halves are not a `declaration` and a `method` with one symbol_id (in two files and in
@@ -180,6 +183,10 @@ const GOLDEN = {
       ["field", "i", "Word.i", "Word.i", 100, 100, 100, 1],
       ["field", "f", "Word.f", "Word.f", 101, 101, 101, 1],
       ["enum", "Level", "Level", "Level", 104, 104, 104, 1],
+      ["operator", "operator==", "geo.Buf.operator==", "geo.Buf.operator==(const Buf&) const", 107, 109, 106, 2],
+      ["namespace", "geo.detail", "geo.detail", "geo.detail", 111, 113, 111, 2],
+      ["declaration", "half", "geo.detail.half", "geo.detail.half(int)", 112, 112, 112, 1],
+      ["function", "half", "geo.detail.half", "geo.detail.half(int)", 115, 117, 115, 2],
     ],
   },
   "Rows.cs": {
@@ -211,6 +218,10 @@ const GOLDEN = {
       ["delegate", "Handler", "Acme.Tools.Handler", "Acme.Tools.Handler`1", 75, 75, 75, 1],
       ["namespace", "Inner", "Acme.Tools.Inner", "Acme.Tools.Inner", 77, 80, 77, 1],
       ["class", "Helper", "Acme.Tools.Inner.Helper", "Acme.Tools.Inner.Helper", 79, 79, 79, 1],
+      ["namespace", "Acme.Money", "Acme.Money", "Acme.Money", 83, 90, 83, 1],
+      ["struct", "Cents", "Acme.Money.Cents", "Acme.Money.Cents", 85, 89, 85, 1],
+      ["operator", "operator long", "Acme.Money.Cents.operator long", "Acme.Money.Cents.operator long(Cents)", 87, 87, 87, 1],
+      ["operator", "operator Cents", "Acme.Money.Cents.operator Cents", "Acme.Money.Cents.operator Cents(long)", 88, 88, 88, 1],
     ],
   },
   "Widget.A.cs": {
@@ -292,7 +303,8 @@ const COVERAGE = {
     "function defined out of class": ["rows.cpp", "method", "geo.Point.scale(double)"],
     constructor: ["rows.cpp", "constructor", "geo.Buf.Buf()"],
     destructor: ["rows.cpp", "destructor", "geo.Buf.~Buf()"],
-    operator: ["rows.cpp", "declaration", "geo.Buf.operator==(const Buf&) const"],
+    operator: ["rows.cpp", "operator", "geo.Buf.operator==(const Buf&) const"],
+    "namespace-qualified function defined out of its namespace": ["rows.cpp", "function", "geo.detail.half(int)"],
     "member declaration": ["rows.cpp", "declaration", "geo.Buf.get(int)"],
     "namespace-level prototype": ["rows.cpp", "declaration", "run()"],
     "type alias (using)": ["rows.cpp", "type", "geo.Index"],
@@ -312,6 +324,7 @@ const COVERAGE = {
     constructor: ["Rows.cs", "constructor", "Acme.Tools.Cache`1.Cache()"],
     destructor: ["Rows.cs", "destructor", "Acme.Tools.Cache`1.~Cache()"],
     operator: ["Rows.cs", "operator", "Acme.Tools.Cache`1.operator+(Cache<T>,Cache<T>)"],
+    "conversion operator": ["Rows.cs", "operator", "Acme.Money.Cents.operator long(Cents)"],
     indexer: ["Rows.cs", "indexer", "Acme.Tools.Cache`1.this[string]"],
     property: ["Rows.cs", "property", "Acme.Tools.Cache`1.Count"],
     "event with accessors": ["Rows.cs", "event", "Acme.Tools.Cache`1.Cleared"],
