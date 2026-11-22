@@ -21,7 +21,8 @@
 //   - a request renames or opens the sidecar while another process's recovery marker is
 //     present, or a stale marker blocks recovery for ever;
 //   - a locked or unreadable sidecar is not `unavailable`, or is set aside; a short lock is not
-//     waited out (busy_timeout);
+//     waited out (busy_timeout); an unwritable storage directory makes opening throw rather
+//     than each request `unavailable`;
 //   - a generation touched within 30 days is collected, a stale one is not, or a process in use
 //     does not touch its generation after an hour, by request or, idle, by its timer;
 //   - symlinks and gitlinks are not skipped with a reason, or an executable file is not parsed;
@@ -1096,6 +1097,25 @@ async function main() {
     const after = store.openCodeIndex(storage);
     check(after.blob(blobSha(repo, rev2, "src/same.ts"), "typescript").indexed === true, "the sidecar lost its rows");
     after.close();
+
+    // A storage directory this process may not write: opening does not throw, and each
+    // request is unavailable.
+    if (process.getuid?.() !== 0) {
+      const readOnly = newStorage("read-only");
+      chmodSync(readOnly, 0o555);
+      let opened;
+      let threw = null;
+      try {
+        opened = store.openCodeIndex(readOnly);
+      } catch (e) {
+        threw = e;
+      }
+      const r = opened ? await opened.indexFile(repo, rev2, "src/same.ts") : null;
+      opened?.close();
+      chmodSync(readOnly, 0o755);
+      check(threw === null, `opening an index in an unwritable storage directory threw ${threw?.code ?? threw}`);
+      check(r?.state === "unavailable", `a request in an unwritable storage directory: ${canonical(r)}`);
+    }
   });
 }
 
