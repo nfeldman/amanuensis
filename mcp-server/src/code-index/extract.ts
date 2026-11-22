@@ -37,7 +37,7 @@ import { fileURLToPath } from "node:url";
 import { Language, type Node, Parser, Query } from "web-tree-sitter";
 
 /** Bump when a change to this file changes any extraction. */
-export const EXTRACTOR_VERSION = "3";
+export const EXTRACTOR_VERSION = "4";
 
 export type CodeLanguage =
   | "typescript"
@@ -334,6 +334,39 @@ function tight(text: string): string {
     .trim();
 }
 
+// A C++ parameter as written without its name and default value, nor the names of the
+// parameters nested in it: `int (*cb)(int x)` is `int (*)(int)`.
+function cppParameterType(source: string, parameter: Node): string {
+  const cuts: [number, number][] = [];
+  const strip = (node: Node) => {
+    const equals = node.children.find((child) => child?.type === "=");
+    const end = equals ? equals.startIndex : node.endIndex;
+    if (equals) cuts.push([equals.startIndex, node.endIndex]);
+    const { name } = declaratorName(node.childForFieldName("declarator"));
+    if (name && name.type === "identifier" && name.endIndex <= end) {
+      cuts.push([name.startIndex, name.endIndex]);
+    }
+    const nested = (n: Node) => {
+      for (const child of n.namedChildren) {
+        if (!child || child.startIndex >= end) continue;
+        if (child.type.endsWith("parameter_declaration")) strip(child);
+        else nested(child);
+      }
+    };
+    nested(node);
+  };
+  strip(parameter);
+  cuts.sort((a, b) => a[0] - b[0]);
+  let text = "";
+  let at = parameter.startIndex;
+  for (const [start, end] of cuts) {
+    if (start < at) continue;
+    text += source.slice(at, start);
+    at = end;
+  }
+  return text + source.slice(at, parameter.endIndex);
+}
+
 // C++: parameter types as written (names and default values removed), then cv- and
 // ref-qualifiers.
 function cppParameters(source: string, fn: Node): string {
@@ -346,15 +379,7 @@ function cppParameters(source: string, fn: Node): string {
       types.push("...");
       continue;
     }
-    let end = parameter.endIndex;
-    const equals = parameter.children.find((child) => child?.type === "=");
-    if (equals) end = equals.startIndex;
-    const { name } = declaratorName(parameter.childForFieldName("declarator"));
-    let text = source.slice(parameter.startIndex, end);
-    if (name && name.type === "identifier" && name.endIndex <= end) {
-      text = source.slice(parameter.startIndex, name.startIndex) + source.slice(name.endIndex, end);
-    }
-    types.push(tight(text));
+    types.push(tight(cppParameterType(source, parameter)));
   }
   const qualifiers = fn.children
     .filter((child) => child && (child.type === "type_qualifier" || child.type === "ref_qualifier"))
