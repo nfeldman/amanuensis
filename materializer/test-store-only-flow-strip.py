@@ -28,6 +28,8 @@ Turns red when:
     them or does not list them all in the account, or an exit's box or account line names a
     target other than its stored one (a step it unwinds to, or `leaves-flow`);
   - an arrow or a box of a strip is not a link a keyboard can reach (rules 1 and 8);
+  - a mark's account line or box does not open with its kind's `claim_mark_kind` label, or a
+    kind the contract does not hold is drawn rather than refused (final review F18/claude);
   - a step is hatched for a file another subsystem's ledger row holds as stale while its
     own subsystem's reading is fresh (final review F4/codex);
   - a step whose cited file the ledger holds as stale is not hatched, or its box and account do
@@ -723,6 +725,25 @@ def main() -> int:
             return None if seen["step"] >= 2 and seen["leaves"] >= 2 else f"the fixture's exits are {seen}"
 
         check("each exit, drawn or listed, names the target the store holds", exit_targets)
+
+        def mark_words_from_contract() -> str | None:
+            # A mark is named by its kind's `claim_mark_kind` label, in the account and in its box,
+            # and a kind the contract does not hold is an error, never a trigger (F18/claude).
+            vocab = json.loads((REPO / "mcp-server" / "contracts" / "conspectus-vocabulary.json").read_text())
+            names = {str(v["value"]): str(v["label"]) for v in vocab["enums"]["claim_mark_kind"]["values"]}
+            for kind, label in names.items():
+                mark = {"kind": kind, "step": "03", "label": "half written", "target": "SM-01" if kind == "crosses-seam" else "leaves-flow"}
+                line = diagrams._flow_mark_text(mark)
+                box = diagrams._flow_mark_box(mark)
+                if not line.startswith(label) or not box.startswith(label):
+                    return f"a {kind} mark reads {line!r} / {box!r}; the contract names it {label!r}"
+            try:
+                said = diagrams._flow_mark_box({"kind": "rollback", "step": "03", "label": "", "target": ""})
+            except ValueError:
+                return None
+            return f"a mark of a kind the contract does not hold is drawn as {said!r}"
+
+        check("flow marks are named by the contract's claim_mark_kind labels", mark_words_from_contract)
 
         def stale_hatched() -> str | None:
             # Appendix B rule 3: a current claim whose cited file is stale is hatched, and says since when.
