@@ -8,6 +8,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 import { CallLog, type CallOutcome, digestArguments, throwSite } from "./call-log.js";
+import { collectStaleGenerations, withCodeIndexSwitch } from "./code-index/store.js";
 import { discoverCodexParentLaunch, STARTUP_PROBE_TIMEOUT_MS } from "./codex-host.js";
 import { type DB, openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
@@ -308,6 +309,8 @@ async function main(): Promise<void> {
       candidate.close();
     });
     db = openDatabase(bound.dbPath);
+    // A server starting up collects code-index generations untouched for 30 days.
+    collectStaleGenerations(bound.storagePath);
     return db;
   };
 
@@ -321,7 +324,7 @@ async function main(): Promise<void> {
     sessionId: null,
   };
 
-  const allTools: ToolDefinition[] = [
+  const allTools: ToolDefinition[] = withCodeIndexSwitch([
     // §5.5: the reader-lens tools head the advertised list, because the list
     // order is the order a host reads and the consumer route is the one a
     // reader needs first.
@@ -373,7 +376,7 @@ async function main(): Promise<void> {
     ...openQuestionTools,
     ...storageHistoryTools,
     ...compareTools,
-  ];
+  ]);
   const byName = new Map(allTools.map((t) => [t.name, t]));
   const ajv = new Ajv({ allErrors: true, strict: true, strictSchema: true, useDefaults: false });
   const validators = new Map<string, ValidateFunction>(

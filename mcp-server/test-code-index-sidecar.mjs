@@ -231,6 +231,7 @@ if (mode === "index") {
     else if (cmd === "exit") break;
   }
   index.close();
+  process.exit(0);
 } else if (mode === "watch") {
   const [dbPath, stopFile] = args;
   const seen = {};
@@ -936,7 +937,11 @@ try {
       if (p.isFile() && p.name === "index.db") chmodSync(join(p.parentPath ?? p.path, p.name), 0o644);
     }
   } catch {}
-  rmSync(root, { recursive: true, force: true });
+  try {
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    // A worker still exiting; the temporary directory is left for the OS.
+  }
 }
 console.log(status.replace(/\s+/g, " ").slice(0, 600));
 process.exit(status === "GATE SI4 GREEN" ? 0 : 1);
