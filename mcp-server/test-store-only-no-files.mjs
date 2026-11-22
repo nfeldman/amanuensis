@@ -210,10 +210,13 @@ async function main(mods) {
   const statusOf = (ctx, id) =>
     ctx.db.prepare("SELECT status FROM subsystems WHERE id = ?").get(id)?.status ?? null;
 
-  const evidence = (ctx, file, lines = "1-4", symbol = "Unit") =>
+  // The label goes in note, not symbol (semantic-index §11): a symbol in a language the code
+  // index parses is anchored, which creates the index's cache under storage, and this gate
+  // counts every file there.
+  const evidence = (ctx, file, lines = "1-4", label = "Unit") =>
     call(
       "add_evidence",
-      { file_path: file, symbol, line_range: lines, ref_sha: headSha(ctx), kind: "code-verified" },
+      { file_path: file, note: label, line_range: lines, ref_sha: headSha(ctx), kind: "code-verified" },
       ctx,
     ).id;
 

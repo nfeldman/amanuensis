@@ -73,7 +73,7 @@ citeable span. The rules and their refusals are in
 - `add_evidence refuses: <symbol> names no definition in <path>`: the refusal
   lists the nearest `symbol_id`s. Pass one of them, or omit symbol: a
   free-text label belongs in note.
-- `<symbol> names N definitions … and line_range does not fall within exactly
+- `<symbol> names <count> definitions … and line_range does not fall within exactly
   one of them`: give a `line_range` inside the one to cite.
 - `line_range … reaches outside <symbol_id>`: cite lines inside the
   definition, or omit symbol to cite lines no definition holds.
