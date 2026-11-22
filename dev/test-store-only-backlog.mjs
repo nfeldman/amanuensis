@@ -30,7 +30,9 @@ function red(reason) {
 const OUTCOME = {
   1: [/render/, /hold/],
   2: [/imported/, /purpose/],
-  3: [/claim_marks/],
+  // The outcome, not a keyword: "typed tables per mark kind (not claim_marks)" names
+  // claim_marks too (F13/claude, final review).
+  3: [/generic `?claim_marks`?/, /per-kind contract rules/, /relations deferred/],
   4: [/never refuse/],
   5: [/contract/],
   6: [/import/, /lane/],
