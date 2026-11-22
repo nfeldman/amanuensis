@@ -24,7 +24,8 @@
 //     its absence (or a range covering both) is not refused with both listed;
 //   - an unknown symbol is not refused with its nearest symbol_ids and the pointer to `note`,
 //     including in a file that parsed only in part (where the refusal must say so);
-//   - no symbol, an unsupported language, a file the index cannot read (not UTF-8) or
+//   - no symbol, an unsupported language, a file the index cannot read (not UTF-8), grammar
+//     data that cannot be read (a package copy with no grammars/) or
 //     AMANUENSIS_CODE_INDEX=off does not write the evidence row as before, with no anchor;
 //   - an UPDATE or DELETE on an anchor, or a DELETE of its evidence row, succeeds;
 //   - evidenceAnchorViolations reports a violation on a sound store, or misses an anchor whose
@@ -48,7 +49,16 @@
 // tools run in this process from dist/, and nothing reaches the network.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -102,6 +112,19 @@ function gitLines(workspace, rev, path, from, to) {
   const lines = text.split("\n");
   if (text.endsWith("\n")) lines.pop();
   return lines.slice(from - 1, to).join("\n");
+}
+
+/**
+ * A copy of this package with no grammars/: dist/ copied, so its modules load afresh with
+ * their own caches, and queries/, package.json and node_modules beside it as installed.
+ */
+function packageWithoutGrammars(dir) {
+  mkdirSync(dir, { recursive: true });
+  cpSync(join(here, "dist"), join(dir, "dist"), { recursive: true });
+  cpSync(join(here, "package.json"), join(dir, "package.json"));
+  symlinkSync(join(here, "queries"), join(dir, "queries"));
+  symlinkSync(join(here, "node_modules"), join(dir, "node_modules"));
+  return dir;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -497,6 +520,25 @@ async function main() {
     await noAnchor("the index off, an unknown symbol", { file_path: "src/shapes.ts", symbol: "nothing here" }, "nothing here");
   } finally {
     delete process.env.AMANUENSIS_CODE_INDEX;
+  }
+
+  // Grammar data that cannot be read leaves the index unable to speak for the file: the row
+  // is written with no anchor, never an error.
+  {
+    const bare = packageWithoutGrammars(join(scratch, "no-grammars"));
+    const { evidenceTools: bareTools } = await import(pathToFileURL(join(bare, "dist", "tools", "evidence.js")).href);
+    const bareAdd = bareTools.find((t) => t.name === "add_evidence");
+    const before = evidenceCount();
+    let r;
+    try {
+      r = await bareAdd.handler({ file_path: "src/shapes.ts", symbol: "add", ref_sha: commit, kind: "code-verified" }, ctx);
+    } catch (e) {
+      fail(`add_evidence without grammar data threw: ${oneLine(e?.message ?? e)}`);
+    }
+    check(r?.ok !== false && Number.isInteger(r?.id), `add_evidence without grammar data refused: ${oneLine(r?.error)}`);
+    check(evidenceCount() === before + 1, `add_evidence without grammar data wrote ${evidenceCount() - before} rows`);
+    check(anchorRow(r.id) === null, "add_evidence without grammar data wrote an anchor");
+    same("add_evidence without grammar data: the stored symbol", evidenceRow(r.id).symbol, "add");
   }
 
   // -------------------------------------------------------------------------------------

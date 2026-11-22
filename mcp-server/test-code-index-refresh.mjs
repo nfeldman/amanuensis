@@ -20,7 +20,8 @@
 //       - `unavailable`, never `gone`, for a cited definition whose syntax broke, while the
 //         intact definition beside it keeps its own state; for a file that became unreadable
 //         (not UTF-8); for a file that was deleted; and for every anchored row with
-//         AMANUENSIS_CODE_INDEX=off;
+//         AMANUENSIS_CODE_INDEX=off, or with grammar data that cannot be read (a package
+//         copy with no grammars/: reason grammar-unreadable, never an error);
 //       - `unanchored` for evidence with no anchor (no symbol; a language the index does not
 //         parse);
 //   - reordering the file's other definitions changes any row's state or lines;
@@ -36,7 +37,7 @@
 //
 // Hermetic: the fixture repository and the store are built in a temporary directory, the
 // tools run in this process from dist/, and nothing reaches the network.
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -71,6 +72,19 @@ const SIGNATURES =
   /Cannot find module|MODULE_NOT_FOUND|ModuleNotFoundError|SyntaxError|No such file or directory|ENOENT|ImportError|ReferenceError|is not defined|command not found/g;
 function oneLine(text) {
   return String(text).replace(SIGNATURES, "[error]").split("\n")[0].slice(0, 500);
+}
+
+/**
+ * A copy of this package with no grammars/: dist/ copied, so its modules load afresh with
+ * their own caches, and queries/, package.json and node_modules beside it as installed.
+ */
+function packageWithoutGrammars(dir) {
+  mkdirSync(dir, { recursive: true });
+  cpSync(join(here, "dist"), join(dir, "dist"), { recursive: true });
+  cpSync(join(here, "package.json"), join(dir, "package.json"));
+  symlinkSync(join(here, "queries"), join(dir, "queries"));
+  symlinkSync(join(here, "node_modules"), join(dir, "node_modules"));
+  return dir;
 }
 
 /** get_stale_backlog's and clear_staleness's input schemas before this packet. */
@@ -368,6 +382,32 @@ async function main() {
     delete process.env.AMANUENSIS_CODE_INDEX;
   }
   same("get_stale_backlog with the index back on", await backlog(), expectedRows(target));
+
+  // Grammar data that cannot be read: absence cannot be shown, so anchored rows are
+  // unavailable, never an error.
+  {
+    const bare = packageWithoutGrammars(join(scratch, "no-grammars"));
+    const { staleTools: bareTools } = await import(pathToFileURL(join(bare, "dist", "tools", "stale.js")).href);
+    const bareBacklog = bareTools.find((t) => t.name === "get_stale_backlog");
+    let rows;
+    try {
+      rows = await bareBacklog.handler({ limit: 50 }, ctx);
+    } catch (e) {
+      fail(`get_stale_backlog without grammar data threw: ${oneLine(e?.message ?? e)}`);
+    }
+    same(
+      "get_stale_backlog without grammar data",
+      rows.map((row) => ({ path: row.source_path, reason: row.stale_reason, at: row.anchors_at, evidence: row.evidence })),
+      expectedRows(target).map((row) => ({
+        ...row,
+        evidence: row.evidence.map((h) =>
+          h.anchor_state === "unanchored"
+            ? h
+            : { ...h, anchor_state: "unavailable", target_lines: [], reason: "grammar-unreadable" },
+        ),
+      })),
+    );
+  }
 
   // A refresh run built over the same range carries the same hints at its head revision.
   const plan = await must("plan_refresh_run", {
