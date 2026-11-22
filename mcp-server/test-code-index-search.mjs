@@ -14,7 +14,8 @@
 //   - a reference row does not carry match: "name", or the reference rows are not the golden
 //     name-matched rows (a same-named Python function's call included), or ref_sha does not
 //     select the older revision's references;
-//   - an incomplete tree index does not report partial, or a completed one still does;
+//   - an incomplete tree index does not report partial, or a completed one still does, or one
+//     removed between the completeness check and the query is reported complete;
 //   - a claim written after the first search is not found by the next, or a claim deleted and
 //     written again with its rowid, claim_id and second is found by its old text, not its new;
 //   - a claim quoting `requireEvidenceCitation` is not found by that identifier, by
@@ -168,6 +169,8 @@ async function loadModules() {
   const mods = {
     codeIndex: await load("dist/tools/code-index.js"),
     records: await load("dist/code-index/records.js"),
+    search: await load("dist/code-index/search.js"),
+    store: await load("dist/code-index/store.js"),
     project: await load("dist/project.js"),
     db: await load("dist/db.js"),
   };
@@ -346,6 +349,33 @@ async function main() {
     }
     const code = await tryCall(ctx, "find_symbol", { query: "Request", mode, path_prefix: "src/" });
     check(code.status === undefined, `find_symbol ${mode} under src/ carries status ${code.status}`);
+  }
+
+  // The tree's completion marker is read with the hits: a tree index pruned or set aside by
+  // another process after the completeness check reports partial, not a complete empty answer.
+  // A fresh sidecar holds no tree at all; the wrapper reports it complete, as the check would
+  // have before the other process removed it.
+  {
+    const sidecar = mods.store.openCodeIndex(join(scratch, "race-storage"));
+    check(sidecar, "openCodeIndex returned no index with the index on");
+    try {
+      const stale = {
+        extractorId: sidecar.extractorId,
+        treeStatus: () => ({ state: "ok", complete: true, files: 5, skipped: 1 }),
+        indexTree: async () => fail("findSymbols re-indexed a tree it was told is complete"),
+        use: (fn) => sidecar.use(fn),
+      };
+      const r = await mods.search.findSymbols(stale, ws, second, "Request", {
+        mode: "definitions",
+        kind: null,
+        pathPrefix: null,
+        limit: 20,
+      });
+      check(r.state === "ok", `findSymbols over a vanished tree index: ${canonical(r).slice(0, 200)}`);
+      check(r.partial === true, `findSymbols over a tree index that vanished after its check reports partial ${r.partial}`);
+    } finally {
+      sidecar.close();
+    }
   }
 
   // find_symbol: references, matched by name only.
