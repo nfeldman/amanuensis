@@ -55,6 +55,8 @@ export interface ResolvedCitation {
   symbol: string | null;
   lineRange: string | null;
   anchor: EvidenceAnchor | null;
+  /** Why a given symbol was written with no anchor; null when anchored or no symbol. */
+  unanchoredReason: string | null;
 }
 
 /** Whether a citation is resolved against the code index before it is written. */
@@ -217,12 +219,21 @@ export function resolveEvidenceAnchor(
   lineRange: string | null,
   excerpt: string | null,
 ): ResolvedCitation {
-  const unanchored: ResolvedCitation = { symbol, lineRange, anchor: null };
-  if (symbol === null || !anchorsCitation(filePath, symbol)) return unanchored;
+  const unanchored = (reason: string | null): ResolvedCitation => ({
+    symbol,
+    lineRange,
+    anchor: null,
+    unanchoredReason: symbol === null ? null : reason,
+  });
+  if (symbol === null) return unanchored(null);
+  if (!anchorsCitation(filePath, symbol)) {
+    return unanchored(codeIndexEnabled() ? "unsupported-language" : "index-off");
+  }
   const index = indexOrUnavailable(ctx);
-  if (!index || "unavailable" in index) return unanchored;
+  if (!index) return unanchored("index-off");
+  if ("unavailable" in index) return unanchored(index.unavailable);
   const found = readDefinitions(ctx, index, commit, filePath);
-  if ("unavailable" in found) return unanchored;
+  if ("unavailable" in found) return unanchored(found.unavailable);
 
   const spans = lineRange === null ? null : lineSpans(lineRange);
   const within = (s: IndexedSymbol) =>
@@ -254,10 +265,12 @@ export function resolveEvidenceAnchor(
     maxBuffer: MAX_BLOB_BYTES,
     stdio: ["ignore", "pipe", "ignore"],
   });
-  if (blob.error || blob.status !== 0) return unanchored;
+  if (blob.error || blob.status !== 0) return unanchored("unreadable");
   const bytes = blob.stdout as Buffer;
   const span = bytes.subarray(def.start_byte, def.end_byte);
-  if (createHash("sha256").update(span).digest("hex") !== def.span_sha256) return unanchored;
+  if (createHash("sha256").update(span).digest("hex") !== def.span_sha256) {
+    return unanchored("span-mismatch");
+  }
   if (excerpt !== null) {
     const cited = spans ?? [[def.doc_start_line, def.end_line] as [number, number]];
     const missing = excerptMiss(definitionSegments(bytes, def, cited), excerpt);
@@ -277,6 +290,7 @@ export function resolveEvidenceAnchor(
       extractor_id: index.extractorId,
       range_source: lineRange === null ? "filled" : "cited",
     },
+    unanchoredReason: null,
   };
 }
 
@@ -315,7 +329,7 @@ export const evidenceTools: ToolDefinition[] = [
   {
     name: "add_evidence",
     description:
-      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. file_path must exist at ref_sha. line_range is N, N-M or a comma-separated list, inside the file at ref_sha. excerpt must appear in those lines (whitespace ignored; '...' marks an elision). With the code index on and a file in a language it parses, symbol must name a definition at ref_sha (a symbol_id, a qualified name, or a bare name naming one definition; read_symbol's evidence_args gives the location fields): the row stores the canonical symbol_id and is anchored to the definition, every span of line_range must lie inside the definition's citeable span, excerpt must be the definition's own text, and an omitted line_range is filled with the span. A symbol naming several definitions needs a line_range inside exactly one; a symbol naming none is refused with the nearest symbol_ids, and a free-text label belongs in note. Without a symbol, in another language, or with the index off, the row is written unanchored. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
+      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. file_path must exist at ref_sha. line_range is N, N-M or a comma-separated list, inside the file at ref_sha. excerpt must appear in those lines (whitespace ignored; '...' marks an elision). With the code index on and a file in a language it parses, symbol must name a definition at ref_sha (a symbol_id, a qualified name, or a bare name naming one definition; read_symbol's evidence_args gives the location fields): the row stores the canonical symbol_id and is anchored to the definition, every span of line_range must lie inside the definition's citeable span, excerpt must be the definition's own text, and an omitted line_range is filled with the span. A symbol naming several definitions needs a line_range inside exactly one; a symbol naming none is refused with the nearest symbol_ids, and a free-text label belongs in note. Without a symbol, in another language, or with the index off, the row is written unanchored; when a symbol was given and no anchor written, the answer says anchored: false and anchor_reason (unsupported-language, index-off, not-utf8, too-large, grammar-unreadable, file-absent or another reason the index cannot read the file), since the symbol was not checked. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
     inputSchema: {
       type: "object",
       properties: {
@@ -369,7 +383,13 @@ export const evidenceTools: ToolDefinition[] = [
               sessionId,
             );
           const id = Number(info.lastInsertRowid);
-          if (!resolved.anchor) return ok({ id });
+          if (!resolved.anchor) {
+            return ok(
+              resolved.unanchoredReason === null
+                ? { id }
+                : { id, anchored: false, anchor_reason: resolved.unanchoredReason },
+            );
+          }
           insertEvidenceAnchor(ctx.db, id, resolved.anchor);
           return ok({
             id,
