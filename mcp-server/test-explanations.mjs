@@ -1111,7 +1111,10 @@ async function main(mods) {
     if (text === null) return "materializer/test-prose-retention.py is unreadable";
     if (!text.includes('"explanations.body"')) return "test-prose-retention.py does not seed explanations.body";
     if (text.includes("rendered by EX11")) return null;
-    const rendered = /RENDERED_FIELDS[^=]*=\s*\(([^)]*)\)/s.exec(text);
+    // Comments inside the tuple may carry parentheses ("the seam contract (A2)"), so
+    // they are dropped before the tuple's closing parenthesis is found.
+    const code = text.replace(/#[^\n]*/g, "");
+    const rendered = /RENDERED_FIELDS[^=]*=\s*\(([^)]*)\)/s.exec(code);
     const accounted = rendered !== null && rendered[1].includes('"explanations.body"');
     const allowlisted = /ALLOWLIST\[\s*"explanations\.body"\s*\]/.test(text);
     if (allowlisted) return "explanations.body is allowlisted without the 'rendered by EX11' reason";
