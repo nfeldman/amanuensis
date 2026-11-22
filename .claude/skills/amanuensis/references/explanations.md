@@ -256,7 +256,7 @@ edges were withdrawn. The writers need an active session. They refuse:
 
 - `record_runtime_boundary refuses: <field> is one line of at most 120 characters with no '|'` — `from_runtime`, `from_language`, `to_runtime` or `mechanism`; the map is a table with a row for each crossing.
 - `record_runtime_boundary refuses: notes is one line of at most 400 bytes with no '|'` — say less.
-- `record_runtime_boundary refuses: a crossing cites the evidence it was written from` — `evidence_ids` is empty or names a row that does not exist.
+- `record_runtime_boundary refuses: a crossing cites the evidence it was read from` — `evidence_ids` is empty or names a row that does not exist.
 - `record_runtime_boundary refuses: a crossing cites at most 64 evidence rows` — cite the rows the crossing rests on.
 - `record_runtime_boundary refuses: ref_sha <ref> does not resolve` — record the revision the crossing was read at.
 - `withdraw_runtime_boundary refuses: no crossing from <from> to <to> by <mechanism> is on the map` — name an edge `get_runtime_boundaries` lists.

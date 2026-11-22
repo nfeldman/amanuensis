@@ -375,7 +375,7 @@ concern_codes=[...], evidence_ids=[...])`.
    attached as rationale — this is a legitimate terminal state.
 
 The materializer renders every matrix as a verdict-grid page under
-`docs/diagnosticity/dm-<id>.md`, with a diagnostic-value column
+`diagnosticity/dm-<id>.html`, with a diagnostic-value column
 summarizing each evidence row.
 
 ---

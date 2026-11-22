@@ -242,8 +242,8 @@ will see the queue at the Phase 7 checkpoint.
   cannot be answered, record a new row; the newest row for a section and topic
   is the one served.
 - Call `materialize_docs()` to render the navigable human docs. It returns an
-  `html_entrypoint`; this self-contained HTML index is the primary human
-  surface, with synchronized Markdown companions alongside it. It also
+  `html_entrypoint`; this self-contained HTML index is the human surface,
+  and no Markdown page is written beside it. It also
   returns `unfilled_slots`: one row for each slot that nobody has recorded,
   with the tool call that fills it. The slots are `thesis`,
   `runtime-boundary-map` and `subsystem-vocabulary` and, once a subsystem

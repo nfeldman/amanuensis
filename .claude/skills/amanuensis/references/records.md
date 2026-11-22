@@ -45,7 +45,7 @@ takes a crossing off, and `get_runtime_boundaries` reads the map back.
 Withdrawing a crossing that is not on the map is refused:
 `withdraw_runtime_boundary refuses: no crossing from <from> to <to> by
 <mechanism> is on the map`. A crossing with no evidence is refused:
-`record_runtime_boundary refuses: a crossing cites the evidence it was written
+`record_runtime_boundary refuses: a crossing cites the evidence it was read
 from`.
 
 ## Narratives
@@ -110,7 +110,8 @@ a mark on one: a commit point, a crash point, an exit, a seam crossing, or the
 trigger. `withdraw_claim_mark` retracts a mistaken one. A flow with nothing to
 mark says so with `decline_claim_marks`. `get_claims` returns the marks with
 each claim. A mark on a claim that is not a flow step is refused:
-`record_claim_mark refuses: no claim <id>`; a withdrawal of a mark that is not
+`record_claim_mark refuses: <key> is not a flow step`; one on a claim that does
+not exist, `record_claim_mark refuses: no claim <id>`; a withdrawal of a mark that is not
 there, `withdraw_claim_mark refuses: no mark <id>`; a declination for a flow
 with no steps, `decline_claim_marks refuses: flow <flow> has no current step
 claim`.

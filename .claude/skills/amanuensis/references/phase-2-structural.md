@@ -49,10 +49,14 @@ claims (step 7), call `record_claim_mark(claim_id, kind, label, target,
 evidence_id, ref_sha)` for each commit point, crash point, exit, seam crossing
 and trigger you read, or say the flow has none with
 `decline_claim_marks(flow, reason, ref_sha)`. Step 7 lists the kinds and what
-the writers refuse. Neither refuses the advance. No page draws a flow's marks
-yet: the flow strip that will show them, and say when a flow has none, is
-store-only packet SO25. Until then the marks and declinations are read with
-`get_claims`.
+the writers refuse. Neither refuses the advance. The subsystem page draws each
+flow of three to twenty steps as a flow strip once the subsystem is at
+`structural` or deeper: steps in number order, a commit line after its step,
+crash points, triggers and seam crossings above, exits below. A flow of fewer
+than three steps is a sentence, one of more than twenty a sentence and a table,
+and one of more than twelve wraps. A flow with neither marks nor a declination
+prints "Marks not recorded"; a declination prints its reason. `get_claims`
+returns the marks and the declination with each step.
 
 ### 4. Concurrency model
 
@@ -105,7 +109,7 @@ are found.
   actually read. An edge with no such token cannot be recorded.
 
 Record only edges you read. Never infer one from a shared name, a
-path prefix, or a nearby seam: `architecture.md` renders its topology
+path prefix, or a nearby seam: `architecture.html` renders its topology
 from these rows and nothing else, so an inferred edge becomes a
 published relation no one verified. A boundary you could not read
 from this side is an `record_open_question`, not a guessed edge.

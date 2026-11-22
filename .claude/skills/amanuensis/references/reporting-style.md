@@ -69,7 +69,7 @@ Two specialized labels are explicitly part of the Amanuensis voice:
 
 ## Present records for reading, not storage inspection
 
-Markdown tables are a portable schema projection. The HTML projection must
+The published pages are HTML only; no page reproduces the schema. Each page must
 choose a presentation from the reader's operation, not reproduce every stored
 field as an equally prominent column.
 
@@ -129,8 +129,8 @@ Current typed projections:
   each concern a compact identity bar containing its code and primary
   subsystem routes above a full-width probe. Do not repeat category,
   territory, or `What to examine` as row labels. Omit bare parenthesized totals
-  from the HTML heading; the Markdown table remains the complete portable
-  projection. Suppress a concern-code tooltip when its defining probe is the
+  from the HTML heading; the store and its tools hold every field in full.
+  Suppress a concern-code tooltip when its defining probe is the
   adjacent record body, but retain subsystem definitions when only their
   compact coordinates are present.
 - Concern-review records keep concern, verdict, evidence, and any actual
