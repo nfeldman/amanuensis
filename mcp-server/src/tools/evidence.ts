@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { languageForPath } from "../code-index/extract.js";
-import { BlobReader } from "../code-index/git-blobs.js";
-import { codeIndexEnabled, type IndexedSymbol } from "../code-index/store.js";
+import { entryAt } from "../code-index/git-blobs.js";
+import { type CodeIndex, codeIndexEnabled, type IndexedSymbol } from "../code-index/store.js";
 import type { DB } from "../db.js";
 import {
   excerptMiss,
@@ -21,6 +22,7 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession, requireEvidenceAnchor } from "../invariants.js";
+import { spawnSync } from "../subprocess.js";
 import { EVIDENCE_KINDS } from "../vocabulary.js";
 import { indexFor, lineRangeOf, matching, nearestIds } from "./code-index.js";
 
@@ -136,40 +138,75 @@ function definitionSegments(
   });
 }
 
+const INDEX_FILE_SCRIPT = fileURLToPath(new URL("../code-index/index-file.js", import.meta.url));
+/** A parse in the child is bounded well inside the subprocess default. */
+const INDEX_FILE_TIMEOUT_MS = 60_000;
+const MAX_BLOB_BYTES = 256 * 1024 * 1024;
+
+/**
+ * The file's definitions at `commit` from the sidecar, or null when the index cannot speak
+ * for the file. Synchronous, because add_evidence runs inside callers' transactions: a blob
+ * not yet in the sidecar is parsed by `code-index/index-file.js` in a child process, and its
+ * rows are read back here.
+ */
+function definitionsAt(
+  ctx: ServerContext,
+  index: CodeIndex,
+  commit: string,
+  filePath: string,
+): { blobSha: string; lang: string; partial: boolean; symbols: IndexedSymbol[] } | null {
+  const workspace = ctx.project.workspacePath as string;
+  const entry = entryAt(workspace, commit, filePath);
+  if (!entry || entry.skip_reason || !entry.lang) return null;
+  let lookup = index.blob(entry.blob_sha, entry.lang);
+  if (lookup.state === "ok" && !lookup.indexed) {
+    const child = spawnSync(
+      process.execPath,
+      [INDEX_FILE_SCRIPT, ctx.project.storagePath, workspace, commit, filePath],
+      { stdio: "ignore", timeout: INDEX_FILE_TIMEOUT_MS, killSignal: "SIGKILL" },
+    );
+    if (child.status !== 0) return null;
+    lookup = index.blob(entry.blob_sha, entry.lang);
+  }
+  if (lookup.state !== "ok" || !lookup.indexed) return null;
+  if (lookup.blob.status !== "ok" && lookup.blob.status !== "parse-partial") return null;
+  return {
+    blobSha: entry.blob_sha,
+    lang: entry.lang,
+    partial: lookup.blob.status === "parse-partial",
+    symbols: lookup.symbols,
+  };
+}
+
 /**
  * Resolve a citation's `symbol` against the code index (PLAN §4.4), or return it unanchored
  * when the index cannot speak for the file. `lineRange` is the normal form
  * `requireEvidenceCitation` returned. Refusals are thrown.
  */
-export async function resolveEvidenceAnchor(
+export function resolveEvidenceAnchor(
   ctx: ServerContext,
   commit: string,
   filePath: string,
   symbol: string | null,
   lineRange: string | null,
   excerpt: string | null,
-): Promise<ResolvedCitation> {
+): ResolvedCitation {
   const unanchored: ResolvedCitation = { symbol, lineRange, anchor: null };
   if (symbol === null || !anchorsCitation(filePath, symbol)) return unanchored;
   const index = indexFor(ctx);
   if (!index) return unanchored;
-  const workspace = ctx.project.workspacePath as string;
-  const file = await index.indexFile(workspace, commit, filePath);
-  if (file.state !== "ok" || file.status === "too-large" || file.status === "not-utf8") {
-    return unanchored;
-  }
-  const lookup = index.blob(file.blob_sha, file.lang);
-  if (lookup.state !== "ok" || !lookup.indexed) return unanchored;
+  const found = definitionsAt(ctx, index, commit, filePath);
+  if (!found) return unanchored;
 
   const spans = lineRange === null ? null : lineSpans(lineRange);
   const within = (s: IndexedSymbol) =>
     spans === null || spans.every(([from, to]) => from >= s.doc_start_line && to <= s.end_line);
-  const named = matching(lookup.symbols, symbol);
+  const named = matching(found.symbols, symbol);
   if (named.length === 0) {
     // A definition whose declaration holds a syntax error is not listed, so a miss in a
     // file that parsed partially proves nothing: the row is written unanchored.
-    if (file.status === "parse-partial") return unanchored;
-    throw symbolNotFound(symbol, filePath, commit, nearestIds(lookup.symbols, symbol));
+    if (found.partial) return unanchored;
+    throw symbolNotFound(symbol, filePath, commit, nearestIds(found.symbols, symbol));
   }
   let def: IndexedSymbol;
   if (named.length === 1) {
@@ -181,14 +218,13 @@ export async function resolveEvidenceAnchor(
     def = inside[0] as IndexedSymbol;
   }
 
-  const reader = new BlobReader(workspace);
-  let bytes: Buffer | null;
-  try {
-    bytes = await reader.read(file.blob_sha);
-  } finally {
-    reader.close();
-  }
-  if (!bytes) return unanchored;
+  const blob = spawnSync("git", ["cat-file", "blob", found.blobSha], {
+    cwd: ctx.project.workspacePath,
+    maxBuffer: MAX_BLOB_BYTES,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (blob.error || blob.status !== 0) return unanchored;
+  const bytes = blob.stdout as Buffer;
   const span = bytes.subarray(def.start_byte, def.end_byte);
   if (createHash("sha256").update(span).digest("hex") !== def.span_sha256) return unanchored;
   if (excerpt !== null) {
@@ -200,8 +236,8 @@ export async function resolveEvidenceAnchor(
     symbol: def.symbol_id,
     lineRange: lineRange ?? lineRangeOf(def),
     anchor: {
-      blob_sha: file.blob_sha,
-      lang: file.lang,
+      blob_sha: found.blobSha,
+      lang: found.lang,
       symbol_id: def.symbol_id,
       kind: def.kind,
       def_start_line: def.doc_start_line,
@@ -312,10 +348,7 @@ export const evidenceTools: ToolDefinition[] = [
             range_source: resolved.anchor.range_source,
           });
         })();
-      // Without an anchor to resolve the write stays synchronous, as callers that run a
-      // step inside their own transaction (the Chorusmith adapter) require.
-      if (!anchorsCitation(filePath, symbol)) return insert({ symbol, lineRange, anchor: null });
-      return resolveEvidenceAnchor(ctx, refSha, filePath, symbol, lineRange, excerpt).then(insert);
+      return insert(resolveEvidenceAnchor(ctx, refSha, filePath, symbol, lineRange, excerpt));
     },
   },
   {

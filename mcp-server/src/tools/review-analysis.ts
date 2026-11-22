@@ -14,12 +14,7 @@ import {
 import { requireActiveSession } from "../invariants.js";
 import { spawnSync } from "../subprocess.js";
 import { EVIDENCE_KINDS, SEVERITIES } from "../vocabulary.js";
-import {
-  anchorsCitation,
-  type EvidenceAnchor,
-  insertEvidenceAnchor,
-  resolveEvidenceAnchor,
-} from "./evidence.js";
+import { type EvidenceAnchor, insertEvidenceAnchor, resolveEvidenceAnchor } from "./evidence.js";
 
 const ROLES = ["generator", "refuter", "verifier"] as const;
 const CONDITIONS = ["same-context", "varied-context", "heterogeneous-runtime"] as const;
@@ -849,10 +844,7 @@ function failPass(args: Record<string, unknown>, ctx: ServerContext): Record<str
   return readAnalysis(ctx, runId);
 }
 
-function land(
-  args: Record<string, unknown>,
-  ctx: ServerContext,
-): Record<string, unknown> | Promise<Record<string, unknown>> {
+function land(args: Record<string, unknown>, ctx: ServerContext): Record<string, unknown> {
   const sessionId = requireActiveSession(ctx, "land_review_pass");
   const runId = requireString(args, "run_id");
   const pass = getPass(ctx, runId, requireString(args, "pass_id"));
@@ -917,7 +909,10 @@ function land(
   );
   // Catalog rows were checked when they were written; new rows are checked here,
   // as add_evidence checks them. A ref_sha given as a name (HEAD, a branch) is
-  // stored as the commit it named, or the citation would move with the name.
+  // stored as the commit it named, or the citation would move with the name. A
+  // symbol in a language the code index parses is resolved and anchored as
+  // add_evidence anchors it (semantic-index PLAN §4.4).
+  const anchors = new Map<string, EvidenceAnchor>();
   for (const row of newEvidence) {
     row.ref_sha = resolveCommit(ctx, row.ref_sha);
     row.line_range = requireEvidenceCitation(
@@ -927,216 +922,192 @@ function land(
       row.line_range,
       row.excerpt,
     );
+    const resolved = resolveEvidenceAnchor(
+      ctx,
+      row.ref_sha,
+      row.file_path,
+      row.symbol,
+      row.line_range,
+      row.excerpt,
+    );
+    row.symbol = resolved.symbol;
+    row.line_range = resolved.lineRange;
+    if (resolved.anchor) anchors.set(row.local_key, resolved.anchor);
   }
-  // A symbol in a language the code index parses is resolved and anchored as add_evidence
-  // anchors it (PLAN §4.4). Resolution reads git and may parse, so that path answers
-  // asynchronously; without it the pass lands synchronously, as before.
-  const anchors = new Map<string, EvidenceAnchor>();
-  const finish = (): Record<string, unknown> => {
-    const localEvidence = new Map<string, number>();
-    const dispatchedInput = parseJson<Record<string, unknown>>(pass.runtime_input_json, {});
-    const allowedPacketEvidence = (hypothesisId: string | null): Set<number> => {
-      if (pass.role === "generator") {
-        const catalog = Array.isArray(dispatchedInput.evidence_catalog)
-          ? (dispatchedInput.evidence_catalog as Array<Record<string, unknown>>)
-          : [];
-        return new Set(catalog.map((row) => Number(row.id)).filter(Number.isInteger));
-      }
-      const packets = Array.isArray(dispatchedInput.hypotheses)
-        ? (dispatchedInput.hypotheses as Array<Record<string, unknown>>)
+  const localEvidence = new Map<string, number>();
+  const dispatchedInput = parseJson<Record<string, unknown>>(pass.runtime_input_json, {});
+  const allowedPacketEvidence = (hypothesisId: string | null): Set<number> => {
+    if (pass.role === "generator") {
+      const catalog = Array.isArray(dispatchedInput.evidence_catalog)
+        ? (dispatchedInput.evidence_catalog as Array<Record<string, unknown>>)
         : [];
-      const packet = packets.find((row) => row.hypothesis_id === hypothesisId);
-      const evidence =
-        packet && Array.isArray(packet.evidence)
-          ? (packet.evidence as Array<Record<string, unknown>>)
-          : [];
-      return new Set(evidence.map((row) => Number(row.id)).filter(Number.isInteger));
-    };
-    const resultPayload = {
-      judgments,
-      no_findings_reason: optString(args, "no_findings_reason"),
-      coverage: args.coverage ?? null,
-      new_evidence: newEvidence,
-      actual_tokens: actualTokens,
-      actual_cost_microusd: actualCost,
-    };
-    const resultJson = stableJson(resultPayload);
-    ctx.db.transaction(() => {
-      const evidenceInsert = ctx.db.prepare(
-        `INSERT INTO evidence
-           (file_path, symbol, line_range, ref_sha, kind, excerpt, note, session_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      );
-      for (const row of newEvidence) {
-        const inserted = evidenceInsert.run(
-          row.file_path,
-          row.symbol,
-          row.line_range,
-          row.ref_sha,
-          row.kind,
-          row.excerpt,
-          row.note,
-          sessionId,
-        );
-        localEvidence.set(row.local_key, Number(inserted.lastInsertRowid));
-        const anchor = anchors.get(row.local_key);
-        if (anchor) insertEvidenceAnchor(ctx.db, Number(inserted.lastInsertRowid), anchor);
-      }
-      const judgmentInsert = ctx.db.prepare(
-        `INSERT INTO review_judgments
-           (judgment_id, pass_id, hypothesis_id, finding_key, claim, severity,
-            scope, verdict, rationale, payload_json, payload_hash)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      );
-      const evidenceLink = ctx.db.prepare(
-        `INSERT INTO review_judgment_evidence (judgment_id, evidence_id, origin)
-         VALUES (?, ?, ?)`,
-      );
-      const seenKeys = new Set<string>();
-      judgments.forEach((item, index) => {
-        const existingIds =
-          item.evidence_ids == null
-            ? []
-            : (() => {
-                if (
-                  !Array.isArray(item.evidence_ids) ||
-                  !item.evidence_ids.every(Number.isInteger)
-                ) {
-                  throw new ToolError(`judgments[${index}].evidence_ids must be integer[]`);
-                }
-                return item.evidence_ids as number[];
-              })();
-        const newKeys =
-          item.new_evidence_keys == null ? [] : requireStringArray(item, "new_evidence_keys");
-        const unknownKeys = newKeys.filter((key) => !localEvidence.has(key));
-        if (unknownKeys.length > 0)
-          throw new ToolError(`unknown new_evidence_keys: ${unknownKeys.join(", ")}`);
-        const discoveredIds = newKeys.map((key) => localEvidence.get(key) as number);
-        const allEvidenceIds = unique([...existingIds, ...discoveredIds].map(String)).map(Number);
-        const rows = evidenceRows(ctx, allEvidenceIds);
-        validateEvidence(ctx, run, rows);
-        let hypothesisId: string | null = null;
-        let findingKey: string;
-        let claim: string;
-        let severity: string | null;
-        let scope: string | null;
-        let verdict: string;
-        if (pass.role === "generator") {
-          findingKey = requireString(item, "finding_key");
-          if (seenKeys.has(findingKey))
-            throw new ToolError(`duplicate finding_key in pass: ${findingKey}`);
-          seenKeys.add(findingKey);
-          claim = requireString(item, "claim");
-          severity = requireEnum(item, "severity", SEVERITIES);
-          scope = requireString(item, "scope");
-          verdict = "proposed";
-          if (allEvidenceIds.length === 0)
-            throw new ToolError("generator candidates require evidence");
-        } else {
-          hypothesisId = requireString(item, "hypothesis_id");
-          const hypothesis = hypotheses.find(
-            (candidate) => candidate.hypothesis_id === hypothesisId,
-          );
-          if (!hypothesis) throw new ToolError(`unknown hypothesis_id: ${hypothesisId}`);
-          findingKey = hypothesis.finding_key;
-          const packet = JSON.parse(hypothesis.challenge_packet_json) as { claims: string[] };
-          claim = packet.claims.join(" | ");
-          severity = null;
-          scope = null;
-          verdict = requireEnum(item, "verdict", VERDICTS);
-          if (verdict === "overturned" && allEvidenceIds.length === 0) {
-            throw new ToolError("an overturn requires evidence");
-          }
-          if (pass.role === "refuter" && verdict === "overturned" && discoveredIds.length === 0) {
-            throw new ToolError("a refuter can overturn only with newly discovered evidence");
-          }
-        }
-        const packetEvidence = allowedPacketEvidence(hypothesisId);
-        const unassigned = existingIds.filter((evidenceId) => !packetEvidence.has(evidenceId));
-        if (unassigned.length > 0) {
-          throw new ToolError(
-            `evidence not assigned to this pass packet: ${unassigned.join(", ")}`,
-          );
-        }
-        const rationale = requireString(item, "rationale");
-        const judgmentId = `${pass.pass_id}:judgment:${index}`;
-        const payload = {
-          hypothesis_id: hypothesisId,
-          finding_key: findingKey,
-          claim,
-          severity,
-          scope,
-          verdict,
-          rationale,
-          evidence_ids: allEvidenceIds,
-        };
-        const payloadJson = stableJson(payload);
-        judgmentInsert.run(
-          judgmentId,
-          pass.pass_id,
-          hypothesisId,
-          findingKey,
-          claim,
-          severity,
-          scope,
-          verdict,
-          rationale,
-          payloadJson,
-          hash(payloadJson),
-        );
-        for (const evidenceId of existingIds)
-          evidenceLink.run(judgmentId, evidenceId, "prior-packet");
-        for (const evidenceId of discoveredIds)
-          evidenceLink.run(judgmentId, evidenceId, "discovered-by-pass");
-      });
-      ctx.db
-        .prepare(
-          `UPDATE review_passes
-              SET status='landed', result_json=?, result_hash=?, actual_tokens=?,
-                  actual_cost_microusd=?, landed_at=datetime('now') WHERE pass_id=?`,
-        )
-        .run(resultJson, hash(resultJson), actualTokens, actualCost, pass.pass_id);
-      if (pass.role === "refuter") {
-        const remaining = ctx.db
-          .prepare(
-            "SELECT COUNT(*) AS n FROM review_passes WHERE run_id=? AND role='refuter' AND status!='landed'",
-          )
-          .get(runId) as { n: number };
-        if (remaining.n === 0) setRunStatus(ctx, runId, "verification-ready");
-      }
-      if (pass.role === "verifier") {
-        const remaining = ctx.db
-          .prepare(
-            "SELECT COUNT(*) AS n FROM review_passes WHERE run_id=? AND role='verifier' AND status!='landed'",
-          )
-          .get(runId) as { n: number };
-        if (remaining.n === 0) setRunStatus(ctx, runId, "ready-to-aggregate");
-      }
-    })();
-    return readAnalysis(ctx, runId);
+      return new Set(catalog.map((row) => Number(row.id)).filter(Number.isInteger));
+    }
+    const packets = Array.isArray(dispatchedInput.hypotheses)
+      ? (dispatchedInput.hypotheses as Array<Record<string, unknown>>)
+      : [];
+    const packet = packets.find((row) => row.hypothesis_id === hypothesisId);
+    const evidence =
+      packet && Array.isArray(packet.evidence)
+        ? (packet.evidence as Array<Record<string, unknown>>)
+        : [];
+    return new Set(evidence.map((row) => Number(row.id)).filter(Number.isInteger));
   };
-  if (!newEvidence.some((row) => anchorsCitation(row.file_path, row.symbol))) return finish();
-  return (async () => {
+  const resultPayload = {
+    judgments,
+    no_findings_reason: optString(args, "no_findings_reason"),
+    coverage: args.coverage ?? null,
+    new_evidence: newEvidence,
+    actual_tokens: actualTokens,
+    actual_cost_microusd: actualCost,
+  };
+  const resultJson = stableJson(resultPayload);
+  ctx.db.transaction(() => {
+    const evidenceInsert = ctx.db.prepare(
+      `INSERT INTO evidence
+         (file_path, symbol, line_range, ref_sha, kind, excerpt, note, session_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
     for (const row of newEvidence) {
-      const resolved = await resolveEvidenceAnchor(
-        ctx,
-        row.ref_sha,
+      const inserted = evidenceInsert.run(
         row.file_path,
         row.symbol,
         row.line_range,
+        row.ref_sha,
+        row.kind,
         row.excerpt,
+        row.note,
+        sessionId,
       );
-      row.symbol = resolved.symbol;
-      row.line_range = resolved.lineRange;
-      if (resolved.anchor) anchors.set(row.local_key, resolved.anchor);
+      localEvidence.set(row.local_key, Number(inserted.lastInsertRowid));
+      const anchor = anchors.get(row.local_key);
+      if (anchor) insertEvidenceAnchor(ctx.db, Number(inserted.lastInsertRowid), anchor);
     }
-    // The pass was dispatched when the call began; another call may have landed it since.
-    const current = getPass(ctx, runId, pass.pass_id);
-    if (current.status !== "dispatched") {
-      throw new ToolError(`review pass ${pass.pass_id} is ${current.status}`);
+    const judgmentInsert = ctx.db.prepare(
+      `INSERT INTO review_judgments
+         (judgment_id, pass_id, hypothesis_id, finding_key, claim, severity,
+          scope, verdict, rationale, payload_json, payload_hash)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    const evidenceLink = ctx.db.prepare(
+      `INSERT INTO review_judgment_evidence (judgment_id, evidence_id, origin)
+       VALUES (?, ?, ?)`,
+    );
+    const seenKeys = new Set<string>();
+    judgments.forEach((item, index) => {
+      const existingIds =
+        item.evidence_ids == null
+          ? []
+          : (() => {
+              if (!Array.isArray(item.evidence_ids) || !item.evidence_ids.every(Number.isInteger)) {
+                throw new ToolError(`judgments[${index}].evidence_ids must be integer[]`);
+              }
+              return item.evidence_ids as number[];
+            })();
+      const newKeys =
+        item.new_evidence_keys == null ? [] : requireStringArray(item, "new_evidence_keys");
+      const unknownKeys = newKeys.filter((key) => !localEvidence.has(key));
+      if (unknownKeys.length > 0)
+        throw new ToolError(`unknown new_evidence_keys: ${unknownKeys.join(", ")}`);
+      const discoveredIds = newKeys.map((key) => localEvidence.get(key) as number);
+      const allEvidenceIds = unique([...existingIds, ...discoveredIds].map(String)).map(Number);
+      const rows = evidenceRows(ctx, allEvidenceIds);
+      validateEvidence(ctx, run, rows);
+      let hypothesisId: string | null = null;
+      let findingKey: string;
+      let claim: string;
+      let severity: string | null;
+      let scope: string | null;
+      let verdict: string;
+      if (pass.role === "generator") {
+        findingKey = requireString(item, "finding_key");
+        if (seenKeys.has(findingKey))
+          throw new ToolError(`duplicate finding_key in pass: ${findingKey}`);
+        seenKeys.add(findingKey);
+        claim = requireString(item, "claim");
+        severity = requireEnum(item, "severity", SEVERITIES);
+        scope = requireString(item, "scope");
+        verdict = "proposed";
+        if (allEvidenceIds.length === 0)
+          throw new ToolError("generator candidates require evidence");
+      } else {
+        hypothesisId = requireString(item, "hypothesis_id");
+        const hypothesis = hypotheses.find((candidate) => candidate.hypothesis_id === hypothesisId);
+        if (!hypothesis) throw new ToolError(`unknown hypothesis_id: ${hypothesisId}`);
+        findingKey = hypothesis.finding_key;
+        const packet = JSON.parse(hypothesis.challenge_packet_json) as { claims: string[] };
+        claim = packet.claims.join(" | ");
+        severity = null;
+        scope = null;
+        verdict = requireEnum(item, "verdict", VERDICTS);
+        if (verdict === "overturned" && allEvidenceIds.length === 0) {
+          throw new ToolError("an overturn requires evidence");
+        }
+        if (pass.role === "refuter" && verdict === "overturned" && discoveredIds.length === 0) {
+          throw new ToolError("a refuter can overturn only with newly discovered evidence");
+        }
+      }
+      const packetEvidence = allowedPacketEvidence(hypothesisId);
+      const unassigned = existingIds.filter((evidenceId) => !packetEvidence.has(evidenceId));
+      if (unassigned.length > 0) {
+        throw new ToolError(`evidence not assigned to this pass packet: ${unassigned.join(", ")}`);
+      }
+      const rationale = requireString(item, "rationale");
+      const judgmentId = `${pass.pass_id}:judgment:${index}`;
+      const payload = {
+        hypothesis_id: hypothesisId,
+        finding_key: findingKey,
+        claim,
+        severity,
+        scope,
+        verdict,
+        rationale,
+        evidence_ids: allEvidenceIds,
+      };
+      const payloadJson = stableJson(payload);
+      judgmentInsert.run(
+        judgmentId,
+        pass.pass_id,
+        hypothesisId,
+        findingKey,
+        claim,
+        severity,
+        scope,
+        verdict,
+        rationale,
+        payloadJson,
+        hash(payloadJson),
+      );
+      for (const evidenceId of existingIds)
+        evidenceLink.run(judgmentId, evidenceId, "prior-packet");
+      for (const evidenceId of discoveredIds)
+        evidenceLink.run(judgmentId, evidenceId, "discovered-by-pass");
+    });
+    ctx.db
+      .prepare(
+        `UPDATE review_passes
+            SET status='landed', result_json=?, result_hash=?, actual_tokens=?,
+                actual_cost_microusd=?, landed_at=datetime('now') WHERE pass_id=?`,
+      )
+      .run(resultJson, hash(resultJson), actualTokens, actualCost, pass.pass_id);
+    if (pass.role === "refuter") {
+      const remaining = ctx.db
+        .prepare(
+          "SELECT COUNT(*) AS n FROM review_passes WHERE run_id=? AND role='refuter' AND status!='landed'",
+        )
+        .get(runId) as { n: number };
+      if (remaining.n === 0) setRunStatus(ctx, runId, "verification-ready");
     }
-    return finish();
+    if (pass.role === "verifier") {
+      const remaining = ctx.db
+        .prepare(
+          "SELECT COUNT(*) AS n FROM review_passes WHERE run_id=? AND role='verifier' AND status!='landed'",
+        )
+        .get(runId) as { n: number };
+      if (remaining.n === 0) setRunStatus(ctx, runId, "ready-to-aggregate");
+    }
   })();
+  return readAnalysis(ctx, runId);
 }
 
 function freeze(args: Record<string, unknown>, ctx: ServerContext): Record<string, unknown> {

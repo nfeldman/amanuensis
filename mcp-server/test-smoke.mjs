@@ -200,7 +200,7 @@ run("get_subsystem_files", { subsystem_id: "B-01", classification_filter: "exami
 // least one claim keyed `B-01/`, and the subsystem-survey artifact must be
 // registered before 'concerns' — all three are enforced server-side.
 const smokeEvidence = run("add_evidence", {
-  file_path: "scheduler/main.ts", symbol: "runJob", line_range: "1-20",
+  file_path: "scheduler/main.ts", note: "runJob", line_range: "1-20",
   ref_sha: claimSha1, kind: "code-verified",
 }, (r) => r.ok && typeof r.id === "number");
 run("add_claim", {
@@ -411,18 +411,16 @@ run("get_seam_assessability", {}, (r) => Array.isArray(r) && r.length === 1 && r
 // 19. Evidence
 const ev1 = run("add_evidence", {
   file_path: "scheduler/main.ts",
-  symbol: "runJob",
   line_range: "10-42",
   ref_sha: claimSha1,
   kind: "code-verified",
-  note: "defer release covers exception path",
+  note: "runJob: defer release covers exception path",
 }, (r) => r.ok && typeof r.id === "number");
 const ev2 = run("add_evidence", {
   file_path: "scheduler/main.ts",
-  symbol: "runJob",
   ref_sha: claimSha1,
   kind: "comment-asserted",
-  note: "claim in docstring",
+  note: "runJob: claim in docstring",
 }, (r) => r.ok);
 run("attach_evidence_to_disposition", {
   subsystem_id: "B-01", concern_code: "CC-1", evidence_id: ev1.id, role: "supports",

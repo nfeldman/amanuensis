@@ -705,9 +705,10 @@ export function resolveWorkspaceAnchors(
  * some other repository is not a citation of this one. One unresolvable token
  * refuses the whole value: a single good citation must not launder the rest.
  *
- * **Symbol reachability is not checked.** Deciding whether a symbol exists at a
- * revision needs a language parser the server does not have, and
- * `evidence.symbol` is a free-text field that carries parenthetical qualifiers.
+ * **Symbol reachability is not checked.** A token's symbol half is prose: it
+ * may name something in a language the code index does not parse, or carry a
+ * parenthetical qualifier. Only `add_evidence` resolves a symbol against the
+ * code index (semantic-index PLAN §4.4), for an evidence row's own `symbol`.
  * The surrounding prose is the caller's to store verbatim.
  */
 export function extractWorkspaceCitations(

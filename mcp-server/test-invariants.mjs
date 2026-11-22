@@ -146,7 +146,7 @@ function fixtureEvidence(ctx, filePath = "fixture.ts") {
     "add_evidence",
     {
       file_path: filePath,
-      symbol: "fixture",
+      symbol: "Unit",
       line_range: "1-4",
       ref_sha: headSha(ctx),
       kind: "code-verified",
@@ -921,8 +921,8 @@ t("sequence of gated writes after session/advance works end-to-end", () => {
       "add_evidence",
       {
         file_path: "a.ts",
-        symbol: "f",
-        line_range: "1-10",
+        symbol: "Unit",
+        line_range: "1-4",
         ref_sha: headSha(ctx),
         kind: "code-verified",
       },
@@ -1432,8 +1432,8 @@ t("overturn to ruled-out succeeds once disproving evidence is attached this sess
       "add_evidence",
       {
         file_path: "src/B-07/cache.ts",
-        symbol: "get",
-        line_range: "10-20",
+        symbol: "line12",
+        line_range: "12",
         ref_sha: headSha(ctx),
         kind: "code-verified",
         excerpt: "export const line12 = 12;",

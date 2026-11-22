@@ -210,10 +210,10 @@ async function main(mods) {
   const statusOf = (ctx, id) =>
     ctx.db.prepare("SELECT status FROM subsystems WHERE id = ?").get(id)?.status ?? null;
 
-  const evidence = (ctx, file, lines = "1-4") =>
+  const evidence = (ctx, file, lines = "1-4", symbol = "Unit") =>
     call(
       "add_evidence",
-      { file_path: file, symbol: "Unit", line_range: lines, ref_sha: headSha(ctx), kind: "code-verified" },
+      { file_path: file, symbol, line_range: lines, ref_sha: headSha(ctx), kind: "code-verified" },
       ctx,
     ).id;
 
@@ -741,7 +741,7 @@ async function main(mods) {
 
   check("K2 an effective narrative recorded at the target commit scores pass", () => {
     const narrative = projectNarrative("repository-shape", "The producer emits one event version.", {
-      evidence_ids: [evidence(composition.ctx, "src/producer.mjs", "1-1")],
+      evidence_ids: [evidence(composition.ctx, "src/producer.mjs", "1-1", "version")],
     });
     const ref = `narrative:${narrative.id}`;
     planWith("k2", [["rec", ref]]);
@@ -799,7 +799,7 @@ async function main(mods) {
 
   check("K6 an effective explanation scores pass, a superseded one fails", () => {
     const { ctx, head } = composition;
-    const cited = [evidence(ctx, "src/producer.mjs", "1-1")];
+    const cited = [evidence(ctx, "src/producer.mjs", "1-1", "version")];
     const record = (body) =>
       call(
         "record_explanation",
@@ -820,7 +820,7 @@ async function main(mods) {
   // commit comparison to narratives stayed green (F14/codex, slice-S1).
   check("K8 an effective explanation recorded at another commit scores fail", () => {
     const { ctx, head, base } = composition;
-    const cited = [evidence(ctx, "src/producer.mjs", "1-1")];
+    const cited = [evidence(ctx, "src/producer.mjs", "1-1", "version")];
     const recorded = call(
       "record_explanation",
       {
