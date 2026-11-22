@@ -9,8 +9,10 @@ refusals and the argument rules of each tool are in
 to `record_open_question`, never to a file.
 
 A record cites the evidence it was read from (`add_evidence`, then
-`evidence_ids`) and the revision it was read at (`ref_sha`). The writers need
-an active session. Every record is append-only: the newest row for a subject
+`evidence_ids`) and the revision it was read at (`ref_sha`). In a language the
+code index parses, the `symbol` of an `add_evidence` call must name a
+definition; a free-text label belongs in `note`. The writers need an active
+session. Every record is append-only: the newest row for a subject
 is the one served, and a correction is a new row.
 
 Prose in a record is prose and lists, at most the size the tool names, with no

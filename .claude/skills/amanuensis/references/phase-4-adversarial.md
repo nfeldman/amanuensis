@@ -198,8 +198,8 @@ the claim and where you looked for it, in prose, not a one-word note.
   pass its id as `field_note_id`; the note alone does not count.
 
 For the purpose and the account, record a field note naming any sentence
-the code contradicts, with the evidence: `add_evidence` for what you read,
-then `add_field_note(category="anomaly", observation="<slot> says '<the
+the code contradicts, with the evidence: `add_evidence` for what you read
+(its `symbol` names a definition; a free-text label belongs in `note`), then `add_field_note(category="anomaly", observation="<slot> says '<the
 sentence>'; <what the code does> at <file:symbol@sha>", location=<sid>)`.
 Phase 5 reads these notes when it revises the account.
 

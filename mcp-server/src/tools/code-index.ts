@@ -43,7 +43,7 @@ const MAX_LIMIT = 200;
 const indexes = new Map<string, CodeIndex | null>();
 
 /** One index per storage directory for the life of the server. */
-function indexFor(ctx: ServerContext): CodeIndex | null {
+export function indexFor(ctx: ServerContext): CodeIndex | null {
   const key = ctx.project.storagePath;
   if (!indexes.has(key)) indexes.set(key, openCodeIndex(key));
   return indexes.get(key) ?? null;
@@ -267,7 +267,7 @@ function editDistance(a: string, b: string): number {
 }
 
 /** The file's `symbol_id`s nearest to `query`: names containing it first, then by edit distance. */
-function nearestIds(symbols: IndexedSymbol[], query: string): string[] {
+export function nearestIds(symbols: IndexedSymbol[], query: string): string[] {
   const wanted = query.toLowerCase();
   const ranked = new Map<string, [number, number]>();
   for (const s of symbols) {
@@ -290,7 +290,7 @@ function nearestIds(symbols: IndexedSymbol[], query: string): string[] {
 }
 
 /** The definitions a `symbol` names: by `symbol_id`, else by qname, else by bare name. */
-function matching(symbols: IndexedSymbol[], symbol: string): IndexedSymbol[] {
+export function matching(symbols: IndexedSymbol[], symbol: string): IndexedSymbol[] {
   for (const key of ["symbol_id", "qname", "name"] as const) {
     const found = symbols.filter((s) => s[key] === symbol);
     if (found.length > 0) return found;
@@ -316,7 +316,7 @@ function startsAt(s: IndexedSymbol, range: [number, number | null]): boolean {
   return (s.doc_start_line === from || s.start_line === from) && (to === null || s.end_line === to);
 }
 
-const lineRangeOf = (s: IndexedSymbol): string =>
+export const lineRangeOf = (s: IndexedSymbol): string =>
   s.end_line > s.doc_start_line ? `${s.doc_start_line}-${s.end_line}` : `${s.doc_start_line}`;
 
 // ---------------------------------------------------------------------------------------

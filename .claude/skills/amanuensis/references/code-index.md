@@ -117,6 +117,50 @@ descend from still holds at HEAD, so `get_claims` returns it and its status is
 scopes them). Each call brings the index up to date with the
 store first, so a record written a moment ago is found.
 
+## Citing a definition with `add_evidence`
+
+`add_evidence(file_path, symbol, line_range, ref_sha, kind, excerpt, note)`
+takes the same fields with or without the index. In a language the index
+parses, the server resolves `symbol` against the definitions at `ref_sha` by
+`symbol_id`, then qualified name, then a bare name that names one definition.
+
+- The row stores the canonical `symbol_id` as its `symbol`, and an anchor is
+  written with it in one transaction: the blob, the `symbol_id`, the
+  definition's kind, its citeable lines and the hash of their bytes. The
+  response carries `anchored: true`, the stored `symbol` and `line_range`.
+- An omitted `line_range` is filled with the citeable span
+  (`range_source: "filled"`). A given one may be narrower, a comma list
+  included, but every span must lie inside the definition.
+- `excerpt` must be the definition's own text within the cited lines. Text from
+  a neighbouring definition is refused even when it sits on the same line.
+- A `symbol` that names several definitions, such as two occurrences of one
+  `symbol_id` or a bare name two classes define, needs a `line_range` inside
+  exactly one of them.
+- No `symbol`, a file in another language, a file the index cannot read, or
+  `AMANUENSIS_CODE_INDEX=off` writes the row as before, with no anchor. Cite a
+  whole file, or a region that is not a definition, this way.
+
+`describe_locus` finds an anchored row by its bare name, its qualified name or
+its `symbol_id`. A bare name that names two `symbol_id`s in the file is
+reported as ambiguous, with both, and their evidence is not merged: ask again
+with the `symbol_id`.
+
+Its refusals:
+
+- `add_evidence refuses: <symbol> names no definition in <path>`: the refusal
+  lists the nearest `symbol_id`s. Pass one of them, or omit symbol: a
+  free-text label belongs in note.
+- `add_evidence refuses: <symbol> names N definitions in <path>` … `and
+  line_range does not fall within exactly one of them`: the refusal lists each
+  candidate's `symbol_id` and lines. Give a `line_range` inside the one to
+  cite.
+- `add_evidence refuses: line_range <range> reaches outside <symbol_id>`: the
+  refusal names the definition's lines. Cite lines inside the definition, or
+  omit symbol to cite lines no definition holds.
+- `add_evidence refuses: the excerpt is not inside <symbol_id>`: quote that
+  definition's own text; text from a neighbouring definition, even on the
+  same line, is not part of it.
+
 ## Refusals and how to recover
 
 Each refusal carries a `rule` and says its own way on. Most say to read the

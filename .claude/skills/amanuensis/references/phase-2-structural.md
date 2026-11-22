@@ -274,7 +274,8 @@ or table line. The typed parts already have their own records (claims, seams,
 vocabulary), so say what they do not: why the parts are shaped as they are, and
 how work moves between them. Cite each symbol as `file:symbol@sha`. At least
 one of `evidence_ids` must be an `add_evidence` row for a file in the
-subsystem's ledger.
+subsystem's ledger. Its `symbol` names a definition; a free-text label belongs
+in `note`.
 
 Where the code supports no prose beyond the claims, say so:
 `decline_narrative(subject_type="subsystem", subject_id, section="structure",

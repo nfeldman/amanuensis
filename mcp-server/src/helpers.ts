@@ -473,6 +473,49 @@ export function splitGitPaths(output: string): string[] {
 /** `N`, `N-M`, or a comma-separated list of them; whitespace around separators is allowed. */
 const LINE_RANGE = /^\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*$/;
 
+/** The spans of a `line_range` that {@link LINE_RANGE} accepts, in order. */
+export function lineSpans(lineRange: string): Array<[number, number]> {
+  return lineRange
+    .trim()
+    .split(",")
+    .map((part) => {
+      const [start, end = start] = part.split("-").map((n) => Number.parseInt(n.trim(), 10));
+      return [start as number, end as number];
+    });
+}
+
+/**
+ * Where `excerpt` fails to appear in `segments`, by `requireEvidenceCitation`'s matching
+ * rules: whitespace is ignored, a verbatim match is accepted, and otherwise `...` or `…`
+ * separates fragments that must appear in order. No match runs across two segments.
+ * Returns the fragment that is missing, or null when the excerpt appears. An excerpt that
+ * quotes nothing is refused here, as it is everywhere an excerpt is checked.
+ */
+export function excerptMiss(segments: readonly string[], excerpt: string): string | null {
+  const squash = (value: string) => value.replace(/\s+/g, "");
+  if (squash(excerpt).length === 0) {
+    throw new ToolError("excerpt quotes nothing; give source text or omit excerpt");
+  }
+  // Segments are joined with NUL, which squash keeps, so no match crosses a gap.
+  const haystack = segments.map(squash).join("\0");
+  if (haystack.includes(squash(excerpt))) return null;
+  const fragments = excerpt.split(/\.\.\.|…/).filter((fragment) => squash(fragment).length > 0);
+  if (fragments.length === 0) return excerpt;
+  let from = 0;
+  for (const fragment of fragments) {
+    const found = haystack.indexOf(squash(fragment), from);
+    if (found < 0) return fragment;
+    from = found + squash(fragment).length;
+  }
+  return null;
+}
+
+/** A missing excerpt fragment as a refusal quotes it: one line, at most 80 characters. */
+export function shownExcerpt(fragment: string): string {
+  const shown = fragment.trim().replace(/\s+/g, " ");
+  return shown.length > 80 ? `${shown.slice(0, 80)}…` : shown;
+}
+
 /**
  * Check that an evidence row's coordinates can be opened, and return its
  * `line_range` in normal form (`12-40,88`), or null when none was given.
@@ -520,10 +563,7 @@ export function requireEvidenceCitation(
           "comma-separated list of them (e.g. 12-40,88), or omit line_range",
       );
     }
-    spans = trimmed.split(",").map((part) => {
-      const [start, end = start] = part.split("-").map((n) => Number.parseInt(n.trim(), 10));
-      return [start as number, end as number];
-    });
+    spans = lineSpans(trimmed);
     for (const [start, end] of spans) {
       if (start < 1 || end < start) {
         throw new ToolError(
@@ -577,36 +617,15 @@ export function requireEvidenceCitation(
   }
 
   if (excerpt !== null) {
-    const squash = (value: string) => value.replace(/\s+/g, "");
-    if (squash(excerpt).length === 0) {
-      throw new ToolError("excerpt quotes nothing; give source text or omit excerpt");
-    }
-    // Spans are joined with NUL, which squash keeps, so no match crosses a gap.
     const segments =
       spans === null ? [text] : spans.map(([start, end]) => lines.slice(start - 1, end).join("\n"));
-    const haystack = segments.map(squash).join("\0");
-    let missing: string | undefined;
-    if (!haystack.includes(squash(excerpt))) {
-      const fragments = excerpt.split(/\.\.\.|…/).filter((fragment) => squash(fragment).length > 0);
-      if (fragments.length === 0) missing = excerpt;
-      let from = 0;
-      for (const fragment of fragments) {
-        const found = haystack.indexOf(squash(fragment), from);
-        if (found < 0) {
-          missing = fragment;
-          break;
-        }
-        from = found + squash(fragment).length;
-      }
-    }
-    if (missing !== undefined) {
+    const missing = excerptMiss(segments, excerpt);
+    if (missing !== null) {
       const where = spans === null ? at : `lines ${lineRange} of ${at}`;
-      const shown = missing.trim().replace(/\s+/g, " ");
       throw new ToolError(
-        `excerpt does not appear in ${where}: ${JSON.stringify(
-          shown.length > 80 ? `${shown.slice(0, 80)}…` : shown,
-        )}. Quote the source as it is at that revision; whitespace is ignored and ` +
-          `"..." marks an elision, with fragments in source order`,
+        `excerpt does not appear in ${where}: ${JSON.stringify(shownExcerpt(missing))}. Quote the ` +
+          `source as it is at that revision; whitespace is ignored and "..." marks an elision, ` +
+          "with fragments in source order",
       );
     }
   }

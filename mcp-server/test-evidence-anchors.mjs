@@ -280,7 +280,8 @@ async function main() {
     kind,
     def_start_line: from,
     def_end_line: to,
-    span_sha256: sha256(gitLines(workspace, commit, path, from, to)),
+    // The citeable span starts at its first token, not at the start of the line.
+    span_sha256: sha256(gitLines(workspace, commit, path, from, to).replace(/^[ \t]+/, "")),
     extractor_id: extractorId,
     range_source: rangeSource,
   });

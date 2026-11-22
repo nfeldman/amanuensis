@@ -1037,6 +1037,89 @@ export function subsystemStanding(ctx: ServerContext, subsystemId: string): Subs
   };
 }
 
+/**
+ * The qualified name and the bare name a `symbol_id` (semantic-index PLAN §4.2) carries: the
+ * id without its overload discriminator — a parameter list and what follows it (`(String,int)`,
+ * `() const`), an indexer's `[…]`, a template arity `<2>` — and without C#'s generic arity
+ * marks (`` `1 ``). The bare name is the qualified name's last segment.
+ */
+export function symbolIdNames(symbolId: string): { qname: string; name: string } {
+  let depth = 0;
+  let cut = symbolId.length;
+  for (let i = 0; i < symbolId.length; i++) {
+    const c = symbolId[i];
+    if (c === "<") depth++;
+    else if (c === ">" && depth > 0) depth--;
+    else if ((c === "(" || c === "[") && depth === 0 && i > 0) {
+      cut = i;
+      break;
+    }
+  }
+  const qname = symbolId
+    .slice(0, cut)
+    .replace(/<\d+>$/, "")
+    .replace(/`\d+/g, "");
+  const dot = qname.lastIndexOf(".");
+  return { qname, name: dot < 0 ? qname : qname.slice(dot + 1) };
+}
+
+/** What a symbol locus names among one file's evidence rows (semantic-index PLAN §4.4). */
+export interface SymbolEvidenceMatch {
+  /** The rows the locus cites, in id order; none of an ambiguous name's anchored rows. */
+  rows: { id: number; kind: string; ref_sha: string }[];
+  /** The `symbol_id`s an ambiguous name matches, sorted; null when it is not ambiguous. */
+  ambiguous: string[] | null;
+}
+
+/**
+ * The one symbol matcher `describe_locus` and the standing block share. A locus symbol names
+ * an evidence row on the file whose `symbol` equals it, and an anchored row whose `symbol_id`
+ * equals it or whose `symbol_id`'s qualified name or bare name does. An unanchored row holds
+ * what its writer typed and is matched on that text alone. When the locus names more than one
+ * `symbol_id`, neither surface merges their evidence: the anchored rows are left out and the
+ * ids are returned, so each surface can say the name is ambiguous.
+ */
+export function matchSymbolEvidence(db: DB, path: string, symbol: string): SymbolEvidenceMatch {
+  const rows = db
+    .prepare(
+      `SELECT e.id, e.kind, e.ref_sha, e.symbol, a.symbol_id
+         FROM evidence e LEFT JOIN evidence_anchors a ON a.evidence_id = e.id
+        WHERE e.file_path = ? AND e.symbol IS NOT NULL
+        ORDER BY e.id`,
+    )
+    .all(path) as {
+    id: number;
+    kind: string;
+    ref_sha: string;
+    symbol: string;
+    symbol_id: string | null;
+  }[];
+  const names = (symbolId: string): boolean => {
+    if (symbolId === symbol) return true;
+    const { qname, name } = symbolIdNames(symbolId);
+    return qname === symbol || name === symbol;
+  };
+  const named = rows.filter((row) =>
+    row.symbol_id === null ? row.symbol === symbol : names(row.symbol_id),
+  );
+  const ids = [...new Set(named.map((row) => row.symbol_id).filter((id) => id !== null))].sort();
+  const ambiguous = ids.length > 1 ? (ids as string[]) : null;
+  return {
+    rows: named
+      .filter((row) => ambiguous === null || row.symbol_id === null)
+      .map((row) => ({ id: row.id, kind: row.kind, ref_sha: row.ref_sha })),
+    ambiguous,
+  };
+}
+
+/** The sentence both surfaces carry when a locus symbol names several `symbol_id`s. */
+export function ambiguousSymbolSentence(symbol: string, symbolIds: readonly string[]): string {
+  return (
+    `${symbol} names ${symbolIds.length} definitions with recorded evidence in this file: ` +
+    `${symbolIds.join(", ")}. Their evidence is not merged; ask for one by its symbol_id.`
+  );
+}
+
 export function symbolStanding(
   ctx: ServerContext,
   path: string,
@@ -1044,32 +1127,33 @@ export function symbolStanding(
 ): SymbolStandingBlock {
   const db = ctx.db;
   const file = fileStanding(ctx, path);
-  const exact = db
-    .prepare(
-      "SELECT id, kind, ref_sha FROM evidence WHERE file_path = ? AND symbol = ? ORDER BY id",
-    )
-    .all(path, symbol) as { id: number; kind: string; ref_sha: string }[];
+  const matched = matchSymbolEvidence(db, path, symbol);
   // 45 of 209 recorded symbols on the reference store carry a parenthetical
   // qualifier, so exact match alone under-reports. The prefix rows are
-  // reported beside the citation, never merged into `symbol_cited`.
-  const prefix = db
-    .prepare(
-      `SELECT id, kind, symbol FROM evidence
-        WHERE file_path = ? AND symbol IS NOT NULL AND symbol != ?
-          AND (symbol LIKE ? ESCAPE '\\' OR symbol LIKE ? ESCAPE '\\')
-        ORDER BY id`,
-    )
-    .all(
-      path,
-      symbol,
-      `${symbol.replace(/[\\%_]/g, "\\$&")} %`,
-      `${symbol.replace(/[\\%_]/g, "\\$&")}(%`,
-    ) as { id: number; kind: string; symbol: string }[];
+  // reported beside the citation, never merged into `symbol_cited`. An anchored
+  // row holds a symbol_id, which the matcher above reads; it is not a prefix.
+  const cited = new Set(matched.rows.map((row) => row.id));
+  const prefix = (
+    db
+      .prepare(
+        `SELECT e.id, e.kind, e.symbol FROM evidence e
+          WHERE e.file_path = ? AND e.symbol IS NOT NULL AND e.symbol != ?
+            AND (e.symbol LIKE ? ESCAPE '\\' OR e.symbol LIKE ? ESCAPE '\\')
+            AND NOT EXISTS (SELECT 1 FROM evidence_anchors a WHERE a.evidence_id = e.id)
+          ORDER BY e.id`,
+      )
+      .all(
+        path,
+        symbol,
+        `${symbol.replace(/[\\%_]/g, "\\$&")} %`,
+        `${symbol.replace(/[\\%_]/g, "\\$&")}(%`,
+      ) as { id: number; kind: string; symbol: string }[]
+  ).filter((row) => !cited.has(row.id));
   const block: SymbolStandingBlock = {
     file,
     symbol,
-    symbol_cited: exact.length > 0,
-    citing_evidence: exact,
+    symbol_cited: matched.rows.length > 0,
+    citing_evidence: matched.rows,
     symbol_prefix_matches: prefix.map((row) => ({
       id: row.id,
       kind: row.kind,
@@ -1077,7 +1161,10 @@ export function symbolStanding(
       match: "prefix" as const,
     })),
   };
-  if (exact.length === 0) {
+  if (matched.ambiguous) {
+    block.symbol_standing = "ambiguous";
+    block.note = ambiguousSymbolSentence(symbol, matched.ambiguous);
+  } else if (matched.rows.length === 0) {
     block.symbol_standing = "not-individually-cited";
     block.note = "the file's state does not extend to this symbol";
   }

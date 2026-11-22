@@ -15,6 +15,7 @@ import { canonicalCreateViewSql, type DB } from "./db.js";
 import type { ServerContext } from "./helpers.js";
 import {
   isCitationToken,
+  lineSpans,
   resolveWorkspaceAnchors,
   resolveWorkspaceCommits,
   ToolError,
@@ -1677,6 +1678,96 @@ export function enforceForwardPrerequisites(
     }
   }
   return [...reported];
+}
+
+/** One way an evidence anchor disagrees with its evidence row (semantic-index PLAN §4.4). */
+export interface EvidenceAnchorViolation {
+  evidence_id: number;
+  rule: "evidence-missing" | "symbol" | "range-missing" | "range-outside" | "range-not-filled";
+  detail: string;
+}
+
+/**
+ * PLAN §4.4's invariants over `evidence_anchors`, for one anchor or all of them: every
+ * anchor's evidence row exists; its `symbol` equals the anchor's `symbol_id`; every span of
+ * its `line_range` lies within the anchor's definition span, and equals it when the range was
+ * filled. Nothing here reads the code index: the anchor carries the lines it was written
+ * against.
+ */
+export function evidenceAnchorViolations(db: DB, evidenceId?: number): EvidenceAnchorViolation[] {
+  const rows = db
+    .prepare(
+      `SELECT a.evidence_id, a.symbol_id, a.def_start_line, a.def_end_line, a.range_source,
+              e.id AS present, e.symbol, e.line_range
+         FROM evidence_anchors a LEFT JOIN evidence e ON e.id = a.evidence_id
+        ${evidenceId === undefined ? "" : "WHERE a.evidence_id = ?"}
+        ORDER BY a.evidence_id`,
+    )
+    .all(...(evidenceId === undefined ? [] : [evidenceId])) as {
+    evidence_id: number;
+    symbol_id: string;
+    def_start_line: number;
+    def_end_line: number;
+    range_source: string;
+    present: number | null;
+    symbol: string | null;
+    line_range: string | null;
+  }[];
+  const out: EvidenceAnchorViolation[] = [];
+  for (const row of rows) {
+    const id = row.evidence_id;
+    const span =
+      row.def_end_line > row.def_start_line
+        ? `${row.def_start_line}-${row.def_end_line}`
+        : `${row.def_start_line}`;
+    if (row.present === null) {
+      out.push({ evidence_id: id, rule: "evidence-missing", detail: "no evidence row" });
+      continue;
+    }
+    if (row.symbol !== row.symbol_id) {
+      out.push({
+        evidence_id: id,
+        rule: "symbol",
+        detail: `symbol ${JSON.stringify(row.symbol)} is not the anchor's ${row.symbol_id}`,
+      });
+    }
+    if (row.line_range === null) {
+      out.push({
+        evidence_id: id,
+        rule: "range-missing",
+        detail: "an anchored row has no line_range",
+      });
+      continue;
+    }
+    const outside = lineSpans(row.line_range).filter(
+      ([from, to]) => !(from >= row.def_start_line && to <= row.def_end_line && from <= to),
+    );
+    if (outside.length > 0) {
+      out.push({
+        evidence_id: id,
+        rule: "range-outside",
+        detail: `line_range ${row.line_range} leaves the definition's lines ${span}`,
+      });
+    } else if (row.range_source === "filled" && row.line_range !== span) {
+      out.push({
+        evidence_id: id,
+        rule: "range-not-filled",
+        detail: `a filled line_range ${row.line_range} is not the definition's lines ${span}`,
+      });
+    }
+  }
+  return out;
+}
+
+/** Refuse a write that leaves an anchor out of agreement with its evidence row. */
+export function requireEvidenceAnchor(db: DB, evidenceId: number): void {
+  const violations = evidenceAnchorViolations(db, evidenceId);
+  if (violations.length > 0) {
+    throw new ToolError(
+      `evidence ${evidenceId} disagrees with its anchor: ${violations.map((v) => v.detail).join("; ")}`,
+      "evidence.anchor-invariant",
+    );
+  }
 }
 
 /**
