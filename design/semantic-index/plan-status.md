@@ -52,5 +52,6 @@
 - `cd mcp-server && node test-smoke.mjs`
 - `cd mcp-server && node test-refusal-parity.mjs`
 - `cd mcp-server && node test-package-artifact.mjs`
+- `cd mcp-server && node scripts/check-sql-identifiers.mjs`
 
-Final review: pending
+Final review: reviewed
