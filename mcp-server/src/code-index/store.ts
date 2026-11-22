@@ -22,7 +22,8 @@
 // state changes, so an object that arrives later completes the same revision.
 //
 // Recovery is for corruption only. SQLITE_BUSY, SQLITE_LOCKED, a permission error or any
-// other failure leaves the index `unavailable` for that call. Only SQLITE_CORRUPT,
+// other SQLite or filesystem failure (EACCES, EPERM, EROFS, ENOSPC) leaves the index
+// `unavailable` for that call; opening never throws for them. Only SQLITE_CORRUPT,
 // SQLITE_NOTADB or a failed `PRAGMA quick_check` sets the database aside, renaming
 // index.db-wal, index.db-shm and, last, index.db to `*.corrupt-<time>`. A recoverer holds
 // `index.db.recovering` (created exclusively) while it rechecks the inode and renames, and no
@@ -559,7 +560,11 @@ export class CodeIndex {
     this.databasePath = join(this.directory, CODE_INDEX_DATABASE);
     this.budgets = { ...DEFAULT_BUDGETS, ...options.budgets };
     this.now = options.now ?? Date.now;
-    this.ensureDirectory();
+    try {
+      this.ensureDirectory();
+    } catch {
+      // An unwritable storage directory: each request reports `unavailable` when it retries.
+    }
     this.touch();
     collectGenerations(storagePath, { keep: this.extractorId, env: options.env, now: this.now });
     this.timer = setInterval(() => this.touch(), options.touchEveryMs ?? HOUR_MS);
