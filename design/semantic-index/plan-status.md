@@ -10,7 +10,7 @@
 | SI1 | Vendored grammars and packaging | done (1 attempt) | — | `mcp-server/test-code-index-grammars.mjs` | §8 SI1, §4.8, §1 |
 | SI2 | Extractor and the first six languages | done (1 attempt) | SI1 | `mcp-server/test-code-index-extract.mjs` | §8 SI2, §4.2 |
 | SI3 | Rust, C, C++ and C# definitions | done (1 attempt) | SI2 | `mcp-server/test-code-index-extract-systems.mjs` | §8 SI3, §4.2 |
-| SI4 | Sidecar, git reader and off switch | ready | SI3 | `mcp-server/test-code-index-sidecar.mjs` | §8 SI4, §4.1 |
+| SI4 | Sidecar, git reader and off switch | ready (1 attempt) | SI3 | `mcp-server/test-code-index-sidecar.mjs` | §8 SI4, §4.1 |
 
 ## S2 · Tools (review: pending)
 
