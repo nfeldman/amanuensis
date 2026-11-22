@@ -1033,6 +1033,66 @@
       "references": [
         { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
       ]
+    },
+    {
+      "id": "code-index-unsupported-language",
+      "note": "New, semantic-index PLAN §4.3 (SI5). Every tool reports it instead of an empty answer.",
+      "refuses": ["outline_file", "read_symbol"],
+      "instructs": [],
+      "server": { "file": "src/tools/code-index.ts", "phrase": "is not in a language the code index parses" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/code-index.md" }
+      ]
+    },
+    {
+      "id": "code-index-path-not-found",
+      "note": "New, semantic-index PLAN §4.3 (SI5).",
+      "refuses": ["outline_file", "read_symbol"],
+      "instructs": [],
+      "server": { "file": "src/tools/code-index.ts", "phrase": "is not in the tree at" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/code-index.md" }
+      ]
+    },
+    {
+      "id": "code-index-not-followed",
+      "note": "New, semantic-index PLAN §4.1 (SI5): a symlink or gitlink.",
+      "refuses": ["outline_file", "read_symbol"],
+      "instructs": [],
+      "server": { "file": "src/tools/code-index.ts", "phrase": "the code index does not follow it" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/code-index.md" }
+      ]
+    },
+    {
+      "id": "code-index-unavailable",
+      "note": "New, semantic-index PLAN §4.1 (SI5): a busy, unreadable or incomplete index, or a missing object.",
+      "refuses": ["outline_file", "read_symbol"],
+      "instructs": [],
+      "server": { "file": "src/tools/code-index.ts", "phrase": "the code index cannot read" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/code-index.md" }
+      ]
+    },
+    {
+      "id": "code-index-not-parsed",
+      "note": "New, semantic-index PLAN §4.1 (SI5): a file over 2 MB or not valid UTF-8.",
+      "refuses": ["outline_file", "read_symbol"],
+      "instructs": [],
+      "server": { "file": "src/tools/code-index.ts", "phrase": "the code index did not parse" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/code-index.md" }
+      ]
+    },
+    {
+      "id": "code-index-symbol-not-found",
+      "note": "New, semantic-index PLAN §4.3 (SI5), D4. The refusal lists the nearest symbol_ids.",
+      "refuses": ["read_symbol"],
+      "instructs": [],
+      "server": { "file": "src/tools/code-index.ts", "phrase": "names no definition in" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/code-index.md" }
+      ]
     }
   ]
 }

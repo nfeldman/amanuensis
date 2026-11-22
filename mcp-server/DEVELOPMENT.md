@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_226 tools across 48 groups. Generated from `tools/list` — do not hand-edit._
+_228 tools across 49 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -254,6 +254,13 @@ _226 tools across 48 groups. Generated from `tools/list` — do not hand-edit._
 | `get_claims` | Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. Each claim carries marks, the flow marks recorded on it that stand now (none once the claim is closed, and none that were withdrawn), and a flow-step claim carries mark_declination, the newest declaration that its flow has no marks to record, or null. |
 | `get_claim_history` | Return every version, evidence link, validity event, and supersession edge for one claim_key. |
 | `get_legacy_claim_projection` | Read the non-destructive compatibility projection of legacy entries, evidence, dispositions, findings, and contradictions. Null temporal fields remain null rather than being invented. |
+
+### `code-index` (2)
+
+| Tool | Description |
+|---|---|
+| `outline_file` | The shape of one source file at a revision, from the code index: its definitions as a nested list (symbol_id, kind, lines, signature, first documentation line), its imports, bytes, lines, blob_sha and parse status. No source is returned. Read a definition with read_symbol, or read the whole file; the index adds to reading and never replaces it. ref_sha defaults to the workspace HEAD and is returned resolved. Languages: TypeScript, TSX, JavaScript, Python, Rust, Go, Java, C, C++ and C#; any other file is refused as unsupported-language. |
+| `read_symbol` | One definition's source at a revision, from the code index. symbol is a symbol_id, a qualified name or a bare name. One match returns exactly the citeable span's text (leading documentation included) with start_line and end_line, and evidence_args: the location fields of add_evidence (file_path, symbol, ref_sha, line_range). The agent adds kind, which only it can choose; excerpt and note are optional. Several matches return their candidates with lines and no source; line_range (a candidate's lines, N or N-M) picks one occurrence. No match is refused with the nearest symbol_ids. A definition over 400 lines returns its first 400, its nested definitions, truncated: true and no evidence_args: read the whole file or a nested definition to go on. context_lines adds lines before and after the span without changing the citation. ref_sha defaults to the workspace HEAD. |
 
 ### `codebase-brief` (5)
 

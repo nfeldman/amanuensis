@@ -24,6 +24,7 @@ import { carriedTools } from "./tools/carried.js";
 import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
 import { claimMarkTools } from "./tools/claim-marks.js";
 import { claimTools } from "./tools/claims.js";
+import { codeIndexTools } from "./tools/code-index.js";
 import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
 import { locusTools } from "./tools/locus.js";
@@ -376,6 +377,7 @@ async function main(): Promise<void> {
     ...openQuestionTools,
     ...storageHistoryTools,
     ...compareTools,
+    ...codeIndexTools,
   ]);
   const byName = new Map(allTools.map((t) => [t.name, t]));
   const ajv = new Ajv({ allErrors: true, strict: true, strictSchema: true, useDefaults: false });
@@ -444,7 +446,7 @@ async function main(): Promise<void> {
     return { outcome: "ok", rule: null, site: null };
   };
 
-  const dispatchTool = (name: string, rawArgs: unknown): Dispatched => {
+  const dispatchTool = async (name: string, rawArgs: unknown): Promise<Dispatched> => {
     const tool = byName.get(name);
     if (!tool) {
       const message = `unknown tool: ${name}`;
@@ -509,7 +511,8 @@ async function main(): Promise<void> {
       }
       assertProjectBinding(requireProject());
       if (name !== "get_project_info") ensureDatabase();
-      const data = tool.handler(args, ctx);
+      // A handler may answer asynchronously (the code-index tools read git and parse).
+      const data = await tool.handler(args, ctx);
       // §4.1: the tool declares whether its text block is serialized compactly,
       // and the dispatcher honors the declaration. A tool that carries a byte
       // budget therefore has it enforced on the emitted response.
@@ -541,7 +544,7 @@ async function main(): Promise<void> {
     const sessionBefore = ctx.sessionId;
     const startedAt = new Date().toISOString();
     const started = performance.now();
-    let dispatched = dispatchTool(name, rawArgs);
+    let dispatched = await dispatchTool(name, rawArgs);
     let result: ReturnType<typeof jsonResult>;
     try {
       result = jsonResult(dispatched.data, { compact: dispatched.compact });
