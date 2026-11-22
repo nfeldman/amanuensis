@@ -26,6 +26,8 @@ Turns red when:
     it: headings shifted beneath the section, a table captioned by that section, a
     table with a record projection's header as that record list, a fence kept as
     code whatever it holds, a link written to `.md` printed as `.html`;
+  - a fence the writers accept (tildes, four backticks, an indented opener, a longer
+    closer) renders a line inside it as anything but code (final review F3/codex);
   - `renderers.py` still defines or imports `_nest_prose`, or `test-materializer.py`
     still reaches it through the renderers;
   - the gate does not run in CI.
@@ -680,6 +682,33 @@ def main() -> int:
         return None
 
     check("a heading in a stored body nests beneath its section, and is text when no section is named", stored_headings_nest)
+
+    def stored_fences_are_code() -> str | None:
+        # The writers (`isStoredProse`) open a fence on three or more backticks or
+        # tildes, indented up to three spaces, and close it only on a run of the same
+        # character at least as long; the renderer must read the same blocks, or a
+        # `# comment` the writer accepted inside a fence prints as a heading (final
+        # review F3/codex).
+        prose, error = load("prose")
+        if prose is None:
+            return error
+        for body in (
+            "~~~\n# literal comment\n~~~",
+            "````\n# literal comment\n````",
+            "   ```sh\n# literal comment\n```",
+            "````\n```\n# literal comment\n````",
+            "~~~\n```\n# literal comment\n~~~",
+            "Intro.\n~~~\n# literal comment\n~~~",
+        ):
+            blocks = prose.render_prose(body, under=3)
+            if any(type(b).__name__ == "Heading" for b in blocks):
+                return f"{body!r}: a line inside a fence the writer accepts rendered as a heading"
+            code = [b for b in blocks if type(b).__name__ == "Code"]
+            if len(code) != 1 or "# literal comment" not in code[0].source:
+                return f"{body!r}: rendered as {[type(b).__name__ for b in blocks]}, not one code block holding the comment"
+        return None
+
+    check("a fence the writers accept renders as code, whatever its character and length", stored_fences_are_code)
 
     def nest_prose_gone() -> str | None:
         source = (ROOT / "amanuensis_materializer" / "renderers.py").read_text()
