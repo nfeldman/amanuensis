@@ -278,7 +278,8 @@ const zeroTokens = () => Object.fromEntries(TOKEN_KEYS.map((k) => [k, 0]));
  * Read transcript files into sessions, one per session id: the files of a resumed session are one
  * session. A message id is counted once for its usage and a tool-use id once for its result, across
  * every file, because a resumed session repeats earlier lines and a streamed message appears once
- * per content block.
+ * per content block. Each is counted in the session whose line is earliest (then whose id sorts
+ * first), so the order the files are named in never moves one between sessions.
  */
 function readSessions(files) {
   const seenMessages = new Set();
@@ -304,6 +305,25 @@ function readSessions(files) {
     group.entries.push(...entries);
     group.unreadable += unreadable;
   }
+  const owners = { messages: new Map(), results: new Map() };
+  const own = (map, key, session, timestamp) => {
+    const at = typeof timestamp === "string" ? timestamp : "\uffff";
+    const held = map.get(key);
+    if (!held || at < held.at || (at === held.at && session < held.session)) map.set(key, { session, at });
+  };
+  for (const [id, { entries }] of groups) {
+    for (const entry of entries) {
+      const message = entry.message;
+      if (entry.type === "assistant" && message?.usage && typeof message.id === "string") {
+        own(owners.messages, message.id, id, entry.timestamp);
+      }
+      if (entry.type === "user" && Array.isArray(message?.content)) {
+        for (const block of message.content) {
+          if (block?.type === "tool_result" && block.tool_use_id != null) own(owners.results, block.tool_use_id, id, entry.timestamp);
+        }
+      }
+    }
+  }
   for (const [id, { entries, unreadable }] of groups) {
     const uses = new Map();
     for (const entry of entries) {
@@ -326,7 +346,13 @@ function readSessions(files) {
         session.started_at = entry.timestamp;
       }
       const message = entry.message;
-      if (entry.type === "assistant" && message?.usage && typeof message.id === "string" && !seenMessages.has(message.id)) {
+      if (
+        entry.type === "assistant" &&
+        message?.usage &&
+        typeof message.id === "string" &&
+        owners.messages.get(message.id)?.session === id &&
+        !seenMessages.has(message.id)
+      ) {
         seenMessages.add(message.id);
         for (const key of TOKEN_KEYS) session.tokens[key] += Number(message.usage[USAGE_FIELDS[key]]) || 0;
       }
@@ -335,7 +361,7 @@ function readSessions(files) {
           if (block?.type !== "tool_result") continue;
           const key = block.tool_use_id ?? null;
           if (key !== null) {
-            if (seenResults.has(key)) continue;
+            if (owners.results.get(key)?.session !== id || seenResults.has(key)) continue;
             seenResults.add(key);
           }
           const use = uses.get(key);
