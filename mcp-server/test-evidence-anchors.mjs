@@ -22,7 +22,8 @@
 //     with no line_range or on the very line the cited definition shares with its neighbour;
 //   - of two occurrences of one symbol_id, line_range does not select the one it lies in, or
 //     its absence (or a range covering both) is not refused with both listed;
-//   - an unknown symbol is not refused with its nearest symbol_ids and the pointer to `note`;
+//   - an unknown symbol is not refused with its nearest symbol_ids and the pointer to `note`,
+//     including in a file that parsed only in part (where the refusal must say so);
 //   - no symbol, an unsupported language, a file the index cannot read (not UTF-8) or
 //     AMANUENSIS_CODE_INDEX=off does not write the evidence row as before, with no anchor;
 //   - an UPDATE or DELETE on an anchor, or a DELETE of its evidence row, succeeds;
@@ -458,6 +459,20 @@ async function main() {
   // Unknown symbols: refused with candidates, and the label's place.
 
   await refused("an unknown symbol", { file_path: "src/shapes.ts", symbol: "ad", line_range: "2" }, ["ad", "add", "note"]);
+  // A file that parsed in part still lists what parsed: an invented name is refused there too,
+  // and the refusal says why a definition with broken syntax cannot be named.
+  const whole = await written("whole, beside a broken definition", { file_path: "src/partial.ts", symbol: "whole" });
+  same("whole's anchor", anchorRow(whole), anchorFor(whole, "src/partial.ts", "typescript", "whole", "function", 1, 3, "filled"));
+  await refused("an invented symbol in a file that parsed in part", { file_path: "src/partial.ts", symbol: "invented" }, [
+    "invented",
+    "whole",
+    "note",
+    "parsed only in part",
+  ]);
+  await refused("the broken definition, which did not parse", { file_path: "src/partial.ts", symbol: "broken", line_range: "5-7" }, [
+    "broken",
+    "parsed only in part",
+  ]);
   await refused("an unknown overload", { file_path: "src/Parser.java", symbol: "Parser.parse(int)" }, [
     "Parser.parse(String)",
     "note",
