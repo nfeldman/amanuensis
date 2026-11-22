@@ -586,8 +586,8 @@
     {
       "needs_mcp": false,
       "status": "ready",
-      "attempts": 0,
-      "start_sha": "",
+      "attempts": 1,
+      "start_sha": "349ac99036c2abe346058f44e6f7eec59e210413",
       "red_sha": "",
       "green_sha": "",
       "verified_by_launcher": false,

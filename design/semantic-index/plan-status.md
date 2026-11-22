@@ -32,7 +32,7 @@
 |---|---|---|---|---|---|
 | SI9 | Skill guidance | done (1 attempt) | SI6, SI7, SI8 | `dev/test-skill-code-index.mjs` | §8 SI9, §5 |
 | SI10 | Descriptive token report | done (1 attempt) | SI6 | `dev/test-token-report.mjs` | §8 SI10, §6 |
-| SI11 | Install docs, CI registration and installed-artifact check | ready | SI9, SI10 | `dev/test-code-index-docs.mjs` | §8 SI11, §4.8 |
+| SI11 | Install docs, CI registration and installed-artifact check | ready (1 attempt) | SI9, SI10 | `dev/test-code-index-docs.mjs` | §8 SI11, §4.8 |
 
 ## Completion
 
