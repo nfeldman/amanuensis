@@ -189,6 +189,17 @@ Workflow:
   downstream repository retired when it moved to its own delivery pipeline (2026-11-12). The lane
   is paused; fix its publish step before it restarts. The owner's rule: push the docs commit
   directly, then fast-forward the local checkout and refresh the store's HTML.
+- **Record links are still made by scanning text for IDs.** Deferred by the owner from the
+  store-only final review (Codex F10), 2026-11-21. `html_projection.py` still runs
+  `_identifier_markup` over each finished page's nav, body and eyebrow, which PLAN §3.1 meant to
+  replace with typed record references in the page model. The fix needs every builder to emit
+  those references, with the golden pages byte-identical, so it needs a packet of its own.
+- **Diagram SVGs are images that contain links.** Deferred by the owner from the store-only final
+  review (Claude F14), 2026-11-21. The SVGs from SO22–SO25 carry `role="img"` and `<a href>`
+  children, and ARIA treats an image's children as presentational, so those links are hidden
+  from screen readers. Appendix B rule 8 of `design/store-only/PLAN.md` asks for both, so amend
+  the rule first. Proposed: a diagram with links is a labelled `role="group"`, and `role="img"`
+  stays for diagrams with none. Then change the four gates that assert `role="img"`.
 
 ### Reader orientation
 
