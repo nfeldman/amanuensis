@@ -10,8 +10,9 @@
 // Identity: `qname` is the chain of enclosing definitions, with each language's rules: a Go
 // method is `<Receiver>.<name>`; inside a Rust `impl T` an item is `T.<name>` and inside
 // `impl Trait for T` it is `<T as Trait>.<name>`; a C++ qualified declarator is relative to
-// its lexical namespace chain unless it starts with `::`; a C# file-scoped namespace
-// qualifies everything after it. `symbol_id` is the qname plus a syntactic discriminator
+// its lexical namespace chain unless it starts with `::`, and defines a method unless it
+// names a namespace the file declares; a C# file-scoped namespace qualifies everything
+// after it. `symbol_id` is the qname plus a syntactic discriminator
 // where a language has overloads: Java parameter types; C++ template arity, parameter types
 // and cv/ref qualifiers; C# generic arity on every type and method segment, and parameter
 // types with their modifiers. It has no positional part: two definitions in one file that
@@ -1149,6 +1150,22 @@ export async function extract(
       };
       if (identity.fileScope) fileScope = entry;
       stack.push(entry);
+    }
+
+    // C++: `n::f() {}` defines a member only when n is not a namespace. A qualified
+    // definition whose owner is a namespace this file declares, and no record, is a function.
+    if (lang === "cpp") {
+      const namespaces = new Set<string>();
+      const records = new Set<string>();
+      for (const entry of named.values()) {
+        if (entry.kind === "namespace") namespaces.add(entry.qname);
+        else if (C_RECORDS.includes(entry.kind)) records.add(entry.qname);
+      }
+      for (const entry of named.values()) {
+        if (entry.kind !== "method") continue;
+        const owner = entry.qname.slice(0, entry.qname.lastIndexOf("."));
+        if (namespaces.has(owner) && !records.has(owner)) entry.kind = "function";
+      }
     }
 
     const occurrences = new Map<string, number>();
