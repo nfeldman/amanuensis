@@ -60,8 +60,10 @@ or a bare name.
 ## `find_symbol`
 
 `find_symbol(query, mode, kind, path_prefix, ref_sha, limit)` searches the
-whole tree at one revision. It returns paths, `symbol_id`s, kinds, lines and
-signatures, never bodies; read a row with `read_symbol` or read the file.
+whole tree at one revision and returns rows, never bodies. A definition row
+carries `path`, `symbol_id`, `kind`, its lines and `signature`: read it with
+`read_symbol`, or read the file. A reference row carries `path`, `name`,
+`kind`, `line` and `match`, and no `symbol_id`: read the file at that line.
 
 - `mode: "definitions"` (the default) ranks definitions by BM25 over their
   names split on case and punctuation, their qualified names, signatures and
