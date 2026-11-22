@@ -771,6 +771,25 @@ async function main() {
     after.close();
   });
 
+  await step("a tree pruned while it is indexed is not recorded complete", async () => {
+    const storage = newStorage("pruned-mid-index");
+    const index = store.openCodeIndex(storage);
+    let pruned = false;
+    const result = await index.indexTree(big, bigRev, {
+      onProgress: () => {
+        if (pruned) return;
+        pruned = true;
+        // Another request records eight newer revisions, which prunes this one's rows.
+        for (let i = 0; i < 8; i++) index.recordTree(`${"0".repeat(39)}${i}`, []);
+      },
+    });
+    check(result.partial === true && result.state !== "ok", `a pruned tree reported: ${canonical(result)}`);
+    check(index.treeStatus(bigRev).complete === false, "a tree with no rows left is recorded complete");
+    const again = await index.indexTree(big, bigRev);
+    check(again.state === "ok" && index.treeStatus(bigRev).complete === true, `the next call does not complete it: ${canonical(again)}`);
+    index.close();
+  });
+
   await step("source-byte, time and disk budgets report partial, resume and evict", async () => {
     const storage = newStorage("budget-bytes");
     const bytes = store.openCodeIndex(storage, { budgets: { maxSourceBytes: 20_000 } });
