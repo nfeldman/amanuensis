@@ -40,7 +40,8 @@
 //   - with the index off, the tools are not refused as the register and references/code-index.md
 //     state, or the refusal register's check finds drift;
 //   - a reference row carries fields beyond path, name, kind, line and match, or the reference
-//     and find_symbol's description do not say what each mode's rows carry.
+//     and find_symbol's description do not say what each mode's rows carry; or the reference
+//     says every refusal has one way on instead of each stating its own.
 //
 // Hermetic: fixture git repositories and stores are built in a temporary directory, and the
 // built tool handlers are called in-process, as test-explanation-read.mjs does. No network.
@@ -844,7 +845,9 @@ async function main() {
       described.includes("a reference row carries path, name, kind, line and match"),
       "find_symbol's description does not state what a reference row carries",
     );
-
+    // Each refusal states its own way on; the reference claims no single one for all.
+    check(!/in every case the way on/i.test(flat), "references/code-index.md says every refusal has the same way on");
+    check(flat.includes("Each refusal carries a `rule` and says its own way on"), "references/code-index.md does not say each refusal states its own way on");
     const parity = spawnSync(process.execPath, [join(here, "scripts", "check-refusal-parity.mjs")], { encoding: "utf8" });
     check(parity.status === 0, `check-refusal-parity.mjs found drift: ${oneLine(parity.stderr || parity.stdout)}`);
   }
