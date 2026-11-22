@@ -72,10 +72,12 @@ function run(command, args, options = {}) {
 }
 
 // The plan's table (§1, §4.8), row for row. integrity is `npm view <pkg>@<version>
-// dist.integrity` as checked 2026-11-22.
+// dist.integrity` as checked 2026-11-22. abi is measured under web-tree-sitter 0.27.2 at SI1:
+// five grammars are ABI 14 and five ABI 15 (§1 says all ten are 15; it is wrong for these).
 const GOLDEN = [
   {
     language: "typescript",
+    abi: 14,
     package: "tree-sitter-typescript",
     version: "0.23.2",
     integrity:
@@ -86,6 +88,7 @@ const GOLDEN = [
   },
   {
     language: "tsx",
+    abi: 14,
     package: "tree-sitter-typescript",
     version: "0.23.2",
     integrity:
@@ -96,6 +99,7 @@ const GOLDEN = [
   },
   {
     language: "javascript",
+    abi: 15,
     package: "tree-sitter-javascript",
     version: "0.25.0",
     integrity:
@@ -106,6 +110,7 @@ const GOLDEN = [
   },
   {
     language: "python",
+    abi: 15,
     package: "tree-sitter-python",
     version: "0.25.0",
     integrity:
@@ -116,6 +121,7 @@ const GOLDEN = [
   },
   {
     language: "rust",
+    abi: 14,
     package: "tree-sitter-rust",
     version: "0.24.0",
     integrity:
@@ -126,6 +132,7 @@ const GOLDEN = [
   },
   {
     language: "go",
+    abi: 15,
     package: "tree-sitter-go",
     version: "0.25.0",
     integrity:
@@ -136,6 +143,7 @@ const GOLDEN = [
   },
   {
     language: "java",
+    abi: 14,
     package: "tree-sitter-java",
     version: "0.23.5",
     integrity:
@@ -146,6 +154,7 @@ const GOLDEN = [
   },
   {
     language: "c",
+    abi: 15,
     package: "tree-sitter-c",
     version: "0.24.1",
     integrity:
@@ -156,6 +165,7 @@ const GOLDEN = [
   },
   {
     language: "cpp",
+    abi: 14,
     package: "tree-sitter-cpp",
     version: "0.23.4",
     integrity:
@@ -166,6 +176,7 @@ const GOLDEN = [
   },
   {
     language: "csharp",
+    abi: 15,
     package: "tree-sitter-c-sharp",
     version: "0.24.0",
     integrity:
@@ -187,7 +198,6 @@ const RUNTIME_DEPENDENCIES = [
   "smol-toml",
   "web-tree-sitter",
 ];
-const ABI_VERSION = 15;
 
 // Ceilings just above the sizes measured at SI1 (the package before grammars was 1.96 MB
 // packed and 11.27 MB unpacked; the ten grammars add 16.8 MB unpacked and 1.32 MB gzipped).
@@ -394,8 +404,8 @@ async function checkLoads(vendor) {
     const bytes = vendor.readVerifiedGrammar(grammarsDir, row.language);
     const language = await Language.load(new Uint8Array(bytes));
     check(
-      language.abiVersion === ABI_VERSION,
-      `${row.language} loads at ABI ${language.abiVersion}, expected ${ABI_VERSION}`,
+      language.abiVersion === row.abi,
+      `${row.language} loads at ABI ${language.abiVersion}, expected ${row.abi}`,
     );
     const parser = new Parser();
     parser.setLanguage(language);

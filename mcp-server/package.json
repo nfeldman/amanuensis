@@ -26,9 +26,12 @@
     "dist/",
     "src/schema.sql",
     "contracts/",
+    "grammars/",
+    "queries/",
     "scripts/historical-evaluation.mjs",
     "skills/",
     "materializer/",
+    "THIRD_PARTY_NOTICES.md",
     "README.md"
   ],
   "keywords": [
@@ -49,14 +52,15 @@
     "start": "node dist/index.js",
     "dev": "tsc --watch",
     "clean": "rm -rf dist agents skills materializer",
-    "prepack": "node scripts/prepack-bundle-assets.mjs && npm run build"
+    "prepack": "node scripts/vendor-grammars.mjs && node scripts/prepack-bundle-assets.mjs && npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "ajv": "8.18.0",
     "better-sqlite3": "^11.3.0",
     "jsonc-parser": "3.3.1",
-    "smol-toml": "1.8.0"
+    "smol-toml": "1.8.0",
+    "web-tree-sitter": "0.27.2"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.12",

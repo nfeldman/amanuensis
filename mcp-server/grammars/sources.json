@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "grammars": [
+    {
+      "language": "typescript",
+      "package": "tree-sitter-typescript",
+      "version": "0.23.2",
+      "integrity": "sha512-e04JUUKxTT53/x3Uq1zIL45DoYKVfHH4CZqwgZhPg5qYROl5nQjV+85ruFzFGZxu+QeFVbRTPDRnqL9UbU4VeA==",
+      "wasm": "tree-sitter-typescript.wasm"
+    },
+    {
+      "language": "tsx",
+      "package": "tree-sitter-typescript",
+      "version": "0.23.2",
+      "integrity": "sha512-e04JUUKxTT53/x3Uq1zIL45DoYKVfHH4CZqwgZhPg5qYROl5nQjV+85ruFzFGZxu+QeFVbRTPDRnqL9UbU4VeA==",
+      "wasm": "tree-sitter-tsx.wasm"
+    },
+    {
+      "language": "javascript",
+      "package": "tree-sitter-javascript",
+      "version": "0.25.0",
+      "integrity": "sha512-1fCbmzAskZkxcZzN41sFZ2br2iqTYP3tKls1b/HKGNPQUVOpsUxpmGxdN/wMqAk3jYZnYBR1dd/y/0avMeU7dw==",
+      "wasm": "tree-sitter-javascript.wasm"
+    },
+    {
+      "language": "python",
+      "package": "tree-sitter-python",
+      "version": "0.25.0",
+      "integrity": "sha512-eCmJx6zQa35GxaCtQD+wXHOhYqBxEL+bp71W/s3fcDMu06MrtzkVXR437dRrCrbrDbyLuUDJpAgycs7ncngLXw==",
+      "wasm": "tree-sitter-python.wasm"
+    },
+    {
+      "language": "rust",
+      "package": "tree-sitter-rust",
+      "version": "0.24.0",
+      "integrity": "sha512-NWemUDf629Tfc90Y0Z55zuwPCAHkLxWnMf2RznYu4iBkkrQl2o/CHGB7Cr52TyN5F1DAx8FmUnDtCy9iUkXZEQ==",
+      "wasm": "tree-sitter-rust.wasm"
+    },
+    {
+      "language": "go",
+      "package": "tree-sitter-go",
+      "version": "0.25.0",
+      "integrity": "sha512-APBc/Dq3xz/e35Xpkhb1blu5UgW+2E3RyGWawZSCNcbGwa7jhSQPS8KsUupuzBla8PCo8+lz9W/JDJjmfRa2tw==",
+      "wasm": "tree-sitter-go.wasm"
+    },
+    {
+      "language": "java",
+      "package": "tree-sitter-java",
+      "version": "0.23.5",
+      "integrity": "sha512-Yju7oQ0Xx7GcUT01mUglPP+bYfvqjNCGdxqigTnew9nLGoII42PNVP3bHrYeMxswiCRM0yubWmN5qk+zsg0zMA==",
+      "wasm": "tree-sitter-java.wasm"
+    },
+    {
+      "language": "c",
+      "package": "tree-sitter-c",
+      "version": "0.24.1",
+      "integrity": "sha512-lkYwWN3SRecpvaeqmFKkuPNR3ZbtnvHU+4XAEEkJdrp3JfSp2pBrhXOtvfsENUneye76g889Y0ddF2DM0gEDpA==",
+      "wasm": "tree-sitter-c.wasm"
+    },
+    {
+      "language": "cpp",
+      "package": "tree-sitter-cpp",
+      "version": "0.23.4",
+      "integrity": "sha512-qR5qUDyhZ5jJ6V8/umiBxokRbe89bCGmcq/dk94wI4kN86qfdV8k0GHIUEKaqWgcu42wKal5E97LKpLeVW8sKw==",
+      "wasm": "tree-sitter-cpp.wasm"
+    },
+    {
+      "language": "csharp",
+      "package": "tree-sitter-c-sharp",
+      "version": "0.24.0",
+      "integrity": "sha512-M7VLq8mZEmPz3HNyocw484Pdai/DdSycrSlFrLqzjmhUPqhph3VellWbtx9mWcyTXgHWpNQzymFDrLt8IIna5w==",
+      "wasm": "tree-sitter-c_sharp.wasm"
+    }
+  ]
+}
