@@ -370,6 +370,18 @@ if (newId) {
     tokens: tokens(2, 10, 0, 50, 57),
   });
 }
+// The replayed message and result belong to the session that first had them, whichever order the
+// files are named in: split by a cutover, the sides do not move when the arguments are reversed.
+{
+  const sides = (label, paths) => {
+    const r = runJson(label, [...paths.flatMap((p) => ["--transcripts", p]), "--cutover", "2026-11-05"]);
+    return r && [r.sides?.before?.transcripts?.totals?.tokens?.weighted, r.sides?.after?.transcripts?.totals?.tokens?.weighted];
+  };
+  const resumed3 = join(fixtures, "resumed-new-id", "resumed-3.jsonl");
+  const forward = sides("a resumed session split by a cutover", [resumedDir, resumed3]);
+  const reversed = sides("a resumed session split by a cutover, files reversed", [resumed3, resumedDir]);
+  if (forward && reversed) check("a cutover split with the files reversed (weighted before, after)", reversed, forward);
+}
 const twice = runJson("one transcript named twice", [
   ...splitTranscripts("--before-transcripts", ["before-2.jsonl", "before-2.jsonl"]),
   ...splitTranscripts("--after-transcripts", ["after-2.jsonl"]),
