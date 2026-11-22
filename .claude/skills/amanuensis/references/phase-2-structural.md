@@ -26,6 +26,14 @@ entries (`define_term`) for the non-obvious names. Each term's
 and whose path must exist in that revision's tree, or the call is
 refused.
 
+<!-- code-index:begin -->
+`outline_file` lists a subsystem's types, with each definition's `symbol_id`,
+kind and lines, so the type graph can be read from the outline and the
+definitions that matter read in full. When you record a flow's steps, cite each
+step through `evidence_args` from `read_symbol`, and add `kind`. If the code index
+cannot read a path, read the file directly.
+<!-- code-index:end -->
+
 ### 2. State containers
 
 For every significant mutable state holder:

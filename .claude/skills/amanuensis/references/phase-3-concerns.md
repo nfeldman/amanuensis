@@ -41,10 +41,21 @@ intentions produce vague findings.
 
 ### 2. Find the relevant code
 
-Semantic tools first (find-references, call-hierarchy,
-find-implementations). Grep last.
+<!-- code-index:begin -->
+`find_symbol` finds a definition, and its `references` mode finds places where
+a name appears: those are matched by name, so they are leads to confirm, not
+call sites. `outline_file` shows a file's shape, and `rg` covers strings,
+config and languages the index does not parse. If the code index cannot read a
+path, read the file directly.
+<!-- code-index:end -->
 
 ### 3. Read to sufficient depth
+
+<!-- code-index:begin -->
+Verify a claim from its cited definition (`read_symbol`) and from whatever
+surrounding code the claim depends on: callers, callees, configuration, or the
+rest of the file. Whole files may be read whenever that helps.
+<!-- code-index:end -->
 
 Sufficient = **you could defend the classification under
 adversarial questioning.** If you are not sure, it is not sufficient

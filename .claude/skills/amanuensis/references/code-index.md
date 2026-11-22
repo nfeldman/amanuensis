@@ -10,6 +10,19 @@ The cache is built from the repository's own revisions and holds no record.
 Deleting it is always safe. `AMANUENSIS_CODE_INDEX=off` removes the index's
 tools and `add_evidence` behaves as it does without a symbol.
 
+## Using the tools
+
+<!-- code-index:begin -->
+Ask the store first: `describe_locus` for a locus, `search_records` for a topic
+the store may already record. Use `find_symbol` to find a definition,
+`outline_file` to see a file's shape, and `read_symbol` to read one definition.
+Whole files may be read whenever context helps; the index is there to find and
+cite. Cite a definition with `read_symbol`'s `evidence_args`, add `kind`, and
+narrow `line_range` inside the definition when the claim rests on part of it. A `find_symbol` reference is
+matched by name, so it is a lead to confirm in the code. Use `rg` for strings,
+comments, config and languages the index does not parse.
+<!-- code-index:end -->
+
 ## Languages
 
 TypeScript, TSX, JavaScript, Python, Rust, Go, Java, C, C++ and C#. A file in

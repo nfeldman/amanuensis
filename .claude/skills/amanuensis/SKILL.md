@@ -305,9 +305,19 @@ them.
 - **Commit every checkpoint.** The storage directory is a git repo.
   `commit_phase_gate` is how the methodology recovers from mid-session
   crashes; do not skip.
-- **Use the highest-capability navigation tool available.** Semantic
-  language-intelligence tools first; project-wide search second; shell
-  grep last.
+<!-- code-index:begin -->
+- **Navigate with what the question needs.** Ask the store first
+  (`describe_locus`, `search_records`). Use `find_symbol` to find a
+  definition and `outline_file` to see a file's shape; read a definition with
+  `read_symbol`, and read the whole file whenever context helps. Whole files
+  may be read at any point: the index is there to find and cite. Cite with
+  `read_symbol`'s `evidence_args` (add `kind`), narrowing `line_range` inside the
+  definition when the claim rests on part of it. A `find_symbol` reference is
+  matched by name: it is a lead to confirm before you call it a call site. Use
+  `rg` for strings, comments, config and languages the index does not parse.
+  If the code index cannot read a path, read the file directly. The tools are in
+  `references/code-index.md`.
+<!-- code-index:end -->
 - **Cite everything.** Every claim in a record carries either a
   `file:symbol@sha` reference or a row id (finding, disposition, field
   note, vocabulary entry). If you can't cite, you can't claim — open a
@@ -318,6 +328,11 @@ them.
 Read the reference for the phase you're about to run; don't preload
 everything.
 
+<!-- code-index:begin -->
+- `references/code-index.md` — `outline_file`, `read_symbol`, `find_symbol`
+  and `search_records`: what each returns, how to cite a definition, and the
+  refusals.
+<!-- code-index:end -->
 - `references/onboarding.md` — the 8-phase first pass.
 - `references/subsystem-survey.md` — the per-subsystem 5-phase loop
   (autonomous execution rhythm + Phase 5 packaging).

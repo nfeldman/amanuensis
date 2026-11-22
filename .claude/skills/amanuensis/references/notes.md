@@ -81,6 +81,17 @@ Neither runs a survey either.
 4. Assemble a reply that leads with the most interesting item. A
    tension beats a pattern; a pattern beats a count.
 
+### "What do we know about X?" when `describe_locus` has nothing
+
+<!-- code-index:begin -->
+When `describe_locus` returns nothing for X, answer with
+`search_records(query=X)`: it searches the store's claims, narratives,
+explanations, findings, field notes, open questions and vocabulary by text. Open
+a hit with its own reader and cite its id. If `search_records` finds nothing
+either, say the store holds nothing on X, and offer a survey. If the code index
+cannot read the store's records, read them with their own tools.
+<!-- code-index:end -->
+
 ### "What do we know about src/foo.rs?"
 
 1. `describe_locus(locus="src/foo.rs")` — standing plus the account

@@ -76,6 +76,18 @@ Read the file at HEAD and compare it against what the conspectus already
 claims about it. There are three outcomes, and only one of them is a
 clear:
 
+<!-- code-index:begin -->
+Read the file's diff before you decide. `get_stale_backlog` adds `anchor_state`
+to each evidence row on a stale file, which says whether the cited definition is
+`same-text`, `moved`, `changed`, `gone`, `ambiguous`, `unavailable` or
+`unanchored` at HEAD. Use it to see which cited definitions moved or changed.
+It says what happened to the cited text and nothing more: `same-text` is a place
+to look at the diff around, not a verdict, because something the definition
+calls or reads may have changed. `anchor_state` does not decide
+`clear_staleness`, which clears the whole file. Account for every evidence row,
+claim and disposition on the file, anchored or not, before `clear_staleness`.
+<!-- code-index:end -->
+
 **Substantively unchanged** — formatting, comments, moved code, no
 behavioral difference. Re-examination is complete.
 `clear_staleness(subsystem_id, file_path, ref_sha=<HEAD>, reason="<what you

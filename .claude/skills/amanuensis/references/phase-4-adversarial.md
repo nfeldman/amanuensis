@@ -67,8 +67,16 @@ Find those.
 
 ### 3. Go look
 
-Semantic tools to find call sites, implementations, type
-constraints. Walk out from the finding's location in both
+<!-- code-index:begin -->
+Use `find_symbol` to find definitions and implementations. Its `references`
+mode lists places where a name appears; they are matched by name, so confirm
+each one in the code before calling it a call site. Verify a claim from its
+cited definition (`read_symbol`) and from whatever surrounding code it depends
+on, reading whole files when that helps. If the code index cannot read a path,
+read the file directly.
+<!-- code-index:end -->
+
+Walk out from the finding's location in both
 directions. Do not limit yourself to the ledger if the answer might
 live outside — add files via `add_files_to_scope` with
 `why_in_scope="adversarial probe for ${finding_id}"`.

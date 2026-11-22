@@ -213,55 +213,55 @@ const RESPONSE_FIELDS = new Set([
 const FILES = {
   "SKILL.md": (s) => {
     const need = [
-      ["asks the store first with `describe_locus` and `search_records`", [/\bstore\b/i, /`describe_locus`/, /`search_records`/]],
-      ["uses `find_symbol` to find a definition", [/`find_symbol`/, /\bdefinitions?\b/i]],
-      ["uses `outline_file` to see a file's shape", [/`outline_file`/, /\bshape\b/i]],
-      ["reads a definition with `read_symbol`", [/`read_symbol`/, /\bread\b/i]],
-      ["cites with `evidence_args`, narrowing `line_range` inside the definition", [/`evidence_args`/, /`line_range`/, /\bnarrow/i]],
+      ["asks the store first with `describe_locus` and `search_records`", [/\bstore\b/i, /`describe_locus\b/, /`search_records\b/]],
+      ["uses `find_symbol` to find a definition", [/`find_symbol\b/, /\bdefinitions?\b/i]],
+      ["uses `outline_file` to see a file's shape", [/`outline_file\b/, /\bshape\b/i]],
+      ["reads a definition with `read_symbol`", [/`read_symbol\b/, /\bread\b/i]],
+      ["cites with `evidence_args`, narrowing `line_range` inside the definition", [/`evidence_args\b/, /`line_range\b/, /\bnarrow/i]],
       ["points at references/code-index.md", [/code-index\.md/]],
     ];
     return need;
   },
   "references/code-index.md": () => [
-    ["names `outline_file`", [/`outline_file`/]],
-    ["names `read_symbol`", [/`read_symbol`/]],
-    ["names `find_symbol`", [/`find_symbol`/]],
-    ["names `search_records`", [/`search_records`/]],
-    ["says where each tool fits the work and names `evidence_args`", [/`evidence_args`/, /\bcite\b/i]],
+    ["names `outline_file`", [/`outline_file\b/]],
+    ["names `read_symbol`", [/`read_symbol\b/]],
+    ["names `find_symbol`", [/`find_symbol\b/]],
+    ["names `search_records`", [/`search_records\b/]],
+    ["says where each tool fits the work and names `evidence_args`", [/`evidence_args\b/, /\bcite\b/i]],
   ],
   "references/phase-1-scope.md": () => [
-    ["`find_symbol` for definitions and name-matched references", [/`find_symbol`/, /\bdefinitions?\b/i, /\breferences?\b/i]],
-    ["`outline_file` for imports", [/`outline_file`/, /\bimports?\b/i]],
-    ["`rg` for strings, comments and config", [/`rg`/, /\bstrings?\b/i, /\bcomments?\b/i, /\bconfig/i]],
-    ["`rg` for other languages", [/`rg`/, /\b(other|unsupported) languages?\b/i]],
+    ["`find_symbol` for definitions and name-matched references", [/`find_symbol\b/, /\bdefinitions?\b/i, /\breferences?\b/i]],
+    ["`outline_file` for imports", [/`outline_file\b/, /\bimports?\b/i]],
+    ["`rg` for strings, comments and config", [/`rg\b/, /\bstrings?\b/i, /\bcomments?\b/i, /\bconfig/i]],
+    ["`rg` for other languages", [/`rg\b/, /\b(other|unsupported) languages?\b/i]],
   ],
   "references/phase-2-structural.md": () => [
-    ["`outline_file` lists a subsystem's types", [/`outline_file`/, /\btypes?\b/i]],
-    ["flow steps cited through `evidence_args`", [/`evidence_args`/, /\bflow\b/i]],
+    ["`outline_file` lists a subsystem's types", [/`outline_file\b/, /\btypes?\b/i]],
+    ["flow steps cited through `evidence_args`", [/`evidence_args\b/, /\bflow\b/i]],
   ],
   "references/phase-3-concerns.md": () => [
     ["verifies from the cited definition", [/\bcited definition\b/i, /\bverif/i]],
     ["and the surrounding code the claim depends on", [/\b(surrounding|around)\b/i, /\bdepends?\b/i]],
-    ["names `read_symbol`", [/`read_symbol`/]],
-    ["names `find_symbol`", [/`find_symbol`/]],
+    ["names `read_symbol`", [/`read_symbol\b/]],
+    ["names `find_symbol`", [/`find_symbol\b/]],
   ],
   "references/phase-4-adversarial.md": () => [
     ["verifies from the cited definition", [/\bcited definition\b/i, /\bverif/i]],
     ["and the surrounding code the claim depends on", [/\b(surrounding|around)\b/i, /\bdepends?\b/i]],
-    ["names `read_symbol`", [/`read_symbol`/]],
-    ["names `find_symbol`", [/`find_symbol`/]],
+    ["names `read_symbol`", [/`read_symbol\b/]],
+    ["names `find_symbol`", [/`find_symbol\b/]],
   ],
   "references/refresh.md": () => [
     ["reads the file's diff", [/\bdiff\b/i, /\bread\b/i]],
-    ["uses `anchor_state` to see which cited definitions moved or changed", [/`anchor_state`/, /\bmoved\b/i, /\bchanged\b/i]],
-    ["says `anchor_state` does not decide the clear", [/`anchor_state`/, /\b(not|never|cannot)\b/i, /\b(clear|clears|clearing)\b|`clear_staleness`/i]],
+    ["uses `anchor_state` to see which cited definitions moved or changed", [/`anchor_state\b/, /\bmoved\b/i, /\bchanged\b/i]],
+    ["says `anchor_state` does not decide the clear", [/`anchor_state\b/, /\b(not|never|cannot)\b/i, /\b(clear|clears|clearing)\b|`clear_staleness`/i]],
     [
       "accounts for every evidence row, claim and disposition on the file, anchored or not, before `clear_staleness`",
-      [/\bevery evidence row\b/i, /\bclaim/i, /\bdisposition/i, /\banchored or not\b/i, /`clear_staleness`/],
+      [/\bevery evidence row\b/i, /\bclaim/i, /\bdisposition/i, /\banchored or not\b/i, /`clear_staleness\b/],
     ],
   ],
   "references/notes.md": () => [
-    ["answers with `search_records` when `describe_locus` has nothing", [/`search_records`/, /`describe_locus`/, /\bnothing\b/i]],
+    ["answers with `search_records` when `describe_locus` has nothing", [/`search_records\b/, /`describe_locus\b/, /\bnothing\b/i]],
   ],
 };
 
