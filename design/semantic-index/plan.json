@@ -437,7 +437,8 @@
         "cd mcp-server && node test-review-analysis.mjs",
         "cd mcp-server && node test-locus-standing.mjs",
         "cd mcp-server && node test-refusal-parity.mjs",
-        "cd mcp-server && node test-smoke.mjs"
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs"
       ],
       "acceptance": [
         "PLAN §4.4: the append-only table with triggers and its contract row; add_evidence's input schema unchanged; server-side resolution; evidence and anchor in one transaction; evidence_args plus kind accepted; canonical symbol_id stored; every cited span inside the citeable span and the excerpt inside the definition's byte extent intersected with the cited spans; filled range; duplicate occurrences selected by line_range or refused with both; unknown symbols refused with candidates; no anchor with no symbol, an unsupported language, an unreadable file or the index off; invariants; one shared ambiguity-aware symbol matcher in locus.ts and standing.ts, gated on the whole describe_locus result; refusal reference text written here. No backfill or migration of older stores (D6).",
@@ -645,7 +646,8 @@
       "cd mcp-server && npm run build && npx biome check src/",
       "cd mcp-server && node test-smoke.mjs",
       "cd mcp-server && node test-refusal-parity.mjs",
-      "cd mcp-server && node test-package-artifact.mjs"
+      "cd mcp-server && node test-package-artifact.mjs",
+      "cd mcp-server && node scripts/check-sql-identifiers.mjs"
     ]
   },
   "final_review": {
