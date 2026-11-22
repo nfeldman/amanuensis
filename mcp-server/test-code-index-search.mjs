@@ -9,6 +9,8 @@
 //     doc comment quotes (`checkEvidenceCitation`), or the rows are not,
 //     row for row, the golden definitions (path, symbol_id, kind, lines, signature), or a row
 //     carries a body; kind and path_prefix do not narrow them;
+//   - a path_prefix holding only unsupported files does not say unsupported-language, or one
+//     holding code does;
 //   - a reference row does not carry match: "name", or the reference rows are not the golden
 //     name-matched rows (a same-named Python function's call included), or ref_sha does not
 //     select the older revision's references;
@@ -331,6 +333,19 @@ async function main() {
     same("find_symbol block, in rank order", r.results.map(definition), [DIGEST, TS_PARSE]);
     const both = await tryCall(ctx, "find_symbol", { query: "frobnication block" });
     same("find_symbol frobnication block (both words required)", rowsOf(both).map(definition), [DIGEST]);
+  }
+
+  // A path_prefix that holds only files in no supported language says unsupported-language
+  // instead of an empty answer (PLAN §4.2); one that holds code does not.
+  for (const mode of ["definitions", "references"]) {
+    for (const prefix of ["docs/", "docs/readme.txt"]) {
+      const r = await tryCall(ctx, "find_symbol", { query: "Request", mode, path_prefix: prefix });
+      check(r.ok === true, `find_symbol ${mode} under ${prefix} was refused: ${oneLine(r.error)}`);
+      check(r.status === "unsupported-language", `find_symbol ${mode} under ${prefix}: status ${r.status}, not unsupported-language`);
+      same(`find_symbol ${mode} under ${prefix}`, r.results, []);
+    }
+    const code = await tryCall(ctx, "find_symbol", { query: "Request", mode, path_prefix: "src/" });
+    check(code.status === undefined, `find_symbol ${mode} under src/ carries status ${code.status}`);
   }
 
   // find_symbol: references, matched by name only.
