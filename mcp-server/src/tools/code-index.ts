@@ -553,7 +553,7 @@ export const codeIndexTools: ToolDefinition[] = [
   {
     name: "find_symbol",
     description:
-      'Search the code index at a revision. mode definitions (the default) ranks definitions by BM25 over their names split on case and punctuation, qualified names, signatures and doc comments, so a fragment such as Request finds parseHTTPRequest and a word from a doc comment finds its definition. mode references returns the places where query appears as an identifier: they are matched by name only, never resolved, so a row may be a different thing with the same name, and every row carries match: "name". Rows carry path, symbol_id, kind, lines and signature, never bodies: read one with read_symbol, or read the file. kind and path_prefix narrow the rows; limit defaults to 20. The revision\'s tree is indexed on first use, and partial: true says the index of that tree is incomplete, so a missing row proves nothing; the next call resumes it. ref_sha defaults to the workspace HEAD.',
+      'Search the code index at a revision. mode definitions (the default) ranks definitions by BM25 over their names split on case and punctuation, qualified names, signatures and doc comments, so a fragment such as Request finds parseHTTPRequest and a word from a doc comment finds its definition. mode references returns the places where query appears as an identifier: they are matched by name only, never resolved, so a row may be a different thing with the same name, and every row carries match: "name". Rows carry path, symbol_id, kind, lines and signature, never bodies: read one with read_symbol, or read the file. kind and path_prefix narrow the rows; when every file under path_prefix is in a language the index does not parse, the empty answer carries status: "unsupported-language". limit defaults to 20. The revision\'s tree is indexed on first use, and partial: true says the index of that tree is incomplete, so a missing row proves nothing; the next call resumes it. ref_sha defaults to the workspace HEAD.',
     inputSchema: {
       type: "object",
       properties: {
@@ -593,6 +593,7 @@ export const codeIndexTools: ToolDefinition[] = [
         extractor_id: index.extractorId,
         partial: found.partial,
         ...(found.partial_reason ? { partial_reason: found.partial_reason } : {}),
+        ...(found.status ? { status: found.status } : {}),
         results: found.results,
         ...(found.more ? { more: true } : {}),
       };

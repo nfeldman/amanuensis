@@ -73,7 +73,9 @@ signatures, never bodies; read a row with `read_symbol` or read the file.
   `match: "name"`. Treat a row as a lead to read, not as proof of a call.
 - `kind` keeps one definition kind (or one reference kind, such as `call`);
   `path_prefix` keeps paths that start with it. `limit` defaults to 20, and
-  `more: true` says more rows matched.
+  `more: true` says more rows matched. When every file under `path_prefix` is
+  in a language the index does not parse, the empty answer carries
+  `status: "unsupported-language"`: search those files with `rg` and read them.
 - The revision's tree is indexed on first use. `partial: true` means that
   index is incomplete, with `partial_reason` saying why (a budget, or files
   missing from this clone): a row that is not there proves nothing yet. The

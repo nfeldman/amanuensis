@@ -45,6 +45,8 @@ export interface FindResult {
   partial: boolean;
   /** Why the tree index is incomplete, when it is. */
   partial_reason?: string;
+  /** Set when `path_prefix` holds files but none in a language the index parses. */
+  status?: "unsupported-language";
   results: DefinitionHit[] | ReferenceHit[];
   /** True when more rows matched than `limit` returns. */
   more: boolean;
@@ -176,6 +178,18 @@ function references(
   };
 }
 
+/** Whether the tree at `commit` holds files under `prefix`, every one in no parsed language. */
+function onlyUnsupported(db: Database.Database, commit: string, prefix: string): boolean {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS entries,
+              COUNT(CASE WHEN skip_reason = 'unsupported-language' THEN 1 END) AS unsupported
+         FROM trees WHERE rev = ? AND substr(path, 1, length(?)) = ?`,
+    )
+    .get(commit, prefix, prefix) as { entries: number; unsupported: number };
+  return row.entries > 0 && row.unsupported === row.entries;
+}
+
 /**
  * Definitions matching `query`'s words, or references to the name `query`, in the tree at
  * `commit`. The tree is indexed first when it is not complete.
@@ -190,15 +204,25 @@ export async function findSymbols(
   const tree = await ensureTree(index, workspace, commit);
   if ("state" in tree) return tree;
   const found = index.use((db) => {
-    if (options.mode === "references") return references(db, commit, query.trim(), options);
-    const match = matchQuery(query);
-    return match ? definitions(db, commit, match, options) : { rows: [], more: false };
+    const match = options.mode === "definitions" ? matchQuery(query) : null;
+    const hits =
+      options.mode === "references"
+        ? references(db, commit, query.trim(), options)
+        : match
+          ? definitions(db, commit, match, options)
+          : { rows: [], more: false };
+    const unsupported =
+      hits.rows.length === 0 &&
+      options.pathPrefix !== null &&
+      onlyUnsupported(db, commit, options.pathPrefix);
+    return { ...hits, unsupported };
   });
   if ("state" in found) return found;
   return {
     state: "ok",
     partial: tree.partial,
     ...(tree.reason ? { partial_reason: tree.reason } : {}),
+    ...(found.unsupported ? { status: "unsupported-language" as const } : {}),
     results: found.rows as DefinitionHit[] | ReferenceHit[],
     more: found.more,
   };
