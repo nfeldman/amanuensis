@@ -1037,17 +1037,28 @@ export function subsystemStanding(ctx: ServerContext, subsystemId: string): Subs
   };
 }
 
+/** A C++ operator's name at the start of a segment: its punctuation is the name's own. */
+const OPERATOR_NAME = /^operator(?:\(\)|\[\]|\s*(?:new|delete)(?:\[\])?|[-+*/%^&|~!=<>,]+)/;
+
 /**
  * The qualified name and the bare name a `symbol_id` (semantic-index PLAN §4.2) carries: the
  * id without its overload discriminator — a parameter list and what follows it (`(String,int)`,
  * `() const`), an indexer's `[…]`, a template arity `<2>` — and without C#'s generic arity
- * marks (`` `1 ``). The bare name is the qualified name's last segment.
+ * marks (`` `1 ``). An operator's own punctuation (`operator()`, `operator[]`, `operator<`)
+ * is part of its name, not a discriminator. The bare name is the qualified name's last segment.
  */
 export function symbolIdNames(symbolId: string): { qname: string; name: string } {
   let depth = 0;
   let cut = symbolId.length;
   for (let i = 0; i < symbolId.length; i++) {
     const c = symbolId[i];
+    if (c === "o" && (i === 0 || symbolId[i - 1] === ".")) {
+      const operator = OPERATOR_NAME.exec(symbolId.slice(i));
+      if (operator) {
+        i += operator[0].length - 1;
+        continue;
+      }
+    }
     if (c === "<") depth++;
     else if (c === ">" && depth > 0) depth--;
     else if ((c === "(" || c === "[") && depth === 0 && i > 0) {
