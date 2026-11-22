@@ -16,7 +16,8 @@
 //     grammars/manifest.json, or the manifest disagrees with sources.json;
 //   - any of the ten grammars does not load under the running Node, parse a sample to the
 //     expected root without error, or compile its tags.scm;
-//   - a flipped .wasm byte, a changed size, or a flipped tags.scm byte is accepted at load;
+//   - a flipped .wasm byte, a changed size, or a flipped tags.scm byte is accepted at load,
+//     by the vendoring script's verifier or by the server's (dist/code-index/extract.js);
 //   - a tarball whose integrity differs from sources.json is accepted, or leaves files behind,
 //     or the vendoring step refuses the correct integrity;
 //   - THIRD_PARTY_NOTICES.md omits a vendored package or a copyright line of its LICENSE;
@@ -30,6 +31,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -535,6 +537,43 @@ function checkRefusedAtLoad(vendor) {
   }
 }
 
+// The server verifies each grammar as it loads it, not only the vendoring script: a package
+// root whose grammar.wasm differs from the manifest by one byte is refused by extract().
+async function checkServerRefusesAtLoad() {
+  const path = join(here, "dist", "code-index", "extract.js");
+  check(existsSync(path), "dist/code-index/extract.js is missing (run npm run build)");
+  const extractor = await import(pathToFileURL(path).href);
+  const roots = [];
+  const copyRoot = (tamper) => {
+    const root = mkdtempSync(join(tmpdir(), "amanuensis-si1-root-"));
+    roots.push(root);
+    cpSync(join(here, "queries"), join(root, "queries"), { recursive: true });
+    cpSync(grammarsDir, join(root, "grammars"), { recursive: true });
+    if (tamper) {
+      const wasm = join(root, "grammars", "go", "grammar.wasm");
+      const bytes = readFileSync(wasm);
+      bytes[Math.floor(bytes.length / 2)] ^= 0x01;
+      writeFileSync(wasm, bytes);
+    }
+    return root;
+  };
+  const text = "package main\n\nfunc main() {}\n";
+  try {
+    const intact = await extractor.extract(text, "go", { packageRoot: copyRoot(false) });
+    check(intact.symbols.some((s) => s.name === "main"), "the server does not load an intact copy of the go grammar");
+    let message = null;
+    try {
+      await extractor.extract(text, "go", { packageRoot: copyRoot(true) });
+    } catch (error) {
+      message = String(error?.message ?? error);
+    }
+    check(message !== null, "the server loaded a grammar.wasm whose bytes differ from the manifest");
+    check(/sha256/.test(message), `the server refused a flipped .wasm byte without naming the hash: ${message.slice(0, 120)}`);
+  } finally {
+    for (const root of roots) rmSync(root, { recursive: true, force: true });
+  }
+}
+
 // Hermetic: the script reads a tarball built here from the vendored go files, through a
 // `tarball` field in a scratch sources.json, with npm forced offline over an empty cache. A
 // script that still reached for the registry fails here, wherever the gate runs.
@@ -710,6 +749,7 @@ async function main() {
   const vendor = await loadVendorModule();
   await checkLoads(vendor);
   checkRefusedAtLoad(vendor);
+  await checkServerRefusesAtLoad();
   checkNotices(sources);
   checkWorkflow();
   checkIntegrityRefusal(sources, manifest);
