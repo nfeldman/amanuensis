@@ -33,7 +33,7 @@ function red(reason) {
 // What each decision's entry must carry, from PLAN §9 (matched case-insensitively).
 const OUTCOME = {
   1: [/0\.3\.0-beta\.1/, /0\.3\.0-beta\.2/],
-  2: [/c\+\+/, /c#/, /rust/, /tsx/],
+  2: [/typescript/, /tsx/, /javascript/, /python/, /rust/, /\bgo\b/, /\bjava\b(?!script)/, /\bc\b(?![+#])/, /c\+\+/, /c#/],
   3: [/sidecar/, /code-index/, /never `?memory\.db`?/],
   4: [/refuse/, /candidates/, /`?note`?/],
   5: [/fill/, /omitted/],
