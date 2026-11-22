@@ -31,13 +31,18 @@
 //     or is not reported as parse-partial;
 //   - references, imports, signature or doc differ from their golden values, or signature
 //     and doc exceed 200 and 2,000 bytes or split a UTF-8 character;
-//   - an unsupported language returns anything but unsupported-language.
+//   - an unsupported language returns anything but unsupported-language;
+//   - a TypeScript class member's decorators and the comment above them are outside its span,
+//     a comment separated from a definition by a blank line or trailing the code above it is
+//     inside, a doc or signature cut splits a UTF-8 character, a Java C-style array parameter
+//     shares an overload's id, or extractor_id is not the hash of the extractor version, the
+//     definition queries and the grammar manifest.
 //
 // Hermetic: fixture sources are committed under fixtures/code-index/; git repositories and
 // package-root copies are built in a temporary directory. No network.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -612,6 +617,43 @@ async function checkUnicode(mod) {
   check(wide && Buffer.byteLength(wide.signature) <= 200 && longSig.startsWith(wide.signature), "a 330-byte first line was not cut to a 200-byte signature prefix");
 }
 
+async function checkSpanEdges(mod) {
+  const row = async (text, lang, symbolId) => {
+    const s = (await mod.extract(text, lang)).symbols.find((r) => r.symbol_id === symbolId);
+    if (!s) fail(`${lang}: no ${symbolId} in ${JSON.stringify(text.slice(0, 60))}`);
+    return s;
+  };
+  // A TypeScript method's decorators and the comment above them are its citeable span.
+  const decorated = "class X {\n  // about m\n  @log\n  m() {}\n}\n";
+  const m = await row(decorated, "typescript", "X.m");
+  check(m.start_line === 4 && m.doc_start_line === 2 && m.doc === "// about m", `a decorated TypeScript method: start ${m.start_line}, doc_start ${m.doc_start_line}, doc ${JSON.stringify(m.doc)}`);
+  check(Buffer.from(decorated).subarray(m.start_byte, m.end_byte).toString("utf8") === "// about m\n  @log\n  m() {}", "a decorated TypeScript method's span does not run from its comment through its body");
+  // A comment separated by a blank line, or trailing the code above, is not the definition's.
+  const f = await row("# license\n\n# doc\ndef f():\n    pass\n", "python", "f");
+  check(f.doc_start_line === 3 && f.doc === "# doc", `a comment after a blank line joined f's span: doc_start ${f.doc_start_line}, doc ${JSON.stringify(f.doc)}`);
+  const g = await row("x = 1  # trailing\ndef g():\n    pass\n", "python", "g");
+  check(g.doc_start_line === 2 && g.doc === "", `x's trailing comment joined g's span: doc_start ${g.doc_start_line}, doc ${JSON.stringify(g.doc)}`);
+  // Cuts land on a character boundary when the byte limit falls inside a character.
+  const long = `/**x ${"é".repeat(1500)} */\nexport function odd() {}\n`;
+  const odd = await row(long, "typescript", "odd");
+  check(!odd.doc.includes("\uFFFD") && long.startsWith(odd.doc) && Buffer.byteLength(odd.doc) === 1999, `a doc cut at an odd byte is ${Buffer.byteLength(odd.doc)} bytes: ${JSON.stringify(odd.doc.slice(-8))}`);
+  const wideSig = `export function wide(${"é".repeat(150)}: number) {}\n`;
+  const wide = await row(wideSig, "typescript", "wide");
+  check(!wide.signature.includes("\uFFFD") && wideSig.startsWith(wide.signature) && Buffer.byteLength(wide.signature) === 199, `a non-ASCII signature cut to ${Buffer.byteLength(wide.signature)} bytes: ${JSON.stringify(wide.signature.slice(-8))}`);
+  // A Java C-style array parameter is part of the overload's id.
+  const java = (await mod.extract("class P {\n  void f(int a[]) {}\n  void f(int a) {}\n}\n", "java")).symbols.map((s) => s.symbol_id);
+  check(java.includes("P.f(int[])") && java.includes("P.f(int)"), `Java C-style array overloads: ${JSON.stringify(java)}`);
+  // extractor_id is the hash of the extractor version, every definition query and the manifest.
+  const version = /export const EXTRACTOR_VERSION = "([^"]+)"/.exec(readFileSync(join(here, "src", "code-index", "extract.ts"), "utf8"))?.[1];
+  check(version, "src/code-index/extract.ts declares no EXTRACTOR_VERSION");
+  const hash = createHash("sha256").update(`amanuensis-code-index\0${version}\0`);
+  for (const name of readdirSync(join(here, "queries")).filter((n) => n.endsWith(".scm")).sort()) {
+    hash.update(`queries/${name}\0`).update(readFileSync(join(here, "queries", name))).update("\0");
+  }
+  hash.update("grammars/manifest.json\0").update(readFileSync(join(here, "grammars", "manifest.json")));
+  check(mod.extractorId() === hash.digest("hex"), "extractor_id is not the hash of EXTRACTOR_VERSION, queries/*.scm and grammars/manifest.json");
+}
+
 async function checkHashEdits(mod) {
   const cases = [
     ["rows.ts", "add", "return a + b;", "return a - b;", "body"],
@@ -1002,6 +1044,7 @@ async function main() {
   const results = await checkGolden(mod);
   checkDetails(results);
   await checkUnicode(mod);
+  await checkSpanEdges(mod);
   await checkHashEdits(mod);
   await checkStableIds(mod);
   await checkCrlf(mod);
