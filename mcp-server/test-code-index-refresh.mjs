@@ -33,7 +33,7 @@
 //     evidence and anchors are byte-for-byte as before), or clear_staleness stops clearing one
 //     whole ledger file with a recorded basis;
 //   - a refresh run built from the backlog (get_refresh_run) does not carry the same hints at
-//     its own head revision.
+//     its own head revision, for the stale files inside its allowed_sources and no others.
 //
 // Hermetic: the fixture repository and the store are built in a temporary directory, the
 // tools run in this process from dist/, and nothing reaches the network.
@@ -446,7 +446,9 @@ async function main() {
           evidence: row.evidence,
         }))
       : run?.anchor_hints;
-  same("plan_refresh_run's anchor_hints", runHints(plan), expectedRows(target));
+  // The run's hints cover only the sources it may read (allowed_sources: src).
+  const inRun = (rows) => rows.filter((row) => row.path.startsWith("src/"));
+  same("plan_refresh_run's anchor_hints", runHints(plan), inRun(expectedRows(target)));
 
   // -------------------------------------------------------------------------------------
   // Reordering definitions no evidence cites changes no state and no lines.
@@ -456,7 +458,7 @@ async function main() {
   same(
     "get_refresh_run's anchor_hints stay at the run's head revision",
     runHints(await must("get_refresh_run", { run_id: "si8-refresh" })),
-    expectedRows(target),
+    inRun(expectedRows(target)),
   );
 
   // -------------------------------------------------------------------------------------
