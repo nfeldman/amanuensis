@@ -66,13 +66,22 @@ const short = (commit: string): string => commit.slice(0, 12);
 
 const linesOf = (s: IndexedSymbol): string => `${s.symbol_id} lines ${lineRangeOf(s)}`;
 
-function symbolNotFound(symbol: string, path: string, commit: string, nearest: string[]) {
+function symbolNotFound(
+  symbol: string,
+  path: string,
+  commit: string,
+  nearest: string[],
+  partial: boolean,
+) {
   return new ToolError(
     `add_evidence refuses: ${symbol} names no definition in ${path} at ${short(commit)}; ` +
       (nearest.length > 0
         ? `nearest symbol_ids: ${nearest.join(", ")}. Pass one of them as symbol`
         : "the file has no definitions the index lists") +
-      ", or omit symbol: a free-text label belongs in note",
+      ", or omit symbol: a free-text label belongs in note" +
+      (partial
+        ? ". The file parsed only in part, so a definition whose syntax is broken is not listed: cite it without symbol"
+        : ""),
     "evidence.symbol-not-found",
   );
 }
@@ -220,10 +229,15 @@ export function resolveEvidenceAnchor(
     spans === null || spans.every(([from, to]) => from >= s.doc_start_line && to <= s.end_line);
   const named = matching(found.symbols, symbol);
   if (named.length === 0) {
-    // A definition whose declaration holds a syntax error is not listed, so a miss in a
-    // file that parsed partially proves nothing: the row is written unanchored.
-    if (found.partial) return unanchored;
-    throw symbolNotFound(symbol, filePath, commit, nearestIds(found.symbols, symbol));
+    // D4: refused even in a file that parsed in part. A definition whose syntax is broken is
+    // not listed there, so the refusal says so and points to citing it without symbol.
+    throw symbolNotFound(
+      symbol,
+      filePath,
+      commit,
+      nearestIds(found.symbols, symbol),
+      found.partial,
+    );
   }
   let def: IndexedSymbol;
   if (named.length === 1) {

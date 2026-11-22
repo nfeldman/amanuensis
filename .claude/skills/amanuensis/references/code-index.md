@@ -149,7 +149,9 @@ Its refusals:
 
 - `add_evidence refuses: <symbol> names no definition in <path>`: the refusal
   lists the nearest `symbol_id`s. Pass one of them, or omit symbol: a
-  free-text label belongs in note.
+  free-text label belongs in note. In a file that parsed only in part, a
+  definition whose syntax is broken is not listed, so it cannot be named:
+  cite it without symbol.
 - `add_evidence refuses: <symbol> names <count> definitions in <path>` … `and
   line_range does not fall within exactly one of them`: the refusal lists each
   candidate's `symbol_id` and lines. Give a `line_range` inside the one to
