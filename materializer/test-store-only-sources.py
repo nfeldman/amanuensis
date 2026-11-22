@@ -821,8 +821,13 @@ def run(work: Path) -> int:
                 for key in entry.get("sources", {}):
                     if str(key).startswith("prose:"):
                         return f"store {label}'s manifest page {entry.get('path')} has the source {key}"
-        wanted = {"index.md", "architecture.md", "onboarding-report.md", "entry-point.md", "concern-checklist.md"}
+        # The run writes HTML only (SO13, SO19): each passthrough page is its .html
+        # entry, and no page entry may name a Markdown file.
+        wanted = {"index.html", "architecture.html", "onboarding-report.html", "entry-point.html", "concern-checklist.html"}
         by_path = {entry["path"]: entry for entry in manifest_b["pages"]}  # type: ignore[index]
+        markdown = sorted(path for path in by_path if str(path).endswith(".md"))
+        if markdown:
+            return f"store B's manifest names Markdown pages: {markdown}"
         for path in sorted(wanted):
             entry = by_path.get(path)
             if entry is None:
