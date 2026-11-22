@@ -143,21 +143,35 @@ const INDEX_FILE_SCRIPT = fileURLToPath(new URL("../code-index/index-file.js", i
 const INDEX_FILE_TIMEOUT_MS = 60_000;
 const MAX_BLOB_BYTES = 256 * 1024 * 1024;
 
+/** A file's definitions at a commit, as the sidecar holds them. */
+export interface Definitions {
+  blobSha: string;
+  lang: string;
+  partial: boolean;
+  symbols: IndexedSymbol[];
+}
+
 /**
- * The file's definitions at `commit` from the sidecar, or null when the index cannot speak
- * for the file. Synchronous, because add_evidence runs inside callers' transactions: a blob
+ * The file's definitions at `commit` from the sidecar, or why the index cannot speak for the
+ * file: `tree` (git cannot list it), `file-absent`, a tree entry's skip reason, `unreadable`
+ * (the blob could not be indexed), the sidecar's own `unavailable` reason, `too-large` or
+ * `not-utf8`. Synchronous, because add_evidence runs inside callers' transactions: a blob
  * not yet in the sidecar is parsed by `code-index/index-file.js` in a child process, and its
  * rows are read back here.
  */
-function definitionsAt(
+export function readDefinitions(
   ctx: ServerContext,
   index: CodeIndex,
   commit: string,
   filePath: string,
-): { blobSha: string; lang: string; partial: boolean; symbols: IndexedSymbol[] } | null {
+): Definitions | { unavailable: string } {
   const workspace = ctx.project.workspacePath as string;
   const entry = entryAt(workspace, commit, filePath);
-  if (!entry || entry.skip_reason || !entry.lang) return null;
+  if (entry === null) return { unavailable: "tree" };
+  if (entry === undefined) return { unavailable: "file-absent" };
+  if (entry.skip_reason || !entry.lang) {
+    return { unavailable: entry.skip_reason ?? "unsupported-language" };
+  }
   let lookup = index.blob(entry.blob_sha, entry.lang);
   if (lookup.state === "ok" && !lookup.indexed) {
     const child = spawnSync(
@@ -165,11 +179,14 @@ function definitionsAt(
       [INDEX_FILE_SCRIPT, ctx.project.storagePath, workspace, commit, filePath],
       { stdio: "ignore", timeout: INDEX_FILE_TIMEOUT_MS, killSignal: "SIGKILL" },
     );
-    if (child.status !== 0) return null;
+    if (child.status !== 0) return { unavailable: "unreadable" };
     lookup = index.blob(entry.blob_sha, entry.lang);
   }
-  if (lookup.state !== "ok" || !lookup.indexed) return null;
-  if (lookup.blob.status !== "ok" && lookup.blob.status !== "parse-partial") return null;
+  if (lookup.state !== "ok") return { unavailable: lookup.reason };
+  if (!lookup.indexed) return { unavailable: "unreadable" };
+  if (lookup.blob.status !== "ok" && lookup.blob.status !== "parse-partial") {
+    return { unavailable: lookup.blob.status };
+  }
   return {
     blobSha: entry.blob_sha,
     lang: entry.lang,
@@ -195,8 +212,8 @@ export function resolveEvidenceAnchor(
   if (symbol === null || !anchorsCitation(filePath, symbol)) return unanchored;
   const index = indexFor(ctx);
   if (!index) return unanchored;
-  const found = definitionsAt(ctx, index, commit, filePath);
-  if (!found) return unanchored;
+  const found = readDefinitions(ctx, index, commit, filePath);
+  if ("unavailable" in found) return unanchored;
 
   const spans = lineRange === null ? null : lineSpans(lineRange);
   const within = (s: IndexedSymbol) =>
