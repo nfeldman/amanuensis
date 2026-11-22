@@ -1422,9 +1422,13 @@ def _flow_marks(conn: sqlite3.Connection, flow_key: str) -> list[dict[str, Any]]
 
 
 def _stale_citations(conn: sqlite3.Connection, claim_ids: Sequence[str]) -> dict[str, list[tuple[str, str]]]:
-    """Each claim's cited files the ledger holds as changed since they were examined, with the revision examined at."""
+    """Each claim's cited files the ledger holds as changed since they were examined, with the revision examined at.
 
-    if not claim_ids or not all(table_exists(conn, t) for t in ("claim_evidence", "evidence", "file_ledger")):
+    Freshness is the claim's own subsystem's: a file in two subsystems' scope has a ledger
+    row for each, and another subsystem's stale reading says nothing of this claim's.
+    """
+
+    if not claim_ids or not all(table_exists(conn, t) for t in ("claims", "claim_evidence", "evidence", "file_ledger")):
         return {}
     if not any(column["name"] == "stale" for column in rows(conn, "PRAGMA table_info(file_ledger)")):
         return {}
@@ -1433,7 +1437,9 @@ def _stale_citations(conn: sqlite3.Connection, claim_ids: Sequence[str]) -> dict
     for cited in rows(
         conn,
         "SELECT DISTINCT ce.claim_id, e.file_path, l.ref_sha FROM claim_evidence ce"
-        " JOIN evidence e ON e.id = ce.evidence_id JOIN file_ledger l ON l.file_path = e.file_path"
+        " JOIN claims c ON c.claim_id = ce.claim_id JOIN evidence e ON e.id = ce.evidence_id"
+        " JOIN file_ledger l ON l.file_path = e.file_path"
+        " AND l.subsystem_id = substr(c.claim_key, 1, instr(c.claim_key, '/') - 1)"
         f" WHERE l.stale = 1 AND ce.claim_id IN ({marks}) ORDER BY e.file_path, l.ref_sha",
         tuple(claim_ids),
     ):
