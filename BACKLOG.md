@@ -91,6 +91,26 @@ real run; "read" means found by reading code and not reproduced.
   - D14 decided 2026-11-20: illustrations are allowed and labelled; no diagram on the overview; scroll inside the frame on narrow screens.
   - D15 decided 2026-11-20: republish and real-store checks (`docs/`, AxiomDB's copy) only after the lane lands and D6's imports run.
   - D16 decided 2026-11-20, amended: legacy data needs no protecting, so the AxiomDB lanes are not paused and the next nightly open migrates the store; one `VACUUM INTO` backup is taken just before `dist` is rebuilt, as a rollback point only.
+- **Code index: find and cite code exactly, alongside reading it.** Planned 2026-11-22 as a
+  hybrid: the index adds to file reading and takes nothing away. Agents use it to find a
+  definition, see a file's shape, search what the store already says and cite code by a checked
+  coordinate; they read whole files whenever they want context, exactly as today. The index never
+  discourages, forbids or gates whole-file reads. There is no benchmark and no threshold, and
+  nothing waits on a measurement; the only measure is a descriptive token report that decides
+  nothing. It ships as 0.3.0-beta.2, after store-only's 0.3.0-beta.1. One risk stays and is
+  stated plainly: a name-matched reference is a lead, not proof of a call.
+
+  The plan is [design/semantic-index/PLAN.md](design/semantic-index/PLAN.md): 12 packets, SI0 to
+  SI11, in four slices. Its owner decisions, all decided 2026-11-22:
+  - D1 decided 2026-11-22: store-only ships as 0.3.0-beta.1 and the index as 0.3.0-beta.2; the version bump and publish are release steps outside the lane.
+  - D2 decided 2026-11-22: TypeScript, TSX, JavaScript, Python, Rust, Go, Java, C, C++ and C#, each with its own definition queries and golden fixtures.
+  - D3 decided 2026-11-22: the index is a sidecar at `<storage>/code-index/<extractor_id>/`, never `memory.db`.
+  - D4 decided 2026-11-22: a `symbol` that does not resolve, in a supported language, is refused with candidates; free-text labels go to `note`.
+  - D5 decided 2026-11-22: `line_range` is filled from the definition when it is omitted.
+  - D6 decided 2026-11-22: no backward compatibility; no backfill, no census, no migration, and older stores open without anchors or are discarded.
+  - D10 decided 2026-11-22: keep Node engines at `>=20`; the index runs on 20, measured, and raising the floor is its own change.
+  - D12 decided 2026-11-22: the index is on by default, with `AMANUENSIS_CODE_INDEX=off` to turn it off.
+  - Removed with the benchmark: D7 (budget), D8 (subjects), D9 (thresholds), D11 (authentication) and D13 (quality margin); none is open.
 
 ## Explanation quality
 

@@ -153,6 +153,9 @@ jobs:
       # GATE SO0 (design/store-only/PLAN.md §8 SO0). Reads BACKLOG.md and the plan only.
       - name: Store-only backlog — the plan is linked and D1–D16 are listed
         run: node dev/test-store-only-backlog.mjs
+      # GATE SI0 (design/semantic-index/PLAN.md §8 SI0). Reads BACKLOG.md and the plan only.
+      - name: Code-index backlog — the plan is linked and D1–D6, D10, D12 are listed
+        run: node dev/test-code-index-backlog.mjs
       - name: Exact-package rollback preserves five repository stores
         working-directory: mcp-server
         run: node test-release-rollback.mjs

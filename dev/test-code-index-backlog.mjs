@@ -84,13 +84,13 @@ function check() {
     [/no threshold/i, "that there is no threshold"],
     [/nothing waits on a measurement/i, "that nothing waits on a measurement"],
     [/0\.3\.0-beta\.2/, "the release 0.3.0-beta\\.2"],
-    [/name-matched references?[^.]*(?:lead|not proof)/i, "that a name-matched reference is a lead, not proof"],
+    [/name-matched references?[^.]*lead,? not proof/i, "that a name-matched reference is a lead, not proof"],
     [/token report/i, "the descriptive token report"],
   ];
   for (const [re, what] of scopeNeeds) {
     if (!re.test(scope)) return `the code-index scope paragraph does not state ${what}`;
   }
-  if (/\b(?:quality|accuracy) (?:risk|margin|regression)\b/i.test(text)) {
+  if (/\b(?:quality|accuracy) (?:risk|regression)\b/i.test(text)) {
     return "the code-index item frames the index itself as a quality risk";
   }
   if (/\b(?:backfill|census|migrat\w+|legacy)\b/i.test(text.replace(/no backfill|no census|no migration/gi, ""))) {
