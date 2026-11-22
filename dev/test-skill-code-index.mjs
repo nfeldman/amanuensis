@@ -22,6 +22,10 @@
 //     forbids, defers, rations or gates reading a file ("only after", "only when", "sparingly"),
 //     or sends the agent to the index instead or ahead of the file;
 //   - the guidance does not say whole files may be read, in SKILL.md and in code-index.md;
+//   - phase 1's guidance says whole files may be read (phase 1 reads no method bodies); notes.md
+//     reports an empty `search_records` as the store holding nothing rather than as no current
+//     record matching; a guidance block sits between a colon and what it introduces; `unanchored`
+//     is described as anything but an evidence row with no anchor;
 //   - a `find_symbol` reference is not described as matched by name and a lead to confirm
 //     (SKILL.md, phase 1, phase 3, phase 4);
 //   - refresh.md gives a route to clearing staleness on `anchor_state` alone: a sentence that names
@@ -291,8 +295,18 @@ const FILES = {
   ],
   "references/notes.md": () => [
     ["answers with `search_records` when `describe_locus` has nothing", [/`search_records\b/, /`describe_locus\b/, /\bnothing\b/i]],
+    [
+      "reports an empty search as no current record matching, not as the store holding nothing",
+      [/\b(finds|returns|has) nothing\b|\bno (hits|matches)\b/i, /\bcurrent\b/i, /\bmatch/i],
+    ],
   ],
 };
+
+// What an empty `search_records` cannot show: it searches current records of some kinds by words.
+const ABSENCE = /\bstore (holds|has|knows|contains|says) nothing\b|\bnothing (is )?(recorded|known) (on|about)\b/i;
+// Phase 1 reads no method bodies, so its guidance licenses no whole-file reading.
+const WHOLE_FILE_LICENSE = (s) =>
+  /\bwhole files?\b/i.test(s) && /\b(may|can)\b[^.]*\bread\b|\bread\b[^.]*\b(whenever|when|at any point)\b/i.test(s);
 
 // Every skill file that must say whole files may be read.
 const WHOLE_FILE = ["SKILL.md", "references/code-index.md"];
@@ -380,6 +394,24 @@ for (const [file, needs] of Object.entries(FILES)) {
   if (WHOLE_FILE.includes(file)) {
     const says = list.some((s) => /\bwhole files?\b/i.test(s) && /\b(may|can)\b[^.]*\bread\b|\bread\b[^.]*\b(whenever|when)\b/i.test(s));
     if (!says) fail(`${file}: the guidance does not say whole files may be read`);
+  }
+  if (file === "references/phase-1-scope.md") {
+    const license = list.find(WHOLE_FILE_LICENSE);
+    if (license) fail(`${file}: the guidance licenses whole files against phase 1's "Do not read method bodies": "${license.slice(0, 110)}"`);
+  }
+  for (const s of list) {
+    if (ABSENCE.test(s)) fail(`${file}: an empty search is reported as the store holding nothing: "${s.slice(0, 110)}"`);
+  }
+  // A guidance block does not cut into the sentence or list a colon opens.
+  for (const m of text.matchAll(/<!-- code-index:begin -->/g)) {
+    const lead = text.slice(0, m.index).trimEnd().split("\n").pop();
+    if (/:$/.test(lead)) fail(`${file}: the index guidance sits between "${lead.slice(-60)}" and what it introduces`);
+  }
+  // `unanchored` is a state of the evidence row, which has no anchor; the other states are the cited definition's.
+  for (const s of list) {
+    if (/`unanchored`/.test(s) && !/\b(no|without an?) anchor\b/i.test(s)) {
+      fail(`${file}: \`unanchored\` is not described as an evidence row with no anchor: "${s.slice(0, 110)}"`);
+    }
   }
   if (NAME_MATCHED.includes(file)) {
     const ok = list.some((s) => /`find_symbol`|\breferences?\b/i.test(s) && /\b(matched by name|name-matched|by name)\b/i.test(s) && NAME_MATCH_OK(s));
