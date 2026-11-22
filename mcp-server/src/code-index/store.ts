@@ -827,13 +827,35 @@ export class CodeIndex {
       result.state = "partial";
     } else {
       const skipped = entries.filter((e) => e.skip_reason).length;
-      const completed = this.run((db) => {
-        db.prepare(
-          "INSERT OR IGNORE INTO trees_complete (rev, files, skipped, completed_at) VALUES (?, ?, ?, ?)",
-        ).run(commit, entries.length, skipped, new Date().toISOString());
-        return true as const;
-      });
-      if (completed !== true) return unavailable(completed.reason);
+      // Another request may have pruned this revision's rows, or evicted its blobs, while it
+      // was parsed: completion is published only over every row and every blob it claims.
+      const completed = this.run((db) =>
+        db
+          .transaction(() => {
+            const kept = db.prepare("SELECT 1 FROM tree_revs WHERE rev = ?").get(commit);
+            const rows = db
+              .prepare("SELECT COUNT(*) AS n FROM trees WHERE rev = ?")
+              .get(commit) as { n: number };
+            const missing = db
+              .prepare(
+                `SELECT COUNT(*) AS n FROM trees t
+                  WHERE t.rev = ? AND t.lang IS NOT NULL AND t.skip_reason IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM blobs b WHERE b.blob_sha = t.blob_sha AND b.lang = t.lang)`,
+              )
+              .get(commit) as { n: number };
+            if (!kept || rows.n !== entries.length || missing.n > 0) return false;
+            db.prepare(
+              "INSERT OR IGNORE INTO trees_complete (rev, files, skipped, completed_at) VALUES (?, ?, ?, ?)",
+            ).run(commit, entries.length, skipped, new Date().toISOString());
+            return true;
+          })
+          .immediate(),
+      );
+      if (typeof completed !== "boolean") return unavailable(completed.reason);
+      if (!completed) {
+        result.partial = true;
+        result.state = "partial";
+      }
     }
     const evicted = this.evict();
     if ("state" in evicted) return unavailable(evicted.reason);
