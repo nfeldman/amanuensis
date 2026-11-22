@@ -1021,6 +1021,21 @@ async function main() {
     rmSync(marker);
     check(opener.blob(blobSha(repo, rev2, "src/a.ts"), "typescript").indexed === true, "the recovered sidecar lost its rows");
     opener.close();
+    // A process already holding the database finds it corrupt during another's recovery: it
+    // reaches recovery without opening, and must still not rename.
+    const holding = store.openCodeIndex(storage, { busyTimeoutMs: 200 });
+    check(holding.blob(blobSha(repo, rev2, "src/a.ts"), "typescript").indexed === true, "fixture: the holder cannot read");
+    const settle = new (require("better-sqlite3"))(dbPath);
+    settle.pragma("wal_checkpoint(TRUNCATE)");
+    settle.close();
+    const held = corruptLeftovers(dir).length;
+    writeFileSync(marker, "");
+    damage();
+    const found = holding.blob(blobSha(repo, rev2, "src/a.ts"), "typescript");
+    check(found.state === "unavailable", `a holder finding corruption during another's recovery: ${canonical(found).slice(0, 200)}`);
+    check(corruptLeftovers(dir).length === held, `a holder set files aside during another's recovery: ${corruptLeftovers(dir).join(", ")}`);
+    rmSync(marker);
+    holding.close();
     // A marker left by a process that died long ago does not block recovery for ever.
     const before = corruptLeftovers(dir).length;
     damage();
