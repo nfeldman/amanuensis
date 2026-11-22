@@ -14,6 +14,9 @@
 //       - `same-text` for the kept definition, and for a kept function whose constant changed
 //         value (the constant itself is `changed`);
 //       - `ambiguous` for the definition that is now defined twice, with both spans;
+//       - for one symbol_id under two kinds (a C++ prototype and its definition), each anchor
+//         read against its own kind: the kept prototype `same-text`, the edited definition
+//         `changed`, neither `ambiguous`;
 //       - `unavailable`, never `gone`, for a cited definition whose syntax broke, while the
 //         intact definition beside it keeps its own state; for a file that became unreadable
 //         (not UTF-8); for a file that was deleted; and for every anchored row with
@@ -206,6 +209,8 @@ async function main() {
     keptLines: await cite("src/kept.ts", null, "3-5"),
     legible: await cite("src/latin1.ts", "legible", null),
     mover: await cite("src/moves.ts", "mover", null),
+    declared: await cite("src/proto.cpp", "twice", "1"),
+    defined: await cite("src/proto.cpp", "twice", "3-5"),
     orphan: await cite("src/removed.ts", "orphan", null),
     hush: await cite("src/quiet.ts", "hush", null),
   };
@@ -226,6 +231,8 @@ async function main() {
       keptLines: "3-5",
       legible: "1-3",
       mover: "1-4",
+      declared: "1",
+      defined: "3-5",
       orphan: "1-3",
       hush: "1-3",
     },
@@ -281,6 +288,12 @@ async function main() {
       evidence: [hint(ev.legible, "unavailable", [], "not-utf8")],
     },
     { path: "src/moves.ts", reason: "git-drift", at, evidence: [hint(ev.mover, "moved", ["5-8"])] },
+    {
+      path: "src/proto.cpp",
+      reason: "git-drift",
+      at,
+      evidence: [hint(ev.declared, "same-text", ["1"]), hint(ev.defined, "changed", ["3-5"])],
+    },
     {
       path: "src/removed.ts",
       reason: "absent",
@@ -344,7 +357,7 @@ async function main() {
   // A second read is served from the index's cache and must say the same.
   same("get_stale_backlog read again", await backlog(), expectedRows(target));
   same("get_stale_backlog with limit 3", await backlog({ limit: 3 }), expectedRows(target).slice(0, 3));
-  same("the default limit of 10 rows", (await backlog({})).length, 9);
+  same("the default limit of 10 rows", (await backlog({})).length, 10);
   same("the store after reading the backlog (nothing cleared or written)", canonical(snapshot()), before);
 
   // The off switch: absence cannot be shown, so nothing reads as gone or same-text.

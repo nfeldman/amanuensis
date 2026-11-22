@@ -14,6 +14,8 @@
 //   lib/dups.py      twin, defined once, is defined twice in the branches of an `if`
 //   src/broken.ts    fragile's syntax breaks beside sturdy, which stays intact
 //   src/latin1.ts    a valid file becomes one that is not valid UTF-8
+//   src/proto.cpp    twice is declared and defined under one symbol_id, as two kinds; only the
+//                    definition's body changes
 //   src/removed.ts   the whole file is deleted
 //   src/quiet.ts     unchanged, so never stale
 //   docs/notes.txt   a file in no supported language, edited
@@ -100,6 +102,13 @@ export function fragile(): number {
 }
 `;
 
+const protoSource = (body) => `int twice(int x);
+
+int twice(int x) {
+  ${body}
+}
+`;
+
 /** "café" in Latin-1: the 0xE9 byte alone is not valid UTF-8. */
 const LATIN1_BYTES = Buffer.concat([
   Buffer.from('export function legible(): string {\n  return "caf', "latin1"),
@@ -116,6 +125,7 @@ export const FILES = [
   "src/kept.ts",
   "src/latin1.ts",
   "src/moves.ts",
+  "src/proto.cpp",
   "src/quiet.ts",
   "src/removed.ts",
 ];
@@ -135,6 +145,7 @@ export function buildRefreshRepo(dir) {
   write(dir, "lib/dups.py", "def twin():\n    return 1\n");
   write(dir, "src/broken.ts", brokenSource("return 8;"));
   write(dir, "src/latin1.ts", 'export function legible(): string {\n  return "cafe";\n}\n');
+  write(dir, "src/proto.cpp", protoSource("return x * 2;"));
   write(dir, "src/removed.ts", "export function orphan(): number {\n  return 0;\n}\n");
   write(dir, "src/quiet.ts", "export function hush(): number {\n  return 0;\n}\n");
   write(dir, "docs/notes.txt", "First notes.\n");
@@ -151,6 +162,7 @@ export function buildRefreshRepo(dir) {
   );
   write(dir, "src/broken.ts", brokenSource("return (1 + ;"));
   write(dir, "src/latin1.ts", LATIN1_BYTES);
+  write(dir, "src/proto.cpp", protoSource("return x + x;"));
   rmSync(join(dir, "src/removed.ts"));
   write(dir, "docs/notes.txt", "Second notes.\n");
   const target = commit(dir, "target");
