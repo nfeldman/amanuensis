@@ -727,7 +727,7 @@ function generation(options?: ExtractOptions): Generation {
   const manifestPath = join(root, "grammars", "manifest.json");
   if (!existsSync(manifestPath)) {
     throw new Error(
-      `grammar manifest grammars/manifest.json is missing from ${root}; run scripts/vendor-grammars.mjs`,
+      `grammar manifest grammars/manifest.json is missing from ${root}; reinstall the package, or in a source checkout run \`node scripts/vendor-grammars.mjs\` in mcp-server`,
     );
   }
   const manifestBytes = readFileSync(manifestPath);
