@@ -34,6 +34,9 @@
 //     line_range leaves its definition, or whose filled line_range is not the definition's;
 //   - a refusal of add_evidence is not registered in contracts/refusal-parity.json against
 //     add_evidence, or the skill reference it names does not state it;
+//   - the shared matcher does not prefer a row whose symbol_id equals the locus exactly over
+//     qname and bare-name matches (a top-level `add` beside `Calc.add`), or reads a computed
+//     member's bracket (`C.[key]`) as an overload discriminator, so `[key]` finds nothing;
 //   - the whole describe_locus result — standing and the account's structure section — does
 //     not find an anchored row by bare name, by qname and by symbol_id (C++ operators, whose
 //     names hold `()`, `[]` or `<`, included); finds anything by a
@@ -233,8 +236,43 @@ async function loadModules() {
   return mods;
 }
 
+// The matcher both locus surfaces share, over a minimal evidence table.
+async function checkMatcher() {
+  const standing = await import(pathToFileURL(join(here, "dist", "standing.js")).href);
+  const Database = (await import("better-sqlite3")).default;
+  const db = new Database(":memory:");
+  try {
+    db.exec(`CREATE TABLE evidence (id INTEGER PRIMARY KEY, kind TEXT, ref_sha TEXT, file_path TEXT, symbol TEXT);
+             CREATE TABLE evidence_anchors (evidence_id INTEGER, symbol_id TEXT);`);
+    const add = (id, path, symbolId) => {
+      db.prepare("INSERT INTO evidence VALUES (?, 'code', 'abc', ?, ?)").run(id, path, symbolId);
+      db.prepare("INSERT INTO evidence_anchors VALUES (?, ?)").run(id, symbolId);
+    };
+    add(1, "src/amb.ts", "add");
+    add(2, "src/amb.ts", "Calc.add");
+    add(3, "src/computed.ts", "C.[key]");
+    add(4, "src/computed.ts", "C.render");
+    add(5, "src/two.ts", "Label.render");
+    add(6, "src/two.ts", "Button.render");
+    const match = (path, symbol) => {
+      const m = standing.matchSymbolEvidence(db, path, symbol);
+      return { rows: m.rows.map((r) => r.id), ambiguous: m.ambiguous };
+    };
+    same("the matcher on add beside Calc.add", match("src/amb.ts", "add"), { rows: [1], ambiguous: null });
+    same("the matcher on Calc.add", match("src/amb.ts", "Calc.add"), { rows: [2], ambiguous: null });
+    same("the matcher on a computed member's bare name", match("src/computed.ts", "[key]"), { rows: [3], ambiguous: null });
+    same("the matcher on a computed member's symbol_id", match("src/computed.ts", "C.[key]"), { rows: [3], ambiguous: null });
+    same("the matcher on a bare name two classes share", match("src/two.ts", "render"), { rows: [], ambiguous: ["Button.render", "Label.render"] });
+    same("symbolIdNames of a computed member", standing.symbolIdNames("C.[key]"), { qname: "C.[key]", name: "[key]" });
+    same("symbolIdNames of a C# indexer", standing.symbolIdNames("Rows.this[int]"), { qname: "Rows.this", name: "this" });
+  } finally {
+    db.close();
+  }
+}
+
 async function main() {
   const mods = await loadModules();
+  await checkMatcher();
   const byName = new Map(mods.tools.map((t) => [t.name, t]));
   const { buildEvidenceAnchorsRepo } = await import(
     pathToFileURL(join(here, "fixtures", "evidence-anchors-repo.mjs")).href
