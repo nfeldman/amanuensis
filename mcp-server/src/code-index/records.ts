@@ -5,8 +5,9 @@
 // Keeping it current. Each search first brings every source up to date with the store, per
 // source table. Append-only tables (claims, narratives, explanations) use a cursor on SQLite
 // `rowid`, because their text ids are caller-supplied and not monotonic; the rows at or below
-// the cursor are checked by (rowid, key, timestamp), so a claim deleted by `reset_subsystem`
-// and a later row given its rowid start the source over. Tables updated in place (findings;
+// the cursor are checked by (rowid, key, timestamp, sha256 of the indexed text), so a claim
+// deleted by `reset_subsystem` and a later row given its rowid start the source over, even
+// with the same id in the same second. Tables updated in place (findings;
 // vocabulary, upserted by `term`; field notes; open questions) are reconciled by content
 // digest: every call compares (key, sha256 of the indexed text) for every row and re-indexes
 // what changed, appeared or vanished. A store with a new `store_identity` starts every source
@@ -58,7 +59,7 @@ export interface RecordSource {
   columns: readonly string[];
   /** `rowid`: append-only text, cursored. `digest`: text updated in place, reconciled. */
   sync: "rowid" | "digest";
-  /** For a rowid source, the insertion time that tells a reused rowid from the row it had. */
+  /** For a rowid source, the insertion time that, with the text's digest, tells a reused rowid from the row it had. */
   stamp?: string;
 }
 
@@ -213,11 +214,11 @@ function syncSource(sidecar: Database.Database, store: Database.Database, source
 
   if (source.sync === "rowid") {
     const line = (row: Record<string, unknown>) =>
-      `${row.rid}\t${String(row.k)}\t${String(row.st ?? "")}`;
+      `${row.rid}\t${String(row.k)}\t${String(row.st ?? "")}\t${sha256(textOf(source, row))}`;
     const kept = (
       store
         .prepare(
-          `SELECT rowid AS rid, ${source.key} AS k, ${source.stamp} AS st
+          `SELECT rowid AS rid, ${source.key} AS k, ${source.stamp} AS st, ${source.columns.join(", ")}
              FROM ${source.table} WHERE rowid <= ? ORDER BY rowid`,
         )
         .all(cursor) as Record<string, unknown>[]
