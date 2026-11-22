@@ -105,8 +105,15 @@ const ADDITIVE_TOOLS = new Set([
 // what the record holds about one locus and writes nothing. Naming them here
 // is the same explicit carve-out ADDITIVE_TOOLS already is, and it keeps the
 // prefix rule as the fallback rather than widening it into a fourth prefix
-// that any future write tool could accidentally match.
-const READ_ONLY_TOOLS = new Set(["describe_locus"]);
+// that any future write tool could accidentally match. The code index's four
+// tools write only their own cache beside the store, never a record.
+const READ_ONLY_TOOLS = new Set([
+  "describe_locus",
+  "outline_file",
+  "read_symbol",
+  "find_symbol",
+  "search_records",
+]);
 
 function toolAnnotations(name: string) {
   // MCP annotations are hints, not authorization. Keep the read-only set
