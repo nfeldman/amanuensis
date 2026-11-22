@@ -32,8 +32,10 @@
 //     outline_file and read_symbol over the stdio server for every language, or
 //     fixtures/installed-artifact/ lacks exactly one file per manifest language, a file's
 //     extension maps to another language, or a file does not define `installedProbe`.
-// Reads files only; it runs nothing but the vendoring script, and only when the generated
-// grammars/manifest.json is absent (a fresh checkout), the step CI and prepack also take.
+//   - an absent grammars/manifest.json is not reported as absent, or the gate runs anything (the
+//     vendoring script fetches from the registry) to make one.
+// Reads files only and runs nothing: when the generated grammars/manifest.json is absent (a fresh
+// checkout) it turns red and names `node scripts/vendor-grammars.mjs`, the step CI and prepack take.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -140,8 +142,7 @@ function ceilings() {
   };
 }
 
-function manifest() {
-  const path = join(server, "grammars", "manifest.json");
+function manifest(path = join(server, "grammars", "manifest.json")) {
   if (!existsSync(path)) {
     const vendored = spawnSync(process.execPath, ["scripts/vendor-grammars.mjs"], {
       cwd: server,
@@ -155,6 +156,26 @@ function manifest() {
   const parsed = JSON.parse(readFileSync(path, "utf8"));
   check(parsed?.grammars && Object.keys(parsed.grammars).length > 0, "grammars/manifest.json lists no grammar");
   return parsed.grammars;
+}
+
+/** An absent manifest is reported as absent, with nothing run to make one: vendoring fetches from the registry. */
+function checkAbsentManifest() {
+  const path = process.env.PATH;
+  // No PATH while the probe runs, so a gate that did reach for npm fails here instead of fetching.
+  process.env.PATH = "";
+  let reason = null;
+  try {
+    manifest(join(server, "grammars", "absent-for-the-gate", "manifest.json"));
+  } catch (error) {
+    if (!(error instanceof Red)) throw error;
+    reason = error.message;
+  } finally {
+    process.env.PATH = path;
+  }
+  check(
+    reason !== null && /\babsent\b/.test(reason) && !/vendor\w* did not/.test(reason),
+    `an absent grammars/manifest.json is not reported as absent without running anything (${reason ?? "accepted"})`,
+  );
 }
 
 // ---------------------------------------------------------------------------------------
@@ -493,6 +514,7 @@ try {
   const installation = read("INSTALLATION.md");
   const body = section(installation, "Code index", "INSTALLATION.md");
   const facts = storeFacts();
+  checkAbsentManifest();
   const grammars = manifest();
   checkSection(body, grammars, facts);
   checkReadme(grammars, facts);
