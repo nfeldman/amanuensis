@@ -31,6 +31,10 @@ Turns red when:
     passes a page whose marked node container was emptied or kept its box but lost its
     words (final review F2/codex);
   - an arrow is not a link a keyboard can reach;
+  - an SVG's aria-labelledby does not name its `<title>` and `<desc>` ids, an arrow's link
+    has no aria-label, a subject's ladder account does not quote what its depth authorizes,
+    or a diagram at its declared minimum (two passes, two rungs) is not drawn (final
+    review F5/codex, F7/codex, F12/claude, F15/claude);
   - an SVG lacks `role="img"`, a `<title>`, or a `<desc>` that counts its boxes and arrows,
     states a font size under 11, uses a colour that is not a CSS token, runs a script,
     or has a width other than the 960 viewBox;
@@ -410,8 +414,14 @@ def unlinked_marks(figure: str) -> str | None:
     """Appendix B rules 1 and 8: every arrow and every box is a link a keyboard can reach."""
 
     for record in re.findall(r'<path\b[^>]*\bdata-edge="([^"]*)"', figure):
-        if not re.search(rf'<a\b[^>]*\bhref="[^"]+"[^>]*>\s*<path\b[^>]*\bdata-edge="{re.escape(record)}"', figure):
+        link = re.search(rf'<a\b([^>]*)\bhref="[^"]+"([^>]*)>\s*<path\b[^>]*\bdata-edge="{re.escape(record)}"', figure)
+        if not link:
             return f"the arrow {record} is not a link"
+        # The link holds only a path and a hidden head: without a name it is a focus
+        # stop a screen reader cannot announce (final review F5/codex, F15/claude).
+        name = re.search(r'\baria-label="([^"]*)"', link.group(1) + link.group(2))
+        if name is None or not name.group(1).strip():
+            return f"the arrow {record}'s link has no accessible name"
     for record, inner in re.findall(r'<g\b[^>]*\bdata-node="([^"]*)"[^>]*>(.*?)</g>', figure, re.S):
         if not re.search(r'<a\b[^>]*\bhref="[^"]+"', inner):
             return f"the box {record} is not a link"
@@ -433,6 +443,15 @@ def svg_faults(figure: str, nodes: int, edges: int) -> str | None:
         return "the SVG has no <title>"
     if desc is None:
         return "the SVG has no <desc>"
+    # The SVG's name and description are its title and desc only if it points at them
+    # (final review F7/codex, F12/claude).
+    labelled = re.search(r'\baria-labelledby="([^"]*)"', start)
+    title_id = re.search(r'\bid="([^"]+)"', title.group(0))
+    desc_id = re.search(r'\bid="([^"]+)"', desc.group(0))
+    if labelled is None or title_id is None or desc_id is None:
+        return "the SVG is not labelled by ids on its <title> and <desc>"
+    if labelled.group(1).split() != [title_id.group(1), desc_id.group(1)]:
+        return f"aria-labelledby names {labelled.group(1)!r}, not the <title> and <desc> ids {title_id.group(1)!r} {desc_id.group(1)!r}"
     said_boxes = re.search(r"(\d+) box(?:es)?\b", desc.group(1))
     said_arrows = re.search(r"(\d+) arrows?\b", desc.group(1))
     if said_boxes is None or said_arrows is None:
@@ -604,6 +623,13 @@ def main() -> int:
         short = diagrams.status_ladder_model(rungs=[{"value": "unmapped", "label": "Unmapped"}])
         if short.nodes or not short.below.strip():
             return "a one-rung ladder is drawn, not said in a sentence"
+        # At the declared minimum a diagram is drawn (Appendix B rule 11): two passes, two rungs.
+        two = [dict(p) for p in doc["survey_passes"][:2]]
+        if not diagrams.survey_workflow_model(passes=two, prerequisites=[]).nodes:
+            return "a two-pass survey, the declared minimum, is not drawn"
+        pair = [{"value": "unmapped", "label": "Unmapped"}, {"value": "scoping", "label": "Scoping"}]
+        if not diagrams.status_ladder_model(rungs=pair).nodes:
+            return "a two-rung ladder, the declared minimum, is not drawn"
         text = projection.write_html(page_mod.Page("t", GUIDE, (sparse,)))
         if "<svg" in text or "<figure" in text or sparse.below.strip().rstrip(".") not in re.sub(r"<[^>]+>", "", text):
             return f"the writer prints the sentence's model as an SVG or loses its sentence: {text[:200]!r}"
@@ -739,9 +765,12 @@ def main() -> int:
                 here = facts["statuses"][sid]
                 if labels[here] not in plain or "here" not in plain.lower():
                     return f"{sid}'s account does not say it is here, at {labels[here]!r}"
-                authorizes = next(v["cannot_justify"] for v in doc["enums"]["subsystem_status"]["values"] if v["value"] == here)
-                if authorizes.strip().rstrip(".") not in plain:
+                standing = next(v for v in doc["enums"]["subsystem_status"]["values"] if v["value"] == here)
+                if standing["cannot_justify"].strip().rstrip(".") not in plain:
                     return f"{sid}'s account does not quote what {labels[here]!r} cannot justify"
+                # Appendix B rule 2: captions quote the contract's `authorizes` too (F12/claude).
+                if standing["authorizes"].strip().rstrip(".") not in plain:
+                    return f"{sid}'s account does not quote what {labels[here]!r} authorizes"
                 items = re.findall(r"<li\b[^>]*>(.*?)</li>", account_of(found[0]), re.S)
                 if len(items) < len(moves) or (moves and len(items) != len(moves)):
                     return f"{sid}'s account lists {len(items)} moves; the store recorded {len(moves)}"
