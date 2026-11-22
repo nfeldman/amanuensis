@@ -38,7 +38,9 @@
 //     column it names is not in the schema, an append-only source is not cursored by rowid or a
 //     table updated in place is not reconciled by content digest;
 //   - with the index off, the tools are not refused as the register and references/code-index.md
-//     state, or the refusal register's check finds drift.
+//     state, or the refusal register's check finds drift;
+//   - a reference row carries fields beyond path, name, kind, line and match, or the reference
+//     and find_symbol's description do not say what each mode's rows carry.
 //
 // Hermetic: fixture git repositories and stores are built in a temporary directory, and the
 // built tool handlers are called in-process, as test-explanation-read.mjs does. No network.
@@ -394,6 +396,7 @@ async function main() {
     check(r.mode === "references", `find_symbol references: mode is ${r.mode}`);
     for (const row of r.results) {
       check(row.match === "name", `a reference row carries match ${JSON.stringify(row.match)}, not "name"`);
+      same("a reference row's fields", Object.keys(row).sort(), ["kind", "line", "match", "name", "path"]);
     }
     same("find_symbol references at HEAD", refRows(r), REFS_SECOND);
     const older = await tryCall(ctx, "find_symbol", { query: "parseHTTPRequest", mode: "references", ref_sha: first });
@@ -826,6 +829,22 @@ async function main() {
     for (const phrase of ["match: \"name\"", "partial", "include_history"]) {
       check(reference.includes(phrase), `references/code-index.md does not state ${phrase}`);
     }
+    // What a row carries is stated per mode: a reference row has no symbol_id or signature.
+    const flat = reference.replace(/\s+/g, " ");
+    check(
+      flat.includes("A definition row carries `path`, `symbol_id`, `kind`, its lines and `signature`"),
+      "references/code-index.md does not state what a definition row carries",
+    );
+    check(
+      flat.includes("A reference row carries `path`, `name`, `kind`, `line` and `match`"),
+      "references/code-index.md does not state what a reference row carries",
+    );
+    const described = byName.get("find_symbol").description;
+    check(
+      described.includes("a reference row carries path, name, kind, line and match"),
+      "find_symbol's description does not state what a reference row carries",
+    );
+
     const parity = spawnSync(process.execPath, [join(here, "scripts", "check-refusal-parity.mjs")], { encoding: "utf8" });
     check(parity.status === 0, `check-refusal-parity.mjs found drift: ${oneLine(parity.stderr || parity.stdout)}`);
   }
