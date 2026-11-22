@@ -125,12 +125,9 @@ export function withCodeIndexSwitch<T extends { name: string }>(
   return tools.filter((tool) => !CODE_INDEX_TOOLS.includes(tool.name));
 }
 
-/**
- * Words for full-text search: the text, and its identifiers split on punctuation and case
- * (`parseHTTPRequest` → `parse HTTP Request`).
- */
-export function searchWords(text: string): string {
-  const words = text
+/** A text's identifiers split on punctuation and case (`parseHTTPRequest` → parse, HTTP, Request). */
+export function identifierWords(text: string): string[] {
+  return text
     .split(/[^\p{L}\p{N}]+/u)
     .flatMap((part) =>
       part
@@ -139,7 +136,14 @@ export function searchWords(text: string): string {
         .split(" "),
     )
     .filter(Boolean);
-  return [text, ...words].join(" ");
+}
+
+/**
+ * Words for full-text search: the text, and its identifiers split on punctuation and case
+ * (`parseHTTPRequest` → `parse HTTP Request`).
+ */
+export function searchWords(text: string): string {
+  return [text, ...identifierWords(text)].join(" ");
 }
 
 // ---------------------------------------------------------------------------------------
@@ -612,6 +616,14 @@ export class CodeIndex {
         return { state: "ok", indexed: true, blob, symbols, refs, imports };
       })(),
     );
+  }
+
+  /**
+   * Run `fn` against the sidecar for one request, under the same recovery and `unavailable`
+   * rules as the index's own reads. The searches of §4.3 and the records index of §4.6 use it.
+   */
+  use<T>(fn: (db: Database.Database) => T): T | Unavailable {
+    return this.run(fn);
   }
 
   /** Whether the tree at `rev` (a commit sha) is completely indexed. */

@@ -1066,8 +1066,8 @@
     },
     {
       "id": "code-index-unavailable",
-      "note": "New, semantic-index PLAN §4.1 (SI5): a busy, unreadable or incomplete index, or a missing object.",
-      "refuses": ["outline_file", "read_symbol"],
+      "note": "New, semantic-index PLAN §4.1 (SI5): a busy, unreadable or incomplete index, or a missing object. SI6 (§4.3, §4.6): the tree a find_symbol searches, or the records index search_records reads.",
+      "refuses": ["outline_file", "read_symbol", "find_symbol", "search_records"],
       "instructs": [],
       "server": { "file": "src/tools/code-index.ts", "phrase": "the code index cannot read" },
       "references": [

@@ -57,6 +57,59 @@ or a bare name.
   covers source the reader was not shown. Read the whole file, or a nested
   definition, to go on.
 
+## `find_symbol`
+
+`find_symbol(query, mode, kind, path_prefix, ref_sha, limit)` searches the
+whole tree at one revision. It returns paths, `symbol_id`s, kinds, lines and
+signatures, never bodies; read a row with `read_symbol` or read the file.
+
+- `mode: "definitions"` (the default) ranks definitions by BM25 over their
+  names split on case and punctuation, their qualified names, signatures and
+  doc comments. `Request` finds `parseHTTPRequest`; a word from a doc comment
+  finds the definition it documents. Every word of the query must match.
+- `mode: "references"` returns each place where `query` appears as an
+  identifier. A reference is matched by name only and is never resolved, so it
+  may be a different thing with the same name: every row carries
+  `match: "name"`. Treat a row as a lead to read, not as proof of a call.
+- `kind` keeps one definition kind (or one reference kind, such as `call`);
+  `path_prefix` keeps paths that start with it. `limit` defaults to 20, and
+  `more: true` says more rows matched.
+- The revision's tree is indexed on first use. `partial: true` means that
+  index is incomplete, with `partial_reason` saying why (a budget, or files
+  missing from this clone): a row that is not there proves nothing yet. The
+  next call resumes the index.
+
+## `search_records`
+
+`search_records(query, kinds, subject, include_history, limit)` is full-text
+search (BM25) over the store's records: claims, narratives, explanations,
+findings, field notes, open questions and vocabulary. Each hit carries `kind`,
+`id`, `subject`, `status` and a snippet of at most 240 bytes. Open the record
+with its own reader.
+
+A hit is returned only as the store's own reader returns it, read at the
+workspace HEAD where the reader takes a revision:
+
+- claims as `get_claims` with `query_sha` at HEAD: superseded, invalidated
+  and inapplicable claims are left out;
+- narratives as `get_narratives`: the effective row per section and topic,
+  with withdrawn keys left out;
+- explanations as `get_explanations`: the newest row whose revision the
+  workspace reaches, and none for a subsystem below its phase;
+- open questions as `get_open_questions`: the open ones;
+- findings, field notes and vocabulary as `get_findings`, `get_field_notes`
+  and `lookup_term` return them, with their status.
+
+`include_history: true` adds the rows those readers leave out, each with the
+status that says why: `superseded`, `invalidated` or `inapplicable` for a
+claim; `replaced` or `withdrawn` for a narrative; `replaced`, `withdrawn`,
+`unreachable` or `not-eligible` for an explanation; `answered`, `dismissed` or
+`superseded` for an open question.
+
+`kinds` keeps some kinds; `subject` keeps one subsystem id (and claims whose
+`claim_key` starts with it). Each call brings the index up to date with the
+store first, so a record written a moment ago is found.
+
 ## Refusals and how to recover
 
 Each refusal carries a `rule` and says what to do instead. In every case the way
@@ -73,6 +126,13 @@ on is the same: read the file.
   unreadable, the revision's file is missing from this clone (a shallow clone, for
   example), or the index is off. Read the file directly; the next call may
   succeed.
+- `the code index cannot read the tree at <revision>`: `find_symbol` could not
+  list or index that revision's tree, or the index is off. Search the files
+  with `rg` and read them.
+- `the code index cannot read the store's records`: `search_records` could
+  not open the index database, or the index is off. Read the records with
+  their own tools: `get_claims`, `get_narratives`, `get_explanations`,
+  `get_findings`, `get_field_notes`, `get_open_questions` or `lookup_term`.
 - `the code index did not parse <path>`: the file is over 2 MB or is not valid
   UTF-8. Read the file.
 - `<symbol> names no definition in <path>`: `read_symbol` found nothing under

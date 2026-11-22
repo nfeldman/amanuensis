@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_228 tools across 49 groups. Generated from `tools/list` — do not hand-edit._
+_230 tools across 49 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -255,12 +255,14 @@ _228 tools across 49 groups. Generated from `tools/list` — do not hand-edit._
 | `get_claim_history` | Return every version, evidence link, validity event, and supersession edge for one claim_key. |
 | `get_legacy_claim_projection` | Read the non-destructive compatibility projection of legacy entries, evidence, dispositions, findings, and contradictions. Null temporal fields remain null rather than being invented. |
 
-### `code-index` (2)
+### `code-index` (4)
 
 | Tool | Description |
 |---|---|
 | `outline_file` | The shape of one source file at a revision, from the code index: its definitions as a nested list (symbol_id, kind, lines, signature, first documentation line), its imports, bytes, lines, blob_sha and parse status. No source is returned. Read a definition with read_symbol, or read the whole file; the index adds to reading and never replaces it. ref_sha defaults to the workspace HEAD and is returned resolved. Languages: TypeScript, TSX, JavaScript, Python, Rust, Go, Java, C, C++ and C#; any other file is refused as unsupported-language. |
 | `read_symbol` | One definition's source at a revision, from the code index. symbol is a symbol_id, a qualified name or a bare name. One match returns exactly the citeable span's text (leading documentation included) with start_line and end_line, and evidence_args: the location fields of add_evidence (file_path, symbol, ref_sha, line_range). The agent adds kind, which only it can choose; excerpt and note are optional. Several matches return their candidates with lines and no source; line_range (a candidate's lines, N or N-M) picks one occurrence. No match is refused with the nearest symbol_ids. A definition over 400 lines returns its first 400, its nested definitions, truncated: true and no evidence_args: read the whole file or a nested definition to go on. context_lines adds lines before and after the span without changing the citation. ref_sha defaults to the workspace HEAD. |
+| `find_symbol` | Search the code index at a revision. mode definitions (the default) ranks definitions by BM25 over their names split on case and punctuation, qualified names, signatures and doc comments, so a fragment such as Request finds parseHTTPRequest and a word from a doc comment finds its definition. mode references returns the places where query appears as an identifier: they are matched by name only, never resolved, so a row may be a different thing with the same name, and every row carries match: "name". Rows carry path, symbol_id, kind, lines and signature, never bodies: read one with read_symbol, or read the file. kind and path_prefix narrow the rows; limit defaults to 20. The revision's tree is indexed on first use, and partial: true says the index of that tree is incomplete, so a missing row proves nothing; the next call resumes it. ref_sha defaults to the workspace HEAD. |
+| `search_records` | Full-text search (BM25) over the store's records: claims, narratives, explanations, findings, field notes, open questions and vocabulary. Each hit carries kind, id, subject, status and a snippet of at most 240 bytes; open the record with its own reader. A hit is returned only as that reader returns it: claims as get_claims at the workspace HEAD, so superseded, invalidated and inapplicable claims drop out; narratives as get_narratives, the effective row per section and topic, withdrawn keys excluded; explanations as get_explanations, the newest row whose revision the workspace reaches, below its phase not at all; open questions as get_open_questions, open ones; findings, field notes and vocabulary with their status. include_history: true adds the rows those readers leave out, each with the status that says why. kinds and subject (a subsystem id, or a claim_key prefix) narrow the hits; limit defaults to 20. The index is brought up to date with the store on every call. |
 
 ### `codebase-brief` (5)
 

@@ -1,12 +1,17 @@
-// The code index's read tools (PLAN §4.3): `outline_file` and `read_symbol`.
+// The code index's read tools (PLAN §4.3): `outline_file`, `read_symbol`, `find_symbol` and
+// `search_records`.
 //
-// Both read a file at one revision through the sidecar (src/code-index/store.ts), which parses
-// the blob on first use and keeps the rows by content. `outline_file` returns the definitions
-// and imports with no source. `read_symbol` returns exactly the citeable span's bytes and the
-// location fields of `add_evidence`. The index adds to reading a file: neither tool is a way
+// The first two read a file at one revision through the sidecar (src/code-index/store.ts),
+// which parses the blob on first use and keeps the rows by content. `outline_file` returns the
+// definitions and imports with no source. `read_symbol` returns exactly the citeable span's
+// bytes and the location fields of `add_evidence`. `find_symbol` searches the tree at a
+// revision (src/code-index/search.ts) and `search_records` the store's records through their
+// own readers (src/code-index/records.ts). The index adds to reading a file: no tool is a way
 // to ration it, and a refusal always says to read the file itself.
 import { createHash } from "node:crypto";
 import { BlobReader } from "../code-index/git-blobs.js";
+import { RECORD_KINDS, type RecordKind, searchRecords } from "../code-index/records.js";
+import { FIND_MODES, findSymbols } from "../code-index/search.js";
 import {
   type CodeIndex,
   DEFAULT_BUDGETS,
@@ -14,8 +19,11 @@ import {
   openCodeIndex,
 } from "../code-index/store.js";
 import {
+  optBool,
+  optEnum,
   optInt,
   optString,
+  optStringArray,
   requireString,
   requireWorkspaceSourcePath,
   resolveWorkspaceCommit,
@@ -29,6 +37,8 @@ const MAX_SOURCE_LINES = 400;
 const MAX_CONTEXT_LINES = 50;
 const NEAREST_SYMBOLS = 5;
 const DOC_LINE_BYTES = 160;
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 200;
 
 const indexes = new Map<string, CodeIndex | null>();
 
@@ -97,6 +107,24 @@ function unavailable(path: string, commit: string | null, reason: string): Refus
     "unavailable",
     `the code index cannot read ${path}${commit ? ` at ${short(commit)}` : ""}: ${why}; read the file itself`,
     { path, ref_sha: commit, status: "unavailable", reason },
+  );
+}
+
+function treeUnavailable(commit: string, reason: string): Refusal {
+  const why = UNAVAILABLE_REASONS[reason] ?? `the index reported ${reason}`;
+  return refuse(
+    "unavailable",
+    `the code index cannot read the tree at ${short(commit)}: ${why}; search the files with rg and read them`,
+    { ref_sha: commit, status: "unavailable", reason },
+  );
+}
+
+function recordsUnavailable(reason: string): Refusal {
+  const why = UNAVAILABLE_REASONS[reason] ?? `the index reported ${reason}`;
+  return refuse(
+    "unavailable",
+    `the code index cannot read the store's records: ${why}; read them with get_claims, get_narratives, get_explanations, get_findings, get_field_notes, get_open_questions or lookup_term`,
+    { status: "unavailable", reason },
   );
 }
 
@@ -519,6 +547,105 @@ export const codeIndexTools: ToolDefinition[] = [
                 line_range: lineRangeOf(row),
               },
             }),
+      };
+    },
+  },
+  {
+    name: "find_symbol",
+    description:
+      'Search the code index at a revision. mode definitions (the default) ranks definitions by BM25 over their names split on case and punctuation, qualified names, signatures and doc comments, so a fragment such as Request finds parseHTTPRequest and a word from a doc comment finds its definition. mode references returns the places where query appears as an identifier: they are matched by name only, never resolved, so a row may be a different thing with the same name, and every row carries match: "name". Rows carry path, symbol_id, kind, lines and signature, never bodies: read one with read_symbol, or read the file. kind and path_prefix narrow the rows; limit defaults to 20. The revision\'s tree is indexed on first use, and partial: true says the index of that tree is incomplete, so a missing row proves nothing; the next call resumes it. ref_sha defaults to the workspace HEAD.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        mode: { type: "string", enum: [...FIND_MODES] },
+        kind: { type: "string" },
+        path_prefix: { type: "string" },
+        ref_sha: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: MAX_LIMIT },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    compact: true,
+    handler: async (args, ctx) => {
+      const query = requireString(args, "query");
+      const mode = optEnum(args, "mode", FIND_MODES) ?? "definitions";
+      const limit = optInt(args, "limit", DEFAULT_LIMIT) ?? DEFAULT_LIMIT;
+      if (limit < 1 || limit > MAX_LIMIT) {
+        throw new ToolError(`limit must be from 1 to ${MAX_LIMIT}`, "arg.range");
+      }
+      const commit = resolveWorkspaceCommit(ctx, optString(args, "ref_sha") ?? "HEAD");
+      const index = indexFor(ctx);
+      if (!index) return treeUnavailable(commit, "off");
+      const found = await findSymbols(index, ctx.project.workspacePath as string, commit, query, {
+        mode,
+        kind: optString(args, "kind"),
+        pathPrefix: optString(args, "path_prefix"),
+        limit,
+      });
+      if (found.state === "unavailable") return treeUnavailable(commit, found.reason);
+      return {
+        ok: true,
+        mode,
+        query,
+        ref_sha: commit,
+        extractor_id: index.extractorId,
+        partial: found.partial,
+        ...(found.partial_reason ? { partial_reason: found.partial_reason } : {}),
+        results: found.results,
+        ...(found.more ? { more: true } : {}),
+      };
+    },
+  },
+  {
+    name: "search_records",
+    description:
+      "Full-text search (BM25) over the store's records: claims, narratives, explanations, findings, field notes, open questions and vocabulary. Each hit carries kind, id, subject, status and a snippet of at most 240 bytes; open the record with its own reader. A hit is returned only as that reader returns it: claims as get_claims at the workspace HEAD, so superseded, invalidated and inapplicable claims drop out; narratives as get_narratives, the effective row per section and topic, withdrawn keys excluded; explanations as get_explanations, the newest row whose revision the workspace reaches, below its phase not at all; open questions as get_open_questions, open ones; findings, field notes and vocabulary with their status. include_history: true adds the rows those readers leave out, each with the status that says why. kinds and subject (a subsystem id, or a claim_key prefix) narrow the hits; limit defaults to 20. The index is brought up to date with the store on every call.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        kinds: { type: "array", items: { type: "string", enum: [...RECORD_KINDS] } },
+        subject: { type: "string" },
+        include_history: { type: "boolean" },
+        limit: { type: "integer", minimum: 1, maximum: MAX_LIMIT },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    compact: true,
+    handler: async (args, ctx) => {
+      const query = requireString(args, "query");
+      const kinds = optStringArray(args, "kinds");
+      for (const kind of kinds ?? []) {
+        if (!RECORD_KINDS.includes(kind as RecordKind)) {
+          throw new ToolError(`kinds must be among: ${RECORD_KINDS.join(", ")}`, "arg.enum");
+        }
+      }
+      const limit = optInt(args, "limit", DEFAULT_LIMIT) ?? DEFAULT_LIMIT;
+      if (limit < 1 || limit > MAX_LIMIT) {
+        throw new ToolError(`limit must be from 1 to ${MAX_LIMIT}`, "arg.range");
+      }
+      const includeHistory = optBool(args, "include_history");
+      const head = resolveWorkspaceCommit(ctx, "HEAD");
+      const index = indexFor(ctx);
+      if (!index) return recordsUnavailable("off");
+      const found = await searchRecords(index, ctx, head, {
+        query,
+        kinds: kinds as RecordKind[] | null,
+        subject: optString(args, "subject"),
+        includeHistory,
+        limit,
+      });
+      if (found.state === "unavailable") return recordsUnavailable(found.reason);
+      return {
+        ok: true,
+        query,
+        ref_sha: head,
+        include_history: includeHistory,
+        results: found.results,
+        ...(found.more ? { more: true } : {}),
       };
     },
   },
