@@ -17,21 +17,32 @@
 // published in one transaction that inserts its symbols, refs and imports and, last, its
 // `blobs` row; a reader treats a blob as indexed only when that row exists. Inserts are
 // INSERT OR IGNORE, so two processes parsing one blob converge (the extractor is
-// deterministic). A whole-tree index writes `trees` rows and, last, `trees_complete`.
+// deterministic). A whole-tree index writes `trees` rows and, last, `trees_complete`, which
+// it withholds while a supported blob is missing; a `trees` row is updated when its entry's
+// state changes, so an object that arrives later completes the same revision.
 //
 // Recovery is for corruption only. SQLITE_BUSY, SQLITE_LOCKED, a permission error or any
 // other failure leaves the index `unavailable` for that call. Only SQLITE_CORRUPT,
 // SQLITE_NOTADB or a failed `PRAGMA quick_check` sets the database aside, renaming
-// index.db, index.db-wal and index.db-shm together to `*.corrupt-<time>`. Every request
-// checks the database file's inode and reopens when it has changed, so a process that had
-// the old file open moves to the new one; its in-flight writes to the old file are lost,
-// which a cache can afford.
+// index.db-wal, index.db-shm and, last, index.db to `*.corrupt-<time>`. A recoverer holds
+// `index.db.recovering` (created exclusively) while it rechecks the inode and renames, and no
+// process opens the database while that marker exists, so two recoverers cannot both rename
+// and an opener cannot pair a new database with the old WAL; a marker a minute old was left
+// by a process that died and is broken. Every request checks the database file's inode and
+// reopens when it has changed, so a process that had the old file open moves to the new one;
+// its in-flight writes to the old file are lost, which a cache can afford.
+//
+// Disk. The generation's budget is bytes on disk, the database and its WAL. The database is
+// created with incremental auto-vacuum, and eviction vacuums and truncates the WAL, so what
+// it deletes leaves the disk; when kept trees alone exceed the budget, the result says so.
 //
 // AMANUENSIS_CODE_INDEX=off: the code-index tools are not registered, and nothing under
 // `code-index/` is created or collected.
 import {
+  closeSync,
   existsSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -74,6 +85,9 @@ const BUSY_TIMEOUT_MS = 5_000;
 const KEPT_TREES = 8;
 const TREE_BATCH = 1_000;
 const EVICT_BATCH = 100;
+const RECOVERY_MARKER = ".recovering";
+/** A recovery marker older than this was left by a process that died mid-recovery. */
+const STALE_RECOVERY_MS = 60_000;
 
 export interface Budgets {
   /** Per file: larger blobs are recorded `too-large` and not parsed. */
@@ -218,6 +232,8 @@ export interface CodeIndexOptions {
   busyTimeoutMs?: number;
   /** The clock for touching and collecting generations. */
   now?: () => number;
+  /** How often an open index touches its generation unprompted; an hour by default. */
+  touchEveryMs?: number;
 }
 
 /**
@@ -381,6 +397,8 @@ export interface TreeResult {
   budget: { limit: "files" | "source-bytes" | "time"; value: number } | null;
   /** Blobs deleted by the generation's disk budget. */
   evicted: number;
+  /** The disk budget, when kept trees alone leave the generation over it. */
+  disk_over_budget: { bytes: number; limit: number } | null;
 }
 
 export type FileResult =
@@ -410,6 +428,10 @@ export type FileResult =
 
 class CorruptDatabase extends Error {
   readonly code = "SQLITE_CORRUPT";
+}
+
+class RecoveryInProgress extends Error {
+  readonly code = "SQLITE_BUSY";
 }
 
 type Failure = "corrupt" | "unavailable";
@@ -452,6 +474,31 @@ function enterWal(db: Database.Database, busyTimeoutMs: number): void {
       if (code !== "SQLITE_BUSY" || Date.now() >= deadline) throw error;
       Atomics.wait(pause, 0, 0, 20);
     }
+  }
+}
+
+function pauseFor(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * Wait for another process's recovery marker to go, up to `deadline`; a stale marker is
+ * removed. True when no marker remains.
+ */
+function recoveryFinished(marker: string, deadline: number): boolean {
+  for (;;) {
+    let modified: number;
+    try {
+      modified = statSync(marker).mtimeMs;
+    } catch {
+      return true;
+    }
+    if (Date.now() - modified > STALE_RECOVERY_MS) {
+      rmSync(marker, { force: true });
+      continue;
+    }
+    if (Date.now() >= deadline) return false;
+    pauseFor(20);
   }
 }
 
@@ -515,7 +562,7 @@ export class CodeIndex {
     this.ensureDirectory();
     this.touch();
     collectGenerations(storagePath, { keep: this.extractorId, env: options.env, now: this.now });
-    this.timer = setInterval(() => this.touch(), HOUR_MS);
+    this.timer = setInterval(() => this.touch(), options.touchEveryMs ?? HOUR_MS);
     this.timer.unref();
   }
 
@@ -626,7 +673,7 @@ export class CodeIndex {
         reader.close();
       }
       const swept = this.evict();
-      evicted = typeof swept === "number" ? swept : 0;
+      evicted = "state" in swept ? 0 : swept.evicted;
     }
     return {
       state: "ok",
@@ -666,6 +713,7 @@ export class CodeIndex {
       unavailable: 0,
       budget: null,
       evicted: 0,
+      disk_over_budget: null,
     };
     const unavailable = (reason: string): TreeResult => ({
       ...result,
@@ -756,7 +804,8 @@ export class CodeIndex {
       reader.close();
     }
 
-    if (result.budget) {
+    if (result.budget || result.unavailable > 0) {
+      // A missing blob leaves absence unprovable: the tree stays incomplete until it arrives.
       result.partial = true;
       result.state = "partial";
     } else {
@@ -770,8 +819,9 @@ export class CodeIndex {
       if (completed !== true) return unavailable(completed.reason);
     }
     const evicted = this.evict();
-    if (typeof evicted !== "number") return unavailable(evicted.reason);
-    result.evicted = evicted;
+    if ("state" in evicted) return unavailable(evicted.reason);
+    result.evicted = evicted.evicted;
+    result.disk_over_budget = evicted.over;
     return result;
   }
 
@@ -898,11 +948,16 @@ export class CodeIndex {
     });
   }
 
-  /** The tree's rows, in batches; the revision is touched and old revisions pruned. */
+  /**
+   * The tree's rows, in batches; the revision is touched and old revisions pruned. An entry's
+   * skip_reason is updated, since `unavailable` lasts only until its object arrives.
+   */
   private recordTree(commit: string, entries: TreeEntry[]): true | Unavailable {
     return this.run((db) => {
       const insert = db.prepare(
-        "INSERT OR IGNORE INTO trees (rev, path, mode, blob_sha, lang, skip_reason) VALUES (?, ?, ?, ?, ?, ?)",
+        `INSERT INTO trees (rev, path, mode, blob_sha, lang, skip_reason) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT (rev, path) DO UPDATE SET skip_reason = excluded.skip_reason
+         WHERE skip_reason IS NOT excluded.skip_reason`,
       );
       for (let i = 0; i < entries.length; i += TREE_BATCH) {
         db.transaction(() => {
@@ -930,17 +985,38 @@ export class CodeIndex {
 
   /**
    * Past the generation's disk budget, delete blobs not in the newest trees, oldest first,
-   * each in one transaction that removes its `blobs` row first. Returns how many went.
+   * each in one transaction that removes its `blobs` row first, then vacuum the freed pages
+   * and truncate the WAL. Returns how many went, and the budget if it is still exceeded.
    */
-  private evict(): number | Unavailable {
+  private evict():
+    | { evicted: number; over: { bytes: number; limit: number } | null }
+    | Unavailable {
+    const limit = this.budgets.maxGenerationBytes;
     return this.run((db) => {
+      const fileSize = (path: string) => {
+        try {
+          return statSync(path).size;
+        } catch {
+          return 0;
+        }
+      };
+      // On disk: the database's pages, free ones included, and the WAL.
       const used = () => {
         const pages = db.pragma("page_count", { simple: true }) as number;
-        const free = db.pragma("freelist_count", { simple: true }) as number;
         const size = db.pragma("page_size", { simple: true }) as number;
-        return (pages - free) * size;
+        return pages * size + fileSize(`${this.databasePath}-wal`);
       };
-      if (used() <= this.budgets.maxGenerationBytes) return 0;
+      const reclaim = () => {
+        db.pragma("incremental_vacuum");
+        db.pragma("wal_checkpoint(TRUNCATE)");
+      };
+      const outcome = (evicted: number) => {
+        const bytes = used();
+        return { evicted, over: bytes > limit ? { bytes, limit } : null };
+      };
+      if (used() <= limit) return { evicted: 0, over: null };
+      reclaim();
+      if (used() <= limit) return outcome(0);
       const victims = db
         .prepare(
           `SELECT blob_sha, lang FROM blobs
@@ -981,9 +1057,10 @@ export class CodeIndex {
         const batch = victims.slice(i, i + EVICT_BATCH);
         remove.immediate(batch);
         evicted += batch.length;
-        if (used() <= this.budgets.maxGenerationBytes) break;
+        reclaim();
+        if (used() <= limit) break;
       }
-      return evicted;
+      return outcome(evicted);
     });
   }
 
@@ -1020,11 +1097,16 @@ export class CodeIndex {
     }
     if (this.db) return this.db;
     this.ensureDirectory();
+    const busyTimeout = this.options.busyTimeoutMs ?? BUSY_TIMEOUT_MS;
+    if (!recoveryFinished(this.marker(), Date.now() + busyTimeout)) {
+      throw new RecoveryInProgress("another process is recovering the code index");
+    }
     this.attempted = inodeOf(this.databasePath);
     const db = new Database(this.databasePath);
     try {
-      const busyTimeout = this.options.busyTimeoutMs ?? BUSY_TIMEOUT_MS;
       db.pragma(`busy_timeout = ${busyTimeout}`);
+      // Takes effect only in a new database, before its first table.
+      db.pragma("auto_vacuum = INCREMENTAL");
       enterWal(db, busyTimeout);
       db.exec(DDL);
       db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', ?)").run(
@@ -1036,9 +1118,33 @@ export class CodeIndex {
       db.close();
       throw error;
     }
+    const inode = inodeOf(this.databasePath);
+    if (this.attempted !== null && inode !== this.attempted) {
+      // A recovery moved the file while it was opening; the next request opens the new one.
+      db.close();
+      throw new RecoveryInProgress("the code index was replaced while opening");
+    }
     this.db = db;
-    this.inode = inodeOf(this.databasePath);
+    this.inode = inode;
     return db;
+  }
+
+  private marker(): string {
+    return `${this.databasePath}${RECOVERY_MARKER}`;
+  }
+
+  /** Create the recovery marker exclusively, waiting out another process's; false if it stays. */
+  private claimRecovery(): boolean {
+    const deadline = Date.now() + (this.options.busyTimeoutMs ?? BUSY_TIMEOUT_MS);
+    for (;;) {
+      try {
+        closeSync(openSync(this.marker(), "wx"));
+        return true;
+      } catch (error) {
+        if ((error as { code?: unknown } | null)?.code !== "EEXIST") return false;
+      }
+      if (!recoveryFinished(this.marker(), deadline)) return false;
+    }
   }
 
   /** Set the database aside with its WAL and SHM files, unless another process already has. */
@@ -1051,16 +1157,23 @@ export class CodeIndex {
     }
     this.db = null;
     this.inode = null;
-    if (known === null || inodeOf(this.databasePath) !== known) return;
-    const stamp = new Date().toISOString().replace(/[-:.]/g, "");
-    for (const suffix of ["", "-wal", "-shm"]) {
-      const from = `${this.databasePath}${suffix}`;
-      if (!existsSync(from)) continue;
-      try {
-        renameSync(from, `${from}.corrupt-${stamp}`);
-      } catch {
-        // A file another process already moved.
+    if (known === null || !this.claimRecovery()) return;
+    try {
+      // Under the marker: another recoverer may have replaced the file already.
+      if (inodeOf(this.databasePath) !== known) return;
+      const stamp = new Date().toISOString().replace(/[-:.]/g, "");
+      // The database last, so an opener never finds a new database beside the old WAL.
+      for (const suffix of ["-wal", "-shm", ""]) {
+        const from = `${this.databasePath}${suffix}`;
+        if (!existsSync(from)) continue;
+        try {
+          renameSync(from, `${from}.corrupt-${stamp}`);
+        } catch {
+          // A file another process already moved.
+        }
       }
+    } finally {
+      rmSync(this.marker(), { force: true });
     }
   }
 
