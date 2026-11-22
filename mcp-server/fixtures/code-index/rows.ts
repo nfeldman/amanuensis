@@ -72,3 +72,31 @@ for (let i = 0; i < 2; i++) counter(i);
 export default function () {
   return readFileSync;
 }
+
+/** A shape that cannot be built. */
+export abstract class Shape {
+  abstract area(): number;
+  label(): string {
+    return "shape";
+  }
+}
+
+declare module "virtual:config" {
+  export const mode: string;
+}
+
+// Declared elsewhere.
+declare function ambient(x: number): void;
+
+export function overloaded(a: string): string;
+export function overloaded(a: number): number;
+export function overloaded(a: any): any {
+  return a;
+}
+
+export class Overloads {
+  pick(a: string): string;
+  pick(a: any): any {
+    return a;
+  }
+}

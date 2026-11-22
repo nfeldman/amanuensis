@@ -51,3 +51,9 @@ func (c Circle) Area() float64 {
 }
 
 type Circle struct{ R float64 }
+
+var (
+	// Fallback is the shape when none is given.
+	Fallback Shape = Square{Side: 1}
+	count, limit = 0, 10
+)

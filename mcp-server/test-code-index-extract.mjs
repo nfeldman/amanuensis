@@ -16,7 +16,12 @@
 //   - a body edit or a leading-comment edit does not change span_sha256, or changes the
 //     span_sha256 of a definition it did not touch;
 //   - Go methods on different receivers or Java overloads do not get distinct symbol_ids, or
-//     an id changes when other definitions are reordered, inserted or deleted;
+//     an id changes when other definitions are reordered, inserted or deleted; a definition
+//     nested in one declarator of a multi-declarator TS/JS declaration is qualified by another
+//     declarator, or by its siblings' order;
+//   - TypeScript overload signatures and ambient function declarations are not `declaration`
+//     rows sharing the implementation's symbol_id as occurrences; abstract classes and methods,
+//     ambient modules, and Go grouped vars lack their rows;
 //   - duplicate Python definitions do not share a symbol_id as occurrences 1 and 2;
 //   - a non-ASCII fixture's byte offsets do not slice the exact definition;
 //   - lines in a CRLF file are not counted as requireEvidenceCitation counts them, or a
@@ -98,6 +103,18 @@ const GOLDEN = {
       ["variable", "legacy", "legacy", "legacy", 68, 68, 68, 1],
       ["variable", "alsoLegacy", "alsoLegacy", "alsoLegacy", 68, 68, 68, 1],
       ["default", "default", "default", "default", 72, 74, 72, 1],
+      ["class", "Shape", "Shape", "Shape", 77, 82, 76, 1],
+      ["method", "area", "Shape.area", "Shape.area", 78, 78, 78, 1],
+      ["method", "label", "Shape.label", "Shape.label", 79, 81, 79, 1],
+      ["namespace", '"virtual:config"', '"virtual:config"', '"virtual:config"', 84, 86, 84, 1],
+      ["variable", "mode", '"virtual:config".mode', '"virtual:config".mode', 85, 85, 85, 1],
+      ["declaration", "ambient", "ambient", "ambient", 89, 89, 88, 1],
+      ["declaration", "overloaded", "overloaded", "overloaded", 91, 91, 91, 1],
+      ["declaration", "overloaded", "overloaded", "overloaded", 92, 92, 92, 2],
+      ["function", "overloaded", "overloaded", "overloaded", 93, 95, 93, 3],
+      ["class", "Overloads", "Overloads", "Overloads", 97, 102, 97, 1],
+      ["declaration", "pick", "Overloads.pick", "Overloads.pick", 98, 98, 98, 1],
+      ["method", "pick", "Overloads.pick", "Overloads.pick", 99, 101, 99, 2],
     ],
     imports: [
       ["node:fs", 2],
@@ -186,6 +203,9 @@ const GOLDEN = {
       ["method", "Push", "List.Push", "List.Push", 45, 47, 45, 1],
       ["method", "Area", "Circle.Area", "Circle.Area", 49, 51, 49, 1],
       ["type", "Circle", "Circle", "Circle", 53, 53, 53, 1],
+      ["var", "Fallback", "Fallback", "Fallback", 58, 58, 57, 1],
+      ["var", "count", "count", "count", 59, 59, 59, 1],
+      ["var", "limit", "limit", "limit", 59, 59, 59, 1],
     ],
     imports: [
       ["fmt", 5],
@@ -693,6 +713,20 @@ async function checkStableIds(mod) {
     for (const [needle, id] of pairs) {
       const s = bySpanText(text, result, needle);
       check(s.symbol_id === id, `Parser.java ${what}: the definition holding ${needle} is ${s.symbol_id}, expected ${id}`);
+    }
+  }
+
+  // TypeScript and JavaScript: a definition nested in one declarator of a multi-declarator
+  // declaration belongs to that declarator, whichever order its siblings are in.
+  for (const lang of ["typescript", "javascript"]) {
+    for (const text of [
+      "const a = () => {\n  function n() {}\n}, b = 1;\n",
+      "const b = 1, a = () => {\n  function n() {}\n};\n",
+      "let b = () => 0, a = () => {\n  function n() {}\n}, c = 2;\n",
+    ]) {
+      const result = await mod.extract(text, lang);
+      const n = result.symbols.find((s) => s.name === "n");
+      check(n?.symbol_id === "a.n" && n.qname === "a.n", `${lang} ${JSON.stringify(text)}: the function in a's initializer is ${n?.symbol_id}, expected a.n`);
     }
   }
 
