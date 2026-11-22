@@ -119,8 +119,10 @@ store first, so a record written a moment ago is found.
 
 ## Refusals and how to recover
 
-Each refusal carries a `rule` and says what to do instead. In every case the way
-on is the same: read the file.
+Each refusal carries a `rule` and says its own way on. Most say to read the
+file itself; the others say to name a file the revision holds, to search with
+`rg`, to read the records with their own tools, or to pass one of the listed
+`symbol_id`s. Reading the files directly is always open.
 
 - `<path> is not in a language the code index parses (unsupported-language)`:
   the extension is outside the list above. Read the file itself.

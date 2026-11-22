@@ -7,7 +7,7 @@
 // bytes and the location fields of `add_evidence`. `find_symbol` searches the tree at a
 // revision (src/code-index/search.ts) and `search_records` the store's records through their
 // own readers (src/code-index/records.ts). The index adds to reading a file: no tool is a way
-// to ration it, and a refusal always says to read the file itself.
+// to ration it, and each refusal states its own way on, reading the file being always open.
 import { createHash } from "node:crypto";
 import { BlobReader } from "../code-index/git-blobs.js";
 import { RECORD_KINDS, type RecordKind, searchRecords } from "../code-index/records.js";
