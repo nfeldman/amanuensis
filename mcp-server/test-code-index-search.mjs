@@ -13,7 +13,8 @@
 //     name-matched rows (a same-named Python function's call included), or ref_sha does not
 //     select the older revision's references;
 //   - an incomplete tree index does not report partial, or a completed one still does;
-//   - a claim written after the first search is not found by the next;
+//   - a claim written after the first search is not found by the next, or a claim deleted and
+//     written again with its rowid, claim_id and second is found by its old text, not its new;
 //   - a claim quoting `requireEvidenceCitation` is not found by that identifier, by
 //     `EvidenceCitation` or by `citation`, with the identifier in its snippet;
 //   - a vocabulary update adding a new word is not found by it;
@@ -425,6 +426,29 @@ async function main() {
   same("search_records quetzal (a low-sorting claim id)", hits(await search("quetzal")), [
     { kind: "claim", id: "0-low", status: "current" },
   ]);
+
+  // A claim deleted (as reset_subsystem deletes claims) and written again with the same rowid,
+  // claim_id and second: the index follows the new text, not the deleted one.
+  {
+    const raw = (statement) =>
+      Number(
+        store
+          .prepare(
+            `INSERT INTO claims (claim_id, claim_key, subject_type, subject_id, statement, epistemic_kind,
+                                 asserted_at_sha, valid_from_sha, session_id, created_at)
+             VALUES ('re-1', 'S-01/behaviour/reset', 'subsystem', 'S-01', ?, 'observation', ?, ?, ?,
+                     '2026-01-01 00:00:00')`,
+          )
+          .run(statement, head, head, ctx.sessionId).lastInsertRowid,
+      );
+    const before = raw("The dingo ledger is compacted hourly.");
+    same("search_records dingo", hits(await search("dingo")), [{ kind: "claim", id: "re-1", status: "current" }]);
+    store.prepare("DELETE FROM claims WHERE claim_id = 're-1'").run();
+    const after = raw("The jackal ledger is compacted daily.");
+    check(after === before, `the rewritten claim took rowid ${after}, not the deleted ${before}`);
+    same("search_records jackal after the rewrite", hits(await search("jackal")), [{ kind: "claim", id: "re-1", status: "current" }]);
+    same("search_records dingo after the rewrite", hits(await search("dingo", { include_history: true })), []);
+  }
 
   // A record is found by an identifier it quotes, whole or by its camel-case words.
   await addClaim("cam-1", "S-01/behaviour/guard", "The requireEvidenceCitation check refuses a loose excerpt.");
