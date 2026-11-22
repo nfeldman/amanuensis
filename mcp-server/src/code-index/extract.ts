@@ -174,6 +174,8 @@ function parentIf(node: Node, types: string[]): Node | null {
 
 const ecmascript = {
   comments: ["comment"],
+  // A TypeScript class member's decorators are its preceding siblings in the class body.
+  leading: ["decorator"],
   wrapper: (node: Node) =>
     parentIf(node, ["export_statement", "ambient_declaration"]) ??
     (node.type === "internal_module" ? parentIf(node, ["expression_statement"]) : null),
