@@ -415,6 +415,41 @@ export const subsystemTools: ToolDefinition[] = [
         }
       }
 
+      // A flow mark is append-only and holds its claim ON DELETE RESTRICT, so a
+      // reset below structural cannot delete a claim that carries one, current
+      // or withdrawn (final review F1/codex). Every version of such a claim's
+      // key is kept, and the current one is closed at the workspace's head by an
+      // `invalidated` event: its marks stop being current with it, as they do
+      // for any closed claim, and the key is free for the next survey.
+      const prefix = `${id}/`;
+      const markedKeys =
+        toStatus === "unmapped" || toStatus === "scoping"
+          ? (
+              ctx.db
+                .prepare(
+                  `SELECT DISTINCT c.claim_key FROM claim_marks m JOIN claims c ON c.claim_id = m.claim_id
+                    WHERE substr(c.claim_key, 1, length(?)) = ?`,
+                )
+                .all(prefix, prefix) as Array<{ claim_key: string }>
+            ).map((row) => row.claim_key)
+          : [];
+      let retiredBy: string | null = null;
+      let retiredAt: string | null = null;
+      if (markedKeys.length > 0) {
+        retiredBy = requireActiveSession(ctx, "reset_subsystem");
+        try {
+          retiredAt = resolveWorkspaceCommit(ctx, "HEAD");
+        } catch {
+          return {
+            ok: false,
+            error:
+              `cannot reset ${id} to '${toStatus}': ${markedKeys.length} of its claims carry flow marks, ` +
+              `which are append-only, so those claims are closed rather than deleted, and the workspace ` +
+              `has no HEAD revision to close them at.`,
+          };
+        }
+      }
+
       const deleted: Record<string, number> = {};
       const txn = ctx.db.transaction(() => {
         // Dependent rows are cleared transactionally so an interrupted
@@ -456,9 +491,11 @@ export const subsystemTools: ToolDefinition[] = [
           // claim_validity_events cascade. Every version under the prefix goes,
           // current and historical alike: a surviving predecessor whose
           // successor had been deleted would be a history with a hole in it.
-          const prefix = `${id}/`;
-          const owned =
-            "SELECT claim_id FROM claims WHERE substr(claim_key, 1, length(:prefix)) = :prefix";
+          const marked =
+            "SELECT DISTINCT c.claim_key FROM claim_marks m JOIN claims c ON c.claim_id = m.claim_id";
+          const owned = `SELECT claim_id FROM claims
+                          WHERE substr(claim_key, 1, length(:prefix)) = :prefix
+                            AND claim_key NOT IN (${marked})`;
           deleted.claim_supersessions = ctx.db
             .prepare(
               `DELETE FROM claim_supersessions
@@ -467,8 +504,48 @@ export const subsystemTools: ToolDefinition[] = [
             )
             .run({ prefix }).changes;
           deleted.claims = ctx.db
-            .prepare("DELETE FROM claims WHERE substr(claim_key, 1, length(?)) = ?")
-            .run(prefix, prefix).changes;
+            .prepare(`DELETE FROM claims WHERE claim_id IN (${owned})`)
+            .run({ prefix }).changes;
+          deleted.claims_retired = 0;
+          if (retiredAt !== null && retiredBy !== null) {
+            const standing = ctx.db
+              .prepare(
+                `SELECT c.claim_id,
+                        (SELECT evidence_id FROM claim_evidence e
+                          WHERE e.claim_id = c.claim_id AND e.role = 'supports'
+                          ORDER BY evidence_id LIMIT 1) AS evidence_id,
+                        (SELECT evidence_id FROM claim_marks m
+                          WHERE m.claim_id = c.claim_id ORDER BY id LIMIT 1) AS mark_evidence_id
+                   FROM claims c
+                  WHERE substr(c.claim_key, 1, length(:prefix)) = :prefix
+                    AND c.claim_key IN (${marked})
+                    AND c.valid_until_sha IS NULL`,
+              )
+              .all({ prefix }) as Array<{
+              claim_id: string;
+              evidence_id: number | null;
+              mark_evidence_id: number | null;
+            }>;
+            for (const claim of standing) {
+              ctx.db
+                .prepare("UPDATE claims SET valid_until_sha = ? WHERE claim_id = ?")
+                .run(retiredAt, claim.claim_id);
+              ctx.db
+                .prepare(
+                  `INSERT INTO claim_validity_events
+                     (claim_id, event_type, at_sha, reason, evidence_id, session_id)
+                   VALUES (?, 'invalidated', ?, ?, ?, ?)`,
+                )
+                .run(
+                  claim.claim_id,
+                  retiredAt,
+                  `reset_subsystem to ${toStatus}: ${reason}`,
+                  claim.evidence_id ?? claim.mark_evidence_id,
+                  retiredBy,
+                );
+            }
+            deleted.claims_retired = standing.length;
+          }
         }
         for (const slot of withdrawals) {
           ctx.db
