@@ -376,7 +376,7 @@ function isRefusal(value: Located | Refusal): value is Refusal {
   return "ok" in value;
 }
 
-/** Fields every response carries about the file. */
+/** Fields every response carries about the file, labelled with the extractor generation. */
 function fileFields(located: Located): Record<string, unknown> {
   const fields: Record<string, unknown> = {
     path: located.path,
@@ -384,6 +384,7 @@ function fileFields(located: Located): Record<string, unknown> {
     blob_sha: located.blobSha,
     lang: located.lang,
     status: located.status,
+    extractor_id: located.index.extractorId,
   };
   if (located.parseErrors > 0) fields.parse_errors = located.parseErrors;
   return fields;
@@ -451,7 +452,6 @@ export const codeIndexTools: ToolDefinition[] = [
       return {
         ok: true,
         ...fileFields(located),
-        extractor_id: located.index.extractorId,
         bytes: located.bytes,
         lines: located.lines,
         symbols: nest(located.symbols, repeated),
