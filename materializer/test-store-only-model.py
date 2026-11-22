@@ -27,6 +27,9 @@ Turns red when:
     either comparison covers (slice-S3 review F2);
   - `page.py` lacks a block kind for any shape a page prints (the kinds the recognition
     hooks resolved to), or still carries a `HOOKS` table of the parser's;
+  - `html_projection.py` imports the Markdown reader anywhere, at module level or under
+    another name, or names it in a string an `importlib` call could load (final review
+    F8/claude);
   - `write_html`, or any function or method it reaches in its module, imports the
     Markdown reader or names a recognition constant (a `_*_PROJECTION(S)`, the marker
     or list pattern);
@@ -418,6 +421,28 @@ def main() -> int:
         parser_imports = [item for item in writer_imports if "legacy_prose" in item or "parse_markdown" in item]
         if parser_imports:
             return f"write_html's code imports the Markdown reader: {parser_imports}"
+        # write_html's module may not import the reader either: a module-level import bound to
+        # another name, or a module named in a string for importlib, reaches it unseen by the
+        # walk above (final review F8/claude). Docstrings are prose and may name it.
+        docstrings = {
+            id(node.body[0].value)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)
+            and node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)
+        }
+        for node in ast.walk(tree):
+            named: list[str] = []
+            if isinstance(node, ast.ImportFrom):
+                named = [f"{node.module}.{alias.name}" for alias in node.names]
+            elif isinstance(node, ast.Import):
+                named = [alias.name for alias in node.names]
+            elif isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in docstrings:
+                named = [node.value]
+            reader = [item for item in named if re.search(r"\blegacy_prose\b|\bparse_markdown\b", item)]
+            if reader:
+                return f"html_projection.py, write_html's module, reaches the Markdown reader: {reader} (line {node.lineno})"
         if len(writer) < 5:
             return f"write_html reaches only {sorted(writer)}; the builders are not its own"
         return None
