@@ -28,6 +28,8 @@ Turns red when:
     them or does not list them all in the account, or an exit's box or account line names a
     target other than its stored one (a step it unwinds to, or `leaves-flow`);
   - an arrow or a box of a strip is not a link a keyboard can reach (rules 1 and 8);
+  - a step is hatched for a file another subsystem's ledger row holds as stale while its
+    own subsystem's reading is fresh (final review F4/codex);
   - a step whose cited file the ledger holds as stale is not hatched, or its box and account do
     not say "cited file changed since <the revision it was examined at>", or a step citing only
     an unchanged file is hatched (Appendix B rule 3);
@@ -151,6 +153,7 @@ MARK_SHA = "cafebabe"
 MARK_SHA_LABEL = "locked out"
 # Files cited by login's steps: one changed since it was examined at EXAMINED_SHA, one not.
 STALE_FILE, FRESH_FILE, EXAMINED_SHA = "auth/flow-stale.ts", "auth/flow-fresh.ts", "abad1dea"
+OTHER_EXAMINED_SHA = "0ddba11"
 # Appendix B rule 7: login step 03 rests only on comment-asserted evidence, as does the crash mark on step
 # 01 (the golden store's evidence row 2); step 04 survived a challenge.
 WEAK_EVIDENCE, WEAK_MARK_LABEL, WEAK_STEP, SURVIVED_STEP = 2, "session row half written", "03", "04"
@@ -248,6 +251,12 @@ def build_store(root: Path) -> Path:
                 "INSERT INTO file_ledger (subsystem_id, file_path, classification, ref_sha, stale) VALUES ('B-02', ?, 'examined', ?, ?)",
                 (path, EXAMINED_SHA, stale),
             )
+        # The fresh file is in B-01's scope too, and B-01's reading of it is stale: freshness
+        # is the claim's own subsystem's, so login step 02 stays solid (final review F4/codex).
+        db.execute(
+            "INSERT INTO file_ledger (subsystem_id, file_path, classification, ref_sha, stale) VALUES ('B-01', ?, 'examined', ?, 1)",
+            (FRESH_FILE, OTHER_EXAMINED_SHA),
+        )
         db.commit()
     finally:
         db.close()
@@ -733,8 +742,8 @@ def main() -> int:
             text = " ".join(account_of(figure).split())
             if not re.search(rf"Step 01:.*?cited file changed since {EXAMINED_SHA}: {re.escape(STALE_FILE)}", text, re.I):
                 return f"the account does not say step 01's cited file {STALE_FILE} changed since {EXAMINED_SHA}: {text[:500]!r}"
-            if FRESH_FILE in text:
-                return f"the account calls {FRESH_FILE} changed, and it is not"
+            if FRESH_FILE in text or OTHER_EXAMINED_SHA in figure:
+                return f"the account calls {FRESH_FILE} changed, and it is not for B-02, whatever B-01's reading says"
             return None
 
         check("a step whose cited file changed since it was examined is hatched and says since when", stale_hatched)
