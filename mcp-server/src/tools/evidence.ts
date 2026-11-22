@@ -24,7 +24,7 @@ import {
 import { requireActiveSession, requireEvidenceAnchor } from "../invariants.js";
 import { spawnSync } from "../subprocess.js";
 import { EVIDENCE_KINDS } from "../vocabulary.js";
-import { indexFor, lineRangeOf, matching, nearestIds } from "./code-index.js";
+import { indexOrUnavailable, lineRangeOf, matching, nearestIds } from "./code-index.js";
 
 // ---------------------------------------------------------------------------------------
 // Evidence anchors (semantic-index PLAN §4.4)
@@ -219,8 +219,8 @@ export function resolveEvidenceAnchor(
 ): ResolvedCitation {
   const unanchored: ResolvedCitation = { symbol, lineRange, anchor: null };
   if (symbol === null || !anchorsCitation(filePath, symbol)) return unanchored;
-  const index = indexFor(ctx);
-  if (!index) return unanchored;
+  const index = indexOrUnavailable(ctx);
+  if (!index || "unavailable" in index) return unanchored;
   const found = readDefinitions(ctx, index, commit, filePath);
   if ("unavailable" in found) return unanchored;
 

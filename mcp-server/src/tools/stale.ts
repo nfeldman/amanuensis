@@ -11,7 +11,7 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
-import { indexFor, lineRangeOf } from "./code-index.js";
+import { indexOrUnavailable, lineRangeOf } from "./code-index.js";
 import { type Definitions, readDefinitions } from "./evidence.js";
 
 const CLEAR_REASON_CAP = 400;
@@ -107,9 +107,10 @@ export function anchorHints(
   let found: Definitions | { unavailable: string } | undefined;
   const definitions = (): Definitions | { unavailable: string } => {
     if (found !== undefined) return found;
-    const index = codeIndexEnabled() ? indexFor(ctx) : null;
+    const index = codeIndexEnabled() ? indexOrUnavailable(ctx) : null;
     if (target === null) found = { unavailable: "no-revision" };
     else if (!index) found = { unavailable: "index-off" };
+    else if ("unavailable" in index) found = index;
     else found = readDefinitions(ctx, index, target, filePath);
     return found;
   };

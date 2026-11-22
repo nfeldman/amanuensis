@@ -49,6 +49,18 @@ export function indexFor(ctx: ServerContext): CodeIndex | null {
   return indexes.get(key) ?? null;
 }
 
+/**
+ * `indexFor`, for a caller that writes or reports without the index when it cannot speak:
+ * grammar data or queries that cannot be read are `grammar-unreadable` rather than an error.
+ */
+export function indexOrUnavailable(ctx: ServerContext): CodeIndex | null | { unavailable: string } {
+  try {
+    return indexFor(ctx);
+  } catch {
+    return { unavailable: "grammar-unreadable" };
+  }
+}
+
 interface Refusal {
   ok: false;
   error: string;
