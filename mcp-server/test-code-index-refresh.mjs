@@ -267,6 +267,7 @@ async function main() {
     declared: await cite("src/proto.cpp", "twice", "1"),
     defined: await cite("src/proto.cpp", "twice", "3-5"),
     orphan: await cite("src/removed.ts", "orphan", null),
+    halved: await cite("src/stub.cpp", "half", "3-5"),
     hush: await cite("src/quiet.ts", "hush", null),
   };
   same(
@@ -289,6 +290,7 @@ async function main() {
       declared: "1",
       defined: "3-5",
       orphan: "1-3",
+      halved: "3-5",
       hush: "1-3",
     },
   );
@@ -355,6 +357,8 @@ async function main() {
       at,
       evidence: [hint(ev.orphan, "unavailable", [], "file-absent")],
     },
+    // The cited definition is gone but its prototype keeps the symbol_id: changed, not gone.
+    { path: "src/stub.cpp", reason: "git-drift", at, evidence: [hint(ev.halved, "changed", ["1"])] },
   ];
   const offRows = (at) =>
     expectedRows(at).map((row) => ({

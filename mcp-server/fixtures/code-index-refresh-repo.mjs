@@ -17,6 +17,7 @@
 //   src/proto.cpp    twice is declared and defined under one symbol_id, as two kinds; only the
 //                    definition's body changes
 //   src/removed.ts   the whole file is deleted
+//   src/stub.cpp     half's definition is deleted; only its prototype, the same symbol_id, stays
 //   src/quiet.ts     unchanged, so never stale
 //   docs/notes.txt   a file in no supported language, edited
 import { spawnSync } from "node:child_process";
@@ -132,6 +133,7 @@ export const FILES = [
   "src/proto.cpp",
   "src/quiet.ts",
   "src/removed.ts",
+  "src/stub.cpp",
 ];
 
 /** Build the base and target revisions in `dir`; `reorder()` adds the third. */
@@ -151,6 +153,7 @@ export function buildRefreshRepo(dir) {
   write(dir, "src/latin1.ts", 'export function legible(): string {\n  return "cafe";\n}\n');
   write(dir, "src/proto.cpp", protoSource("return x * 2;"));
   write(dir, "src/removed.ts", "export function orphan(): number {\n  return 0;\n}\n");
+  write(dir, "src/stub.cpp", "int half(int x);\n\nint half(int x) {\n  return x / 2;\n}\n");
   write(dir, "src/quiet.ts", "export function hush(): number {\n  return 0;\n}\n");
   write(dir, "docs/notes.txt", "First notes.\n");
   const base = commit(dir, "base");
@@ -168,6 +171,7 @@ export function buildRefreshRepo(dir) {
   write(dir, "src/latin1.ts", LATIN1_BYTES);
   write(dir, "src/proto.cpp", protoSource("return x + x;"));
   rmSync(join(dir, "src/removed.ts"));
+  write(dir, "src/stub.cpp", "int half(int x);\n");
   write(dir, "docs/notes.txt", "Second notes.\n");
   const target = commit(dir, "target");
 
