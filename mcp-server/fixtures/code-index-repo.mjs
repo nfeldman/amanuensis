@@ -10,6 +10,9 @@
 //                    definition inside the first 400 lines and another after them
 //   src/unicode.ts   non-ASCII text, so byte offsets differ from UTF-16 offsets
 //   lib/dup.py       one function defined twice, in the branches of an `if`
+//   lib/twice.js     one documented function declared twice, so an occurrence has a
+//                    citeable span that starts above its declaration
+//   src/Parser.java  an overloaded method, whose qname differs from each symbol_id
 //   docs/notes.txt   a file in no supported language
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -111,6 +114,31 @@ else:
         return "/"
 `;
 
+export const TWICE_SOURCE = `/** Doubles by multiplying. */
+function twice(x) {
+  return x * 2;
+}
+
+/** Doubles by adding. */
+function twice(x) {
+  return x + x;
+}
+`;
+
+export const PARSER_SOURCE = `/** Parses text. */
+class Parser {
+    /** Parses a whole string. */
+    int parse(String s) {
+        return 0;
+    }
+
+    /** Parses with a base. */
+    int parse(String s, int base) {
+        return base;
+    }
+}
+`;
+
 /** Build the repository in `dir` and return its two commits. */
 export function buildCodeIndexRepo(dir) {
   mkdirSync(dir, { recursive: true });
@@ -122,6 +150,8 @@ export function buildCodeIndexRepo(dir) {
   write(dir, "src/big.ts", bigSource());
   write(dir, "src/unicode.ts", UNICODE_SOURCE);
   write(dir, "lib/dup.py", DUP_SOURCE);
+  write(dir, "lib/twice.js", TWICE_SOURCE);
+  write(dir, "src/Parser.java", PARSER_SOURCE);
   write(dir, "docs/notes.txt", "Notes in no language the index parses.\n");
   git(dir, ["add", "-A"]);
   git(dir, ["commit", "-q", "-m", "first revision"]);

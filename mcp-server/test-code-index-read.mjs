@@ -9,14 +9,16 @@
 //     signatures, first doc lines, occurrences of a repeated symbol_id, imports, bytes, lines,
 //     blob_sha, status and the extractor generation; or any of it carries source text;
 //   - read_symbol does not return exactly the citeable span's bytes (doc comment included,
-//     non-ASCII text included) for a symbol_id, a qname and a bare name, or its source differs
+//     non-ASCII text included) for a symbol_id, a qname and a bare name (an overloaded Java
+//     method's qname naming both overloads and each symbol_id one), or its source differs
 //     from what git holds at that revision;
 //   - evidence_args is not exactly { file_path, symbol: <symbol_id>, ref_sha: <resolved commit>,
 //     line_range: <the full citeable span> }, carries a field add_evidence's schema lacks, carries
 //     `kind`, or is refused by add_evidence once the agent adds kind;
 //   - an ambiguous name (two symbols, or two occurrences of one symbol_id) returns source,
 //     evidence_args or anything but its candidates with their lines; line_range does not select
-//     one occurrence;
+//     one occurrence, by its citeable span or by its declaration's lines, or selects one for a
+//     range whose end is not the definition's;
 //   - a miss does not refuse with the nearest symbol_ids, in order, and no source;
 //   - a definition of 500 lines does not return its first 400 lines, truncated: true, its nested
 //     definitions' outline and no evidence_args; or a nested definition does not read whole with
@@ -466,6 +468,50 @@ async function main() {
       const none = await read("lib/dup.py", "sep", { line_range: "7-8" });
       check(none.ok === false, "a line_range that starts no occurrence did not refuse");
       refusals.push({ tool: "read_symbol", response: none });
+    }
+    // A documented occurrence is picked by its citeable span or by its declaration's lines,
+    // and a range with the wrong end picks nothing.
+    {
+      const want = gitLines(workspace, second, "lib/twice.js", 6, 9);
+      for (const range of ["6-9", "7-9"]) {
+        const picked = await read("lib/twice.js", "twice", { line_range: range });
+        check(
+          picked.ok === true && !picked.ambiguous && picked.occurrence === 2 && picked.source === want,
+          `line_range ${range} did not select the documented second occurrence of twice: ${canonical(picked).slice(0, 300)}`,
+        );
+        same(`line_range ${range}: evidence_args`, picked.evidence_args, {
+          file_path: "lib/twice.js",
+          symbol: "twice",
+          ref_sha: second,
+          line_range: "6-9",
+        });
+      }
+      for (const range of ["6-8", "7-10", "2-9"]) {
+        const wrong = await read("lib/twice.js", "twice", { line_range: range });
+        check(wrong.ok === false, `line_range ${range} matches no occurrence of twice but was not refused`);
+      }
+    }
+    // Overloads share a qname: the qname names both, each symbol_id names one.
+    {
+      const both = await read("src/Parser.java", "Parser.parse");
+      check(both.ok === true && both.ambiguous === true, `read_symbol by the qname Parser.parse is not ambiguous: ${canonical(both).slice(0, 300)}`);
+      same(
+        "candidates for the qname Parser.parse",
+        both.candidates.map((c) => [c.symbol_id, c.start_line, c.end_line]),
+        [
+          ["Parser.parse(String)", 4, 6],
+          ["Parser.parse(String,int)", 9, 11],
+        ],
+      );
+      const one = await read("src/Parser.java", "Parser.parse(String,int)");
+      check(one.ok === true && !one.ambiguous, `read_symbol by symbol_id Parser.parse(String,int): ${canonical(one).slice(0, 300)}`);
+      check(one.source === spanLines(workspace, second, "src/Parser.java", 8, 11), "read_symbol Parser.parse(String,int) is not lines 8-11");
+      same("Parser.parse(String,int): evidence_args", one.evidence_args, {
+        file_path: "src/Parser.java",
+        symbol: "Parser.parse(String,int)",
+        ref_sha: second,
+        line_range: "8-11",
+      });
     }
 
     // -------------------------------------------------------------------------------------
