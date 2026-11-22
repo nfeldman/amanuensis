@@ -156,13 +156,17 @@ const SQL_KEYWORDS = new Set(
     "IF",
   ].map((k) => k.toLowerCase()),
 );
+// SQLite's JSON1 table-valued functions are relations no schema declares.
+// They are accepted only when called, as `FROM json_each(...)`.
+const TABLE_FUNCTIONS = new Set(["json_each", "json_tree"]);
 function tokenizeSql(sql) {
   const rels = new Set();
-  const re = /\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+([a-zA-Z_][a-zA-Z0-9_]*)/gi;
+  const re = /\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()?/gi;
   let m;
   while ((m = re.exec(sql)) !== null) {
     const ident = m[1];
     if (SQL_KEYWORDS.has(ident.toLowerCase())) continue;
+    if (m[2] && TABLE_FUNCTIONS.has(ident.toLowerCase())) continue;
     rels.add(ident);
   }
   return { rels };
