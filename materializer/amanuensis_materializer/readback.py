@@ -1262,6 +1262,9 @@ class _MarkInventory(HTMLParser):
         self.pieces: list[_Piece] = []
         self.drawn: dict[str, list[tuple[str, str, str]]] = {}
         self.chip: tuple[set[str], list[str]] | None = None
+        # Each open `<g data-node>`: its stack depth, where its entry sits in `drawn`,
+        # whether a shape is drawn inside it, and the words its `<text>` prints.
+        self.nodes_open: list[tuple[int, str, int, list[bool], list[str]]] = []
 
     def _offset(self) -> int:
         line, column = self.getpos()
@@ -1286,7 +1289,12 @@ class _MarkInventory(HTMLParser):
             elif "data-node" in values or (tag == "rect" and "runtime-svg-node" in classes) or (
                 tag == "g" and "boundary-svg-node" in classes
             ):
-                self.drawn.setdefault(within, []).append(("node", tag, values.get("data-node", "")))
+                drawn = self.drawn.setdefault(within, [])
+                drawn.append(("node", tag, values.get("data-node", "")))
+                if tag == "g" and "data-node" in values and not closed:
+                    self.nodes_open.append((len(self.stack), within, len(drawn) - 1, [False], []))
+            if tag in _NODE_SHAPES and self.nodes_open:
+                self.nodes_open[-1][3][0] = True
         piece = None
         record = values.get("data-record")
         current = self._open_piece()
@@ -1322,6 +1330,16 @@ class _MarkInventory(HTMLParser):
             holder.text.append(" ")
         while self.stack:
             open_tag, piece, _svg, chip = self.stack.pop()
+            if self.nodes_open and self.nodes_open[-1][0] == len(self.stack):
+                # A marked node is drawn only if it holds a shape and prints words;
+                # an emptied container is not the box its mark names (§3.5, F2/codex).
+                # A coverage bar's segment prints its count only when it is wide
+                # enough, and the legend names it, so a segment owes only its shape.
+                _depth, within, index, shaped, words = self.nodes_open.pop()
+                worded = within.startswith("figure:coverage-bars:") or "".join(words).strip()
+                if not shaped[0] or not worded:
+                    element, node_tag, record = self.drawn[within][index]
+                    self.drawn[within][index] = (element, f"hollow {node_tag}", record)
             if chip and self.chip is not None:
                 piece_open = piece or self._open_piece()
                 if piece_open is not None and piece_open.chips is not None:
@@ -1334,6 +1352,8 @@ class _MarkInventory(HTMLParser):
                 break
 
     def handle_data(self, data: str) -> None:
+        if self.nodes_open and any(open_tag == "text" for open_tag, *_rest in self.stack):
+            self.nodes_open[-1][4].append(data)
         if any(open_tag == "caption" for open_tag, *_rest in self.stack):
             return
         piece = self._open_piece()
@@ -1341,6 +1361,10 @@ class _MarkInventory(HTMLParser):
             piece.text.append(data)
         if self.chip is not None:
             self.chip[1].append(data)
+
+
+#: What a node's box is drawn with; a `<path>` or `<line>` inside a figure is an arrow.
+_NODE_SHAPES = frozenset({"rect", "circle", "ellipse", "polygon"})
 
 
 def _tokens_of(text: str) -> str:
