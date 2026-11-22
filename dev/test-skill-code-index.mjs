@@ -19,15 +19,17 @@
 //   - a code span in the guidance names a tool, or a tool's argument, the built server does not
 //     define, or one of the four index tools is missing from the built server;
 //   - the guidance says whole files may not, or should not first, be read: any sentence that
-//     forbids, defers, rations or gates reading a file, or sends the agent to the index instead;
+//     forbids, defers, rations or gates reading a file ("only after", "only when", "sparingly"),
+//     or sends the agent to the index instead or ahead of the file;
 //   - the guidance does not say whole files may be read, in SKILL.md and in code-index.md;
 //   - a `find_symbol` reference is not described as matched by name and a lead to confirm
 //     (SKILL.md, phase 1, phase 3, phase 4);
-//   - refresh.md gives a route to clearing staleness on `anchor_state` alone: a sentence that ties
-//     `clear_staleness` to a state without a negation, or one that says a `same-text` row needs
-//     no reading;
+//   - refresh.md gives a route to clearing staleness on `anchor_state` alone: a sentence that names
+//     a state and has a clause clearing with no negation before the clearing word, or one that says
+//     a `same-text` row needs no reading or is done;
 //   - text outside the markers changed: a line of a skill file at the start revision (other than
-//     the navigation sentences SI9 replaces) is gone, for example phase 1's "No method bodies yet";
+//     the navigation sentences SI9 replaces, and of a line that held one, only that sentence) is
+//     gone, for example phase 1's "No method bodies yet" or phase 4's `add_files_to_scope` advice;
 //   - the old navigation rule ("semantic language-intelligence tools first … shell grep last")
 //     is still in SKILL.md, phase 1, phase 3 or phase 4;
 //   - the checks above cannot tell good from bad: each detector is run on bad and good sentences
@@ -118,17 +120,32 @@ const RESTRICTIONS = [
   /\b(last resort|fall ?back)\b[^.]*\b(read|reading|whole file)/i,
   /\bration/i,
   /\b(saves?|cheaper|fewer tokens|reduces? reading|expensive)\b/i,
+  /\b(ahead of|in preference to|in lieu of|sooner than)\b[^.]*\b(files?|read|reading)\b|\bfiles?\b[^.]*\b(ahead of|in preference to)\b/i,
+  /\bbefore (the|a|any) (whole |entire |full )?files?\b/i,
 ];
-const restricts = (s) => RESTRICTIONS.some((re) => re.test(s));
+// A sentence about reading or opening a file that limits when, or how much: "only after", "sparingly".
+const READS_FILE = /\b(whole|entire|full)[- ]files?\b|\b(read|reads|reading|open|opens|opening)\b[^.;]*\bfiles?\b|\bfiles?\b[^.;]*\b(read|opened)\b/i;
+const LIMITER =
+  /\bonly\s+(after|when|if|once|where|as|for|in)\b|\bsparing(ly)?\b|\bminimi[sz]|\bseldom\b|\brarely\b|\bas (little|few)\b|\b(when|if|where) (strictly |really |absolutely )?(necessary|needed|required|unavoidable)\b|\bnot enough\b|\binsufficient\b|\bsparse/i;
+const restricts = (s) => RESTRICTIONS.some((re) => re.test(s)) || (READS_FILE.test(s) && LIMITER.test(s));
 
-const NEGATION = /\b(not|never|no|nor|cannot|can't|without|neither)\b/i;
+// A negation counts only when it comes before the clearing word in the same clause: "does not
+// decide `clear_staleness`" denies, "can be cleared without reading" and "no changes need
+// inspection; run `clear_staleness`" do not.
+const NEGATION = /\b(not|never|no|nor|cannot|can't|neither)\b/i;
 const STATE_NAME = /\b(anchor_state|same-text|moved|unchanged|gone|ambiguous)\b/i;
 const CLEARING = /\bclear(s|ed|ing)?\b|\bclear_staleness\b/i;
 const LICENSES =
   /\bno (further|more|other) (reading|look|re-?examination|checking)\b|\bneed not (read|re-?examine|look)\b|\bskip(ping)? (the )?(read|re-?examin)|\bsafe to clear\b|\benough to clear\b|\bsuffic\w* to clear\b|\bclear (it|them|these|the file|those) (on|from|by|when|if|once)\b|\bautomatically\b/i;
+// With a state named, a sentence that calls the row finished or says nothing needs looking at.
+const STATE_LICENSES =
+  /\b(is|are) (done|finished|settled|resolved|complete)\b|\bneeds? no\b|\bno\b[^.;]*\bneeds? (inspection|reading|review|re-?examination|checking|a look)\b/i;
+const clauses = (s) => s.split(/[;:]|,\s*(?=(?:then|so|and then)\b)/);
+const deniedClear = (clause) => NEGATION.test(clause.slice(0, clause.search(CLEARING)));
 /** True when a sentence of refresh guidance makes anchor_state a ground for clearing. */
 const clearsOnAnchor = (s) =>
-  (STATE_NAME.test(s) && CLEARING.test(s) && !NEGATION.test(s)) || LICENSES.test(s);
+  (STATE_NAME.test(s) && (STATE_LICENSES.test(s) || clauses(s).some((c) => CLEARING.test(c) && !deniedClear(c)))) ||
+  LICENSES.test(s);
 
 const NAME_MATCH_OK = (s) => /\b(confirm|lead|leads)\b/i.test(s);
 
@@ -145,12 +162,18 @@ function selfTest() {
     "Never open a whole file when `outline_file` answers it.",
     "Keep reads small to ration the context.",
     "Using `read_symbol` saves tokens.",
+    "Whole files may be read only after `find_symbol` returns no matches.",
+    "Read whole files sparingly.",
+    "Open a whole file only when `read_symbol` is not enough.",
+    "Reach for the index ahead of the file itself.",
   ];
   for (const s of badRestrictions) if (!restricts(s)) fail(`self-test: the restriction detector missed "${s}"`);
   const goodRestrictions = [
     "Whole files may be read whenever context helps; the index is there to find and cite.",
     "Read a definition with `read_symbol`, or the whole file when its surroundings matter.",
     "A `find_symbol` reference is matched by name: confirm it before calling it a call site.",
+    "Whole files may be read at any point: the index is there to find and cite.",
+    "If the code index cannot read a path, read the file directly.",
   ];
   for (const s of goodRestrictions) if (restricts(s)) fail(`self-test: the restriction detector flagged "${s}"`);
 
@@ -160,12 +183,18 @@ function selfTest() {
     "Rows whose cited definition is `moved` can be cleared.",
     "If every row is `same-text`, it is safe to clear the file.",
     "`clear_staleness` follows from `anchor_state` automatically.",
+    "With `anchor_state` set to `same-text`, no code changes need inspection; run `clear_staleness`.",
+    "A `same-text` row can be cleared without reading the diff.",
+    "Without reading the diff, a `same-text` row can be cleared.",
+    "Rows marked `same-text` are done.",
   ];
   for (const s of badClears) if (!clearsOnAnchor(s)) fail(`self-test: the refresh detector missed "${s}"`);
   const goodClears = [
     "`anchor_state` does not decide `clear_staleness`; read the file's diff first.",
     "Account for every evidence row, claim and disposition on the file, anchored or not, before `clear_staleness`.",
     "`same-text` is a place to look at the diff around, not a verdict.",
+    "`anchor_state` does not decide `clear_staleness`, which clears the whole file.",
+    "A `same-text` row cannot be cleared without reading the diff.",
   ];
   for (const s of goodClears) if (clearsOnAnchor(s)) fail(`self-test: the refresh detector flagged "${s}"`);
 }
@@ -270,7 +299,8 @@ const WHOLE_FILE = ["SKILL.md", "references/code-index.md"];
 // Files where a `find_symbol` reference must be a name-matched lead.
 const NAME_MATCHED = ["SKILL.md", "references/phase-1-scope.md", "references/phase-3-concerns.md", "references/phase-4-adversarial.md"];
 
-// Navigation sentences SI9 replaces: the only lines of the start revision allowed to go.
+// Navigation sentences SI9 replaces: the only lines of the start revision allowed to go. A pair
+// names a line that held a replaced sentence and what of it must stay: the rest of the line.
 const REPLACED = {
   "SKILL.md": [
     "- **Use the highest-capability navigation tool available.** Semantic",
@@ -281,10 +311,7 @@ const REPLACED = {
   "references/phase-3-concerns.md": ["Semantic tools first (find-references, call-hierarchy,", "find-implementations). Grep last."],
   "references/phase-4-adversarial.md": [
     "Semantic tools to find call sites, implementations, type",
-    "constraints. Walk out from the finding's location in both",
-    "directions. Do not limit yourself to the ledger if the answer might",
-    "live outside — add files via `add_files_to_scope` with",
-    "`why_in_scope=\"adversarial probe for ${finding_id}\"`.",
+    ["constraints. Walk out from the finding's location in both", "Walk out from the finding's location in both"],
   ],
 };
 const OLD_NAVIGATION = [
@@ -409,11 +436,12 @@ for (const file of Object.keys(FILES)) {
     fail(`the start revision ${START_SHA.slice(0, 7)} cannot be read for ${file}`);
     continue;
   }
-  const replaced = new Set((REPLACED[file] ?? []).map((l) => l.trim()));
+  const replaced = new Map((REPLACED[file] ?? []).map((l) => (Array.isArray(l) ? [l[0].trim(), l[1].trim()] : [l.trim(), ""])));
   const present = new Set(trimmedLines(now));
   for (const line of trimmedLines(before)) {
-    if (replaced.has(line)) continue;
-    if (!present.has(line)) {
+    const rest = replaced.has(line) ? replaced.get(line) : line;
+    if (rest === "") continue;
+    if (!present.has(rest)) {
       fail(`${file}: a line outside the index guidance changed or went: "${line.slice(0, 90)}"`);
       break;
     }
