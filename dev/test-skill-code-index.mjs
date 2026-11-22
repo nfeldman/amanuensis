@@ -38,9 +38,10 @@
 //     is still in SKILL.md, phase 1, phase 3 or phase 4;
 //   - the checks above cannot tell good from bad: each detector is run on bad and good sentences
 //     first, and a detector that misses a bad one turns the gate red.
-// Reads the skill and the built server's tool definitions; it writes nothing and touches no store.
+// Reads the skill, its committed start-revision copies in dev/fixtures/skill-code-index/start/ and
+// the built server's tool definitions; it needs no Git history, writes nothing and touches no store.
 
-import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -48,6 +49,19 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const skill = join(root, ".claude", "skills", "amanuensis");
 const START_SHA = "984f09b9e75378e8d48e97cc2141e98cfbe3f07b";
+// Committed copies of each skill file at START_SHA, so the gate needs no Git history; each is
+// pinned to the sha256 of the start revision's blob, so a copy edited to match the tree turns red.
+const START_COPIES = join(root, "dev", "fixtures", "skill-code-index", "start");
+const START_SHA256 = {
+  "SKILL.md": "02797e51918aeaf3f53f6fdf1cbc52bb5a696bc4c51584d683d1c6c66051e51d",
+  "references/code-index.md": "8e7ee86371501c0fdb69066a4775717262e06003beccc21472e6ab87962f58e0",
+  "references/phase-1-scope.md": "f308411ae29185888b3df6844f7f05358aa22b899a7013adf3118dc545cc2222",
+  "references/phase-2-structural.md": "fabc6fda3157351d90f4f36efa7f6b413e8e96313c94bae90b9713276cec4261",
+  "references/phase-3-concerns.md": "5aa1b601e2498fc123700a678026a0e0191e070aee6013534cd44ca4bd63668e",
+  "references/phase-4-adversarial.md": "31c1a800657767b5fc553e208d14117aa41f72f3ad4f16fb5eaa2883dc57c8d4",
+  "references/refresh.md": "f2d8085704bdad018183ee086a09c5e55b974154e0ac72f10dbf95e3670993cb",
+  "references/notes.md": "f2a76c8f285b8d7662d917e17a195ab0483355ca3bbe32eb76d1b1827fe32168",
+};
 const BEGIN = "<!-- code-index:begin -->";
 const END = "<!-- code-index:end -->";
 
@@ -335,16 +349,16 @@ const OLD_NAVIGATION = [
   /shell\s+grep\s+last/i,
 ];
 
+/** The committed copy of a skill file at the start revision; null when absent or not that revision's bytes. */
 function startRevision(path) {
+  let bytes;
   try {
-    return execFileSync("git", ["show", `${START_SHA}:.claude/skills/amanuensis/${path}`], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
+    bytes = readFileSync(join(START_COPIES, path));
   } catch {
     return null;
   }
+  if (createHash("sha256").update(bytes).digest("hex") !== START_SHA256[path]) return null;
+  return bytes.toString("utf8");
 }
 
 const trimmedLines = (text) => text.split("\n").map((l) => l.trim()).filter((l) => l !== "");
@@ -465,7 +479,7 @@ for (const file of Object.keys(FILES)) {
   const now = read(join(skill, file));
   if (now === null) continue;
   if (before === null) {
-    fail(`the start revision ${START_SHA.slice(0, 7)} cannot be read for ${file}`);
+    fail(`the start revision ${START_SHA.slice(0, 7)} of ${file} is not at dev/fixtures/skill-code-index/start/${file} with its pinned sha256`);
     continue;
   }
   const replaced = new Map((REPLACED[file] ?? []).map((l) => (Array.isArray(l) ? [l[0].trim(), l[1].trim()] : [l.trim(), ""])));
