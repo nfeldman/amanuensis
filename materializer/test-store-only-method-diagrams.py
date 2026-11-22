@@ -27,7 +27,9 @@ Turns red when:
     `data-edge`, or an SVG line carries no record;
   - a counted node draws nothing: its `<g data-node>` holds no visible shape, lacks the
     words its record gives it (a pass's name, a rung's contract label, "Here" and the
-    subject), or links to nothing (the marker included);
+    subject), or links to nothing (the marker included); and the read-back, resealed,
+    passes a page whose marked node container was emptied or kept its box but lost its
+    words (final review F2/codex);
   - an arrow is not a link a keyboard can reach;
   - an SVG lacks `role="img"`, a `<title>`, or a `<desc>` that counts its boxes and arrows,
     states a font size under 11, uses a colour that is not a CSS token, runs a script,
@@ -815,6 +817,18 @@ def main() -> int:
 
             return edit
 
+        def hollow(record: str, keep: str = "") -> Callable[[str], str]:
+            """Empty a node's container, or keep only its shapes (`keep="shape"`), leaving the mark (F2/codex)."""
+
+            def edit(text: str) -> str:
+                def gut(match: re.Match[str]) -> str:
+                    inner = re.sub(r"<text\b.*?</text>", "", match.group(2), flags=re.S) if keep == "shape" else ""
+                    return match.group(1) + inner + "</g>"
+
+                return re.sub(rf'(<g\b[^>]*data-node="{re.escape(record)}"[^>]*>)(.*?)</g>', gut, text, count=1, flags=re.S)
+
+            return edit
+
         def retarget(old: str, new: str) -> Callable[[str], str]:
             return lambda text: text.replace(f'"{old}"', f'"{new}"', 1)
 
@@ -831,6 +845,8 @@ def main() -> int:
             ("an unmarked edge added to B1", GUIDE, lambda t: re.sub(r"(<figure\b[^>]*data-diagram=\"survey-workflow\".*?)</svg>", lambda m: m.group(1) + '<line x1="10" y1="10" x2="300" y2="40" stroke="var(--text)"/></svg>', t, count=1, flags=re.S), "content", "survey-workflow-diagram-edge", ""),
             ("a server check re-pointed to another status in B1", GUIDE, retarget("pass-check:structural", "pass-check:mapped"), "content", "survey-workflow-diagram-edge", "pass-check"),
             ("a checkpoint removed from B1", GUIDE, drop("checkpoint:mapped"), "content", "survey-workflow-diagram-node", "checkpoint:mapped"),
+            ("a pass's box and words emptied from its kept mark in B1", GUIDE, hollow("survey-pass:1"), "content", "survey-workflow-diagram-node", "survey-pass:1"),
+            ("a pass's words removed from its kept box in B1", GUIDE, hollow("survey-pass:2", "shape"), "content", "survey-workflow-diagram-node", "survey-pass:2"),
             ("a rung re-marked on the guide's ladder", GUIDE, retarget("status:concerns", "status:mapped"), "content", "status-ladder-diagram-node", "status:"),
             ("a recorded move removed from B-01's ladder", b01, drop(f"transition:{first_move}", "edge"), "content", "status-ladder-diagram-edge", f"transition:{first_move}"),
             # The ladder's marker, by its attribute: the page's status line carries the same record.
