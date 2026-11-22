@@ -174,6 +174,11 @@ TERRITORY_DOC = REPO / ".claude" / "skills" / "amanuensis" / "references" / "con
 RECANTED_TOPIC = "Recanted reading"
 RECANTED_BODY = "NARRRECANTEDPI the writer used to retry forever."
 UNRESOLVABLE_SHA = "e" * 40
+# A correction recorded at a revision the workspace cannot resolve is still the effective row,
+# as `readNarratives` serves it: the page prints it, never its older row (final review F17/claude).
+LATE_TOPIC = "Late correction"
+LATE_OLD = "NARRLATEOLDRHO the writer flushes on every call."
+LATE_NEW = "NARRLATENEWSIGMA the writer flushes once per batch."
 SUPERSEDED_CONDITION = "CONDITIONSUPERSEDED the service never leaves the host"
 
 # Runtime boundaries.
@@ -403,6 +408,8 @@ def seed_store(root: Path, name: str, shas: dict[str, str], *, with_import: bool
         "subsystem", "B-02", "structure", RECANTED_TOPIC, "The reading was retracted.",
         disposition="withdrawn", ref=UNRESOLVABLE_SHA,
     )
+    s.narrative("subsystem", "B-02", "structure", LATE_TOPIC, LATE_OLD, cites=(WRITER,))
+    s.narrative("subsystem", "B-02", "structure", LATE_TOPIC, LATE_NEW, cites=(WRITER,), ref=UNRESOLVABLE_SHA)
     # B-03: a declination.
     s.narrative(
         "subsystem", "B-03", "structure", TOPICS["declined"], DECLINED_REASON,
@@ -668,6 +675,18 @@ def run(work: Path) -> int:
         return None
 
     check("a superseded or withdrawn narrative does not render", superseded_and_withdrawn)
+
+    def unresolvable_correction() -> str | None:
+        # The contract: a narrative's revision is resolved when it is written, not again when it is
+        # read, so the page agrees with get_narratives (F17/claude).
+        text = read(subsystem_file(docs_a, "B-02"))
+        if LATE_NEW.split()[0] not in text:
+            return "B-02: the newest narrative row, recorded at a revision the workspace cannot resolve, does not render"
+        if LATE_OLD.split()[0] in text:
+            return "B-02: the older row of a corrected narrative renders"
+        return None
+
+    check("a narrative's newest row renders even when its revision no longer resolves", unresolvable_correction)
 
     def solo_and_declined() -> str | None:
         b02_html = subsystem_file(docs_a, "B-02")
