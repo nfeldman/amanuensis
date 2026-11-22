@@ -26,7 +26,8 @@
 //     including in a file that parsed only in part (where the refusal must say so);
 //   - no symbol, an unsupported language, a file the index cannot read (not UTF-8), grammar
 //     data that cannot be read (a package copy with no grammars/) or
-//     AMANUENSIS_CODE_INDEX=off does not write the evidence row as before, with no anchor;
+//     AMANUENSIS_CODE_INDEX=off does not write the evidence row as before, with no anchor,
+//     or, when a symbol was given, does not answer anchored: false with the reason;
 //   - an UPDATE or DELETE on an anchor, or a DELETE of its evidence row, succeeds;
 //   - evidenceAnchorViolations reports a violation on a sound store, or misses an anchor whose
 //     evidence row is gone, whose evidence symbol differs from its symbol_id, whose
@@ -505,19 +506,34 @@ async function main() {
   // -------------------------------------------------------------------------------------
   // No anchor, and the write proceeds as it did.
 
-  const noAnchor = async (label, extra, symbol) => {
-    const id = await written(label, extra);
+  /** A row with no anchor; a symbol given and left unchecked is said so, with the reason. */
+  const noAnchor = async (label, extra, symbol, reason) => {
+    const before = evidenceCount();
+    const r = await attempt("add_evidence", { ref_sha: commit, kind: "code-verified", ...extra });
+    check(r?.ok !== false && r?.id != null, `add_evidence refused ${label}: ${oneLine(r?.error)}`);
+    check(evidenceCount() === before + 1, `add_evidence ${label} wrote ${evidenceCount() - before} evidence rows`);
+    const id = Number(r.id);
     check(anchorRow(id) === null, `${label} wrote an anchor`);
     same(`${label}'s stored symbol`, evidenceRow(id).symbol, symbol);
+    same(
+      `${label}'s answer about its anchor`,
+      { anchored: r.anchored, anchor_reason: r.anchor_reason },
+      symbol === null ? {} : { anchored: false, anchor_reason: reason },
+    );
     return id;
   };
   await noAnchor("no symbol", { file_path: "src/shapes.ts", line_range: "2-3" }, null);
-  const notes = await noAnchor("an unsupported language", { file_path: "docs/notes.txt", symbol: "Notes", line_range: "1" }, "Notes");
-  await noAnchor("a file that is not UTF-8", { file_path: "src/latin1.ts", symbol: "caf" }, "caf");
+  const notes = await noAnchor(
+    "an unsupported language",
+    { file_path: "docs/notes.txt", symbol: "Notes", line_range: "1" },
+    "Notes",
+    "unsupported-language",
+  );
+  await noAnchor("a file that is not UTF-8", { file_path: "src/latin1.ts", symbol: "caf" }, "caf", "not-utf8");
   process.env.AMANUENSIS_CODE_INDEX = "off";
   try {
-    await noAnchor("the index off, a real symbol", { file_path: "src/shapes.ts", symbol: "add", line_range: "2" }, "add");
-    await noAnchor("the index off, an unknown symbol", { file_path: "src/shapes.ts", symbol: "nothing here" }, "nothing here");
+    await noAnchor("the index off, a real symbol", { file_path: "src/shapes.ts", symbol: "add", line_range: "2" }, "add", "index-off");
+    await noAnchor("the index off, an unknown symbol", { file_path: "src/shapes.ts", symbol: "nothing here" }, "nothing here", "index-off");
   } finally {
     delete process.env.AMANUENSIS_CODE_INDEX;
   }
@@ -539,6 +555,11 @@ async function main() {
     check(evidenceCount() === before + 1, `add_evidence without grammar data wrote ${evidenceCount() - before} rows`);
     check(anchorRow(r.id) === null, "add_evidence without grammar data wrote an anchor");
     same("add_evidence without grammar data: the stored symbol", evidenceRow(r.id).symbol, "add");
+    same(
+      "add_evidence without grammar data: its answer about its anchor",
+      { anchored: r.anchored, anchor_reason: r.anchor_reason },
+      { anchored: false, anchor_reason: "grammar-unreadable" },
+    );
   }
 
   // -------------------------------------------------------------------------------------
