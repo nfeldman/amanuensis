@@ -9,8 +9,9 @@
 //     any other tree-sitter package is a dependency of any kind or appears in the lockfile,
 //     or the installed web-tree-sitter has an install script or dependencies;
 //   - package.json `files` omits grammars/, queries/ or THIRD_PARTY_NOTICES.md, or `prepack`
-//     does not run the vendoring step; .gitignore does not ignore the extracted grammars and
-//     manifest while keeping sources.json tracked;
+//     does not run the vendoring step (a scratch prepack with stubbed steps must execute it);
+//     .gitignore does not ignore the extracted grammars and manifest while keeping
+//     sources.json tracked;
 //   - a manifest file is missing, or its bytes differ from the sha256 and size recorded in
 //     grammars/manifest.json, or the manifest disagrees with sources.json;
 //   - any of the ten grammars does not load under the running Node, parse a sample to the
@@ -272,6 +273,41 @@ function checkPackageJson() {
       pkg.scripts.preinstall === undefined,
     "package.json has an install script of its own",
   );
+}
+
+// A regex over the prepack string accepts `echo node scripts/vendor-grammars.mjs`. Run the
+// real prepack in a scratch package whose three steps are stubs that log themselves, and
+// require each step to run, in order, with the vendoring step given no arguments.
+function checkPrepackRuns() {
+  const scratch = mkdtempSync(join(tmpdir(), "amanuensis-prepack-"));
+  try {
+    const log = join(scratch, "steps.log");
+    copyFileSync(join(here, "package.json"), join(scratch, "package.json"));
+    mkdirSync(join(scratch, "scripts"));
+    mkdirSync(join(scratch, "node_modules", ".bin"), { recursive: true });
+    const stub = (name) =>
+      `import { appendFileSync } from "node:fs";\nappendFileSync(${JSON.stringify(log)}, ${JSON.stringify(name)} + JSON.stringify(process.argv.slice(2)) + "\\n");\n`;
+    writeFileSync(join(scratch, "scripts", "vendor-grammars.mjs"), stub("vendor-grammars"));
+    writeFileSync(join(scratch, "scripts", "prepack-bundle-assets.mjs"), stub("prepack-bundle-assets"));
+    writeFileSync(join(scratch, "tsc.mjs"), stub("tsc"));
+    writeFileSync(
+      join(scratch, "node_modules", ".bin", "tsc"),
+      `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(scratch, "tsc.mjs"))} "$@"\n`,
+      { mode: 0o755 },
+    );
+    const result = run("npm", ["run", "prepack", "--ignore-scripts=false"], {
+      cwd: scratch,
+      timeout: 120_000,
+    });
+    check(result.status === 0, `prepack failed in a scratch package: ${(result.stderr || result.stdout).slice(0, 200)}`);
+    const steps = existsSync(log) ? readFileSync(log, "utf8").trim().split("\n") : [];
+    check(
+      JSON.stringify(steps) === JSON.stringify(["vendor-grammars[]", "prepack-bundle-assets[]", "tsc[]"]),
+      `prepack ran ${JSON.stringify(steps)}; it must run vendor-grammars.mjs (no arguments), then prepack-bundle-assets.mjs, then the build`,
+    );
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 }
 
 function checkLockfile() {
@@ -666,6 +702,7 @@ function checkPackedSize() {
 async function main() {
   const sources = checkSources();
   checkPackageJson();
+  checkPrepackRuns();
   checkLockfile();
   checkGitignore();
   const manifest = checkManifest(sources);
