@@ -542,12 +542,14 @@ def effective_narratives(
     """The recorded or declined narrative in force for each `(subject, section, topic)`.
 
     The newest row per key wins, as `readNarratives` (`invariants.ts`) decides
-    it. A key whose newest row is `withdrawn` is absent, and so is one whose
-    newest row is recorded at a revision a bound workspace cannot resolve: an
-    older row is never brought back in its place, since the server has already
-    replaced or withdrawn it (F1/codex, slice S2). Rows come back in the order
-    their topic was first written, so a correction does not move a topic. The
-    page and the read-back both ask this function which rows are in force.
+    it. A key whose newest row is `withdrawn` is absent. A row's revision is
+    resolved when it is written, not again when it is read (the contract's
+    `narrative_disposition` note): a newest row whose revision the workspace no
+    longer resolves is still the one in force, as `get_narratives` serves it,
+    and an older row is never brought back in its place (F1/codex, slice S2;
+    final review F17/claude). Rows come back in the order their topic was first
+    written, so a correction does not move a topic. The page and the read-back
+    both ask this function which rows are in force.
     """
 
     stored = [
@@ -557,12 +559,6 @@ def effective_narratives(
     ]
     if not stored:
         return []
-    workspace = resolve_workspace(storage)
-    resolvable: set[str] | None = None
-    if workspace_is_bound(workspace):
-        resolvable = {
-            sha for sha in {str(r["ref_sha"]) for r in stored} if revision_resolves(workspace, sha)
-        }
     grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = {}
     for record in stored:
         key = (
@@ -575,8 +571,6 @@ def effective_narratives(
     effective: list[dict[str, Any]] = []
     for candidates in grouped.values():
         newest = max(candidates, key=lambda c: int(c["id"]))
-        if resolvable is not None and str(newest["ref_sha"]) not in resolvable:
-            continue
         if str(newest["disposition"]) in {"recorded", "declined"}:
             effective.append({**newest, "first_id": min(int(c["id"]) for c in candidates)})
     return sorted(effective, key=lambda r: int(r["first_id"]))
