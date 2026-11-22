@@ -143,16 +143,10 @@ function ceilings() {
 }
 
 function manifest(path = join(server, "grammars", "manifest.json")) {
-  if (!existsSync(path)) {
-    const vendored = spawnSync(process.execPath, ["scripts/vendor-grammars.mjs"], {
-      cwd: server,
-      encoding: "utf8",
-    });
-    check(
-      vendored.status === 0 && existsSync(path),
-      "grammars/manifest.json is missing and vendoring did not produce it",
-    );
-  }
+  check(
+    existsSync(path),
+    "grammars/manifest.json is absent; run `node scripts/vendor-grammars.mjs` in mcp-server, as CI and prepack do (the gate does not, since it fetches from the registry)",
+  );
   const parsed = JSON.parse(readFileSync(path, "utf8"));
   check(parsed?.grammars && Object.keys(parsed.grammars).length > 0, "grammars/manifest.json lists no grammar");
   return parsed.grammars;
