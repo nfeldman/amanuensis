@@ -1,0 +1,656 @@
+{
+  "version": 1,
+  "branch": "semantic-index",
+  "slices": [
+    {
+      "id": "S1",
+      "title": "Index engine",
+      "packets": [
+        "SI0",
+        "SI1",
+        "SI2",
+        "SI3",
+        "SI4"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S2",
+      "title": "Tools",
+      "packets": [
+        "SI5",
+        "SI6"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S3",
+      "title": "Evidence and refresh",
+      "packets": [
+        "SI7",
+        "SI8"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S4",
+      "title": "Skill, report and docs",
+      "packets": [
+        "SI9",
+        "SI10",
+        "SI11"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    }
+  ],
+  "packets": [
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI0",
+      "slice": "S1",
+      "title": "Record the plan in BACKLOG.md",
+      "claims": [
+        "§8 SI0",
+        "§0",
+        "§9"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "BACKLOG.md",
+        "dev/test-code-index-backlog.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-code-index-backlog.mjs",
+        "command": "node dev/test-code-index-backlog.mjs",
+        "marker": "GATE SI0",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [],
+      "acceptance": [
+        "PLAN §8 SI0: the code-index item links design/semantic-index/PLAN.md, states the hybrid scope in one paragraph (§0), and lists D1–D6, D10 and D12 with their outcomes and the removed benchmark decisions (§9)."
+      ],
+      "budget_minutes": 30
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI1",
+      "slice": "S1",
+      "title": "Vendored grammars and packaging",
+      "claims": [
+        "§8 SI1",
+        "§4.8",
+        "§1"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/package.json",
+        "mcp-server/package-lock.json",
+        "mcp-server/grammars/sources.json",
+        "mcp-server/scripts/vendor-grammars.mjs",
+        "mcp-server/.gitignore",
+        "mcp-server/THIRD_PARTY_NOTICES.md",
+        ".github/workflows/test.yml",
+        "mcp-server/test-code-index-grammars.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-code-index-grammars.mjs",
+        "command": "cd mcp-server && node scripts/vendor-grammars.mjs && node test-code-index-grammars.mjs",
+        "marker": "GATE SI1",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-package-artifact.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4.8: web-tree-sitter 0.27.2 pinned exactly as the only new runtime dependency; ten grammars (TS, TSX, JS, Python, Rust, Go, Java, C, C++, C#) fetched by npm pack with sha512 integrity pinned in grammars/sources.json, never npm dependencies; .wasm, tags.scm and LICENSE extracted into gitignored grammars/<lang>/ with manifest.json (sha256, size); prepack and CI run the vendoring step; files lists grammars/, queries/ and THIRD_PARTY_NOTICES.md.",
+        "All ten grammars load under the running Node; web-tree-sitter has no install script and no dependencies; no grammar package appears in package-lock.json; a tarball whose integrity differs is refused; a flipped .wasm byte is refused at load; packed size is under the ceiling."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI2",
+      "slice": "S1",
+      "title": "Extractor and the first six languages",
+      "claims": [
+        "§8 SI2",
+        "§4.2"
+      ],
+      "depends_on": [
+        "SI1"
+      ],
+      "deliverables": [
+        "mcp-server/src/code-index/extract.ts",
+        "mcp-server/queries/",
+        "mcp-server/fixtures/code-index/",
+        "mcp-server/test-code-index-extract.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-code-index-extract.mjs",
+        "command": "cd mcp-server && npm run build && node test-code-index-extract.mjs",
+        "marker": "GATE SI2",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-code-index-grammars.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4.2 for TypeScript, TSX, JavaScript, Python, Go and Java: the index's own definition queries with full declaration spans; tags.scm for references only; queries in mcp-server/queries/ loaded from the package root; language-aware qname and a stable symbol_id with syntactic overload discriminators and no positional part; occurrences for duplicates; the citeable span from doc_start_line; UTF-8 byte offsets; span_sha256 over the citeable span; deterministic per blob, language and extractor_id.",
+        "Golden tables cover every row of §4.2's table for those languages; a body edit and a leading-comment edit each change span_sha256; Go receivers and Java overloads get distinct symbol_ids that survive reordering, inserting and deleting other definitions; duplicate Python definitions share a symbol_id as two occurrences; a non-ASCII fixture's byte offsets slice the exact definition; CRLF lines count like requireEvidenceCitation; a syntax error yields intact definitions and parse-partial."
+      ],
+      "budget_minutes": 180,
+      "model": "opus"
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI3",
+      "slice": "S1",
+      "title": "Rust, C, C++ and C# definitions",
+      "claims": [
+        "§8 SI3",
+        "§4.2"
+      ],
+      "depends_on": [
+        "SI2"
+      ],
+      "deliverables": [
+        "mcp-server/src/code-index/extract.ts",
+        "mcp-server/queries/",
+        "mcp-server/fixtures/code-index/",
+        "mcp-server/test-code-index-extract-systems.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-code-index-extract-systems.mjs",
+        "command": "cd mcp-server && npm run build && node test-code-index-extract-systems.mjs",
+        "marker": "GATE SI3",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-code-index-extract.mjs",
+        "cd mcp-server && node test-code-index-grammars.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4.2 for Rust, C, C++ and C#: definition queries and identity rules: Rust impl and trait-impl qnames; C++ relative and global qualified declarators, prototypes and member declarations as kind declaration, overloads discriminated by parameter types, cv/ref qualifiers and template arity; C# namespaces, partial types as file-local fragments, partial methods as declaration plus method, properties, records, overloads discriminated by generic arity and parameter modifiers.",
+        "Golden tables cover every row of §4.2's table for those languages; a body edit changes span_sha256 in each, C and C++ above all; each Rust method appears once; overloads differing only by const, ref-qualifier, template arity, generic arity or ref/out get distinct ids; a partial class and partial method split across two files read as separate fragments; every discriminator is unchanged after reordering the file."
+      ],
+      "budget_minutes": 180,
+      "model": "opus"
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI4",
+      "slice": "S1",
+      "title": "Sidecar, git reader and off switch",
+      "claims": [
+        "§8 SI4",
+        "§4.1"
+      ],
+      "depends_on": [
+        "SI3"
+      ],
+      "deliverables": [
+        "mcp-server/src/code-index/store.ts",
+        "mcp-server/src/code-index/git-blobs.ts",
+        "mcp-server/src/storage-git.ts",
+        "mcp-server/test-code-index-sidecar.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-code-index-sidecar.mjs",
+        "command": "cd mcp-server && npm run build && node test-code-index-sidecar.mjs",
+        "marker": "GATE SI4",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-storage-git.mjs",
+        "cd mcp-server && node test-call-log.mjs",
+        "cd mcp-server && node test-cloud-storage.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4.1: <storage>/code-index/<extractor_id>/index.db, .gitignore *, excluded from STORAGE_PATHSPEC (storageManifest untouched: legacy migration only, D6); (blob_sha, lang) keys; per-blob transactional publication with the blobs row last; trees_complete; INSERT OR IGNORE; busy_timeout; recovery only on SQLITE_CORRUPT/SQLITE_NOTADB/quick_check failure, renaming db, WAL and SHM together, with a per-request inode check; generation collection only after 30 days untouched, with hourly touches while in use; ls-tree -z with mode handling; unavailable, not-utf8, too-large and partial states; budgets with resumption; AMANUENSIS_CODE_INDEX=off.",
+        "Nothing under code-index/ after a checkpoint; one blob under .ts and .js gives two entries; two processes indexing concurrently converge with no half-written blob visible; an interrupted index reports partial and resumes; two extractor_ids coexist; a corrupt sidecar is set aside while a second process holds it open, and that process moves to the new file; a locked sidecar is unavailable, not set aside; a recently touched generation is not collected and a stale one is; symlinks and gitlinks skipped with a reason; the off switch registers no tool and creates no directory."
+      ],
+      "budget_minutes": 180,
+      "model": "opus"
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI5",
+      "slice": "S2",
+      "title": "outline_file and read_symbol",
+      "claims": [
+        "§8 SI5",
+        "§4.3"
+      ],
+      "depends_on": [
+        "SI4"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/code-index.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/fixtures/code-index-repo.mjs",
+        ".claude/skills/amanuensis/references/code-index.md",
+        "mcp-server/test-code-index-read.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-code-index-read.mjs",
+        "command": "cd mcp-server && npm run build && node test-code-index-read.mjs",
+        "marker": "GATE SI5",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-code-index-sidecar.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4.3: outline_file with symbol_ids, spans, signatures, imports and no source; read_symbol with exactly the citeable span's bytes and evidence_args holding the location fields of add_evidence (the agent adds kind); candidates with their lines on ambiguity; nearest symbol_ids on a miss; a definition over 400 lines returns 400 lines, truncated: true and no evidence_args; unsupported-language; ref_sha selects the revision; references/code-index.md states each refusal so refusal parity passes."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI6",
+      "slice": "S2",
+      "title": "find_symbol and search_records",
+      "claims": [
+        "§8 SI6",
+        "§4.3",
+        "§4.6"
+      ],
+      "depends_on": [
+        "SI5"
+      ],
+      "deliverables": [
+        "mcp-server/src/code-index/search.ts",
+        "mcp-server/src/code-index/records.ts",
+        "mcp-server/src/tools/code-index.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        ".claude/skills/amanuensis/references/code-index.md",
+        "mcp-server/test-code-index-search.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-code-index-search.mjs",
+        "command": "cd mcp-server && npm run build && node test-code-index-search.mjs",
+        "marker": "GATE SI6",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-code-index-read.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4.3 and §4.6: BM25 definitions; every reference row carries match: name; partial when the tree index is incomplete; rowid cursors for append-only sources and content-digest reconciliation for updated ones; hits resolved per kind through the store's own readers, with HEAD passed where a reader takes a revision (claims via query_sha; explanations reachable and phase-eligible; narratives effective, withdrawn keys excluded), history only with include_history; refusals stated in references/code-index.md; the source list checked against schema.sql.",
+        "A claim written after the first search is found by the next; a vocabulary update adding a new word is found by it; a low-sorting text key is found; a superseded claim, a claim inapplicable at HEAD, a replaced narrative, a withdrawn narrative key, an unreachable explanation and a phase-ineligible one are absent by default and present with include_history."
+      ],
+      "budget_minutes": 180,
+      "model": "opus"
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI7",
+      "slice": "S3",
+      "title": "evidence_anchors and anchored add_evidence",
+      "claims": [
+        "§8 SI7",
+        "§4.4",
+        "§11"
+      ],
+      "depends_on": [
+        "SI5"
+      ],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/contracts/append-only-tables.txt",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/helpers.ts",
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/review-analysis.ts",
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/src/standing.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        ".claude/skills/amanuensis/references/",
+        "mcp-server/test-evidence-anchors.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-evidence-anchors.mjs",
+        "command": "cd mcp-server && npm run build && node test-evidence-anchors.mjs",
+        "marker": "GATE SI7",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-record-integrity.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-write-path-fixes.mjs",
+        "cd mcp-server && node test-review-analysis.mjs",
+        "cd mcp-server && node test-locus-standing.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4.4: the append-only table with triggers and its contract row; add_evidence's input schema unchanged; server-side resolution; evidence and anchor in one transaction; evidence_args plus kind accepted; canonical symbol_id stored; every cited span inside the citeable span and the excerpt inside the definition's byte extent intersected with the cited spans; filled range; duplicate occurrences selected by line_range or refused with both; unknown symbols refused with candidates; no anchor with no symbol, an unsupported language, an unreadable file or the index off; invariants; one shared ambiguity-aware symbol matcher in locus.ts and standing.ts, gated on the whole describe_locus result; refusal reference text written here. No backfill or migration of older stores (D6).",
+        "PLAN §11: every add_evidence and new_evidence call in tests and dev/ that passes a free-text symbol for a supported-language file, and every reader of evidence.symbol, listed in the packet notes with its repair or its unchanged result. An existing assertion that fails only because it expects a store made before 0.3.0-beta.2 to carry forward may be deleted under D6, and is listed in the notes."
+      ],
+      "budget_minutes": 180,
+      "model": "opus"
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI8",
+      "slice": "S3",
+      "title": "The refresh hint",
+      "claims": [
+        "§8 SI8",
+        "§4.5"
+      ],
+      "depends_on": [
+        "SI7"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/stale.ts",
+        "mcp-server/src/tools/refresh.ts",
+        "mcp-server/test-code-index-refresh.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-code-index-refresh.mjs",
+        "command": "cd mcp-server && npm run build && node test-code-index-refresh.mjs",
+        "marker": "GATE SI8",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-evidence-anchors.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-refresh-recovery.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4.5: same-text, moved, changed, gone, ambiguous, unavailable and unanchored at the target revision, on a fixture whose second commit moves, edits, deletes, keeps and duplicates one definition each, edits only one definition's leading comment (changed), breaks one cited definition's syntax beside an intact one (unavailable, never gone), makes one file unreadable, and changes a constant a kept function reads (which stays same-text); reordering other definitions changes no state; file-level staleness and clear_staleness unchanged; nothing cleared automatically."
+      ],
+      "budget_minutes": 150,
+      "model": "opus"
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI9",
+      "slice": "S4",
+      "title": "Skill guidance",
+      "claims": [
+        "§8 SI9",
+        "§5"
+      ],
+      "depends_on": [
+        "SI6",
+        "SI7",
+        "SI8"
+      ],
+      "deliverables": [
+        ".claude/skills/amanuensis/SKILL.md",
+        ".claude/skills/amanuensis/references/code-index.md",
+        ".claude/skills/amanuensis/references/phase-1-scope.md",
+        ".claude/skills/amanuensis/references/phase-2-structural.md",
+        ".claude/skills/amanuensis/references/phase-3-concerns.md",
+        ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+        ".claude/skills/amanuensis/references/refresh.md",
+        ".claude/skills/amanuensis/references/notes.md",
+        "dev/test-skill-code-index.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-skill-code-index.mjs",
+        "command": "node dev/test-skill-code-index.mjs",
+        "marker": "GATE SI9",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/check-reference-calls.mjs",
+        "cd mcp-server && node test-reference-calls.mjs",
+        "node dev/test-skill-no-file-writes.mjs"
+      ],
+      "acceptance": [
+        "PLAN §5: the four tools named at the listed steps; every tool named exists; the index guidance SI9 writes, between markers, says whole files may be read and adds no restriction on reading them, leaving phase instructions that are not about the index unchanged; name-matched references described as leads to confirm; refresh.md gives no route to clearing staleness on anchor_state alone."
+      ],
+      "budget_minutes": 90
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI10",
+      "slice": "S4",
+      "title": "Descriptive token report",
+      "claims": [
+        "§8 SI10",
+        "§6"
+      ],
+      "depends_on": [
+        "SI6"
+      ],
+      "deliverables": [
+        "dev/token-report.mjs",
+        "dev/fixtures/token-report/",
+        "dev/test-token-report.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-token-report.mjs",
+        "command": "node dev/test-token-report.mjs",
+        "marker": "GATE SI10",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [],
+      "acceptance": [
+        "PLAN §6: reads call-log copies read-only and, optionally, Claude Code transcripts; prints before and after by server version or cutover date: per-tool calls, response bytes and refusals; per-session tool-result bytes by class and usage tokens deduplicated by message id; no verdict and no threshold.",
+        "Hand-counted fixture call log with two server versions and fixture transcripts; whole-file and sliced Reads told apart; without transcripts the output says host reads are not covered; the call log is opened read-only."
+      ],
+      "budget_minutes": 90
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SI11",
+      "slice": "S4",
+      "title": "Install docs, CI registration and installed-artifact check",
+      "claims": [
+        "§8 SI11",
+        "§4.8"
+      ],
+      "depends_on": [
+        "SI9",
+        "SI10"
+      ],
+      "deliverables": [
+        "INSTALLATION.md",
+        "mcp-server/README.md",
+        ".github/workflows/test.yml",
+        "dev/test-code-index-docs.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-code-index-docs.mjs",
+        "command": "node dev/test-code-index-docs.mjs",
+        "marker": "GATE SI11",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node test-code-index-grammars.mjs",
+        "cd mcp-server && node test-package-artifact.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4.8 and §8 SI11 (runs last): documented languages, location, switches, weight and notices agree with manifest.json and the code's defaults; every gate named in plan.json is registered in test.yml; an installed-tarball job (npm pack, install into an empty directory, start the server, call outline_file and read_symbol on a fixture with one file per language, failing if a grammar or definition query is missing) runs on Node 20 and 22, Linux and macOS."
+      ],
+      "budget_minutes": 90
+    }
+  ],
+  "completion": {
+    "commands": [
+      "node dev/test-code-index-backlog.mjs",
+      "cd mcp-server && node scripts/vendor-grammars.mjs && node test-code-index-grammars.mjs",
+      "cd mcp-server && npm run build && node test-code-index-extract.mjs",
+      "cd mcp-server && npm run build && node test-code-index-extract-systems.mjs",
+      "cd mcp-server && npm run build && node test-code-index-sidecar.mjs",
+      "cd mcp-server && npm run build && node test-code-index-read.mjs",
+      "cd mcp-server && npm run build && node test-code-index-search.mjs",
+      "cd mcp-server && npm run build && node test-evidence-anchors.mjs",
+      "cd mcp-server && npm run build && node test-code-index-refresh.mjs",
+      "node dev/test-skill-code-index.mjs",
+      "node dev/test-token-report.mjs",
+      "node dev/test-code-index-docs.mjs",
+      "cd mcp-server && npm run build && npx biome check src/",
+      "cd mcp-server && node test-smoke.mjs",
+      "cd mcp-server && node test-refusal-parity.mjs",
+      "cd mcp-server && node test-package-artifact.mjs"
+    ]
+  },
+  "final_review": {
+    "status": "pending",
+    "reviewed_sha": "",
+    "findings": 0
+  }
+}

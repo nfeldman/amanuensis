@@ -1,0 +1,148 @@
+{
+  "measured_on": "2026-11-21",
+  "planning_commit": {
+    "main": "32ad4308bf23e02deb717b73076c8795efaa30ec",
+    "store_only": "504cdd2690632f654efdfa6da0c339390a278c22"
+  },
+  "transcripts": {
+    "method": "python3 -I transcripts.py <main session .jsonl files> ; python3 -I transcripts.py <sub-session .jsonl files>",
+    "corpus": "one survey catch-up of a private repository, 2026-11-11: 6 main sessions and 78 sub-sessions (33 verify, 34 blind reads, 5 refresh backlog, 4 traces, 2 other)",
+    "sub_sessions": {
+      "tool_result_bytes": {
+        "read": 5962202,
+        "search": 1883736,
+        "bash-other": 802144,
+        "bash-tooling": 787831,
+        "other": 10922,
+        "amanuensis-read": 579170,
+        "git": 281271,
+        "bash-write": 91621,
+        "amanuensis-write": 7791
+      },
+      "context_weighted_bytes": {
+        "read": 136305152,
+        "search": 41963075,
+        "bash-other": 23642784,
+        "bash-tooling": 42028467,
+        "other": 186032,
+        "amanuensis-read": 6806863,
+        "git": 15116316,
+        "bash-write": 1587633,
+        "amanuensis-write": 335959
+      },
+      "usage_tokens": {
+        "input": 4664,
+        "cache_creation": 7970422,
+        "cache_read": 238035505,
+        "output": 1453096
+      },
+      "read_tool_calls": {
+        "whole_file": 98,
+        "with_offset_or_limit": 21
+      },
+      "commonest_shell_commands": {
+        "sed -n": 314,
+        "rg -n": 301
+      }
+    },
+    "main_sessions": {
+      "tool_result_bytes": {
+        "bash-other": 446416,
+        "other": 27819,
+        "bash-tooling": 233537,
+        "read": 507711,
+        "amanuensis-read": 438306,
+        "amanuensis-write": 41469,
+        "bash-write": 44194,
+        "subagent": 84942,
+        "search": 195566,
+        "git": 7883
+      },
+      "usage_tokens": {
+        "input": 1306,
+        "cache_creation": 2278707,
+        "cache_read": 119895012,
+        "output": 696332
+      }
+    },
+    "classifier_note": "shell commands are classified by the last command of their &&/; chain (corrected 2026-11-21; the first version reported read 43.2%, search 20.5%)"
+  },
+  "evidence_vs_symbols": {
+    "method": "sqlite3 -readonly -json <store> 'select id,file_path,symbol,line_range,ref_sha,excerpt from evidence' > rows.json ; node evcheck.mjs <repo> rows.json",
+    "store": "this repository's own store (.amanuensis/memory.db)",
+    "result": {
+      "rows": 159,
+      "code": 125,
+      "withSymbol": 116,
+      "symResolves": 56,
+      "rangeKnown": 156,
+      "rangePastEnd": 13,
+      "excerpted": 38,
+      "exAtRange": 9,
+      "exInSymbol": 5,
+      "exAnywhere": 17,
+      "exRecoverable": 8,
+      "fileBytes": 2131408,
+      "symBytes": 142759,
+      "rangeBytes": 60022,
+      "symRows": 56,
+      "missingBlob": 0
+    }
+  },
+  "retrieval": {
+    "method": "sqlite3 -readonly <store> '.backup copy.db' ; BETTER_SQLITE3=<path to better-sqlite3> node retrieval.mjs <repo> main copy.db",
+    "result": {
+      "n": 73,
+      "sym5": 27,
+      "sym10": 32,
+      "file5": 16,
+      "file10": 29,
+      "indexBytes": {
+        "symbolsAndDocs": 623252,
+        "wholeFiles": 17612610
+      },
+      "kinds": {
+        "finding": 12,
+        "claim": 11,
+        "disposition": 50
+      }
+    }
+  },
+  "prototype_index": {
+    "method": "node index.mjs <repo> main out.json (Node 20.20.2, 22.23.5, 24.18.0)",
+    "result_node24": {
+      "initMs": 7,
+      "parseMs": 1156,
+      "totalMs": 4486,
+      "files": 295,
+      "bytes": 7069614,
+      "defs": 6865,
+      "refs": 63527,
+      "filesWithErrors": 2
+    },
+    "result_node20": {
+      "parseMs": 1140,
+      "totalMs": 4309
+    },
+    "result_node22": {
+      "parseMs": 1136,
+      "totalMs": 4123
+    }
+  },
+  "grammar_wasm_bytes": {
+    "web-tree-sitter.wasm": 210688,
+    "web-tree-sitter.js": 155405,
+    "typescript": 1413849,
+    "tsx": 1445638,
+    "javascript": 411770,
+    "python": 457883,
+    "rust": 1102547,
+    "go": 217182,
+    "java": 414641,
+    "c": 625918,
+    "cpp": 3434931,
+    "c_sharp": 7252213,
+    "gzip_total_ten": 1324700,
+    "c_sharp_checked": "2026-11-22, tree-sitter-c-sharp 0.24.0 via npm pack; ABI 15 on Node 20/22/24"
+  }
+}
