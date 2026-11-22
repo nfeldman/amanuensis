@@ -41,10 +41,10 @@
         "SI8"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "b18b4b1ef290fd06049cb55dd49b5ed25ed0426f",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "2ab237029e0e5001e4d23f37726c50fb568c8881",
+        "findings": 12
       }
     },
     {
