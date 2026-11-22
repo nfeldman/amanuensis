@@ -15,17 +15,24 @@
 //     next call does not resume from what was published and complete the tree;
 //   - two extractor_ids do not coexist in their own directories;
 //   - a corrupt sidecar is not set aside with its WAL and SHM files while a second process holds
-//     it open, or that process does not move to the new file on its next request;
+//     it open, or that process does not move to the new file on its next request; a holder
+//     does not move when the files are replaced without a damaged byte (the inode check); a
+//     database failing only `PRAGMA quick_check` is not set aside;
+//   - a request renames or opens the sidecar while another process's recovery marker is
+//     present, or a stale marker blocks recovery for ever;
 //   - a locked or unreadable sidecar is not `unavailable`, or is set aside; a short lock is not
 //     waited out (busy_timeout);
 //   - a generation touched within 30 days is collected, a stale one is not, or a process in use
-//     does not touch its generation after an hour;
+//     does not touch its generation after an hour, by request or, idle, by its timer;
 //   - symlinks and gitlinks are not skipped with a reason, or an executable file is not parsed;
-//   - a missing object is not `unavailable`, or a missing revision is not;
+//   - a missing object is not `unavailable`, or a missing revision is not; a tree with a missing
+//     object is recorded complete, or stays incomplete once the object arrives;
 //   - invalid UTF-8 is not `not-utf8`, a file over 2 MB is not `too-large`, or a byte-order mark
 //     moves byte offsets off the blob's bytes;
 //   - the file, source-byte and time budgets do not report `partial` and resume, or the
-//     generation's disk budget does not evict blobs outside the newest trees and say so;
+//     generation's disk budget does not evict blobs outside the newest trees and say so, does
+//     not bring the database and its WAL on disk within it, or does not report a budget that
+//     kept trees prevent it from meeting;
 //   - AMANUENSIS_CODE_INDEX=off registers a code-index tool, creates any directory, or lets a
 //     server collect a generation; or a server with the index on does not collect a stale one.
 //
@@ -41,6 +48,7 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -642,17 +650,34 @@ async function main() {
     write(r, "lost.ts", "export function lost() { return 'lost-object-marker'; }\n");
     const rev = commit(r, "one");
     const sha = blobSha(r, rev, "lost.ts");
-    rmSync(join(r, ".git", "objects", sha.slice(0, 2), sha.slice(2)));
+    const objectPath = join(r, ".git", "objects", sha.slice(0, 2), sha.slice(2));
+    const objectBytes = readFileSync(objectPath);
+    rmSync(objectPath);
     const storage = newStorage("missing-storage");
     const index = store.openCodeIndex(storage);
     const result = await index.indexTree(r, rev);
     check(result.unavailable === 1, `indexTree with a missing object: ${canonical(result)}`);
+    // Absence cannot be shown while a supported blob is missing, so the tree is not complete.
+    check(result.partial === true && result.state === "partial", `a tree with a missing object was reported complete: ${canonical(result)}`);
+    const status = index.treeStatus(rev);
+    check(status.state === "ok" && status.complete === false, `a tree with a missing object was recorded complete: ${canonical(status)}`);
     check(index.blob(blobSha(r, rev, "keep.ts"), "typescript").indexed === true, "the intact file was not indexed");
     const lost = await index.indexFile(r, rev, "lost.ts");
     check(lost.state === "unavailable", `indexFile on a missing object: ${canonical(lost)}`);
     const gone = await index.indexTree(r, "0123456789abcdef0123456789abcdef01234567");
     check(gone.state === "unavailable", `indexTree on a missing revision: ${canonical(gone)}`);
     check(gitBlobs.resolveCommit(r, "no-such-branch") === null, "resolveCommit resolved a missing revision");
+    // The object arrives (a fetch, an unshallow): the same revision completes, and its entry
+    // no longer records the transient failure.
+    writeFileSync(objectPath, objectBytes);
+    const again = await index.indexTree(r, rev);
+    check(again.state === "ok" && again.partial === false && again.unavailable === 0 && again.indexed === 1, `indexTree after the object arrived: ${canonical(again)}`);
+    check(index.treeStatus(rev).complete === true, `the tree was not completed once its object arrived: ${canonical(index.treeStatus(rev))}`);
+    const Database = require("better-sqlite3");
+    const raw = new Database(join(storage, "code-index", extractorId, "index.db"), { readonly: true });
+    const entry = raw.prepare("SELECT skip_reason FROM trees WHERE rev = ? AND path = 'lost.ts'").get(rev);
+    raw.close();
+    check(entry && entry.skip_reason === null, `the arrived object's tree entry still reads ${canonical(entry)}`);
     index.close();
   });
 
@@ -767,7 +792,33 @@ async function main() {
     check(tight.blob(blobSha(r, old, "old.ts"), "typescript").indexed === false, "a blob outside every kept tree was not evicted");
     check(tight.blob(blobSha(r, fresh, "kept.ts"), "typescript").indexed === true, "a blob in the newest tree was evicted");
     check(tight.blob(blobSha(r, fresh, "old.ts"), "typescript").indexed === true, "a blob in the newest tree was evicted");
+    // Kept trees hold more than one byte: the budget cannot be met, and the result says so.
+    check(result.disk_over_budget?.limit === 1 && result.disk_over_budget.bytes > 1, `an unmet disk budget was not reported: ${canonical(result)}`);
     tight.close();
+
+    // The budget is bytes on disk, the database and its WAL: eviction reclaims what it frees.
+    const p = newRepo("evict-physical");
+    write(p, "big.ts", functions("big", 600));
+    const before = commit(p, "big");
+    rmSync(join(p, "big.ts"));
+    write(p, "small.ts", functions("small", 3));
+    const after = commit(p, "small");
+    const physicalStorage = newStorage("budget-physical");
+    const onDisk = () => {
+      const db = join(physicalStorage, "code-index", extractorId, "index.db");
+      return ["", "-wal"].reduce((total, suffix) => total + (existsSync(db + suffix) ? statSync(db + suffix).size : 0), 0);
+    };
+    const first = store.openCodeIndex(physicalStorage);
+    check((await first.indexFile(p, before, "big.ts")).state === "ok", "fixture: the large blob was not indexed");
+    first.close();
+    const grown = onDisk();
+    const limit = Math.floor(grown * 0.6);
+    const second = store.openCodeIndex(physicalStorage, { budgets: { maxGenerationBytes: limit } });
+    const reclaimed = await second.indexTree(p, after);
+    check(reclaimed.evicted === 1, `the large blob outside the newest tree was not evicted: ${canonical(reclaimed)}`);
+    check(onDisk() <= limit, `after eviction the generation is ${onDisk()} bytes on disk (from ${grown}), over its ${limit}-byte budget: ${canonical(reclaimed)}`);
+    check(reclaimed.disk_over_budget === null, `a met disk budget was reported unmet: ${canonical(reclaimed)}`);
+    second.close();
   });
 
   await step("two extractor_ids coexist", async () => {
@@ -825,6 +876,13 @@ async function main() {
     const result = store.collectGenerations(storage, { now: () => clock });
     check(!result.collected.includes(extractorId) && existsSync(lastOpened), "a generation in use was collected");
     index.close();
+    // Idle: an open index touches on its own timer, with no request to do it.
+    const idle = store.openCodeIndex(storage, { now: () => clock, touchEveryMs: 25 });
+    utimesSync(lastOpened, longAgo, longAgo);
+    clock += 61 * 60_000;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    check(Math.abs(statSync(lastOpened).mtimeMs - clock) < 2000, "an idle open index did not touch last_opened on its timer");
+    idle.close();
   });
 
   await step("a corrupt sidecar is set aside while a second process holds it, which then moves", async () => {
@@ -869,6 +927,111 @@ async function main() {
     holder.send("exit");
     await holder.exited;
     index.close();
+  });
+
+  await step("a sidecar replaced without a byte changed moves its holder on its next request", async () => {
+    const storage = newStorage("replaced");
+    const dbPath = join(storage, "code-index", extractorId, "index.db");
+    const holder = startWorker(["hold", storage, repo, rev1]);
+    const ready = (await holder.next((m) => m.ready, 60_000)).ready;
+    check(ready.state === "ok", `holder: ${canonical(ready)}`);
+    // Another process's recovery: the files move; nothing the holder reads is damaged, so
+    // only the per-request inode check can send the holder to the new file.
+    const oldInode = statSync(dbPath).ino;
+    for (const suffix of ["", "-wal", "-shm"]) {
+      if (existsSync(dbPath + suffix)) renameSync(dbPath + suffix, `${dbPath}${suffix}.corrupt-elsewhere`);
+    }
+    const r = newRepo("replaced-repo");
+    write(r, "moved.ts", "export function moved(): number {\n  return 7;\n}\n");
+    const rev = commit(r, "one");
+    const index = store.openCodeIndex(storage);
+    const y = await index.indexFile(r, rev, "moved.ts");
+    check(y.state === "ok" && statSync(dbPath).ino !== oldInode, `indexing into the replacement: ${canonical(y)}`);
+    holder.send(`blob ${blobSha(r, rev, "moved.ts")} typescript`);
+    const seen = (await holder.next((m) => "blob" in m)).blob;
+    check(seen.state === "ok" && seen.indexed === true, `the holder kept reading the replaced file: ${canonical(seen).slice(0, 200)}`);
+    // src/a.js is in the old file (the holder indexed rev1), not the new one.
+    holder.send(`file ${rev2} src/a.js`);
+    const z = (await holder.next((m) => "file" in m)).file;
+    check(z.state === "ok", `the holder's next write: ${canonical(z)}`);
+    check(index.blob(blobSha(repo, rev2, "src/a.js"), "javascript").indexed === true, "the holder's write did not reach the replacement");
+    holder.send("exit");
+    await holder.exited;
+    index.close();
+  });
+
+  await step("a sidecar that fails only quick_check is set aside", async () => {
+    const storage = newStorage("quick-check");
+    const dir = join(storage, "code-index", extractorId);
+    const dbPath = join(dir, "index.db");
+    const seed = store.openCodeIndex(storage);
+    await seed.indexFile(repo, rev2, "src/same.ts");
+    seed.close();
+    // Damage an interior page of a table no request reads; the header stays intact.
+    const Database = require("better-sqlite3");
+    const raw = new Database(dbPath);
+    raw.exec("CREATE TABLE pad (x BLOB)");
+    const pad = raw.prepare("INSERT INTO pad VALUES (randomblob(3000))");
+    for (let i = 0; i < 40; i++) pad.run();
+    const { rootpage } = raw.prepare("SELECT rootpage FROM sqlite_master WHERE name = 'pad'").get();
+    const pageSize = raw.pragma("page_size", { simple: true });
+    raw.pragma("wal_checkpoint(TRUNCATE)");
+    raw.close();
+    const fd = openSync(dbPath, "r+");
+    writeSync(fd, Buffer.alloc(pageSize, 0x41), 0, pageSize, (rootpage - 1) * pageSize);
+    closeSync(fd);
+    const oldInode = statSync(dbPath).ino;
+    const index = store.openCodeIndex(storage);
+    const y = await index.indexFile(repo, rev2, "src/a.ts");
+    check(y.state === "ok", `indexing after a quick_check failure: ${canonical(y)}`);
+    check(corruptLeftovers(dir).some((n) => n.startsWith("index.db.corrupt-")), `a database failing quick_check was not set aside: ${corruptLeftovers(dir).join(", ") || "nothing"}`);
+    check(statSync(dbPath).ino !== oldInode, "index.db is the database that failed quick_check still");
+    index.close();
+  });
+
+  await step("recovery and opening wait while another process recovers", async () => {
+    const storage = newStorage("recovering");
+    const dir = join(storage, "code-index", extractorId);
+    const dbPath = join(dir, "index.db");
+    const marker = `${dbPath}.recovering`;
+    const seed = store.openCodeIndex(storage);
+    await seed.indexFile(repo, rev2, "src/same.ts");
+    seed.close();
+    const damage = () => {
+      const fd = openSync(dbPath, "r+");
+      writeSync(fd, Buffer.alloc(100, 0x41), 0, 100, 0);
+      closeSync(fd);
+    };
+    damage();
+    // Another process is mid-recovery: a second recoverer neither renames nor opens.
+    writeFileSync(marker, "");
+    const waiting = store.openCodeIndex(storage, { busyTimeoutMs: 200 });
+    const during = await waiting.indexFile(repo, rev2, "src/a.ts");
+    check(during.state === "unavailable", `a request during another process's recovery: ${canonical(during)}`);
+    check(corruptLeftovers(dir).length === 0, `a second recoverer set files aside during another's recovery: ${corruptLeftovers(dir).join(", ")}`);
+    rmSync(marker);
+    const afterwards = await waiting.indexFile(repo, rev2, "src/a.ts");
+    check(afterwards.state === "ok" && corruptLeftovers(dir).length >= 1, `recovery once the other finished: ${canonical(afterwards)}`);
+    waiting.close();
+    // An opener does not open a healthy file while a recovery is in progress.
+    writeFileSync(marker, "");
+    const opener = store.openCodeIndex(storage, { busyTimeoutMs: 200 });
+    const read = opener.blob(blobSha(repo, rev2, "src/a.ts"), "typescript");
+    check(read.state === "unavailable", `a request opened the sidecar during a recovery: ${canonical(read).slice(0, 200)}`);
+    rmSync(marker);
+    check(opener.blob(blobSha(repo, rev2, "src/a.ts"), "typescript").indexed === true, "the recovered sidecar lost its rows");
+    opener.close();
+    // A marker left by a process that died long ago does not block recovery for ever.
+    const before = corruptLeftovers(dir).length;
+    damage();
+    writeFileSync(marker, "");
+    const stale = new Date(Date.now() - DAY);
+    utimesSync(marker, stale, stale);
+    const late = store.openCodeIndex(storage, { busyTimeoutMs: 200 });
+    const recovered = await late.indexFile(repo, rev2, "src/same.ts");
+    check(recovered.state === "ok" && corruptLeftovers(dir).length > before, `a stale recovery marker blocked recovery: ${canonical(recovered)}`);
+    check(!existsSync(marker), "the stale recovery marker was left behind");
+    late.close();
   });
 
   await step("a locked or unreadable sidecar is unavailable and not set aside", async () => {
