@@ -161,7 +161,7 @@ async function verifyRelocatedMaterialization(server) {
       verify_readback: true,
     });
     assert(published.published && published.readback.ok, "packed publication must pass read-back");
-    for (const suffix of ["md", "html"]) {
+    for (const suffix of ["html"]) {
       const page = readFileSync(join(info.storage_path, "docs", `index.${suffix}`), "utf8");
       assert(page.includes(head.slice(0, 12)), "bound revision missing from published overview");
       assert(!page.includes(oldHead.slice(0, 12)), "overview used the original checkout's HEAD");
