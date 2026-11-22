@@ -133,6 +133,7 @@ const AFTER_CALLS_BY_VERSION = [
   tool("find_symbol", 5, 2500, 500, 900, 1),
   tool("get_project_info", 1, 80, 80, 80, 0),
   tool("read_symbol", 3, 12000, 4000, 6000, 0),
+  tool("search_records", 10, 5500, 550, 900, 0),
 ];
 const BEFORE_CALLS_BY_DATE = [tool("describe_locus", 4, 6500, 1500, 3000, 1), tool("get_project_info", 1, 400, 400, 400, 0)];
 const AFTER_CALLS_BY_DATE = [
@@ -140,6 +141,7 @@ const AFTER_CALLS_BY_DATE = [
   tool("find_symbol", 5, 2500, 500, 900, 1),
   tool("get_project_info", 2, 120, 60, 80, 0),
   tool("read_symbol", 3, 12000, 4000, 6000, 0),
+  tool("search_records", 10, 5500, 550, 900, 0),
 ];
 
 const classes = ["index", "amanuensis_other", "read_whole", "read_sliced", "search", "shell", "other"];
