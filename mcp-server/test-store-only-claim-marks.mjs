@@ -25,7 +25,11 @@
 //   - a declination is missing from `get_claims`, is accepted for a key that is
 //     not a flow with current steps, or an older declination is returned in
 //     place of the newest;
-//   - a refusal does not start with its tool's name, or leaves a row behind.
+//   - a refusal does not start with its tool's name, or leaves a row behind;
+//   - resetting the subsystem below `structural` after a mark (current or
+//     withdrawn) was recorded on one of its claims fails, deletes a mark or a
+//     withdrawal, or leaves the marked claim or its marks current (final
+//     review F1/codex).
 // Controls (a handler that refuses everything must be red): one mark of each
 // kind, a withdrawal, a re-record after it, a successor's own mark and a
 // declination are all accepted and read back.
@@ -747,6 +751,41 @@ async function main(mods) {
     return stems(DECLINE, said) ? null : `refused with "${said.slice(0, 100)}"`;
   });
 
+  // ------------------------------------------- X: a reset retires marked claims
+
+  check("X1 a reset below structural after a current and a withdrawn mark succeeds, keeps every mark row and leaves none current", () => {
+    const w = world("x1");
+    mark(w, "S1/flow/boot/01", "commit-point");
+    const dropped = mark(w, "S1/flow/boot/02", "crash-point", { label: "half written" });
+    call(WITHDRAW, { mark_id: dropped.id, reason: "The crash is on the next step." }, w.ctx);
+    const marks = count(w.ctx, "claim_marks");
+    const withdrawals = count(w.ctx, "claim_mark_withdrawals");
+    let receipt;
+    try {
+      receipt = call("reset_subsystem", { id: "S1", to_status: "scoping", reason: "Re-scope the boot flow." }, w.ctx);
+    } catch (error) {
+      return `the reset threw: ${String(error?.message ?? error).slice(0, 160)}`;
+    }
+    if (!receipt || receipt.ok === false) return `the reset was refused: ${JSON.stringify(receipt).slice(0, 200)}`;
+    const wrong = [];
+    if (count(w.ctx, "claim_marks") !== marks) wrong.push("the reset removed a mark row");
+    if (count(w.ctx, "claim_mark_withdrawals") !== withdrawals) wrong.push("the reset removed a withdrawal row");
+    const current = claimsOf(w, { subsystem_id: "S1" }).map((row) => row.claim_key);
+    if (current.length > 0) wrong.push(`claims under S1/ are still current after the reset: ${current.join(", ")}`);
+    for (const key of ["S1/flow/boot/01", "S1/flow/boot/02"]) {
+      const row = w.ctx.db.prepare("SELECT valid_until_sha FROM claims WHERE claim_key = ?").get(key);
+      if (!row) wrong.push(`the marked claim ${key} was deleted from under its marks`);
+      else if (row.valid_until_sha === null) wrong.push(`the marked claim ${key} is still current`);
+    }
+    if (w.ctx.db.prepare("SELECT 1 FROM claims WHERE claim_key = 'S1/flow/boot/03'").get()) {
+      wrong.push("an unmarked claim under S1/ survived the reset");
+    }
+    // The key is free again: the re-surveyed step can be recorded and marked.
+    const again = refusal(() => w.claim("S1/flow/boot/01", "src/a.ts:boot01", { id: "S1-flow-boot-01-v2" }));
+    if (again) wrong.push(`re-recording the reset step was refused: ${again.slice(0, 120)}`);
+    return wrong.length === 0 ? null : wrong.join("; ");
+  });
+
   for (const cleanup of cleanups) cleanup();
   rmSync(scratch, { recursive: true, force: true });
 }
@@ -766,12 +805,13 @@ try {
     ({ openDatabase: mods.openDatabase } = await import("./dist/db.js"));
     ({ resolveProject: mods.resolveProject, ensureProjectStorage: mods.ensureProjectStorage } =
       await import("./dist/project.js"));
-    const [claims, evidence, project] = await Promise.all([
+    const [claims, evidence, project, subsystems] = await Promise.all([
       import("./dist/tools/claims.js"),
       import("./dist/tools/evidence.js"),
       import("./dist/tools/project.js"),
+      import("./dist/tools/subsystems.js"),
     ]);
-    mods.toolArrays = [claims.claimTools, evidence.evidenceTools, project.projectTools];
+    mods.toolArrays = [claims.claimTools, evidence.evidenceTools, project.projectTools, subsystems.subsystemTools];
   } catch (error) {
     loadError = `the server build could not be loaded: ${scrub(error?.message ?? error)}`;
   }
