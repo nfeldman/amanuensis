@@ -4,6 +4,8 @@
 // Turns red when:
 //   - dist/tools/code-index.js is missing, or the server does not advertise outline_file and
 //     read_symbol, or advertises them with the index switched off;
+//   - outline_file, read_symbol, find_symbol or search_records is not annotated read-only,
+//     non-destructive and idempotent;
 //   - outline_file does not return, row for row, the golden outline of each fixture file at the
 //     revision asked for: symbol_ids, kinds, nested children, declaration and citeable lines,
 //     signatures, first doc lines, occurrences of a repeated symbol_id, imports, bytes, lines,
@@ -289,6 +291,15 @@ async function main() {
     const tools = new Map((await server.request("tools/list")).tools.map((t) => [t.name, t]));
     for (const name of ["outline_file", "read_symbol"]) {
       check(tools.has(name), `the server does not advertise ${name}`);
+    }
+    // The four index tools are reads (PLAN §4.3), and are advertised as such.
+    for (const name of ["outline_file", "read_symbol", "find_symbol", "search_records"]) {
+      same(`${name}'s annotations`, tools.get(name)?.annotations, {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      });
     }
     const evidenceProperties = Object.keys(tools.get("add_evidence").inputSchema.properties);
     const readSchema = tools.get("read_symbol").inputSchema;
