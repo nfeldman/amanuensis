@@ -35,7 +35,8 @@
 //     not bring the database and its WAL on disk within it, or does not report a budget that
 //     kept trees prevent it from meeting;
 //   - AMANUENSIS_CODE_INDEX=off registers a code-index tool, creates any directory, or lets a
-//     server collect a generation; or a server with the index on does not collect a stale one.
+//     server collect a generation; or a server with the index on does not collect a stale one;
+//     or src/index.ts does not list and dispatch tools from withCodeIndexSwitch's output.
 //
 // Hermetic: fixture repositories and stores are built in a temporary directory; worker
 // processes are written there too. No network.
@@ -487,6 +488,16 @@ async function main() {
     utimesSync(join(storage, "code-index", "stale-generation", "last_opened"), old, old);
     store.collectGenerations(storage, { env: off });
     check(existsSync(join(storage, "code-index", "stale-generation")), "collectGenerations collected with the index off");
+
+    // Until a code-index tool is registered (SI5), the server's lists below cannot show the
+    // switch working, so the registered list itself must be the switch's output.
+    const serverSource = readFileSync(join(here, "src", "index.ts"), "utf8");
+    const wrapped = /const (\w+): ToolDefinition\[\] = withCodeIndexSwitch\(\[/.exec(serverSource)?.[1];
+    check(wrapped !== undefined, "src/index.ts does not build its tool list with withCodeIndexSwitch");
+    check(
+      new RegExp(`tools: ${wrapped}\\.map\\(`).test(serverSource) && new RegExp(`new Map\\(${wrapped}\\.map\\(`).test(serverSource),
+      `src/index.ts does not list and dispatch from ${wrapped}, the switched tool list`,
+    );
 
     // The server: off registers none of the four and leaves storage alone; on collects.
     const serverRoot = newStorage("server-storage");
