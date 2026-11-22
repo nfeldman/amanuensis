@@ -23,8 +23,12 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+// Git runs with no global or system configuration, so a user's hooks, templates or default
+// branch never reach the fixture.
+const GIT_ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+
 function git(cwd, args) {
-  const r = spawnSync("git", args, { cwd, encoding: "utf8" });
+  const r = spawnSync("git", args, { cwd, encoding: "utf8", env: GIT_ENV });
   if (r.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${r.stderr}`);
   return r.stdout;
 }
@@ -36,7 +40,7 @@ function write(dir, path, content) {
 
 function commit(dir, message) {
   git(dir, ["add", "-A"]);
-  git(dir, ["commit", "-q", "-m", message]);
+  git(dir, ["commit", "-q", "--no-verify", "-m", message]);
   return git(dir, ["rev-parse", "HEAD"]).trim();
 }
 

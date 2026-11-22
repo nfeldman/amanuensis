@@ -15,8 +15,12 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+// Git runs with no global or system configuration, so a user's hooks, templates or default
+// branch never reach the fixture.
+const GIT_ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+
 function git(cwd, args) {
-  const r = spawnSync("git", args, { cwd, encoding: "utf8" });
+  const r = spawnSync("git", args, { cwd, encoding: "utf8", env: GIT_ENV });
   if (r.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${r.stderr}`);
   return r.stdout;
 }
@@ -109,6 +113,6 @@ export function buildEvidenceAnchorsRepo(dir) {
   write(dir, "src/fun.cpp", FUN_SOURCE);
   write(dir, "docs/notes.txt", "Notes in no language the index parses.\n");
   git(dir, ["add", "-A"]);
-  git(dir, ["commit", "-q", "-m", "evidence anchors fixture"]);
+  git(dir, ["commit", "-q", "--no-verify", "-m", "evidence anchors fixture"]);
   return { workspace: dir, commit: git(dir, ["rev-parse", "HEAD"]).trim() };
 }
