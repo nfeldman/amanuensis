@@ -292,6 +292,17 @@ function runMigrations(db: DB): void {
   if (hasTable(db, "carried_finding_outcomes")) {
     db.exec("DROP INDEX IF EXISTS idx_carried_outcome_one");
   }
+  // 3d. concerns.territory / concerns.probe — concern calibration moves out of
+  // concern-checklist.md (design/store-only/PLAN.md §2.2). Nullable: existing
+  // concerns were seeded before either was recorded.
+  if (hasTable(db, "concerns")) {
+    if (!hasColumn(db, "concerns", "territory")) {
+      db.exec("ALTER TABLE concerns ADD COLUMN territory TEXT");
+    }
+    if (!hasColumn(db, "concerns", "probe")) {
+      db.exec("ALTER TABLE concerns ADD COLUMN probe TEXT");
+    }
+  }
   // The CREATE INDEX ... IF NOT EXISTS and CREATE TABLE ... IF NOT EXISTS in
   // schema.sql handle the new index, scope_gaps and scope_reconciliations on
   // the next initializeSchema pass — no explicit add here. A new *table* needs
@@ -302,12 +313,58 @@ function runMigrations(db: DB): void {
   // rewritten. REQUIRED_VIEWS (:44, :61-82) stays as it is because the
   // survey-depth lane's §3 adds no view.
   //
-  // 4. CHECK-constrained vocabularies — a widened enum reaches an existing
+  // 4. The project may hold a purpose, and a thesis may be imported
+  // (design/store-only/PLAN.md §2.2). Before the vocabulary rebuild, which
+  // would otherwise widen `disposition` and leave the purpose CHECK behind.
+  migrateExplanationsProjectPurpose(db);
+  //
+  // 5. CHECK-constrained vocabularies — a widened enum reaches an existing
   // store only through a table rebuild.
   migrateVocabularyChecks(db);
   //
-  // 5. A claim may close at its own valid_from_sha (finding B04-R6).
+  // 6. A claim may close at its own valid_from_sha (finding B04-R6).
   migrateClaimsNeverHeld(db);
+  //
+  // 7. A composition item may verify a stored record (design/store-only/PLAN.md
+  // §2.5): the item kind CHECK is widened by a rebuild.
+  migrateCompositionRecordKind(db);
+}
+
+/**
+ * Rebuild `explanations` without the CHECK that confined the project to an
+ * account (design/store-only/PLAN.md §2.2).
+ *
+ * The thesis was the one project explanation that lived only in a file
+ * (`entry-point.md`); it is now the project's `purpose`, recorded over evidence
+ * or `imported` from that file without any (D2). Stores created before carry
+ * `CHECK (subject_type <> 'project' OR (subject_id = 'project' AND slot =
+ * 'account'))`, which refuses both, and a CHECK cannot be altered in place. The
+ * canonical text replaces the table; rows, ids, the index and both
+ * append-only triggers are carried over by `rebuildTable`.
+ */
+function migrateExplanationsProjectPurpose(db: DB): void {
+  if (!hasTable(db, "explanations")) return;
+  const live = liveCreateSql(db, "explanations").replace(/\s+/g, " ");
+  if (!/slot\s*=\s*'account'/.test(live)) return;
+  const canonicalCreate = canonicalCreateSql(readSchemaText(), "explanations");
+  if (!canonicalCreate) return;
+  rebuildTable(db, "explanations", canonicalCreate);
+}
+
+/**
+ * Widen `composition_items.item_kind` to admit `record` (design/store-only/PLAN.md
+ * §2.5). The kind list is not a contract vocabulary, so the vocabulary rebuild
+ * does not reach it; a CHECK cannot be altered in place, so the canonical text
+ * replaces the table and `rebuildTable` carries the rows, the index and the
+ * triggers over.
+ */
+function migrateCompositionRecordKind(db: DB): void {
+  if (!hasTable(db, "composition_items")) return;
+  const present = checkValues(liveCreateSql(db, "composition_items"), "item_kind");
+  if (present === null || present.includes("record")) return;
+  const canonicalCreate = canonicalCreateSql(readSchemaText(), "composition_items");
+  if (!canonicalCreate) return;
+  rebuildTable(db, "composition_items", canonicalCreate);
 }
 
 /**

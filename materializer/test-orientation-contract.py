@@ -30,7 +30,7 @@ Turns red when:
   - the "Survey depth" term's definition omits a depth label it describes;
   - the "Stale" term's definition describes only files the survey read, while
     Stale knowledge also lists files scoped but unread and files set aside;
-  - `contract_version` is not 1.1.0;
+  - `contract_version` is not 1.2.0 (1.1.0 until store-only SO1 added its enums);
   - CI does not run this gate.
 
 Output protocol: exactly one status line, last, on stdout. Every message,
@@ -283,7 +283,7 @@ def check_generator_green() -> str | None:
 
 def check_version() -> str | None:
     got = constant("VOCABULARY_CONTRACT_VERSION")
-    return None if got == "1.1.0" else f"contract_version is {got!r}, not '1.1.0'"
+    return None if got == "1.2.0" else f"contract_version is {got!r}, not '1.2.0'"
 
 
 def check_constants_shape() -> str | None:
@@ -580,7 +580,7 @@ def check_ci() -> str | None:
 def main() -> int:
     emit("GATE O1 — vocabulary contract: terms, ID kinds, survey passes, reader-facing flag, D4 labels")
     check("gen-vocabulary --check and --check-sql are green", check_generator_green)
-    check("contract_version is 1.1.0", check_version)
+    check("contract_version is 1.2.0", check_version)
     check("vocabulary.py carries READER_TERMS, ID_KINDS, SURVEY_PASSES", check_constants_shape)
     check("READER_TERMS matches Appendix A", check_reader_terms)
     check("the Survey depth term names every depth label", check_depth_term_names_labels)

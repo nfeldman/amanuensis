@@ -27,7 +27,7 @@
         { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
         { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" },
         {
-          "file": "../.claude/skills/amanuensis/references/artifact-templates.md",
+          "file": "../.claude/skills/amanuensis/SKILL.md",
           "phrase": "declared that it has none"
         }
       ]
@@ -138,11 +138,11 @@
       ]
     },
     {
-      "id": "ladder-no-survey-artifact",
-      "note": "Existing.",
+      "id": "ladder-no-structure-narrative",
+      "note": "PLAN store-only §2.5. Replaces the registered survey artifact; an imported survey body also admits the advance.",
       "refuses": ["update_subsystem_status"],
-      "instructs": [],
-      "server": { "file": "src/invariants.ts", "phrase": "no subsystem-survey artifact has been registered" },
+      "instructs": ["record_narrative", "decline_narrative"],
+      "server": { "file": "src/invariants.ts", "phrase": "no structure narrative has been recorded or declined" },
       "references": [
         { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
       ]
@@ -159,8 +159,8 @@
     },
     {
       "id": "active-session-required",
-      "note": "Existing, and spec.md §4.2 extends its reach to define_term, which is the caller registered here. Roughly fifty handlers call requireActiveSession; refuses is sound, not exhaustive.",
-      "refuses": ["define_term"],
+      "note": "Existing, and spec.md §4.2 extends its reach to define_term, which is the caller registered here; store-only PLAN §5.2 (SO7) registers import_artifact_bodies, whose only refusal it is. Roughly fifty handlers call requireActiveSession; refuses is sound, not exhaustive.",
+      "refuses": ["define_term", "import_artifact_bodies"],
       "instructs": ["start_session"],
       "server": {
         "file": "src/invariants.ts",
@@ -284,16 +284,6 @@
       ]
     },
     {
-      "id": "explanation-record-project-purpose",
-      "note": "New, spec.md §3.3 R4.",
-      "refuses": ["record_explanation"],
-      "instructs": [],
-      "server": { "file": "src/tools/explanations.ts", "phrase": "record_explanation refuses: the project's purpose is the thesis in entry-point.md" },
-      "references": [
-        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
-      ]
-    },
-    {
       "id": "explanation-record-cites-evidence",
       "note": "New, spec.md §3.3 R5.",
       "refuses": ["record_explanation"],
@@ -405,10 +395,10 @@
     },
     {
       "id": "explanation-decline-project-purpose",
-      "note": "New, spec.md §3.3.",
+      "note": "New, spec.md §3.3; reworded when the project's purpose became recordable (store-only PLAN §2.2, SO4).",
       "refuses": ["decline_explanation"],
       "instructs": [],
-      "server": { "file": "src/tools/explanations.ts", "phrase": "decline_explanation refuses: the project's purpose is the thesis in entry-point.md" },
+      "server": { "file": "src/tools/explanations.ts", "phrase": "decline_explanation refuses: the project's purpose is recorded, not declined" },
       "references": [
         { "file": "../.claude/skills/amanuensis/references/explanations.md" }
       ]
@@ -452,6 +442,596 @@
       "references": [
         { "file": "../.claude/skills/amanuensis/references/memory-audit.md" },
         { "file": "../.claude/skills/amanuensis/references/refresh.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-no-subsystem",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: no subsystem" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-below-rung",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "narrative is written once a subsystem has reached" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-wrong-subject",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "Record it with subject_type" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-cites-evidence",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "narrative cites the evidence it was written from" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-too-many-evidence",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "a narrative cites at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-not-in-ledger",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: none of the cited evidence is in" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-too-long",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: a narrative is limited to" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-shape",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "a narrative is prose and lists" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-topic",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: a topic is a short title on one line" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-revision",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-orientation",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "the narrative carries survey-status language or a count fraction" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-no-subsystem",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: no subsystem" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-below-rung",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "narrative is answered once a subsystem has reached" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-wrong-subject",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "Decline it with subject_type" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-reason-too-long",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: a reason is limited to" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-reason-one-paragraph",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: a reason is one paragraph" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-topic",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: a topic is a short title on one line" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-revision",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-orientation",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: the reason carries survey-status language or a count fraction" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "project-profile-name",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_project_profile"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_project_profile refuses: a name is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "project-profile-revision",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_project_profile"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_project_profile refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-field",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-notes",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_runtime_boundary refuses: notes is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-evidence",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_runtime_boundary refuses: a crossing cites the evidence it was" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-too-many-evidence",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_runtime_boundary refuses: a crossing cites at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-revision",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_runtime_boundary refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-withdraw-no-edge",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["withdraw_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "withdraw_runtime_boundary refuses: no crossing from" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-withdraw-reason",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["withdraw_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "withdraw_runtime_boundary refuses: a reason is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-withdraw-revision",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["withdraw_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "withdraw_runtime_boundary refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "concern-territory-id",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["add_concern"],
+      "instructs": [],
+      "server": { "file": "src/tools/concerns.ts", "phrase": "add_concern refuses: territory is the id of a territory in concern-territories.md" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "concern-probe-cap",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["add_concern"],
+      "instructs": [],
+      "server": { "file": "src/tools/concerns.ts", "phrase": "add_concern refuses: a probe is limited to" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-id",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: territory is the id of a territory in concern-territories.md" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-condition-needed",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: a disqualified territory names the condition that rules it out" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-condition-shape",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: a condition is one paragraph of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-no-question",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: no open question" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-revision",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-kind",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is not a mark kind" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-no-claim",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: no claim" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-closed",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is closed, so its marks would not be current" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-not-flow-step",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is not a flow step. A mark goes on a claim keyed" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-trigger-step",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "a trigger is the start of a flow, so it belongs to step 00" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-needs",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "mark needs a" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-unused",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "mark takes no" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-label",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: a label is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-no-seam",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: no seam" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-not-party",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is not one of them" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-exit-target",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "an exit unwinds to a step of its own flow or to" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-no-evidence",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: no evidence row" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-evidence-file",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "does not show the step" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-evidence-revision",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "does not descend from" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-revision",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-duplicate",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "already says this about the step" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-withdraw-no-mark",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["withdraw_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "withdraw_claim_mark refuses: no mark" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-withdraw-already",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["withdraw_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is already withdrawn" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-withdraw-reason",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["withdraw_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "withdraw_claim_mark refuses: a reason is one paragraph of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-decline-flow",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["decline_claim_marks"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is not a flow. Name it" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-decline-no-steps",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["decline_claim_marks"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "has no current step claim" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-decline-reason",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["decline_claim_marks"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "decline_claim_marks refuses: a reason is one paragraph of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-decline-revision",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["decline_claim_marks"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "decline_claim_marks refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
       ]
     }
   ]

@@ -350,25 +350,30 @@ export function isExplanationEligible(status: string | null): boolean {
  * Whether a subject can hold an effective explanation, as a pure function so both
  * languages run `explanation-effective-cases.json` over it. A subsystem answers
  * by its own status. The project's account is written once a subsystem has been
- * read (R3), and reads `not-recorded` while none is eligible.
+ * read (R3), and reads `not-recorded` while none is eligible. The project's
+ * purpose is its thesis, written at onboarding before any subsystem is read, so
+ * it is eligible whatever the statuses are (design/store-only/PLAN.md §2.2).
  */
 export function isSubjectExplanationEligible(
   subjectType: string,
   subjectStatus: string | null,
   allStatuses: readonly (string | null)[],
+  slot?: string,
 ): boolean {
-  return subjectType === "project"
-    ? allStatuses.some(isExplanationEligible)
-    : isExplanationEligible(subjectStatus);
+  if (subjectType === "project") {
+    return slot === "purpose" || allStatuses.some(isExplanationEligible);
+  }
+  return isExplanationEligible(subjectStatus);
 }
 
 /** Whether any subsystem in the store is explanation-eligible, the project's condition. */
-export function isProjectExplanationEligible(db: DB): boolean {
+export function isProjectExplanationEligible(db: DB, slot?: string): boolean {
   const statuses = db.prepare("SELECT status FROM subsystems").all() as Array<{ status: string }>;
   return isSubjectExplanationEligible(
     "project",
     null,
     statuses.map((row) => row.status),
+    slot,
   );
 }
 
@@ -415,11 +420,16 @@ export interface ExplanationSelection<R extends ExplanationCandidate = Explanati
  * `not-recorded`. Earlier rows are kept and never selected: a correction is a new
  * row, and it may be written at the same commit as the row it replaces, so the
  * greatest id and not the newest revision decides.
+ *
+ * An `imported` row is the thesis copied in by the import (PLAN §2.2, D2). It
+ * reads as `recorded` where `admitsImported` is true, which only the project's
+ * purpose passes, and as `not-recorded` anywhere else.
  */
 export function selectExplanation<R extends ExplanationCandidate>(
   rows: readonly R[],
   resolvable: ReadonlySet<string> | null,
   eligible: boolean,
+  admitsImported = false,
 ): ExplanationSelection<R> {
   const checked = resolvable !== null;
   let effective: R | null = null;
@@ -432,10 +442,13 @@ export function selectExplanation<R extends ExplanationCandidate>(
   const earlierRows =
     effective === null ? rows.length : rows.filter((row) => row.id < (effective as R).id).length;
   const state: ExplanationDischarge =
-    effective !== null &&
-    (effective.disposition === "recorded" || effective.disposition === "declined")
-      ? effective.disposition
-      : "not-recorded";
+    effective === null
+      ? "not-recorded"
+      : effective.disposition === "recorded" || effective.disposition === "declined"
+        ? effective.disposition
+        : effective.disposition === "imported" && admitsImported
+          ? "recorded"
+          : "not-recorded";
   return { state, row: state === "not-recorded" ? null : effective, checked, earlierRows };
 }
 
@@ -472,7 +485,7 @@ export function readExplanation(
     .all(subjectType, subjectId, slot) as ExplanationRow[];
   const eligible =
     subjectType === "project"
-      ? isProjectExplanationEligible(db)
+      ? isProjectExplanationEligible(db, slot)
       : isSubjectExplanationEligible(
           subjectType,
           atStatus ?? readSubsystemStatus(db, subjectId),
@@ -486,7 +499,12 @@ export function readExplanation(
     );
     resolvable = new Set([...resolved].filter(([, sha]) => sha !== null).map(([key]) => key));
   }
-  const selection = selectExplanation(rows, resolvable, eligible);
+  const selection = selectExplanation(
+    rows,
+    resolvable,
+    eligible,
+    subjectType === "project" && slot === "purpose",
+  );
   const reachable = resolvable;
   const unreachable =
     reachable === null || !eligible
@@ -496,6 +514,304 @@ export function readExplanation(
             !reachable.has(row.ref_sha) && (selection.row === null || row.id > selection.row.id),
         );
   return { ...selection, unreachable };
+}
+
+/** One narrative section as the contract states it: who owns it, from which rung, and whether it must cite a file. */
+export interface NarrativeSectionRule {
+  section: string;
+  subjectType: "subsystem" | "project";
+  /** The lowest status at which a subsystem section is written; null for a project section. */
+  minStatus: string | null;
+  evidenceRequired: boolean;
+}
+
+/** The sections `narrative_section` carries, read from the contract so the tools and the contract cannot disagree. */
+export const NARRATIVE_SECTION_RULES: readonly NarrativeSectionRule[] = (
+  VOCABULARY.narrative_section?.values ?? []
+).map((entry) => ({
+  section: entry.value,
+  subjectType: entry.subject_type === "project" ? "project" : "subsystem",
+  minStatus: entry.min_status ?? null,
+  evidenceRequired: entry.evidence === "required",
+}));
+
+export function narrativeSectionRule(section: string): NarrativeSectionRule | null {
+  return NARRATIVE_SECTION_RULES.find((rule) => rule.section === section) ?? null;
+}
+
+/**
+ * Whether a subsystem at `status` may hold a narrative of `section`: its status
+ * is on the ladder and at or above the section's rung. A parked subsystem is
+ * `deferred`, which is off the ladder, and holds none until it is resumed.
+ */
+export function isNarrativeEligible(section: string, status: string | null): boolean {
+  const rule = narrativeSectionRule(section);
+  if (rule === null || rule.subjectType !== "subsystem" || rule.minStatus === null) return false;
+  const have = status === null ? undefined : statusRank(status);
+  const need = statusRank(rule.minStatus);
+  return have !== undefined && need !== undefined && have >= need;
+}
+
+export interface NarrativeRow {
+  id: number;
+  subject_type: string;
+  subject_id: string;
+  section: string;
+  topic: string;
+  disposition: string;
+  body: string;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+export interface NarrativeReading {
+  /** Per (section, topic), the newest row, when it is recorded or declined. Ordered by section, topic. */
+  rows: NarrativeRow[];
+  /** Keys whose newest row is a withdrawal: the subject owes a new narrative there. */
+  withdrawn: number;
+  /** Every row kept that is not an effective one, newest first. */
+  earlier: NarrativeRow[];
+}
+
+/**
+ * The effective narratives of one subject, re-derived from the rows at every
+ * read: for each `(section, topic)` the row with the greatest id, a correction
+ * being a new row that may share the earlier row's commit. A key whose newest
+ * row is `withdrawn` has no effective narrative. Every reader and the reset call
+ * this, and nothing keeps a flag.
+ */
+export function readNarratives(
+  db: DB,
+  subjectType: string,
+  subjectId: string,
+  section?: string,
+): NarrativeReading {
+  const rows = db
+    .prepare(
+      `SELECT id, subject_type, subject_id, section, topic, disposition, body, ref_sha, session_id, recorded_at
+         FROM narratives
+        WHERE subject_type = ? AND subject_id = ? AND (? IS NULL OR section = ?)
+        ORDER BY id DESC`,
+    )
+    .all(subjectType, subjectId, section ?? null, section ?? null) as NarrativeRow[];
+  const newest = new Map<string, NarrativeRow>();
+  const earlier: NarrativeRow[] = [];
+  for (const row of rows) {
+    const key = `${row.section}\u0000${row.topic}`;
+    if (newest.has(key)) earlier.push(row);
+    else newest.set(key, row);
+  }
+  const current = [...newest.values()];
+  const order = new Map(NARRATIVE_SECTION_RULES.map((rule, index) => [rule.section, index]));
+  return {
+    rows: current
+      .filter((row) => row.disposition !== "withdrawn")
+      .sort(
+        (a, b) =>
+          (order.get(a.section) ?? 0) - (order.get(b.section) ?? 0) ||
+          (a.topic < b.topic ? -1 : a.topic > b.topic ? 1 : 0),
+      ),
+    withdrawn: current.filter((row) => row.disposition === "withdrawn").length,
+    earlier,
+  };
+}
+
+/** One slot of {@link readNarratives}: the effective narrative at a topic, or null. */
+export function readNarrative(
+  db: DB,
+  subjectType: string,
+  subjectId: string,
+  section: string,
+  topic = "",
+): NarrativeRow | null {
+  return (
+    readNarratives(db, subjectType, subjectId, section).rows.find((row) => row.topic === topic) ??
+    null
+  );
+}
+
+export interface ProjectProfileRow {
+  id: number;
+  name: string;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+/** The project's name: the newest `project_profile` row, or null when none is recorded (PLAN §2.2). */
+export function readProjectProfile(db: DB): ProjectProfileRow | null {
+  return (
+    (db
+      .prepare(
+        "SELECT id, name, ref_sha, session_id, recorded_at FROM project_profile ORDER BY id DESC LIMIT 1",
+      )
+      .get() as ProjectProfileRow | undefined) ?? null
+  );
+}
+
+export interface RuntimeBoundaryRow {
+  id: number;
+  from_runtime: string;
+  from_language: string | null;
+  to_runtime: string;
+  mechanism: string;
+  notes: string | null;
+  origin: string;
+  withdrawn: number;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+export interface RuntimeBoundaryReading {
+  /** Per (from_runtime, to_runtime, mechanism), the newest row, when it is not a withdrawal. Ordered by edge. */
+  rows: RuntimeBoundaryRow[];
+  /** Edges whose newest row is a withdrawal. */
+  withdrawn: number;
+}
+
+/**
+ * The runtime boundary map, re-derived from the rows at every read: for each
+ * edge the row with the greatest id, and an edge whose newest row has
+ * `withdrawn = 1` is not on the map (PLAN §2.2).
+ */
+export function readRuntimeBoundaries(db: DB): RuntimeBoundaryReading {
+  const rows = db
+    .prepare(
+      `SELECT id, from_runtime, from_language, to_runtime, mechanism, notes, origin, withdrawn,
+              ref_sha, session_id, recorded_at
+         FROM runtime_boundaries
+        ORDER BY id DESC`,
+    )
+    .all() as RuntimeBoundaryRow[];
+  const newest = new Map<string, RuntimeBoundaryRow>();
+  for (const row of rows) {
+    const key = [row.from_runtime, row.to_runtime, row.mechanism].join("\u0000");
+    if (!newest.has(key)) newest.set(key, row);
+  }
+  const current = [...newest.values()];
+  const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  return {
+    rows: current
+      .filter((row) => row.withdrawn === 0)
+      .sort(
+        (a, b) =>
+          compare(a.from_runtime, b.from_runtime) ||
+          compare(a.to_runtime, b.to_runtime) ||
+          compare(a.mechanism, b.mechanism),
+      ),
+    withdrawn: current.filter((row) => row.withdrawn === 1).length,
+  };
+}
+
+export interface TerritoryDispositionRow {
+  id: number;
+  territory: string;
+  disposition: string;
+  condition: string | null;
+  open_question_id: number | null;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+/** The effective disposition of every territory that has one: the newest row per territory, ordered by id (PLAN §2.2). */
+export function readTerritoryDispositions(db: DB): TerritoryDispositionRow[] {
+  return db
+    .prepare(
+      `SELECT id, territory, disposition, condition, open_question_id, ref_sha, session_id, recorded_at
+         FROM territory_dispositions
+        WHERE id IN (SELECT MAX(id) FROM territory_dispositions GROUP BY territory)
+        ORDER BY id`,
+    )
+    .all() as TerritoryDispositionRow[];
+}
+
+/**
+ * A flow step's claim key, `<sid>/flow/<slug>/<nn>` (the shape `requireStableClaimKey`
+ * enforces), taken apart: the subsystem, the flow (`<sid>/flow/<slug>`) and the step.
+ * Null for any other key.
+ */
+export function parseFlowStepKey(
+  claimKey: string,
+): { subsystemId: string; flow: string; step: string } | null {
+  const match = /^([^/\s]+)\/flow\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([0-9]{2,})$/.exec(claimKey);
+  const [, subsystemId, slug, step] = match ?? [];
+  if (subsystemId === undefined || slug === undefined || step === undefined) return null;
+  return { subsystemId, flow: `${subsystemId}/flow/${slug}`, step };
+}
+
+export interface ClaimMarkRow {
+  id: number;
+  claim_id: string;
+  kind: string;
+  label: string | null;
+  target: string | null;
+  evidence_id: number;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+/**
+ * The marks that are current on each of `claimIds` (PLAN §7.2): a mark with no
+ * withdrawal, on a claim whose validity interval is still open. A closed claim
+ * has none, and a successor records its own, so nothing here is inherited.
+ * Ordered by id.
+ */
+export function readCurrentClaimMarks(
+  db: DB,
+  claimIds: readonly string[],
+): Map<string, ClaimMarkRow[]> {
+  const byClaim = new Map<string, ClaimMarkRow[]>();
+  if (claimIds.length === 0) return byClaim;
+  const rows = db
+    .prepare(
+      `SELECT m.id, m.claim_id, m.kind, m.label, m.target, m.evidence_id, m.ref_sha,
+              m.session_id, m.recorded_at
+         FROM claim_marks m
+         JOIN claims c ON c.claim_id = m.claim_id
+        WHERE m.claim_id IN (${claimIds.map(() => "?").join(", ")})
+          AND c.valid_until_sha IS NULL
+          AND NOT EXISTS (SELECT 1 FROM claim_mark_withdrawals w WHERE w.mark_id = m.id)
+        ORDER BY m.id`,
+    )
+    .all(...claimIds) as ClaimMarkRow[];
+  for (const row of rows) {
+    const list = byClaim.get(row.claim_id);
+    if (list) list.push(row);
+    else byClaim.set(row.claim_id, [row]);
+  }
+  return byClaim;
+}
+
+export interface ClaimMarkDeclinationRow {
+  id: number;
+  flow_key: string;
+  reason: string;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+/** The newest declination for each of `flowKeys` (`<sid>/flow/<slug>`) that has one (PLAN §7.2). */
+export function readClaimMarkDeclinations(
+  db: DB,
+  flowKeys: readonly string[],
+): Map<string, ClaimMarkDeclinationRow> {
+  const byFlow = new Map<string, ClaimMarkDeclinationRow>();
+  if (flowKeys.length === 0) return byFlow;
+  const rows = db
+    .prepare(
+      `SELECT id, flow_key, reason, ref_sha, session_id, recorded_at
+         FROM claim_mark_declinations
+        WHERE flow_key IN (${flowKeys.map(() => "?").join(", ")})
+        ORDER BY id`,
+    )
+    .all(...flowKeys) as ClaimMarkDeclinationRow[];
+  for (const row of rows) byFlow.set(row.flow_key, row);
+  return byFlow;
 }
 
 /**
@@ -1163,6 +1479,33 @@ export function requireCompleteReconciliation(
 }
 
 /**
+ * Whether the structural phase has answered for `subsystemId`: an effective
+ * `structure` narrative (recorded or declined; a withdrawn one is not), or an
+ * imported survey body that no withdrawal has retired, so a store whose survey
+ * was written as a file is not stranded (PLAN §2.5). A legacy `artifacts` row is
+ * not an answer: only an import carries the file's text into the store.
+ */
+export function hasStructureNarrative(db: DB, subsystemId: string): boolean {
+  if (readNarratives(db, "subsystem", subsystemId, "structure").rows.length > 0) return true;
+  return importedSurveyBodies(db, subsystemId).length > 0;
+}
+
+/** The imported survey bodies of a subsystem that no withdrawal has retired, oldest first. */
+export function importedSurveyBodies(
+  db: DB,
+  subsystemId: string,
+): Array<{ id: number; path: string }> {
+  return db
+    .prepare(
+      `SELECT id, path FROM imported_artifacts
+        WHERE subsystem_id = ? AND kind = 'subsystem-survey'
+          AND path NOT IN (SELECT path FROM imported_artifact_withdrawals)
+        ORDER BY id`,
+    )
+    .all(subsystemId) as Array<{ id: number; path: string }>;
+}
+
+/**
  * Enforce that advancing a subsystem to a higher status requires evidence
  * that the prior phase ran. Called only for genuine forward transitions
  * (targetRank > currentRank); no-ops and deferred toggles are exempt.
@@ -1174,8 +1517,8 @@ export function requireCompleteReconciliation(
  * |               |   phase recorded its inventory through add_claim)      |
  * |               |   AND an anchored term scoped to it or an effective     |
  * |               |   declination — discharge or decline, never a floor     |
- * | concerns      | ≥1 artifacts row kind='subsystem-survey' (structural   |
- * |               |   phase wrote and registered its narrative document)   |
+ * | concerns      | an effective `structure` narrative, recorded or        |
+ * |               |   declined, or an imported survey body not withdrawn   |
  * | adversarial   | ≥1 dispositions row (concerns pass ran set_disposition)|
  * | mapped        | every current claim keyed `<sid>/…` carries a recorded |
  * |               |   challenge outcome — the adversarial pass ran over   |
@@ -1222,16 +1565,12 @@ export function enforcePhasePrerequisites(
       break;
     }
     case "concerns": {
-      const { n } = db
-        .prepare(
-          "SELECT COUNT(*) AS n FROM artifacts WHERE subsystem_id = ? AND kind = 'subsystem-survey'",
-        )
-        .get(subsystemId) as { n: number };
-      if (n === 0) {
+      if (!hasStructureNarrative(db, subsystemId)) {
         throw new ToolError(
-          `cannot advance ${subsystemId} to 'concerns': no subsystem-survey artifact ` +
-            `has been registered. The structural phase must write its narrative document ` +
-            `and call register_artifact(kind='subsystem-survey') before the concern pass begins.`,
+          `cannot advance ${subsystemId} to 'concerns': no structure narrative has been ` +
+            `recorded or declined. The structural phase must call record_narrative(section='structure') ` +
+            `with the evidence it was written from, or decline_narrative when the code does not ` +
+            `support one, before the concern pass begins.`,
         );
       }
       break;

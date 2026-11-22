@@ -14,8 +14,10 @@ renderer reads the table only when it exists.
 from __future__ import annotations
 
 import sqlite3
+import subprocess
 import sys
 import tempfile
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -66,42 +68,96 @@ def store(path: Path, *, with_regrade: bool, drop_table: bool = False) -> sqlite
     return db
 
 
+class TimelineRows(HTMLParser):
+    """The rows of the timeline table: each cell's text and every link target in the row."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.rows: list[tuple[list[str], list[str]]] = []
+        self._cells: list[str] | None = None
+        self._hrefs: list[str] = []
+        self._in_cell = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "tr":
+            self._cells, self._hrefs = [], []
+        elif tag == "td" and self._cells is not None:
+            self._cells.append("")
+            self._in_cell = True
+        elif tag == "a":
+            self._hrefs.extend(v or "" for k, v in attrs if k == "href")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "td":
+            self._in_cell = False
+        elif tag == "tr" and self._cells is not None:
+            self.rows.append((self._cells, self._hrefs))
+            self._cells = None
+
+    def handle_data(self, data: str) -> None:
+        if self._in_cell and self._cells:
+            self._cells[-1] += data
+
+
+def publish_history(storage: Path) -> list[tuple[list[str], list[str]]]:
+    """Materialize the store and read the timeline rows off the HTML history page."""
+
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "materialize.py"), "--storage", str(storage)],
+        capture_output=True,
+        text=True,
+    )
+    page = storage / "docs" / "resolution-history.html"
+    if proc.returncode != 0 or not page.is_file():
+        return []
+    parser = TimelineRows()
+    parser.feed(page.read_text())
+    return parser.rows
+
+
 def main() -> int:
     print("Severity re-grades on the resolution history page\n")
     with tempfile.TemporaryDirectory(prefix="amanuensis-severity-") as tmp:
         base = Path(tmp)
 
-        db = store(base / "regraded.db", with_regrade=True)
-        text, sources = render_resolution_history(db, base)
+        (base / "regraded").mkdir()
+        db = store(base / "regraded" / "memory.db", with_regrade=True)
+        _text, sources = render_resolution_history(db, base)
         db.close()
-        rows = [line for line in text.splitlines() if "`HIGH` → `MEDIUM`" in line]
+        timeline = publish_history(base / "regraded")
+        rows = [(cells, hrefs) for cells, hrefs in timeline if "HIGH → MEDIUM" in " ".join(cells)]
         check(
             "a re-grade is a row on the timeline, with both grades",
-            None if len(rows) == 1 else f"{len(rows)} re-grade rows; page:\n{text}",
+            None if len(rows) == 1 else f"{len(rows)} re-grade rows; timeline:\n{timeline}",
         )
-        row = rows[0] if rows else ""
+        cells, hrefs = rows[0] if rows else ([], [])
+        row = " ".join(cells)
         check(
             "the row links to its finding and names the revision it was judged at",
             None
-            if "(findings.md#b01-1)" in row and JUDGED[:7] in row and "batch path" in row
-            else f"row reads: {row!r}",
+            if "findings.html#b01-1" in hrefs and JUDGED[:7] in row and "batch path" in row
+            else f"row reads: {row!r} linking {hrefs!r}",
         )
-        lines = text.splitlines()
-        regrade_at = next((i for i, line in enumerate(lines) if "`HIGH` → `MEDIUM`" in line), -1)
-        open_at = next((i for i, line in enumerate(lines) if "`open`" in line), -1)
+        regrade_at = next(
+            (i for i, (c, _h) in enumerate(timeline) if "HIGH → MEDIUM" in " ".join(c)), -1
+        )
+        open_at = next((i for i, (c, _h) in enumerate(timeline) if "Open" in " ".join(c)), -1)
         check(
             "the later re-grade reads above the earlier resolution event",
-            None if 0 <= regrade_at < open_at else f"re-grade at line {regrade_at}, open at {open_at}",
+            None if 0 <= regrade_at < open_at else f"re-grade at row {regrade_at}, open at {open_at}",
         )
         check(
             "the page's sources include the re-grade table",
             None if "db:history:severity-events" in sources else f"sources: {sorted(sources)}",
         )
 
-        db = store(base / "older.db", with_regrade=False, drop_table=True)
+        (base / "older").mkdir()
+        db = store(base / "older" / "memory.db", with_regrade=False, drop_table=True)
         try:
             text, sources = render_resolution_history(db, base)
-            problem = None if "`open`" in text and "db:history:severity-events" not in sources else text
+            older = publish_history(base / "older")
+            shows_open = any("Open" in " ".join(cells) for cells, _hrefs in older)
+            problem = None if shows_open and "db:history:severity-events" not in sources else text
         except sqlite3.Error as exc:
             problem = f"rendering a store without the table raised: {exc}"
         db.close()

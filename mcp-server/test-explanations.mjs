@@ -412,16 +412,30 @@ async function main(mods) {
           "a missing subsystem",
         );
       });
-      check(`R4 ${tool} refuses the project's purpose`, () => {
-        const missing = absent(tool);
-        if (missing) return missing;
-        return refusesWith(
-          ctx,
-          () => run({ subject_type: "project", subject_id: "project", slot: "purpose" }),
-          `${T(tool)} the project's purpose is the thesis in entry-point.md`,
-          "a project purpose",
-        );
-      });
+      // The project holds a purpose since store-only SO4 (design/store-only/PLAN.md
+      // §2.2): it is recorded at any status, so only declining it is refused.
+      // Recording one, and every refusal on that path, is test-store-only-project-records.mjs.
+      if (tool === DECLINE) {
+        check(`R4 ${tool} refuses the project's purpose`, () => {
+          const missing = absent(tool);
+          if (missing) return missing;
+          return refusesWith(
+            ctx,
+            () => run({ subject_type: "project", subject_id: "project", slot: "purpose" }),
+            `${T(tool)} the project's purpose is recorded, not declined`,
+            "a project purpose",
+          );
+        });
+      } else {
+        check(`R4 ${tool} accepts the project's purpose`, () => {
+          const missing = absent(tool);
+          if (missing) return missing;
+          const said = refusal(() =>
+            run({ subject_type: "project", subject_id: "project", slot: "purpose" }),
+          );
+          return said ? `the project's purpose was refused: ${said.slice(0, 120)}` : null;
+        });
+      }
     }
 
     check("R3 record_explanation refuses a project account while no subsystem has reached structural", () => {
@@ -792,7 +806,11 @@ async function main(mods) {
             .run(type, id, slot, disposition, body, headSha(ctx), ctx.sessionId),
         );
       const wrong = [];
-      if (!insert("project", "project", "purpose", "recorded")) wrong.push("a project purpose row was stored");
+      // The project holds a purpose since store-only SO2 (design/store-only/PLAN.md
+      // §2.2), so the refusal moved to the one row the schema still forbids for
+      // it: `imported` belongs to the project purpose and nowhere else.
+      if (!insert("subsystem", "S-01", "purpose", "imported")) wrong.push("an imported subsystem row was stored");
+      if (!insert("project", "project", "account", "imported")) wrong.push("an imported project account was stored");
       if (!insert("project", "S-01", "account", "recorded")) wrong.push("a project row with a subsystem id was stored");
       if (!insert("subsystem", "S-01", "summary", "recorded")) wrong.push("an unknown slot was stored");
       if (!insert("subsystem", "S-01", "purpose", "superseded")) wrong.push("an unknown disposition was stored");
@@ -939,7 +957,9 @@ async function main(mods) {
       explanation_subject: { values: ["subsystem", "project"], column: "subject_type", constName: "EXPLANATION_SUBJECTS" },
       explanation_slot: { values: ["purpose", "account"], column: "slot", constName: "EXPLANATION_SLOTS" },
       explanation_disposition: {
-        values: ["recorded", "declined", "withdrawn"],
+        // `imported` is the thesis copied from an earlier entry point
+        // (design/store-only/PLAN.md §2.2, D2; added by SO2).
+        values: ["recorded", "declined", "withdrawn", "imported"],
         column: "disposition",
         constName: "EXPLANATION_DISPOSITIONS",
       },
@@ -1091,7 +1111,10 @@ async function main(mods) {
     if (text === null) return "materializer/test-prose-retention.py is unreadable";
     if (!text.includes('"explanations.body"')) return "test-prose-retention.py does not seed explanations.body";
     if (text.includes("rendered by EX11")) return null;
-    const rendered = /RENDERED_FIELDS[^=]*=\s*\(([^)]*)\)/s.exec(text);
+    // Comments inside the tuple may carry parentheses ("the seam contract (A2)"), so
+    // they are dropped before the tuple's closing parenthesis is found.
+    const code = text.replace(/#[^\n]*/g, "");
+    const rendered = /RENDERED_FIELDS[^=]*=\s*\(([^)]*)\)/s.exec(code);
     const accounted = rendered !== null && rendered[1].includes('"explanations.body"');
     const allowlisted = /ALLOWLIST\[\s*"explanations\.body"\s*\]/.test(text);
     if (allowlisted) return "explanations.body is allowlisted without the 'rendered by EX11' reason";

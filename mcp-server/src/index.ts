@@ -21,6 +21,7 @@ import { storagePathIsTracked } from "./storage-git.js";
 import { artifactTools } from "./tools/artifacts.js";
 import { carriedTools } from "./tools/carried.js";
 import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
+import { claimMarkTools } from "./tools/claim-marks.js";
 import { claimTools } from "./tools/claims.js";
 import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
@@ -73,6 +74,26 @@ const ADDITIVE_TOOLS = new Set([
   // new row.
   "record_explanation",
   "decline_explanation",
+  // `narratives` and `narrative_evidence` are append-only in the same way
+  // (PLAN §2.1): each writer inserts rows, and a correction is a new row.
+  "record_narrative",
+  "decline_narrative",
+  // `project_profile`, `runtime_boundaries`, `runtime_boundary_evidence` and
+  // `territory_dispositions` are append-only in the same way (PLAN §2.2); a
+  // withdrawal is a row too.
+  "record_project_profile",
+  "record_runtime_boundary",
+  "withdraw_runtime_boundary",
+  "record_territory_disposition",
+  // `claim_marks`, `claim_mark_withdrawals` and `claim_mark_declinations` are
+  // append-only in the same way (PLAN §7.2); a withdrawal is a row too.
+  "record_claim_mark",
+  "withdraw_claim_mark",
+  "decline_claim_marks",
+  // `imported_artifacts`, `explanations`, `project_profile` and
+  // `runtime_boundaries` are append-only (PLAN §5.2): the import inserts rows,
+  // skips what is already there, and writes no file.
+  "import_artifact_bodies",
   "record_open_question",
   "rebaseline_operating_envelope",
 ]);
@@ -127,12 +148,15 @@ import { fileTools } from "./tools/files.js";
 import { findingTools } from "./tools/findings.js";
 import { gitTools } from "./tools/git.js";
 import { impactTools } from "./tools/impact.js";
+import { importTools } from "./tools/import.js";
 import { learningTools } from "./tools/learning.js";
 import { lockTools } from "./tools/locks.js";
 import { loggingTools } from "./tools/logging.js";
 import { materializeTools } from "./tools/materialize.js";
+import { narrativeTools } from "./tools/narratives.js";
 import { openQuestionTools } from "./tools/open-questions.js";
 import { projectTools } from "./tools/project.js";
+import { projectRecordTools } from "./tools/project-records.js";
 import { refreshTools } from "./tools/refresh.js";
 import { researchTools } from "./tools/research.js";
 import { resolutionTools } from "./tools/resolution.js";
@@ -328,6 +352,10 @@ async function main(): Promise<void> {
     ...fieldNoteTools,
     ...vocabularyTools,
     ...explanationTools,
+    ...narrativeTools,
+    ...projectRecordTools,
+    ...claimMarkTools,
+    ...importTools,
     ...carriedTools,
     ...xrefTools,
     ...contradictionTools,

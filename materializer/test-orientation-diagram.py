@@ -24,8 +24,7 @@ Turns red when:
     recorded, says every line is listed in the seam topology (it lists seams
     only) instead of sending arrows to the dependency graph and seams to the
     seam topology;
-  - the "N of M subsystems have no recorded boundary" count is wrong in either
-    view;
+  - the "N of M subsystems have no recorded boundary" count is wrong;
   - the SVG lacks `role="img"`, a `<title>` or a `<desc>` as parsed direct
     children (one hidden in a comment does not count), or its
     `aria-labelledby` names an ID no SVG element carries;
@@ -38,8 +37,8 @@ Turns red when:
     not 200×44 with the ID on line 1 and the (truncated) name on line 2; lines
     are not drawn under the boxes; nine layers do not wrap to a second band;
   - the section is not the one after the atlas or dependency section and
-    before the seam topology, in either view, or omits a subsystem or seam in
-    the Markdown;
+    before the seam topology, or the page omits a link to a subsystem or seam
+    or the name of an xref's relationship;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -247,21 +246,12 @@ def html_text(fragment: str) -> str:
     return " ".join(htmllib.unescape(re.sub(r"<[^>]+>", "", fragment)).split())
 
 
-def md_section(text: str, heading: str) -> str | None:
-    match = re.search(rf"^## {re.escape(heading)}\s*$(.*?)(?=^## |\Z)", text, re.M | re.S)
-    return match.group(1) if match else None
-
-
 def html_section(page: str, heading: str) -> str | None:
     for match in re.finditer(r"<h2\b[^>]*>(.*?)</h2>", page, re.S):
         if html_text(match.group(1)).lstrip("§").strip() == heading:
             end = page.find("<h2", match.end())
             return page[match.start() : end if end >= 0 else len(page)]
     return None
-
-
-def h2s_md(text: str) -> list[str]:
-    return [line[3:].strip() for line in text.splitlines() if line.startswith("## ")]
 
 
 def h2s_html(page: str) -> list[str]:
@@ -407,7 +397,6 @@ def main() -> int:
     }
     with tempfile.TemporaryDirectory(prefix="o8-gate-") as tmp:
         root = Path(tmp)
-        md: dict[str, str | None] = {}
         page: dict[str, str | None] = {}
         summaries: dict[str, dict[str, Any]] = {}
         for name, (subs, seams, xrefs) in stores.items():
@@ -418,15 +407,14 @@ def main() -> int:
                 summaries[name] = publish(storage)
             except Exception as exc:
                 summaries[name] = {"_diagnostic": f"could not seed — {scrub(repr(exc))}"}
-            md[name] = read(storage / "docs" / "architecture.md")
             page[name] = read(storage / "docs" / "architecture.html")
 
         def published() -> str | None:
             for name, result in summaries.items():
                 if result.get("_returncode") != 0 or result.get("ok") is False:
                     return f"the {name} fixture did not publish — {result.get('_diagnostic', result)}"
-                if md[name] is None or page[name] is None:
-                    return f"the {name} fixture wrote no architecture.md and architecture.html"
+                if page[name] is None:
+                    return f"the {name} fixture wrote no architecture.html"
             return None
 
         check("the fixtures publish", published)
@@ -434,20 +422,20 @@ def main() -> int:
         # -- the section's place ------------------------------------------------
         def section_placed() -> str | None:
             for name in stores:
-                text, html_page = md[name], page[name]
-                if text is None or html_page is None:
+                html_page = page[name]
+                if html_page is None:
                     return f"the {name} architecture page is not published"
-                for view, heads in (("Markdown", h2s_md(text)), ("HTML", h2s_html(html_page))):
-                    if heads.count(SECTION) != 1:
-                        return f"{name}: the {view} view has {heads.count(SECTION)} '{SECTION}' sections, expected one"
-                    at = heads.index(SECTION)
-                    before = heads[at - 1] if at else ""
-                    after = heads[at + 1] if at + 1 < len(heads) else ""
-                    if before not in ("Subsystem atlas", "Subsystem dependency graph") or after != "Seam topology":
-                        return (
-                            f"{name}: in the {view} view '{SECTION}' sits between {before!r} and {after!r};"
-                            " it belongs after the atlas or dependency section and before the seam topology"
-                        )
+                heads = h2s_html(html_page)
+                if heads.count(SECTION) != 1:
+                    return f"{name}: the page has {heads.count(SECTION)} '{SECTION}' sections, expected one"
+                at = heads.index(SECTION)
+                before = heads[at - 1] if at else ""
+                after = heads[at + 1] if at + 1 < len(heads) else ""
+                if before not in ("Subsystem atlas", "Subsystem dependency graph") or after != "Seam topology":
+                    return (
+                        f"{name}: '{SECTION}' sits between {before!r} and {after!r};"
+                        " it belongs after the atlas or dependency section and before the seam topology"
+                    )
             return None
 
         check("the section follows the atlas or dependency section, before the seam topology", section_placed)
@@ -520,17 +508,14 @@ def main() -> int:
         # -- caption ------------------------------------------------------------
         def caption_words() -> str | None:
             for name in ("seams", "wide"):
-                html_page, text = page[name], md[name]
-                section = html_section(html_page or "", SECTION)
-                md_part = md_section(text or "", SECTION)
-                if section is None or md_part is None:
+                section = html_section(page[name] or "", SECTION)
+                if section is None:
                     return f"{name}: no '{SECTION}' section to read"
                 figcaption = re.search(r"<figcaption\b[^>]*>(.*?)</figcaption>", section, re.S)
                 if not figcaption or SECTION not in html_text(figcaption.group(1)):
                     return f"{name}: the figure's caption does not say {SECTION!r}"
-                for label, fragment in (("HTML section", html_text(section)), ("Markdown section", md_part)):
-                    if re.search(r"dependenc", fragment, re.I):
-                        return f"{name}: the {label} says 'dependency' with zero xrefs recorded"
+                if re.search(r"dependenc", html_text(section), re.I):
+                    return f"{name}: the HTML section says 'dependency' with zero xrefs recorded"
             section = html_section(page["xrefs"] or "", SECTION)
             if section is None or not re.search(r"dependenc", html_text(section), re.I):
                 return "xrefs: with xrefs recorded the caption does not name the dependency arrows"
@@ -550,18 +535,15 @@ def main() -> int:
         def no_boundary_count() -> str | None:
             for name, (subs, seams, xrefs) in stores.items():
                 want = (unconnected(subs, seams, xrefs), len(subs))
-                for view, fragment in (
-                    ("Markdown", md_section(md[name] or "", SECTION)),
-                    ("HTML", html_text(html_section(page[name] or "", SECTION) or "")),
-                ):
-                    if not fragment:
-                        return f"{name}: no '{SECTION}' section in the {view} view"
-                    counts = {(int(a), int(b)) for a, b in COUNT.findall(" ".join(fragment.split()))}
-                    if counts != {want}:
-                        return f"{name}: the {view} view states {sorted(counts)} subsystems with no recorded boundary, expected {want}"
+                fragment = html_text(html_section(page[name] or "", SECTION) or "")
+                if not fragment:
+                    return f"{name}: no '{SECTION}' section in the page"
+                counts = {(int(a), int(b)) for a, b in COUNT.findall(fragment)}
+                if counts != {want}:
+                    return f"{name}: the page states {sorted(counts)} subsystems with no recorded boundary, expected {want}"
             return None
 
-        check("the 'N of M subsystems have no recorded boundary' count is right in both views", no_boundary_count)
+        check("the 'N of M subsystems have no recorded boundary' count is right", no_boundary_count)
 
         # -- accessibility and build time ----------------------------------------
         def accessible_svg() -> str | None:
@@ -620,17 +602,16 @@ def main() -> int:
         check("no <script> on the page references a diagram library", no_diagram_runtime)
 
         def sentence_without_relations() -> str | None:
-            html_page, text = page["quiet"], md["quiet"]
+            html_page = page["quiet"]
             section = html_section(html_page or "", SECTION)
-            md_part = md_section(text or "", SECTION)
-            if section is None or md_part is None:
+            if section is None:
                 return f"quiet: no '{SECTION}' section"
             if "<svg" in section or diagram_of(html_page) is not None:
                 return "zero seams and zero xrefs produce an SVG instead of a sentence"
-            if NO_RELATION_SENTENCE not in html_text(section) or NO_RELATION_SENTENCE not in md_part:
-                return f"zero seams and zero xrefs do not produce the sentence {NO_RELATION_SENTENCE!r} in both views"
-            if "|" in md_part:
-                return "zero seams and zero xrefs still produce a boundary table in the Markdown"
+            if NO_RELATION_SENTENCE not in html_text(section):
+                return f"zero seams and zero xrefs do not produce the sentence {NO_RELATION_SENTENCE!r}"
+            if re.search(r"<table\b|record-list", section):
+                return "zero seams and zero xrefs still produce a boundary table or record list in the HTML"
             return None
 
         check("zero seams and zero xrefs produce a sentence, not an SVG", sentence_without_relations)
@@ -693,25 +674,27 @@ def main() -> int:
 
         check("above eight layers the SVG wraps to a second band", wraps)
 
-        # -- Markdown account -----------------------------------------------------
-        def markdown_account() -> str | None:
+        # -- the page's account of every boundary -----------------------------------
+        def page_account() -> str | None:
+            # The SVG is a picture; the page's links and sections are its account.
             for name in ("seams", "xrefs"):
                 subs, seams, xrefs = stores[name]
-                part = md_section(md[name] or "", SECTION)
+                part = page[name]
                 if part is None:
-                    return f"{name}: no Markdown section"
+                    return f"{name}: no architecture.html"
                 for sid, *_rest in subs:
-                    if not re.search(rf"\[{re.escape(sid)}\]\(subsystems/", part):
-                        return f"{name}: the Markdown section does not link subsystem {sid}"
+                    anchors = re.findall(r'<a\b[^>]*href="subsystems/[^"#]*\.html"[^>]*>(.*?)</a>', part, re.S)
+                    if not any(re.search(rf"(?<![\w-]){re.escape(sid)}(?![\w-])", html_text(a)) for a in anchors):
+                        return f"{name}: the page does not link subsystem {sid}"
                 for seam in seams:
-                    if not re.search(rf"\[{re.escape(seam[0])}\]\(seams\.md#{seam[0].lower()}\)", part):
-                        return f"{name}: the Markdown section does not link seam {seam[0]}"
+                    if not re.search(rf'<a\b[^>]*href="seams\.html#{seam[0].lower()}"', part):
+                        return f"{name}: the page does not link seam {seam[0]}"
                 for from_id, to_id, rel in xrefs:
-                    if rel not in part:
-                        return f"{name}: the Markdown section omits the xref {from_id} {rel} {to_id}"
+                    if not re.search(rf'<span class="topology-edge-key">{re.escape(rel)}</span>', part):
+                        return f"{name}: the page omits the xref {from_id} {rel} {to_id}"
             return None
 
-        check("the Markdown view links every subsystem and seam and names every xref", markdown_account)
+        check("the page links every subsystem and seam and names every xref", page_account)
         check("no published page hides its report from assistive technology", lambda: hidden_pages(*(root / name / "docs" for name in stores)))
 
     def runs_in_ci() -> str | None:

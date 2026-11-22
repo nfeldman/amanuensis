@@ -1,11 +1,15 @@
 """Self-contained HTML projection for the human-facing conspectus.
 
-Markdown remains a useful portable projection, but it is not the primary
-reading surface.  This module turns the post-xref Markdown bytes into a
+HTML is the only published view (store-only PLAN §3.2).  This module turns each
+page's model, built by its renderer and linked by the cross-reference pass, into a
 dependency-free HTML site with global navigation, reader hints, semantic
 status labels, and local-link integrity.  Every page embeds the same compact
 CSS and JavaScript so the projection works from ``file://`` as well as from a
 static web server.
+
+A page is a model of the blocks of `page.py`, and `write_html` prints those blocks.
+No Markdown is read here: the one Markdown reader left is `legacy_prose.py`, for
+the bodies an earlier version had the survey write by hand.
 """
 
 from __future__ import annotations
@@ -20,19 +24,67 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from typing import Any
-from urllib.parse import quote, urlsplit, urlunsplit
+from urllib.parse import quote
 
+from .diagrams import draw_svg
 from .manifest import sha256_bytes
-from .readback import MARKER_KINDS
-from .slugs import slugify
-from .vocabulary import axes, labels, meanings
-from .xref import identifier_pattern
-
-_MARKER_RE = re.compile(
-    r"<!--\s*amanuensis:(?:"
-    + "|".join(MARKER_KINDS)
-    + r"):[0-9a-f]+\s*-->"
+from .page import (
+    COVERAGE_STATES,
+    Abbr,
+    Anchor,
+    Atlas,
+    AtlasItem,
+    Badge,
+    BadgeNote,
+    Block,
+    BoundaryDiagram,
+    Break,
+    Chip,
+    Code,
+    CodeSpan,
+    ConcernChecklist,
+    CoverageIndex,
+    Details,
+    Diagram,
+    DiagramSource,
+    Emph,
+    EnumTable,
+    Heading,
+    Inline,
+    InlineAnchor,
+    InlineMarker,
+    Inlines,
+    LifecycleTable,
+    Link,
+    List,
+    Marked,
+    Page,
+    Paragraph,
+    Quote,
+    RecordList,
+    RecordMarker,
+    RelationshipTrace,
+    RuntimeDiagram,
+    Section,
+    StalenessBars,
+    Strong,
+    SummaryList,
+    Table,
+    Tag,
+    Text,
+    Topology,
+    TraceNode,
 )
+from .prose import (
+    DISPLAY_STATUS,
+    EVIDENCE_HINTS,
+    SEVERITY_HINTS,
+    STATUS_AXIS,
+    STATUS_HINTS,
+    parse_inlines,
+)
+from .slugs import slugify
+from .xref import identifier_pattern
 
 HTML_PROJECTION_VERSION = "1.14.0"
 
@@ -51,6 +103,20 @@ NAV_GROUPS: tuple[str, ...] = ("Overview", "Codebase", "Unresolved", "History", 
 # `manifest.projection_files` and in the publication receipt like any page.
 SEARCH_INDEX_PATH = "search-index.js"
 
+# The one `.md` a publication holds (store-only PLAN §6, D10): a README that
+# points at `index.html`, because GitHub's directory view shows a README and shows
+# `.html` only as source. It is the same bytes for every store: nothing a survey
+# recorded is in it, so it is a pointer and not a page. It is a projection file
+# like the search index, and the read-back holds it to exactly this text.
+README_PATH = "README.md"
+README_TEXT = (
+    "# Documentation\n"
+    "\n"
+    "Open [index.html](index.html) to read this documentation.\n"
+    "\n"
+    "The pages are generated HTML. This file only points at them.\n"
+)
+
 
 class UnknownNavGroup(ValueError):
     """A planned page claims a navigation group `NAV_GROUPS` does not name."""
@@ -61,7 +127,7 @@ def assert_nav_groups(groups: Sequence[tuple[str, str]]) -> None:
 
     Raised before anything is written. The projection cannot render a page it
     has nowhere to route from, and appending a sixth group would publish a
-    lens with no definition in `how-to-read.md` (§7.8).
+    lens with no definition in `how-to-read.html` (§7.8).
     """
 
     rogue = sorted({f"{path} (group {group!r})" for path, group in groups if group not in NAV_GROUPS})
@@ -74,9 +140,9 @@ def assert_nav_groups(groups: Sequence[tuple[str, str]]) -> None:
 
 @dataclass(frozen=True)
 class SitePage:
-    """Human-facing identity for one Markdown/HTML page pair."""
+    """Human-facing identity for one page; `path` is its plan id and its HTML path."""
 
-    markdown_path: str
+    path: str
     title: str
     label: str
     hint: str
@@ -96,23 +162,10 @@ class SitePage:
 
     @property
     def html_path(self) -> str:
-        return str(Path(self.markdown_path).with_suffix(".html")).replace("\\", "/")
+        return self.path
 
 
-def page_head_line(hint: str, use_when: str) -> str:
-    """The italic paragraph the Markdown view prints under a page's H1.
-
-    The HTML head prints the same two sentences as separate paragraphs, so the
-    two views say one thing; `strip_page_head` removes this line before the
-    HTML body is built, so it is not printed twice.
-    """
-
-    sentence = f"Use it when {use_when}" if use_when else ""
-    text = " ".join(part for part in (hint.strip(), sentence) if part)
-    return f"*{text}*" if text else ""
-
-
-GUIDE_PAGE = "how-to-read.md"
+GUIDE_PAGE = "how-to-read.html"
 TERMS_LABEL = "Terms on this page:"
 
 # A page `materialize.py` writes for a caller that does not record its read-back
@@ -136,33 +189,12 @@ def cli_render_notice(*, recorded: bool, verified: bool) -> str:
     return CLI_RENDER_NOTICE if verified else CLI_RENDER_NOTICE_UNVERIFIED
 
 
-def notice_paragraph(notice: str) -> str:
-    return f"*{notice}*"
-
-
-def append_notice(markdown: str, notice: str) -> str:
-    """End the Markdown page with the notice as its last paragraph."""
-
-    if not notice:
-        return markdown
-    return markdown.rstrip("\n") + "\n\n" + notice_paragraph(notice) + "\n"
-
-
-def strip_notice(markdown: str, notice: str) -> str:
-    """The inverse of `append_notice`: the HTML prints the notice in its page head."""
-
-    paragraph = notice_paragraph(notice)
-    body = markdown.rstrip("\n")
-    if not notice or not body.endswith("\n" + paragraph):
-        return markdown
-    return body[: -len(paragraph)].rstrip("\n") + "\n"
-
-
 def terms_line(page_path: str, terms: Sequence[tuple[str, str]]) -> str:
-    """The Markdown paragraph listing a page's terms, linked to the guide's anchors.
+    """The line listing a page's terms, linked to the guide's anchors.
 
-    The HTML head prints the same terms as its own paragraph, and
-    `strip_page_head` removes this one before the HTML body is built.
+    The HTML head prints the terms itself; this text is the page's recorded
+    head, hashed with the model so a changed term list re-renders the page, and
+    held out of the cross-reference pass as generated copy.
     """
 
     if not terms:
@@ -171,52 +203,6 @@ def terms_line(page_path: str, terms: Sequence[tuple[str, str]]) -> str:
     guide = posixpath.relpath(GUIDE_PAGE, base)
     links = " · ".join(f"[{term}]({guide}#term-{slug})" for term, slug in terms)
     return f"{TERMS_LABEL} {links}"
-
-
-def _first_two_content_lines(lines: list[str]) -> tuple[int, int] | None:
-    first = next((i for i, line in enumerate(lines) if line.strip()), None)
-    if first is None or not lines[first].startswith("# "):
-        return None
-    second = next((i for i in range(first + 1, len(lines)) if lines[i].strip()), len(lines))
-    return first, second
-
-
-def insert_page_head(markdown: str, hint: str, use_when: str, terms: str = "") -> str:
-    """Put the page-head paragraph, then the terms line, directly under the page's H1."""
-
-    line = page_head_line(hint, use_when)
-    lines = markdown.split("\n")
-    found = _first_two_content_lines(lines) if line else None
-    if found is None:
-        return markdown
-    first, _second = found
-    head = [line, "", terms] if terms else [line]
-    return "\n".join(lines[: first + 1] + [""] + head + lines[first + 1 :])
-
-
-def _visible_inline(text: str) -> str:
-    return re.sub(r"\*\*(.+?)\*\*", r"\1", re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text))
-
-
-def strip_page_head(markdown: str, hint: str, use_when: str, terms: str = "") -> str:
-    """The inverse of `insert_page_head`, for the HTML projection's body."""
-
-    line = page_head_line(hint, use_when)
-    lines = markdown.split("\n")
-    found = _first_two_content_lines(lines) if line else None
-    if found is None or found[1] >= len(lines):
-        return markdown
-    # The xref pass may have linked or bolded an ID inside the paragraph since
-    # it was written (a subsystem named after its own ID gets `**B-01**`);
-    # compare what the reader sees, not the link or bold markup.
-    if _visible_inline(lines[found[1]]) != _visible_inline(line):
-        return markdown
-    del lines[found[1]]
-    if terms:
-        nxt = next((i for i in range(found[1], len(lines)) if lines[i].strip()), None)
-        if nxt is not None and _visible_inline(lines[nxt]) == _visible_inline(terms):
-            del lines[nxt]
-    return "\n".join(lines)
 
 
 @dataclass
@@ -228,32 +214,6 @@ class HtmlProjectionResult:
     warnings: list[str]
 
 
-# The reader-facing vocabulary is not restated here. Every hint, label, and
-# axis below is built from contracts/conspectus-vocabulary.json through the
-# generated `vocabulary` module, so a value the server accepts and a value the
-# projection can explain are the same set by construction.
-#
-# These tables are one flat namespace over several axes — `_status_html` and
-# `_code_html` look a bare token up without knowing which enum it came from —
-# so a value carried by more than one enum is taken from the first enum in the
-# precedence below. The order is declared, never dictionary chance.
-_STATUS_ENUMS = (
-    "subsystem_status",
-    "disposition_classification",
-    "finding_status",
-    "finding_resolution_state",
-    "diagnosticity_outcome",
-)
-
-STATUS_HINTS = meanings(*_STATUS_ENUMS)
-
-EVIDENCE_HINTS = meanings("evidence_kind")
-
-SEVERITY_HINTS = meanings("severity")
-
-DISPLAY_STATUS = labels(*_STATUS_ENUMS, "evidence_kind")
-
-STATUS_AXIS = axes(*_STATUS_ENUMS)
 
 
 _CSS = r"""
@@ -1446,48 +1406,15 @@ _JS = r"""
 """
 
 
-def _plain(text: str) -> str:
-    text = re.sub(r"<[^>]+>", "", text)
-    text = re.sub(r"\[([^]]+)\]\([^)]+\)", r"\1", text)
-    text = text.replace("**", "").replace("__", "").replace("`", "")
-    return html.unescape(text).strip()
-
-
-def _record_key_text(value: str) -> str:
-    """The human name a heading or key cell carries, without link or emphasis.
-
-    A subsystem heading and a hot-spot row both name their subsystem as a
-    Markdown link, so the facet a filter offers has to be the link's text and
-    not the whole cell — otherwise the two pages would name one subsystem two
-    different ways.
-    """
-
-    match = re.search(r"\[([^\]]+)\]\([^)]*\)", value)
-    return _plain(match.group(1) if match else value)
-
-
-def _positive_count(value: str) -> bool:
-    """Whether a measure cell records a count above zero."""
-
-    match = re.match(r"^\s*(\d+)", _plain(value))
-    return bool(match) and int(match.group(1)) > 0
+# ---------------------------------------------------------------------------
+# Page model → HTML. Nothing below reads Markdown: every block already says
+# what it is, and every inline already says how it prints.
+# ---------------------------------------------------------------------------
 
 
 def _rel_link(from_path: str, to_path: str) -> str:
     base = posixpath.dirname(from_path) or "."
     return posixpath.relpath(to_path, base)
-
-
-def _html_href(href: str) -> str:
-    if href.startswith(("http://", "https://", "mailto:", "#")):
-        return href
-    split = urlsplit(href)
-    if split.scheme or split.netloc:
-        return "#"
-    path = split.path
-    if path.endswith(".md"):
-        path = path[:-3] + ".html"
-    return urlunsplit(("", "", path, split.query, split.fragment))
 
 
 def _status_html(value: str, *, severity: bool = False, show_hint: bool = True) -> str:
@@ -1506,128 +1433,1234 @@ def _status_html(value: str, *, severity: bool = False, show_hint: bool = True) 
     return f'<span class="status status-{axis} status-{html.escape(key)}"{hint_attr}>{html.escape(label)}</span>'
 
 
-def _code_html(value: str) -> str:
-    key = value.strip().lower()
-    if key in STATUS_HINTS:
-        return _status_html(key)
-    if key in EVIDENCE_HINTS:
+def _chip_html(chip: Chip) -> str:
+    if chip.enum == "severity":
+        return _status_html(chip.value, severity=True, show_hint=chip.show_hint)
+    if chip.enum == "evidence":
+        key = chip.value
         label = DISPLAY_STATUS.get(key, key.replace("-", " ").title())
         cls = f"evidence-label evidence-{key}"
         return f'<span class="{cls}" title="{html.escape(EVIDENCE_HINTS[key], quote=True)}">{html.escape(label)}</span>'
-    if value == "ACH":
-        return '<abbr title="Analysis of Competing Hypotheses">ACH</abbr>'
-    return f"<code>{html.escape(value)}</code>"
+    return _status_html(chip.value, show_hint=chip.show_hint)
 
 
-_DEPTH_VALUE_BY_LABEL = {label.lower(): value for value, label in labels("subsystem_status").items()}
+def _inline_html(node: Inline) -> str:
+    if isinstance(node, Text):
+        return html.escape(node.text, quote=False)
+    if isinstance(node, CodeSpan):
+        return f"<code>{html.escape(node.text)}</code>"
+    if isinstance(node, Chip):
+        return _chip_html(node)
+    if isinstance(node, Strong):
+        return f"<strong>{''.join(_inline_html(child) for child in node.children)}</strong>"
+    if isinstance(node, Emph):
+        return f"<em>{''.join(_inline_html(child) for child in node.children)}</em>"
+    if isinstance(node, Link):
+        attrs = ' rel="noreferrer"' if node.external else ""
+        # A label's own words are escaped as the start tree's link printer escaped them.
+        label = "".join(
+            html.escape(child.text) if isinstance(child, Text) else _inline_html(child)
+            for child in node.children or (Text(node.label),)
+        )
+        return f'<a href="{html.escape(node.href, quote=True)}"{attrs}>{label}</a>'
+    if isinstance(node, Abbr):
+        return f'<abbr title="{html.escape(node.title, quote=True)}">{html.escape(node.text)}</abbr>'
+    if isinstance(node, InlineAnchor):
+        return f'<span id="{html.escape(node.id, quote=True)}" class="record-anchor"></span>'
+    if isinstance(node, InlineMarker):
+        return node.raw
+    if isinstance(node, Break):
+        return "<br>\n"
+    if isinstance(node, Tag):
+        return f"<{'/' if node.closing else ''}{node.name}>"
+    raise TypeError(f"not an inline node: {node!r}")
 
 
-def _atlas_depth(cell: str) -> str:
-    """An atlas depth cell, which carries the contract's label, as its status chip."""
-
-    value = _DEPTH_VALUE_BY_LABEL.get(_plain(cell).lower())
-    return _status_html(value) if value else _inline(cell)
-
-
-def _names_label(text: str) -> bool:
-    """Whether a bare cell is a stored value or its own label, not another enum's word.
-
-    A label such as pass_type's "Adversarial" lowercases to a status value whose
-    label differs; chipping it would print that other label in its place.
-    """
-
-    key = text.lower()
-    return text == key or text == DISPLAY_STATUS.get(key, key.replace("-", " ").title())
+def _inlines_html(text: Inlines) -> str:
+    return "".join(_inline_html(node) for node in text.nodes)
 
 
 def _inline(text: str) -> str:
-    """Render the deliberately small inline subset emitted by Amanuensis."""
+    """Markdown inline text as HTML: `parse_inlines`, then the writer's inline printer.
 
-    stripped = text.strip()
-    if stripped.lower() in STATUS_HINTS and _names_label(stripped):
-        return _status_html(stripped)
-    if stripped.lower() in EVIDENCE_HINTS and _names_label(stripped):
-        return _code_html(stripped)
-    if stripped.upper() in SEVERITY_HINTS:
-        return _status_html(stripped, severity=True)
+    Kept for the read-back, which compares a page's words with the store's.
+    """
 
-    placeholders: list[str] = []
+    return _inlines_html(parse_inlines(text))
 
-    def stash(rendered: str) -> str:
-        placeholders.append(rendered)
-        return f"\x00{len(placeholders) - 1}\x00"
 
-    # Durable projection markers and explicit xref anchors are the only raw
-    # HTML accepted.  All record-authored prose is escaped below.
-    text = re.sub(
-        _MARKER_RE,
-        lambda m: stash(m.group(0)),
-        text,
+_DISPLAY_FIELD = {
+    "ref sha": "Revision",
+    "id": "ID",
+    "classification": "Verdict",
+    "evidence quality": "Evidence",
+    "linchpin?": "Linchpin dependency",
+    "why in scope": "Why this file is in scope",
+    "codebase-specific probe (abbreviated)": "What to examine",
+    "jump-in": "Start here",
+    "sev": "Severity",
+    "one-line": "Finding",
+    "assessable?": "Assessment ready",
+    "#": "Number",
+}
+
+
+def _mark_attrs(record: str, state: str = "") -> str:
+    """A rendered record's mark (store-only PLAN §3.5): its type and id, and the state it prints."""
+
+    if not record:
+        return ""
+    attrs = f' data-record="{html.escape(record, quote=True)}"'
+    if state:
+        attrs += f' data-state="{html.escape(state, quote=True)}"'
+    return attrs
+
+
+def _svg_mark(kind: str, record: str) -> str:
+    """A drawn node's or edge's mark: `data-node` or `data-edge`, naming its record (§3.5)."""
+
+    return f' data-{kind}="{html.escape(record, quote=True)}"' if record else ""
+
+
+#: Colour tokens a badge's measure borrows from the page's severity and resolution ramps.
+_BADGE_TONE = {
+    "crit-high": "severity-critical",
+    "med-low": "severity-medium",
+    "awaiting": "resolution-pending",
+    "undiscriminated": "disposition-ambiguous",
+}
+
+
+def _badge_attrs(badge: Badge, subsystem: str) -> str:
+    review = ' data-under-review="yes"' if badge.review else ""
+    return (
+        f' data-finding-badge="{html.escape(badge.measure, quote=True)}"'
+        f' data-subsystem="{html.escape(subsystem, quote=True)}" data-count="{badge.count}"{review}'
     )
-    text = re.sub(
-        r'<a\s+id="([a-zA-Z0-9_.:-]+)"></a>',
-        lambda m: stash(f'<span id="{html.escape(m.group(1), quote=True)}" class="record-anchor"></span>'),
-        text,
+
+
+def _atlas_badges(item: AtlasItem) -> str:
+    """An atlas item's finding badges, one pill per measure; nothing when it has none (A4)."""
+
+    if not item.badges:
+        return ""
+    sid = item.record.removeprefix("subsystem:")
+    pills = "".join(
+        f'<span class="finding-badge"{_badge_attrs(b, sid)}'
+        f' style="display:inline-block;margin:0 .4rem .2rem 0;padding:.08rem .4rem;font:.62rem/1.4 var(--mono);'
+        f'border:1px solid var(--rule-strong);border-left:.35rem solid var(--{_BADGE_TONE[b.measure]})">'
+        f"{html.escape(b.label)}</span>"
+        for b in item.badges
     )
-    text = re.sub(r"`([^`]+)`", lambda m: stash(_code_html(m.group(1))), text)
-
-    def link_repl(match: re.Match[str]) -> str:
-        label, href = match.group(1), _html_href(match.group(2).strip())
-        safe_href = html.escape(href, quote=True)
-        safe_label = html.escape(_plain(label))
-        external = href.startswith(("http://", "https://"))
-        attrs = ' rel="noreferrer"' if external else ""
-        return stash(f'<a href="{safe_href}"{attrs}>{safe_label}</a>')
-
-    text = re.sub(r"\[([^]]+)\]\(([^)]+)\)", link_repl, text)
-
-    text = re.sub(
-        r"([🟢🟡🟠🔵⚪⚫])\s+(mapped|adversarial|concerns|structural|scoping|unmapped|deferred)",
-        lambda m: stash(_status_html(m.group(2))),
-        text,
-        flags=re.IGNORECASE,
+    review = (
+        ' <span class="finding-badge-review" style="font:.62rem/1.4 var(--mono)">under review</span>'
+        if any(b.review for b in item.badges)
+        else ""
     )
-    text = re.sub(
-        r"([🔴🟠🟡🔵])\s+(CRITICAL|HIGH|MEDIUM|LOW)",
-        lambda m: stash(_status_html(m.group(2), severity=True)),
-        text,
+    return (
+        '<div class="atlas-badges" role="group" aria-label="Open findings'
+        f'{" (under review)" if review else ""}" style="grid-column:1 / -1">{pills}{review}</div>'
     )
 
-    # Retained survey prose may use durable schema vocabulary. Translate it at
-    # the human projection boundary without rewriting the Markdown record.
-    display_phrases = {
-        "concern dispositions": "concern review",
-        "evidence dispositions": "concern review",
-        "jump-in reading": "start here",
-    }
-    for source, replacement in display_phrases.items():
-        text = re.sub(
-            re.escape(source),
-            lambda match, value=replacement: value.capitalize()
-            if match.group(0)[0].isupper()
-            else value,
-            text,
-            flags=re.IGNORECASE,
+
+def _boundary_badges(badges: tuple[Badge, ...], subsystem: str, x: float, y: float, box_w: float) -> str:
+    """A boundary box's badges, right-aligned along its top edge, each a rectangle and its short mark (A4)."""
+
+    widths = [10 + 6.6 * len(f"{b.short} {b.count}") for b in badges]
+    cursor = x + box_w - sum(widths) - 4 * (len(badges) - 1) - 2
+    out: list[str] = []
+    for badge, width in zip(badges, widths, strict=True):
+        words = badge.label + (" (under review)" if badge.review else "")
+        dash = ' stroke-dasharray="3 2"' if badge.review else ""
+        out.append(
+            f'<g class="boundary-svg-badge"{_badge_attrs(badge, subsystem)}>'
+            f"<title>{html.escape(words)}</title>"
+            f'<rect x="{round(cursor, 1):g}" y="{round(y - 9, 1):g}" width="{round(width, 1):g}" height="16" rx="2"'
+            f' fill="var(--surface)" stroke="var(--{_BADGE_TONE[badge.measure]})" stroke-width="2"{dash}/>'
+            f'<text x="{round(cursor + width / 2, 1):g}" y="{round(y + 3, 1):g}" text-anchor="middle" font-size="11"'
+            f' font-family="var(--mono)" fill="var(--text)">{html.escape(badge.short)} {badge.count}</text>'
+            "</g>"
+        )
+        cursor += width + 4
+    return "".join(out)
+
+
+_START_TAG = re.compile(r"^<([a-zA-Z][a-zA-Z0-9]*)")
+
+
+def _marked(element: str, attrs: str) -> str:
+    """An element with a record's mark added to its start tag; a comment is left as it is."""
+
+    return _START_TAG.sub(lambda m: f"<{m.group(1)}{attrs}", element, count=1)
+
+
+def _compose_prose_runs(elements: list[str]) -> list[str]:
+    """Give finite runs of sustained prose an editorial multicolumn surface.
+
+    Source order remains ordinary paragraphs. Only adjacent top-level
+    paragraphs with enough text to form a useful reading field are wrapped;
+    headings, lists, records, tables, figures, and code always terminate a run.
+    """
+
+    composed: list[str] = []
+    run: list[str] = []
+
+    def flush() -> None:
+        if not run:
+            return
+        character_count = sum(len(re.sub(r"<[^>]+>", "", paragraph)) for paragraph in run)
+        use_columns = (len(run) >= 2 and character_count >= 700) or character_count >= 1300
+        if use_columns:
+            composed.append('<div class="prose-flow">' + "".join(run) + "</div>")
+        else:
+            composed.extend(run)
+        run.clear()
+
+    for element in elements:
+        if element.startswith(("<p>", "<p ")) and element.endswith("</p>"):
+            run.append(element)
+            continue
+        flush()
+        composed.append(element)
+    flush()
+    return composed
+
+
+class _HtmlWriter:
+    """One page model, printed. Holds the slugs already used on the page."""
+
+    def __init__(
+        self,
+        route_map: dict[str, str],
+        current_html_path: str,
+        repository_url: str | None = None,
+    ) -> None:
+        self.route_map = route_map
+        self.current_html_path = current_html_path
+        self.repository_url = repository_url.rstrip("/") if repository_url else None
+        self.used_slugs: dict[str, int] = {}
+
+    def _unique_slug(self, plain_title: str) -> str:
+        base = slugify(plain_title)
+        count = self.used_slugs.get(base, 0)
+        self.used_slugs[base] = count + 1
+        return base if count == 0 else f"{base}-{count + 1}"
+
+    def _route(self, record_id: str) -> str | None:
+        target = self.route_map.get(record_id)
+        if not target:
+            return None
+        return _rel_link(self.current_html_path, target)
+
+    def _trace_node(self, node: TraceNode) -> str:
+        body = (
+            f'<strong data-identifier-defined>{html.escape(node.record_id)}</strong>'
+            f'<span>{html.escape(node.name or node.record_id)}</span>'
+        )
+        href = self._route(node.record_id)
+        if href:
+            return f'<a class="relationship-node" href="{html.escape(href, quote=True)}">{body}</a>'
+        return f'<span class="relationship-node">{body}</span>'
+
+    def _relationship_trace(self, block: RelationshipTrace) -> str:
+        rendered = []
+        for edge in block.edges:
+            glyph = "↔" if edge.two_way else "→"
+            rendered.append(
+                '<div class="relationship">'
+                + self._trace_node(edge.left)
+                + f'<div class="relationship-edge"><b aria-hidden="true">{glyph}</b>{html.escape(edge.label)}</div>'
+                + self._trace_node(edge.right)
+                + "</div>"
+            )
+        return '<figure class="figure"><figcaption class="figure-label">Relationship trace</figcaption><div class="relationship-map">' + "".join(rendered) + "</div></figure>"
+
+    @staticmethod
+    def _staleness_bars(block: StalenessBars) -> str:
+        ceiling = max(value for _, value in block.values) or 1
+        bars = "".join(
+            f'<div class="bar-row"><span class="bar-label">{html.escape(label)}</span><span class="bar-track"><span class="bar-fill" style="width:{value / ceiling * 100:.2f}%"></span></span><span class="bar-value">{value:g}</span></div>'
+            for label, value in block.values
+        )
+        return f'<figure class="figure"><figcaption class="figure-label">Staleness distribution</figcaption><div class="bar-chart">{bars}</div></figure>'
+
+    @staticmethod
+    def _field_label(key: str, kind: str) -> str:
+        if key == "classification" and kind == "file-ledger":
+            return "Review"
+        return _DISPLAY_FIELD.get(key, key.replace("-", " ").capitalize())
+
+    def _github_file_url(self, path: str, revision: str) -> str | None:
+        parts = PurePosixPath(path).parts
+        if (
+            not self.repository_url
+            or not re.fullmatch(r"https://github\.com/[^/]+/[^/]+", self.repository_url)
+            or not re.fullmatch(r"[0-9a-fA-F]{7,40}", revision)
+            or not parts
+            or path.startswith("/")
+            or ".." in parts
+        ):
+            return None
+        return f"{self.repository_url}/blob/{revision}/{quote(path, safe='/')}"
+
+    def _record_list(self, block: RecordList) -> str:
+        kind = block.kind
+        rendered: list[str] = []
+        for record in block.records:
+            heading_id = self._unique_slug(record.slug_text)
+            if kind == "file-ledger":
+                path = record.key_text
+                basename = posixpath.basename(path) or path
+                file_url = self._github_file_url(record.path, record.revision)
+                filename = f"<code>{html.escape(basename)}</code>"
+                primary = (
+                    f'<a class="file-source-link" href="{html.escape(file_url, quote=True)}" '
+                    f'rel="noreferrer" title="Open {html.escape(path, quote=True)} at the reviewed revision on GitHub">{filename}</a>'
+                    if file_url
+                    else filename
+                )
+            elif kind == "open-question":
+                primary = f"Question {html.escape(record.key_text)}"
+            elif kind == "subsystem":
+                route = self._route(record.subsystem_id)
+                label = _inlines_html(record.key)
+                primary = (
+                    f'<a class="record-primary-link" href="{html.escape(route, quote=True)}">{label}</a>'
+                    if route
+                    else label
+                )
+            else:
+                primary = _inlines_html(record.key)
+
+            fact_chunks: list[str] = []
+            for fact in record.facts:
+                value_html = _inlines_html(fact.value)
+                if kind == "subsystem" and fact.key == "id":
+                    value_html = f'<span data-identifier-defined>{value_html}</span>'
+                fact_chunks.append(
+                    f'<div class="record-fact record-fact-{html.escape(slugify(fact.key), quote=True)}">'
+                    f'<dt>{html.escape(self._field_label(fact.key, kind))}</dt><dd>{value_html}</dd></div>'
+                )
+            facts_html = "".join(fact_chunks)
+            heading_tag = "h4" if kind == "finding" else "h3"
+            definition_context = " data-identifier-defined" if kind == "finding" else ""
+            meta = (
+                f'<header class="record-meta"{definition_context}>'
+                f'<{heading_tag} class="record-primary" id="{html.escape(heading_id, quote=True)}">{primary}</{heading_tag}>'
+                + (f'<dl class="record-facts">{facts_html}</dl>' if facts_html else "")
+                + "</header>"
+            )
+            fields = "".join(
+                f'<div class="record-field"><p class="record-label">{html.escape(self._field_label(field.key, kind))}</p>'
+                f'<div class="record-copy">{_inlines_html(field.value)}</div></div>'
+                for field in record.fields
+            )
+            if record.lede is not None:
+                lede = f'<p class="record-lede">{_inlines_html(record.lede)}</p>'
+                content = f'<div class="record-body">{lede}<div class="record-fields">{fields}</div></div>'
+            else:
+                content = f'<div class="record-fields">{fields}</div>'
+
+            aria = html.escape(f"{kind.replace('-', ' ')} {record.key_text}", quote=True)
+            filter_attrs = ""
+            if record.filter is not None:
+                filter_attrs = (
+                    " data-filter-row"
+                    f' data-filter-subsystem="{html.escape(record.filter.subsystem, quote=True)}"'
+                    f' data-filter-severity="{html.escape(record.filter.severity, quote=True)}"'
+                )
+            rendered.append(
+                "".join(record.markers)
+                + f'<article class="record record-{kind}"{filter_attrs} role="listitem" aria-labelledby="{html.escape(heading_id, quote=True)}" data-record-label="{aria}"{_mark_attrs(record.record, record.state)}>'
+                + meta
+                + content
+                + "</article>"
+            )
+
+        label = html.escape(block.caption, quote=True)
+        return f'<div class="record-list record-list-{kind}" role="list" aria-label="{label}">{"".join(rendered)}</div>'
+
+    def _concern_checklist(self, block: ConcernChecklist) -> str:
+        """The calibrated concern table as a grouped reading register."""
+
+        rendered_groups: list[str] = []
+        for family in block.families:
+            family_name, territory = family.name, family.territory
+            family_id = self._unique_slug(family.slug_text)
+            family_label = f"{family_name} · {territory}" if territory else family_name
+            articles: list[str] = []
+            for item in family.items:
+                record_id = self._unique_slug(item.slug_text)
+                facts = ""
+                if item.primary_subsystems.plain:
+                    facts = (
+                        '<dl class="record-facts"><div class="record-fact record-fact-primary-subsystems">'
+                        '<dt>Review in</dt>'
+                        f'<dd>{_inlines_html(item.primary_subsystems)}</dd></div></dl>'
+                    )
+                articles.append(
+                    "".join(item.markers)
+                    + f'<article class="record record-concern-checklist" role="listitem" '
+                    f'aria-labelledby="{html.escape(record_id, quote=True)}" '
+                    f'data-record-label="{html.escape(f"concern {item.code_text}", quote=True)}">'
+                    '<header class="record-meta">'
+                    f'<h4 class="record-primary" id="{html.escape(record_id, quote=True)}">'
+                    f'<span data-identifier-defined>{_inlines_html(item.code)}</span></h4>{facts}</header>'
+                    f'<div class="record-body"><div class="record-probe">{_inlines_html(item.probe)}</div></div>'
+                    '</article>'
+                )
+
+            rendered_groups.append(
+                f'<div class="concern-family" role="group" aria-labelledby="{html.escape(family_id, quote=True)}">'
+                f'<h3 class="concern-family-heading" id="{html.escape(family_id, quote=True)}" data-identifier-defined>'
+                f'<a class="heading-anchor" href="#{html.escape(family_id, quote=True)}" '
+                f'aria-label="{html.escape(f"Link to {family_label}", quote=True)}">§</a>'
+                f'<span>{html.escape(family_name)}</span>'
+                + (f'<span class="concern-territory">{html.escape(territory)}</span>' if territory else "")
+                + '</h3>'
+                f'<div class="record-list record-list-concern-checklist" role="list" '
+                f'aria-label="{html.escape(family_label, quote=True)}">{"".join(articles)}</div>'
+                '</div>'
+            )
+
+        return (
+            f'<div class="concern-checklist" aria-label="{html.escape(block.caption, quote=True)}">'
+            + "".join(rendered_groups)
+            + '</div>'
         )
 
-    text = html.escape(text, quote=False)
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"__(.+?)__", r"<strong>\1</strong>", text)
-    text = re.sub(r"(?<!\w)_(.+?)_(?!\w)", r"<em>\1</em>", text)
-    text = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", text)
-    text = text.replace("  \n", "<br>\n")
-    for i in reversed(range(len(placeholders))):
-        rendered = placeholders[i]
-        text = text.replace(f"\x00{i}\x00", rendered)
-    return text
+    @staticmethod
+    def _summary_list(block: SummaryList) -> str:
+        items = [
+            "".join(item.markers)
+            + f'<div><dt>{_inlines_html(item.key)}</dt><dd>{_inlines_html(item.value)}</dd></div>'
+            for item in block.items
+        ]
+        return (
+            f'<dl class="summary-list" aria-label="{html.escape(block.caption, quote=True)}">'
+            + "".join(items)
+            + "</dl>"
+        )
+
+    @staticmethod
+    def _subsystem_atlas(block: Atlas) -> str:
+        region_html: list[str] = []
+        for region in block.regions:
+            items = "".join(
+                "".join(item.markers)
+                + f'<li class="atlas-item"{_mark_attrs(item.record, item.state)}>'
+                + f'<div class="atlas-subsystem" data-identifier-defined>{_inlines_html(item.subsystem)}</div>'
+                + f'<div class="atlas-depth">{_inlines_html(item.depth)}</div>'
+                + _atlas_badges(item)
+                + "</li>"
+                for item in region.items
+            )
+            count = len(region.items)
+            region_html.append(
+                '<section class="atlas-region">'
+                '<header class="atlas-region-head">'
+                f'<h3>{html.escape(region.name)}</h3>'
+                f'<span class="atlas-region-count">{count} subsystem{"s" if count != 1 else ""}</span>'
+                '</header>'
+                f'<ul class="atlas-list">{items}</ul>'
+                '</section>'
+            )
+
+        label = html.escape(block.caption, quote=True)
+        regions = len(block.regions)
+        return (
+            f'<div class="subsystem-atlas" role="group" aria-label="{label}">'
+            '<div class="atlas-summary">'
+            f'<strong>{sum(len(region.items) for region in block.regions)} subsystems</strong>'
+            f'<span>{regions} architectural region{"s" if regions != 1 else ""}</span>'
+            '<span>Names open the subsystem report</span>'
+            '</div>'
+            f'<div class="atlas-regions">{"".join(region_html)}</div>'
+            '</div>'
+        )
+
+    @staticmethod
+    def _runtime_boundary_diagram(block: RuntimeDiagram) -> str:
+        """Recorded runtime relations as inline SVG plus readable HTML."""
+
+        def wrapped(value: Inlines, width: int) -> list[str]:
+            plain = value.plain.strip() or "Not recorded"
+            return textwrap.wrap(
+                plain,
+                width=width,
+                break_long_words=False,
+                break_on_hyphens=False,
+            ) or [plain]
+
+        def svg_text(
+            lines: list[str],
+            *,
+            x: float,
+            y: float,
+            css_class: str,
+            line_height: int,
+            anchor: str = "start",
+        ) -> str:
+            tspans = "".join(
+                f'<tspan x="{x:g}" dy="{0 if index == 0 else line_height}">'
+                f'{html.escape(line)}</tspan>'
+                for index, line in enumerate(lines)
+            )
+            return (
+                f'<text class="{css_class}" x="{x:g}" y="{y:g}" '
+                f'text-anchor="{anchor}">{tspans}</text>'
+            )
+
+        width = 960
+        source_x, source_width = 24, 244
+        target_x, target_width = 692, 244
+        mechanism_x, mechanism_width = 308, 344
+        current_y = 48
+        svg_rows: list[str] = []
+        details: list[str] = []
+
+        for index, row in enumerate(block.rows):
+            source, language, target, mechanism, note = (
+                row.source, row.language, row.target, row.mechanism, row.note
+            )
+            source_lines = wrapped(source, 26)
+            language_lines = wrapped(language, 32)
+            target_lines = wrapped(target, 27)
+            mechanism_lines = wrapped(mechanism, 42)
+
+            source_height = 42 + 17 * len(source_lines) + 15 * len(language_lines)
+            target_height = 42 + 17 * len(target_lines)
+            mechanism_height = 22 + 15 * len(mechanism_lines)
+            content_height = max(82, source_height, target_height, mechanism_height)
+            lane_height = content_height + 24
+            box_y = current_y + 12
+            center_y = box_y + content_height / 2
+            mechanism_y = center_y - mechanism_height / 2
+            lane_class = "runtime-svg-lane-even" if index % 2 else "runtime-svg-lane"
+            # A drawn runtime and a drawn edge name what the store holds (§3.5).
+            source_node = _svg_mark("node", f"runtime:{row.source_node}" if row.source_node else "")
+            target_node = _svg_mark("node", f"runtime:{row.target_node}" if row.target_node else "")
+            edge_mark = _svg_mark("edge", row.record)
+
+            svg_rows.append(
+                f'<g class="runtime-svg-row">'
+                f'<rect class="{lane_class}" x="0" y="{current_y:g}" '
+                f'width="{width}" height="{lane_height:g}"/>'
+                f'<rect class="runtime-svg-node" x="{source_x}" y="{box_y:g}" '
+                f'width="{source_width}" height="{content_height:g}"{source_node}/>'
+                f'<rect class="runtime-svg-node runtime-svg-target" x="{target_x}" y="{box_y:g}" '
+                f'width="{target_width}" height="{content_height:g}"{target_node}/>'
+                f'<line class="runtime-svg-edge" x1="{source_x + source_width}" y1="{center_y:g}" '
+                f'x2="{target_x}" y2="{center_y:g}"{edge_mark}/>'
+                f'<path class="runtime-svg-arrow" d="M {target_x:g} {center_y:g} '
+                f'L {target_x - 10:g} {center_y - 5:g} L {target_x - 10:g} {center_y + 5:g} Z"{edge_mark}/>'
+                f'<rect class="runtime-svg-edge-label" x="{mechanism_x}" y="{mechanism_y:g}" '
+                f'width="{mechanism_width}" height="{mechanism_height:g}"/>'
+                + svg_text(
+                    source_lines,
+                    x=source_x + 14,
+                    y=box_y + 27,
+                    css_class="runtime-svg-title",
+                    line_height=17,
+                )
+                + svg_text(
+                    language_lines,
+                    x=source_x + 14,
+                    y=box_y + 34 + 17 * len(source_lines),
+                    css_class="runtime-svg-language",
+                    line_height=15,
+                )
+                + svg_text(
+                    target_lines,
+                    x=target_x + 14,
+                    y=box_y + 31,
+                    css_class="runtime-svg-title",
+                    line_height=17,
+                )
+                + svg_text(
+                    mechanism_lines,
+                    x=mechanism_x + mechanism_width / 2,
+                    y=mechanism_y + 15,
+                    css_class="runtime-svg-mechanism",
+                    line_height=15,
+                    anchor="middle",
+                )
+                + '</g>'
+            )
+
+            note_html = (
+                '<p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>'
+                f'{_inlines_html(note)}</p>'
+                if note.plain.strip()
+                else ""
+            )
+            details.append(
+                "".join(row.markers)
+                + f'<article class="runtime-detail" role="listitem"{_mark_attrs(row.record)}>'
+                '<header class="runtime-detail-head">'
+                f'<h3>{_inlines_html(source)}</h3>'
+                f'<span class="runtime-detail-language">{_inlines_html(language)}</span></header>'
+                '<div class="runtime-detail-body">'
+                '<p><span class="runtime-detail-label">Communicates with</span>'
+                f'{_inlines_html(target)}</p>'
+                '<p><span class="runtime-detail-label">Mechanism</span>'
+                f'{_inlines_html(mechanism)}</p>{note_html}</div></article>'
+            )
+            current_y += lane_height
+
+        count = len(block.rows)
+        boundary_word = "boundary" if count == 1 else "boundaries"
+        svg_height = current_y
+        svg = (
+            f'<svg class="runtime-boundary-svg" xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 {width} {svg_height}" role="img" '
+            'aria-labelledby="runtime-boundary-svg-title runtime-boundary-svg-description">'
+            '<title id="runtime-boundary-svg-title">Runtime boundary map</title>'
+            f'<desc id="runtime-boundary-svg-description">{count} recorded runtime {boundary_word}; '
+            'each row connects a runtime or process to its recorded target through the stated mechanism.</desc>'
+            '<text class="runtime-svg-column-label" x="24" y="27">Runtime or process</text>'
+            '<text class="runtime-svg-column-label" x="480" y="27" text-anchor="middle">Mechanism</text>'
+            '<text class="runtime-svg-column-label" x="692" y="27">Communicates with</text>'
+            + "".join(svg_rows)
+            + '</svg>'
+        )
+        label = html.escape(block.caption or "runtime boundary map", quote=True)
+        return (
+            '<div class="runtime-boundary-projection">'
+            f'<figure class="runtime-boundary-diagram" aria-label="{label}">'
+            '<figcaption class="runtime-diagram-caption">'
+            f'<strong>{count} recorded runtime {boundary_word}</strong>'
+            '<span>Runtime → communication mechanism → recorded target</span>'
+            '</figcaption>'
+            f'<div class="runtime-svg-scroll">{svg}</div></figure>'
+            '<div class="runtime-boundary-details" role="list" '
+            'aria-label="Complete runtime boundary details">'
+            + "".join(details)
+            + '</div></div>'
+        )
+
+    @staticmethod
+    def _diagram(block: Diagram) -> str:
+        """A drawn figure with the account beside it, or the sentence that says why none is drawn (§7, Appendix B)."""
+
+        if not block.nodes:
+            subject_attr = f' data-subject="{html.escape(block.subject, quote=True)}"' if block.subject else ""
+            # The sentence keeps the provenance a drawing would print (Appendix B rule 3).
+            read_at = f' <span class="diagram-read-at">{html.escape(block.read_at, quote=False)}</span>' if block.read_at else ""
+            return (
+                f'<p class="diagram-below" data-diagram="{html.escape(block.kind, quote=True)}"{subject_attr}>'
+                f"{html.escape(block.below, quote=False)}{read_at}</p>"
+            )
+        subject = f' data-subject="{html.escape(block.subject, quote=True)}"' if block.subject else ""
+
+        def text(value: str) -> str:
+            return html.escape(value, quote=False)
+
+        items = "".join(
+            f'<li id="{html.escape(anchor, quote=True)}">{text(line)}</li>' for anchor, line in block.items
+        )
+        account = (
+            '<div class="diagram-account">'
+            + "".join(f"<p>{text(paragraph)}</p>" for paragraph in block.account)
+            + (f'<ol class="diagram-items">{items}</ol>' if items else "")
+            + f'<p class="diagram-read-at">{text(block.read_at)}</p>'
+            + "</div>"
+        )
+        return (
+            f'<figure class="diagram" data-diagram="{html.escape(block.kind, quote=True)}"{subject}>'
+            f'<figcaption><strong>{text(block.title)}</strong> <span>{text(block.caption)}</span></figcaption>'
+            f'<div class="diagram-frame" style="max-width:100%;overflow-x:auto">{draw_svg(block)}</div>'
+            f"{account}</figure>"
+        )
+
+    @staticmethod
+    def _boundary_diagram(block: BoundaryDiagram) -> str:
+        """Draw the recorded-boundary table as inline SVG (§2.5 item 2).
+
+        Columns are layers in table order, eight to a band; boxes are in table
+        order within a column. A line is drawn only for a row that names a seam
+        or an outgoing xref, so nothing the table does not record is drawn.
+        """
+        box_w, box_h, gap_x, gap_y, margin, per_band = 200, 44, 64, 16, 24, 8
+        layers: dict[str, list[str]] = {}
+        names: dict[str, str] = {}
+        touched: set[str] = set()
+        seams: dict[str, tuple[str, str, str]] = {}
+        xrefs: list[tuple[str, str, str, str]] = []
+        badges: dict[str, tuple[Badge, ...]] = {}
+        for row in block.rows:
+            sid = row.subsystem_id
+            if sid not in names:
+                names[sid] = row.name
+                badges[sid] = row.badges
+                layers.setdefault(row.layer, []).append(sid)
+            if not row.other_id:
+                continue
+            touched.add(sid)
+            if row.seam:
+                seams.setdefault(row.seam_id, (sid, row.other_id, row.record))
+            elif row.relation.endswith("→"):
+                xrefs.append((sid, row.other_id, row.relation.removesuffix("→").strip(), row.record))
+
+        columns = list(layers)
+        bands = [columns[i : i + per_band] for i in range(0, len(columns), per_band)]
+        boxes: dict[str, tuple[int, int]] = {}
+        parts_columns: list[str] = []
+        band_top = 0
+        for band in bands:
+            for position, layer in enumerate(band):
+                x = margin + position * (box_w + gap_x)
+                parts_columns.append(
+                    f'<text class="boundary-svg-column" x="{x}" y="{band_top + 30}">{html.escape(layer)}</text>'
+                )
+                for row_index, sid in enumerate(layers[layer]):
+                    boxes[sid] = (x, band_top + 44 + row_index * (box_h + gap_y))
+            tallest = max(len(layers[layer]) for layer in band)
+            band_top += 44 + tallest * (box_h + gap_y) + 24
+        width = 2 * margin + min(len(columns), per_band) * (box_w + gap_x) - gap_x
+        height = band_top
+
+        def ends(a: str, b: str) -> tuple[float, float, float, float]:
+            (ax, ay), (bx, by) = boxes[a], boxes[b]
+            if ax == bx:
+                if ay < by:
+                    return ax + box_w / 2, ay + box_h, bx + box_w / 2, by
+                return ax + box_w / 2, ay, bx + box_w / 2, by + box_h
+            if ax < bx:
+                return ax + box_w, ay + box_h / 2, bx, by + box_h / 2
+            return ax, ay + box_h / 2, bx + box_w, by + box_h / 2
+
+        def num(value: float) -> str:
+            return f"{round(value, 1):g}"
+
+        lines: list[str] = []
+        labels: list[str] = []
+        for seam_id, (a, b, record) in seams.items():
+            x1, y1, x2, y2 = ends(a, b)
+            lines.append(
+                f'<line class="boundary-svg-seam" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"{_svg_mark("edge", record)}/>'
+            )
+            mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+            label_w = 12 + 6.4 * len(seam_id)
+            labels.append(
+                f'<rect class="boundary-svg-label-box" x="{num(mx - label_w / 2)}" y="{num(my - 8)}" '
+                f'width="{num(label_w)}" height="16" rx="2"/>'
+                f'<text class="boundary-svg-label" x="{num(mx)}" y="{num(my + 3.5)}">{html.escape(seam_id)}</text>'
+            )
+        for a, b, _relation, record in xrefs:
+            x1, y1, x2, y2 = ends(a, b)
+            length = max(((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5, 1.0)
+            ux, uy = (x2 - x1) / length, (y2 - y1) / length
+            edge_mark = _svg_mark("edge", record)
+            lines.append(
+                f'<line class="boundary-svg-xref" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"{edge_mark}/>'
+                f'<path class="boundary-svg-arrow" d="M {num(x2)} {num(y2)} '
+                f'L {num(x2 - 10 * ux - 5 * uy)} {num(y2 - 10 * uy + 5 * ux)} '
+                f'L {num(x2 - 10 * ux + 5 * uy)} {num(y2 - 10 * uy - 5 * ux)} Z"{edge_mark}/>'
+            )
+
+        nodes: list[str] = []
+        for sid, (x, y) in boxes.items():
+            name = names[sid]
+            shown = name if len(name) <= 28 else name[:27].rstrip() + "…"
+            nodes.append(
+                f'<g class="boundary-svg-node" data-subsystem="{html.escape(sid, quote=True)}"{_svg_mark("node", f"subsystem:{sid}")}>'
+                f"<title>{html.escape(f'{sid} {name}')}</title>"
+                f'<rect x="{x}" y="{y}" width="{box_w}" height="{box_h}" rx="3"/>'
+                f'<text class="boundary-svg-id" x="{x + 10}" y="{y + 18}">{html.escape(sid)}</text>'
+                f'<text class="boundary-svg-name" x="{x + 10}" y="{y + 35}">{html.escape(shown)}</text>'
+                "</g>"
+                + _boundary_badges(badges[sid], sid, x, y, box_w)
+            )
+
+        total = len(names)
+        unconnected = total - len(touched)
+        census = (
+            f"{unconnected} of {total} subsystem{'s' if total != 1 else ''} "
+            f"{'has' if unconnected == 1 else 'have'} no recorded boundary"
+        )
+        seam_count = f"{len(seams)} seam{'s' if len(seams) != 1 else ''} as labelled lines"
+        xref_count = (
+            f"{len(xrefs)} recorded dependenc{'ies' if len(xrefs) != 1 else 'y'} as arrows"
+            if xrefs
+            else ""
+        )
+        drawn = "; ".join(part for part in (seam_count, xref_count) if part)
+        account = (
+            "Each arrow is listed in the dependency graph above, and each seam line in the seam topology below"
+            if xrefs
+            else "Each line is listed in the seam topology below"
+        )
+        svg = (
+            f'<svg class="boundary-svg" xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" '
+            'aria-labelledby="boundary-svg-title boundary-svg-description">'
+            '<title id="boundary-svg-title">Recorded boundaries</title>'
+            f'<desc id="boundary-svg-description">{total} subsystems in {len(columns)} layer '
+            f'column{"s" if len(columns) != 1 else ""}; {html.escape(drawn)}. {html.escape(census)}. '
+            'No line is inferred from a name or a layer.</desc>'
+            + "".join(parts_columns)
+            + f'<g class="boundary-svg-lines">{"".join(lines)}</g>'
+            + f'<g class="boundary-svg-nodes">{"".join(nodes)}</g>'
+            + f'<g class="boundary-svg-labels">{"".join(labels)}</g>'
+            + "</svg>"
+        )
+        label = html.escape(block.caption or "recorded boundaries", quote=True)
+        return (
+            '<div class="boundary-projection">'
+            f'<figure class="boundary-diagram" aria-label="{label}">'
+            '<figcaption class="runtime-diagram-caption">'
+            "<strong>Recorded boundaries</strong>"
+            f"<span>{html.escape(drawn)}</span>"
+            f"<span>{html.escape(census)}</span>"
+            f"<span>{account}</span>"
+            "</figcaption>"
+            f'<div class="boundary-svg-scroll">{svg}</div></figure></div>'
+        )
+
+    @staticmethod
+    def _connection_topology(block: Topology) -> str:
+        kind = block.kind
+        nodes: dict[str, Inlines] = {}
+        adjacency: dict[str, set[str]] = {}
+        for edge in block.edges:
+            nodes.setdefault(edge.left_id, edge.left)
+            nodes.setdefault(edge.right_id, edge.right)
+            adjacency.setdefault(edge.left_id, set()).add(edge.right_id)
+            adjacency.setdefault(edge.right_id, set()).add(edge.left_id)
+        edges = list(block.edges)
+
+        components: list[set[str]] = []
+        unseen = set(nodes)
+        while unseen:
+            start = min(unseen)
+            component: set[str] = set()
+            stack = [start]
+            while stack:
+                node = stack.pop()
+                if node in component:
+                    continue
+                component.add(node)
+                stack.extend(sorted(adjacency.get(node, set()) - component, reverse=True))
+            unseen -= component
+            components.append(component)
+        components.sort(key=lambda component: (-len(component), min(component)))
+
+        degree = {node: len(adjacency.get(node, set())) for node in nodes}
+        component_html: list[str] = []
+        for component_number, component in enumerate(components, start=1):
+            hub = sorted(component, key=lambda node: (-degree[node], node))[0]
+            component_edges = [
+                edge for edge in edges
+                if edge.left_id in component and edge.right_id in component
+            ]
+            spokes = [edge for edge in component_edges if hub in {edge.left_id, edge.right_id}]
+            cross_edges = [edge for edge in component_edges if edge not in spokes]
+
+            spoke_html: list[str] = []
+            for edge in spokes:
+                peer = edge.right_id if edge.left_id == hub else edge.left_id
+                if edge.directed:
+                    outbound = edge.left_id == hub
+                    arrow = "→" if outbound else "←"
+                    peer_label = "To" if outbound else "From"
+                    direction = "Outgoing" if outbound else "Incoming"
+                else:
+                    arrow = "↔"
+                    peer_label = "With"
+                    direction = "Two-way seam"
+                qualifier = (
+                    f'<span class="topology-qualifier">{html.escape(direction)} · {_inlines_html(edge.qualifier)}</span>'
+                    if edge.qualifier.plain
+                    else f'<span class="topology-qualifier">{html.escape(direction)}</span>'
+                )
+                spoke_html.append(
+                    "".join(edge.markers)
+                    + '<article class="topology-spoke" role="listitem">'
+                    f'<div class="topology-edge-mark" aria-hidden="true">{arrow}</div>'
+                    '<div class="topology-edge-body">'
+                    '<p class="topology-edge-head">'
+                    f'<span class="topology-edge-key">{_inlines_html(edge.key)}</span>{qualifier}</p>'
+                    f'<p class="topology-peer"><span class="topology-peer-label">{peer_label}</span>'
+                    f'<span class="topology-node" data-identifier-defined>{_inlines_html(nodes[peer])}</span></p>'
+                    f'<p class="topology-object">{_inlines_html(edge.detail)}</p>'
+                    '</div></article>'
+                )
+
+            cross_html = ""
+            if cross_edges:
+                cross_items: list[str] = []
+                for edge in cross_edges:
+                    arrow = "→" if edge.directed else "↔"
+                    qualifier = f' · {_inlines_html(edge.qualifier)}' if edge.qualifier.plain else ""
+                    cross_items.append(
+                        "".join(edge.markers)
+                        + '<div class="topology-cross-edge">'
+                        f'<span class="topology-node" data-identifier-defined>{_inlines_html(nodes[edge.left_id])}</span>'
+                        '<span class="topology-cross-relation">'
+                        f'<strong>{_inlines_html(edge.key)}</strong>{html.escape(arrow)}{qualifier}'
+                        f'<span class="topology-cross-object">{_inlines_html(edge.detail)}</span>'
+                        '</span>'
+                        f'<span class="topology-node" data-identifier-defined>{_inlines_html(nodes[edge.right_id])}</span>'
+                        '</div>'
+                    )
+                cross_html = (
+                    '<div class="topology-cross"><p class="topology-cross-label">Other connection in this area</p>'
+                    f'<div class="topology-cross-list">{"".join(cross_items)}</div></div>'
+                )
+
+            component_label = html.escape(f"Connected area {component_number}", quote=True)
+            component_html.append(
+                f'<section class="topology-component" aria-label="{component_label}">'
+                '<header class="topology-hub">'
+                f'<p class="topology-hub-label">Connected area {component_number} · hub</p>'
+                f'<h3 class="topology-hub-title" data-identifier-defined>{_inlines_html(nodes[hub])}</h3>'
+                f'<p class="topology-hub-count">{len(component)} subsystems · {len(component_edges)} connection{"s" if len(component_edges) != 1 else ""}</p>'
+                '</header>'
+                f'<div class="topology-spokes" role="list">{"".join(spoke_html)}</div>'
+                + cross_html
+                + '</section>'
+            )
+
+        noun = "seams" if kind == "seam" else "dependencies"
+        label = html.escape(block.caption, quote=True)
+        return (
+            f'<div class="topology topology-{kind}" role="group" aria-label="{label}">'
+            '<div class="topology-summary">'
+            f'<strong>{len(components)} connected area{"s" if len(components) != 1 else ""}</strong>'
+            f'<span>{len(nodes)} subsystems · {len(edges)} {noun}</span>'
+            '<span>Follow any name to its subsystem report</span>'
+            '</div>'
+            + "".join(component_html)
+            + '</div>'
+        )
+
+    def _coverage_index(self, block: CoverageIndex) -> str:
+        """Sparse, task-oriented projection of the exact coverage matrix."""
+
+        concern_codes = list(block.codes)
+        totals = {key: 0 for key, _label, _mark in COVERAGE_STATES}
+        linchpin_total = 0
+        counts_by_row: list[dict[str, int]] = []
+        for row in block.rows:
+            counts: dict[str, int] = {}
+            for review in row.reviews:
+                counts[review.key] = counts.get(review.key, 0) + 1
+                if review.key in totals:
+                    totals[review.key] += 1
+                if review.linchpin:
+                    linchpin_total += 1
+            counts_by_row.append(counts)
+
+        review_total = sum(len(row.reviews) for row in block.rows)
+        intersection_total = len(block.rows) * len(concern_codes)
+        unassessed = intersection_total - review_total
+
+        summary_items = (
+            (review_total, "Recorded reviews"),
+            (len(block.rows), "Subsystems"),
+            (len(concern_codes), "Active concerns"),
+            (totals.get("confirmed-bug", 0), "Confirmed defects"),
+        )
+        summary = "".join(
+            '<div class="coverage-summary-item">'
+            f'<strong>{value:,}</strong><span>{html.escape(label)}</span></div>'
+            for value, label in summary_items
+        )
+
+        count_labels = {
+            "confirmed-bug": lambda count: f"{count} defect{'s' if count != 1 else ''}",
+            "confirmed-acceptable": lambda count: f"{count} accepted",
+            "ruled-out": lambda count: f"{count} ruled out",
+            "out-of-scope": lambda count: f"{count} out of scope",
+            "unresolved-competition": lambda count: f"{count} unresolved",
+            "unknown": lambda count: f"{count} recorded",
+        }
+
+        subsystem_items: list[str] = []
+        matrix_rows: list[str] = []
+        for row, counts in zip(block.rows, counts_by_row, strict=True):
+            route = str((row.href if row.href is not None else self._route(row.subsystem_id)) or "")
+            name = row.name
+            subsystem_id = row.subsystem_id
+            name_html = html.escape(name)
+            primary = (
+                f'<a href="{html.escape(route, quote=True)}">{name_html}</a>'
+                if route
+                else name_html
+            )
+            reviewed = len(row.reviews)
+            progress = reviewed / len(concern_codes) * 100 if concern_codes else 0
+            outcome_counts = "".join(
+                f'<span class="coverage-state-{html.escape(key, quote=True)}">'
+                f'{html.escape(count_labels[key](count))}</span>'
+                for key in (
+                    "confirmed-bug",
+                    "unresolved-competition",
+                    "confirmed-acceptable",
+                    "ruled-out",
+                    "out-of-scope",
+                    "unknown",
+                )
+                if (count := counts.get(key, 0))
+            )
+
+            tokens: list[str] = []
+            review_map = {review.code: review for review in row.reviews}
+            matrix_cells: list[str] = []
+            for code in concern_codes:
+                review = review_map.get(code)
+                if not review:
+                    matrix_cells.append(
+                        '<td class="coverage-matrix-empty"><span title="Not assessed">'
+                        '<span aria-hidden="true">·</span><span class="visually-hidden">Not assessed</span>'
+                        '</span></td>'
+                    )
+                    continue
+
+                key, label, mark, linchpin = review.key, review.label, review.mark, review.linchpin
+                destination = (
+                    f'{route}#concern-disposition-{slugify(code)}' if route else f'#{slugify(code)}'
+                )
+                description = f"{code} — {label} in {name}"
+                if linchpin:
+                    description += "; linchpin-dependent"
+                safe_description = html.escape(description, quote=True)
+                linchpin_html = (
+                    '<span class="coverage-linchpin" aria-hidden="true">◆</span>'
+                    if linchpin
+                    else ""
+                )
+                tokens.append(
+                    f'<a class="coverage-token coverage-state-{html.escape(key, quote=True)}" '
+                    f'href="{html.escape(destination, quote=True)}" title="{safe_description}" '
+                    f'aria-label="{safe_description}">'
+                    f'<span class="coverage-token-mark" aria-hidden="true">{html.escape(mark)}</span>'
+                    f'<span>{html.escape(code)}</span>{linchpin_html}</a>'
+                )
+                matrix_cells.append(
+                    f'<td class="coverage-matrix-cell coverage-state-{html.escape(key, quote=True)}">'
+                    f'<a href="{html.escape(destination, quote=True)}" title="{safe_description}" '
+                    f'aria-label="{safe_description}"><span class="coverage-matrix-mark" '
+                    f'aria-hidden="true">{html.escape(mark)}</span>{linchpin_html}</a></td>'
+                )
+
+            marker_html = "".join(row.markers)
+            subsystem_items.append(
+                marker_html
+                + '<article class="coverage-subsystem">'
+                '<header class="coverage-subsystem-head">'
+                f'<h3 class="coverage-subsystem-title">{primary}</h3>'
+                f'<span class="coverage-subsystem-id" data-identifier-defined>{html.escape(subsystem_id)}</span></header>'
+                '<div class="coverage-measure">'
+                f'<p class="coverage-review-count">{reviewed} recorded review'
+                f'{"s" if reviewed != 1 else ""} of {len(concern_codes)}</p>'
+                f'<span class="coverage-progress" aria-hidden="true"><span style="width:{progress:.2f}%"></span></span>'
+                f'<p class="coverage-outcome-counts">{outcome_counts}</p></div>'
+                f'<div class="coverage-tokens" aria-label="Recorded concern reviews">{"".join(tokens)}</div>'
+                '</article>'
+            )
+            matrix_rows.append(
+                marker_html
+                + '<tr><th scope="row">'
+                + primary
+                + f'<span class="coverage-matrix-subsystem-id" data-identifier-defined>{html.escape(subsystem_id)}</span></th>'
+                + "".join(matrix_cells)
+                + '</tr>'
+            )
+
+        legend = "".join(
+            f'<span class="coverage-legend-item coverage-state-{html.escape(key, quote=True)}">'
+            f'<span class="coverage-token-mark" aria-hidden="true">{html.escape(mark)}</span>'
+            f'<span>{html.escape(label)}</span></span>'
+            for key, label, mark in COVERAGE_STATES
+        )
+        legend += (
+            '<span class="coverage-legend-item"><span class="coverage-linchpin" '
+            'aria-hidden="true">◆</span><span>Linchpin-dependent</span></span>'
+            '<span class="coverage-legend-item"><span class="coverage-matrix-empty" '
+            'aria-hidden="true">·</span><span>Not assessed</span></span>'
+        )
+
+        matrix_head = "".join(
+            f'<th scope="col"><a href="#{html.escape(slugify(code), quote=True)}">'
+            f'{html.escape(code)}</a></th>'
+            for code in concern_codes
+        )
+        matrix = (
+            '<div class="table-wrap coverage-matrix-wrap"><table class="coverage-matrix">'
+            '<caption>Full concern review matrix</caption><thead><tr><th scope="col">Subsystem</th>'
+            + matrix_head
+            + '</tr></thead><tbody>'
+            + "".join(matrix_rows)
+            + '</tbody></table></div>'
+        )
+        linchpin_note = (
+            f" {linchpin_total} review{'s are' if linchpin_total != 1 else ' is'} linchpin-dependent."
+            if linchpin_total
+            else ""
+        )
+        return (
+            '<div class="coverage-index">'
+            f'<div class="coverage-summary">{summary}</div>'
+            f'<p class="coverage-intro">Only the {review_total} recorded reviews are expanded below; '
+            f'{unassessed:,} unassessed intersections do not consume reading space. The thin rule '
+            'shows recorded coverage; the labelled markers show review outcomes.'
+            f'{html.escape(linchpin_note)}</p>'
+            f'<div class="coverage-subsystem-list">{"".join(subsystem_items)}</div>'
+            f'<div class="coverage-legend" aria-label="Review outcome legend">{legend}</div>'
+            '<details class="coverage-matrix-disclosure"><summary><span>Full cross-reference matrix</span>'
+            f'<span>{len(block.rows)} subsystems × {len(concern_codes)} concerns</span></summary>'
+            '<p class="coverage-matrix-note">Use the matrix when exact row-and-column comparison matters. '
+            'Headers and subsystem names remain fixed while the matrix scrolls.</p>'
+            + matrix
+            + '</details></div>'
+        )
+
+    @staticmethod
+    def _table(block: Table | EnumTable | LifecycleTable) -> str:
+        lifecycle = isinstance(block, LifecycleTable)
+        visible_headers = [header for index, header in enumerate(block.headers) if not lifecycle or index != 1]
+        head = "".join(f'<th scope="col">{_inlines_html(cell)}</th>' for cell in visible_headers)
+        table_rows: list[str] = []
+        for row in block.rows:
+            cells: list[str] = []
+            for index, value in enumerate(row.cells):
+                if lifecycle and index == 1:
+                    continue
+                label = block.headers[index].plain
+                if lifecycle and index == 0:
+                    location = row.cells[1]
+                    location_html = (
+                        f'<span class="table-detail"><span class="visually-hidden">Location: </span>{_inlines_html(location)}</span>'
+                        if location.plain
+                        else ""
+                    )
+                    cells.append(
+                        f'<th scope="row" data-label="{html.escape(label, quote=True)}"><span class="table-key">{_inlines_html(value)}</span>{location_html}</th>'
+                    )
+                else:
+                    cells.append(
+                        f'<td data-label="{html.escape(label, quote=True)}">{_inlines_html(value)}</td>'
+                    )
+            row_attrs = ""
+            if row.filter is not None:
+                row_attrs = (
+                    " data-filter-row"
+                    f' data-filter-subsystem="{html.escape(row.filter.subsystem, quote=True)}"'
+                    f' data-filter-severity="{html.escape(row.filter.severity, quote=True)}"'
+                )
+            row_attrs += _mark_attrs(row.record, row.state)
+            table_rows.append("".join(row.markers) + f'<tr{row_attrs}>{"".join(cells)}</tr>')
+        kind = " lifecycle-table" if lifecycle else ""
+        return (
+            f'<div class="table-wrap{kind}"><table><caption>{html.escape(block.caption)}</caption>'
+            f'<thead><tr>{head}</tr></thead><tbody>{"".join(table_rows)}</tbody></table></div>'
+        )
+
+    def _heading(self, block: Heading) -> str:
+        level = block.level
+        anchor_id = self._unique_slug(block.text.plain)
+        label = html.escape(f"Link to {block.text.plain}", quote=True)
+        heading_class = ' class="finding-subsystem-heading"' if block.finding_group else ""
+        definition_context = " data-identifier-defined" if block.finding_group else ""
+        return (
+            f'<h{level}{heading_class} id="{anchor_id}"{definition_context}>'
+            f'<a class="heading-anchor" href="#{anchor_id}" aria-label="{label}">§</a>'
+            f'{_inlines_html(block.text)}</h{level}>'
+        )
+
+    @staticmethod
+    def _list(block: List) -> str:
+        tag = "ol" if block.ordered else "ul"
+        items = "".join(
+            f"<li{_mark_attrs(item.record)}>{_inlines_html(item.text)}{''.join(_HtmlWriter._list(child) for child in item.children)}</li>"
+            for item in block.items
+        )
+        return f"<{tag}>{items}</{tag}>"
+
+    def _elements(self, blocks: tuple[Block, ...], out: list[str]) -> None:
+        """Each block as one element, a section or disclosure as its open, its blocks and its close."""
+
+        for block in blocks:
+            if isinstance(block, Section):
+                out.append(f'<section class="section-{html.escape(block.slug, quote=True)}">')
+                self._elements(block.blocks, out)
+                out.append("</section>")
+            elif isinstance(block, Details):
+                out.append(f'<details class="{html.escape(block.css_class, quote=True)}"><summary>{html.escape(block.summary)}</summary>')
+                self._elements(block.blocks, out)
+                out.append("</details>")
+            elif isinstance(block, Marked):
+                # Every element the record prints carries its mark, so the read-back can
+                # gather its text without a wrapper changing the page's layout.
+                inner: list[str] = []
+                self._elements(block.blocks, inner)
+                attrs = _mark_attrs(block.record, block.state)
+                out.extend(_marked(element, attrs) for element in inner)
+            else:
+                out.append(self._block(block))
+
+    def _block(self, block: Block) -> str:
+        if isinstance(block, Heading):
+            return self._heading(block)
+        if isinstance(block, Paragraph):
+            return f"<p>{_inlines_html(block.text)}</p>"
+        if isinstance(block, List):
+            return self._list(block)
+        if isinstance(block, Quote):
+            return f"<blockquote><p>{_inlines_html(block.text)}</p></blockquote>"
+        if isinstance(block, Code):
+            lang_class = f' class="language-{html.escape(block.language, quote=True)}"' if block.language else ""
+            return f"<pre><code{lang_class}>{html.escape(block.source)}</code></pre>"
+        if isinstance(block, Anchor):
+            return f'<span id="{html.escape(block.id, quote=True)}" class="record-anchor"></span>'
+        if isinstance(block, RecordMarker):
+            return block.raw
+        if isinstance(block, Table | EnumTable | LifecycleTable):
+            return self._table(block)
+        if isinstance(block, RecordList):
+            return self._record_list(block)
+        if isinstance(block, SummaryList):
+            return self._summary_list(block)
+        if isinstance(block, Atlas):
+            return self._subsystem_atlas(block)
+        if isinstance(block, Topology):
+            return self._connection_topology(block)
+        if isinstance(block, RuntimeDiagram):
+            return self._runtime_boundary_diagram(block)
+        if isinstance(block, BoundaryDiagram):
+            return self._boundary_diagram(block)
+        if isinstance(block, CoverageIndex):
+            return self._coverage_index(block)
+        if isinstance(block, ConcernChecklist):
+            return self._concern_checklist(block)
+        if isinstance(block, RelationshipTrace):
+            return self._relationship_trace(block)
+        if isinstance(block, StalenessBars):
+            return self._staleness_bars(block)
+        if isinstance(block, BadgeNote):
+            return f'<p class="finding-badge-note">{html.escape(block.text, quote=False)}</p>'
+        if isinstance(block, Diagram):
+            return self._diagram(block)
+        if isinstance(block, DiagramSource):
+            return f'<figure class="figure"><figcaption class="figure-label">Diagram source</figcaption><pre class="diagram-source">{html.escape(block.source)}</pre></figure>'
+        raise TypeError(f"not a block kind: {type(block).__name__}")
+
+    def write(self, page: Page) -> str:
+        elements: list[str] = []
+        self._elements(page.blocks, elements)
+        return "\n".join(_compose_prose_runs(elements))
 
 
-# The shape of a concern code heading a review-coverage column. It only
-# recognises that table; which IDs get a definition is decided by the index's
-# own keys (`identifier_pattern`), whatever their shape (PLAN §2.2 item 4).
-_IDENTIFIER_SHAPE = re.compile(
-    r"(?<![\w-])([A-Z]{1,3}\d{0,3}-\d{1,3})(?![\w-])"
-)
+def write_html(
+    page: Page,
+    route_map: dict[str, str] | None = None,
+    repository_url: str | None = None,
+) -> str:
+    """Print a page model's body as HTML (§3.1). It reads no Markdown."""
+
+    return _HtmlWriter(route_map or {}, page.path, repository_url).write(page)
 
 
 class _IdentifierMarkup(HTMLParser):
@@ -1712,1563 +2745,6 @@ def _identifier_markup(fragment: str, definitions: dict[str, str]) -> str:
     return "".join(parser.parts)
 
 
-def _split_table_row(line: str) -> list[str]:
-    raw = line.strip().strip("|")
-    cells = re.split(r"(?<!\\)\|", raw)
-    return [cell.strip().replace("\\|", "|") for cell in cells]
-
-
-def _is_table_separator(line: str) -> bool:
-    cells = _split_table_row(line)
-    return bool(cells) and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
-
-
-@dataclass(frozen=True)
-class RecordProjection:
-    """Explicit presentation contract for one known Markdown table schema."""
-
-    kind: str
-    key: str
-    metadata: tuple[str, ...]
-    content: tuple[str, ...]
-
-
-def _header_key(value: str) -> str:
-    return re.sub(r"\s+", " ", _plain(value)).strip().lower()
-
-
-_RECORD_PROJECTIONS: dict[tuple[str, ...], RecordProjection] = {
-    ("id", "status", "symptom", "why it matters", "root cause", "ref sha"): RecordProjection(
-        "finding", "id", ("status", "ref sha"), ("symptom", "why it matters", "root cause")
-    ),
-    ("id", "status", "symptom", "root cause", "ref sha"): RecordProjection(
-        "finding", "id", ("status", "ref sha"), ("symptom", "root cause")
-    ),
-    ("path", "classification", "why in scope", "ref sha"): RecordProjection(
-        "file-ledger", "path", ("classification", "ref sha"), ("why in scope",)
-    ),
-    ("concern", "classification", "evidence quality", "linchpin?", "rationale"): RecordProjection(
-        "concern-disposition",
-        "concern",
-        ("classification", "evidence quality", "linchpin?"),
-        ("rationale",),
-    ),
-    ("symbol", "role", "source"): RecordProjection(
-        "structural-inventory", "symbol", ("source",), ("role",)
-    ),
-    ("priority", "id", "name", "status", "purpose", "scope", "jump-in", "findings"): RecordProjection(
-        "subsystem",
-        "name",
-        ("id", "status", "findings", "priority"),
-        ("purpose", "scope", "jump-in"),
-    ),
-    ("code", "category", "origin", "discovered in", "notes"): RecordProjection(
-        "concern", "code", ("category", "origin", "discovered in"), ("notes",)
-    ),
-    ("code", "category", "discovered in", "notes"): RecordProjection(
-        "concern", "code", ("category", "discovered in"), ("notes",)
-    ),
-    ("territory", "verdict", "derived", "rationale"): RecordProjection(
-        "territory", "territory", ("verdict", "derived"), ("rationale",)
-    ),
-    ("id", "sev", "subsystem", "one-line"): RecordProjection(
-        "finding-summary", "id", ("sev", "subsystem"), ("one-line",)
-    ),
-    ("#", "category", "question", "resolution", "answer"): RecordProjection(
-        "open-question", "#", ("category", "resolution"), ("question", "answer")
-    ),
-    ("seam", "shared object", "kind", "parties", "assessable?", "notes"): RecordProjection(
-        "seam", "seam", ("kind", "parties", "assessable?"), ("shared object", "notes")
-    ),
-}
-
-
-_SUMMARY_LIST_PROJECTIONS = {
-    ("metric", "value"),
-    ("status", "what it means"),
-    ("status", "what claims are authorized"),
-    ("mapping status", "authorized claims"),
-    ("quality", "what it means"),
-    ("severity", "typical shape"),
-    ("task", "start here"),
-    ("if you're here because…", "start here"),
-    ("prefix", "maps"),
-    ("exit", "meaning"),
-    ("territory", "attenuating condition"),
-}
-
-
-_LIFECYCLE_TABLE_PROJECTIONS = {
-    ("name", "location", "stores", "lifetime", "populated by", "invalidated by"),
-    ("name", "location", "what it stores", "lifetime", "populated by", "invalidated by"),
-}
-
-
-_SUBSYSTEM_ATLAS_PROJECTION = ("region", "subsystem", "survey depth")
-# The guide's enum tables. Their Value column is the stored value itself, so it
-# prints as literal code: chipping it would print some enum's label in its
-# place (pass_type's `adversarial` as subsystem_status's "Challenging claims").
-_ENUM_TABLE_PROJECTION = ("value", "label", "what it means", "what it cannot justify")
-_DEPENDENCY_TOPOLOGY_PROJECTION = ("from", "relationship", "to", "strength", "context")
-_SEAM_TOPOLOGY_PROJECTION = ("seam", "party a", "shared object", "party b")
-_BOUNDARY_PROJECTION = ("layer", "subsystem", "boundary", "other end")
-_RUNTIME_BOUNDARY_PROJECTION = (
-    "runtime / process",
-    "language",
-    "communicates with",
-    "mechanism",
-    "notes",
-)
-_CONCERN_CHECKLIST_PROJECTION = (
-    "code",
-    "category",
-    "territory",
-    "codebase-specific probe (abbreviated)",
-    "primary subsystems",
-)
-
-_COVERAGE_STATES = {
-    "🔴": ("confirmed-bug", "Confirmed defect", "!"),
-    "🟡": ("confirmed-acceptable", "Accepted behavior", "✓"),
-    "🟢": ("ruled-out", "Ruled out", "×"),
-    "⚪": ("out-of-scope", "Out of scope", "○"),
-    "⚠": ("unresolved-competition", "Competing explanations", "?"),
-}
-
-
-_DISPLAY_FIELD = {
-    "ref sha": "Revision",
-    "id": "ID",
-    "classification": "Verdict",
-    "evidence quality": "Evidence",
-    "linchpin?": "Linchpin dependency",
-    "why in scope": "Why this file is in scope",
-    "codebase-specific probe (abbreviated)": "What to examine",
-    "jump-in": "Start here",
-    "sev": "Severity",
-    "one-line": "Finding",
-    "assessable?": "Assessment ready",
-    "#": "Number",
-}
-
-
-class MarkdownRenderer:
-    def __init__(
-        self,
-        route_map: dict[str, str],
-        current_html_path: str,
-        repository_url: str | None = None,
-    ) -> None:
-        self.route_map = route_map
-        self.current_html_path = current_html_path
-        self.repository_url = repository_url.rstrip("/") if repository_url else None
-        self.used_slugs: dict[str, int] = {}
-        # The heading a record currently sits under, by level. Both filterable
-        # pages group by exactly what the filter narrows on (§8.1.2), so the
-        # facets are read from the page's own hierarchy rather than restated.
-        self.headings: dict[int, str] = {}
-        self.facets: dict[str, list[str]] = {}
-        self.filter_scope = ""
-
-    def _note_heading(self, level: int, raw: str) -> None:
-        self.headings[level] = _record_key_text(raw)
-        for deeper in [key for key in self.headings if key > level]:
-            del self.headings[deeper]
-
-    def _facet(self, key: str, value: str) -> str:
-        """Record one facet value in first-appearance order and return it."""
-
-        if value:
-            values = self.facets.setdefault(key, [])
-            if value not in values:
-                values.append(value)
-        return value
-
-    def _heading_slug(self, title: str) -> str:
-        base = slugify(_plain(title))
-        count = self.used_slugs.get(base, 0)
-        self.used_slugs[base] = count + 1
-        return base if count == 0 else f"{base}-{count + 1}"
-
-    def _route(self, record_id: str) -> str | None:
-        target = self.route_map.get(record_id)
-        if not target:
-            return None
-        return _rel_link(self.current_html_path, target)
-
-    def _node(self, record_id: str, label: str) -> str:
-        name = re.sub(r"<br\s*/?>", " ", label, flags=re.IGNORECASE)
-        name = html.unescape(name).strip()
-        if name.startswith(record_id):
-            name = name[len(record_id) :].strip()
-        body = (
-            f'<strong data-identifier-defined>{html.escape(record_id)}</strong>'
-            f'<span>{html.escape(name or record_id)}</span>'
-        )
-        href = self._route(record_id)
-        if href:
-            return f'<a class="relationship-node" href="{html.escape(href, quote=True)}">{body}</a>'
-        return f'<span class="relationship-node">{body}</span>'
-
-    def _mermaid(self, source: str) -> str:
-        lines = [line.strip() for line in source.splitlines() if line.strip()]
-        if lines and lines[0].startswith("graph "):
-            nodes: dict[str, tuple[str, str]] = {}
-            edges: list[tuple[str, str, str, str]] = []
-            for line in lines[1:]:
-                node = re.fullmatch(r'(\w+)\["(.+?)"\]', line)
-                if node:
-                    label = node.group(2)
-                    record = re.split(r"<br\s*/?>", label, flags=re.IGNORECASE)[0]
-                    nodes[node.group(1)] = (record, label)
-                    continue
-                edge = re.fullmatch(r'(\w+)\s+(-->|<-->)\|"?(.+?)"?\|\s+(\w+)', line)
-                if edge:
-                    edges.append((edge.group(1), edge.group(2), edge.group(3), edge.group(4)))
-            if edges:
-                rendered = []
-                for left, arrow, edge_label, right in edges:
-                    left_id, left_label = nodes.get(left, (left, left))
-                    right_id, right_label = nodes.get(right, (right, right))
-                    clean_edge = re.sub(r"<br\s*/?>", " · ", edge_label, flags=re.IGNORECASE).strip('"')
-                    glyph = "↔" if arrow == "<-->" else "→"
-                    rendered.append(
-                        '<div class="relationship">'
-                        + self._node(left_id, left_label)
-                        + f'<div class="relationship-edge"><b aria-hidden="true">{glyph}</b>{html.escape(clean_edge)}</div>'
-                        + self._node(right_id, right_label)
-                        + "</div>"
-                    )
-                return '<figure class="figure"><figcaption class="figure-label">Relationship trace</figcaption><div class="relationship-map">' + "".join(rendered) + "</div></figure>"
-        if lines and lines[0] == "pie showData":
-            values: list[tuple[str, float]] = []
-            for line in lines[1:]:
-                match = re.fullmatch(r'"(.+?)"\s*:\s*([0-9.]+)', line)
-                if match:
-                    values.append((match.group(1), float(match.group(2))))
-            if values:
-                ceiling = max(value for _, value in values) or 1
-                bars = "".join(
-                    f'<div class="bar-row"><span class="bar-label">{html.escape(label)}</span><span class="bar-track"><span class="bar-fill" style="width:{value / ceiling * 100:.2f}%"></span></span><span class="bar-value">{value:g}</span></div>'
-                    for label, value in values
-                )
-                return f'<figure class="figure"><figcaption class="figure-label">Staleness distribution</figcaption><div class="bar-chart">{bars}</div></figure>'
-        return f'<figure class="figure"><figcaption class="figure-label">Diagram source</figcaption><pre class="diagram-source">{html.escape(source)}</pre></figure>'
-
-    def _field_label(self, key: str, kind: str) -> str:
-        if key == "classification" and kind == "file-ledger":
-            return "Review"
-        return _DISPLAY_FIELD.get(key, key.replace("-", " ").capitalize())
-
-    def _github_file_url(self, path: str, revision: str) -> str | None:
-        clean_path = _plain(path)
-        clean_revision = _plain(revision)
-        parts = PurePosixPath(clean_path).parts
-        if (
-            not self.repository_url
-            or not re.fullmatch(r"https://github\.com/[^/]+/[^/]+", self.repository_url)
-            or not re.fullmatch(r"[0-9a-fA-F]{7,40}", clean_revision)
-            or not parts
-            or clean_path.startswith("/")
-            or ".." in parts
-        ):
-            return None
-        return f"{self.repository_url}/blob/{clean_revision}/{quote(clean_path, safe='/')}"
-
-    def _record_list(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-        projection: RecordProjection,
-    ) -> str:
-        keys = [_header_key(header) for header in headers]
-        rendered: list[str] = []
-
-        for row_number, (values, markers) in enumerate(rows, start=1):
-            record = dict(zip(keys, values, strict=True))
-            key_raw = record[projection.key]
-            key_text = _plain(key_raw) or f"Record {row_number}"
-            # The xref pass introduces a concern code as "concern RC-2" (PLAN
-            # §2.2 item 5); the anchor other pages link to is the code's.
-            anchor_text = (
-                re.sub(r"^concern\s+", "", key_text)
-                if projection.kind == "concern-disposition"
-                else key_text
-            )
-            heading_id = self._heading_slug(f"{projection.kind}-{anchor_text}")
-
-            facts: list[tuple[str, str, str]] = []
-            if projection.kind == "file-ledger":
-                path = key_text
-                basename = posixpath.basename(path) or path
-                file_url = self._github_file_url(key_raw, record.get("ref sha", ""))
-                filename = f"<code>{html.escape(basename)}</code>"
-                primary = (
-                    f'<a class="file-source-link" href="{html.escape(file_url, quote=True)}" '
-                    f'rel="noreferrer" title="Open {html.escape(path, quote=True)} at the reviewed revision on GitHub">{filename}</a>'
-                    if file_url
-                    else filename
-                )
-                facts.append(("path", "Path", key_raw))
-            elif projection.kind == "open-question":
-                primary = f"Question {html.escape(key_text)}"
-            elif projection.kind == "subsystem":
-                subsystem_id = _plain(record.get("id", ""))
-                route = self._route(subsystem_id)
-                label = _inline(key_raw)
-                primary = (
-                    f'<a class="record-primary-link" href="{html.escape(route, quote=True)}">{label}</a>'
-                    if route
-                    else label
-                )
-            else:
-                primary = _inline(key_raw)
-
-            for key in projection.metadata:
-                value = record.get(key, "")
-                if not _plain(value):
-                    continue
-                facts.append((key, self._field_label(key, projection.kind), value))
-
-            fact_chunks: list[str] = []
-            for key, label, value in facts:
-                value_html = (
-                    _status_html(_plain(value), show_hint=False)
-                    if projection.kind == "finding" and key == "status"
-                    else _inline(value)
-                )
-                if projection.kind == "subsystem" and key == "id":
-                    value_html = f'<span data-identifier-defined>{value_html}</span>'
-                fact_chunks.append(
-                    f'<div class="record-fact record-fact-{html.escape(slugify(key), quote=True)}">'
-                    f'<dt>{html.escape(label)}</dt><dd>{value_html}</dd></div>'
-                )
-            facts_html = "".join(fact_chunks)
-            heading_tag = "h4" if projection.kind == "finding" else "h3"
-            definition_context = " data-identifier-defined" if projection.kind == "finding" else ""
-            meta = (
-                f'<header class="record-meta"{definition_context}>'
-                f'<{heading_tag} class="record-primary" id="{html.escape(heading_id, quote=True)}">{primary}</{heading_tag}>'
-                + (f'<dl class="record-facts">{facts_html}</dl>' if facts_html else "")
-                + "</header>"
-            )
-
-            if projection.kind == "finding":
-                symptom = record["symptom"]
-                parts = re.split(r"(?<=[.!?])\s+", symptom, maxsplit=1)
-                lede = f'<p class="record-lede">{_inline(parts[0])}</p>'
-                fields: list[str] = []
-                if len(parts) == 2 and _plain(parts[1]):
-                    fields.append(
-                        '<div class="record-field"><p class="record-label">Observed behavior</p>'
-                        f'<div class="record-copy">{_inline(parts[1])}</div></div>'
-                    )
-                if _plain(record.get("why it matters", "")):
-                    fields.append(
-                        '<div class="record-field"><p class="record-label">Why it matters</p>'
-                        f'<div class="record-copy">{_inline(record["why it matters"])}</div></div>'
-                    )
-                fields.append(
-                    '<div class="record-field"><p class="record-label">Root cause</p>'
-                    f'<div class="record-copy">{_inline(record["root cause"])}</div></div>'
-                )
-                content = f'<div class="record-body">{lede}<div class="record-fields">{"".join(fields)}</div></div>'
-            else:
-                fields = []
-                for key in projection.content:
-                    value = record.get(key, "")
-                    if not _plain(value):
-                        continue
-                    fields.append(
-                        f'<div class="record-field"><p class="record-label">{html.escape(self._field_label(key, projection.kind))}</p>'
-                        f'<div class="record-copy">{_inline(value)}</div></div>'
-                    )
-                content = f'<div class="record-fields">{"".join(fields)}</div>'
-
-            aria = html.escape(f"{projection.kind.replace('-', ' ')} {key_text}", quote=True)
-            # The Unresolved lens's records are this page's filterable rows
-            # (§8.1.2). Subsystem and severity are the headings the record
-            # already sits under, so the filter narrows on the page's own
-            # grouping rather than on a second, restated classification.
-            filter_attrs = ""
-            if self.current_html_path == "findings.html" and projection.kind == "finding":
-                self.filter_scope = "findings"
-                subsystem = self._facet("subsystem", self.headings.get(4, ""))
-                severity = self._facet(
-                    "severity",
-                    re.sub(
-                        r"\s+findings$", "", self.headings.get(3, ""), flags=re.IGNORECASE
-                    ),
-                )
-                filter_attrs = (
-                    " data-filter-row"
-                    f' data-filter-subsystem="{html.escape(subsystem, quote=True)}"'
-                    f' data-filter-severity="{html.escape(severity, quote=True)}"'
-                )
-            rendered.append(
-                "".join(markers)
-                + f'<article class="record record-{projection.kind}"{filter_attrs} role="listitem" aria-labelledby="{html.escape(heading_id, quote=True)}" data-record-label="{aria}">'
-                + meta
-                + content
-                + "</article>"
-            )
-
-        label = html.escape(caption, quote=True)
-        return f'<div class="record-list record-list-{projection.kind}" role="list" aria-label="{label}">{"".join(rendered)}</div>'
-
-    def _concern_checklist(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        """Project the calibrated concern table as a grouped reading register."""
-
-        keys = [_header_key(header) for header in headers]
-        groups: dict[tuple[str, str], list[tuple[dict[str, str], list[str]]]] = {}
-        for values, markers in rows:
-            record = dict(zip(keys, values, strict=True))
-            group_key = (_plain(record["category"]), _plain(record["territory"]))
-            groups.setdefault(group_key, []).append((record, markers))
-
-        rendered_groups: list[str] = []
-        for (category, territory), records in groups.items():
-            family_name = category.replace("-", " ").capitalize()
-            family_id = self._heading_slug(f"{family_name} concerns")
-            family_label = f"{family_name} · {territory}" if territory else family_name
-            articles: list[str] = []
-
-            for row_number, (record, markers) in enumerate(records, start=1):
-                code_raw = record["code"]
-                code_text = _plain(code_raw) or f"Concern {row_number}"
-                record_id = self._heading_slug(f"concern-checklist-{code_text}")
-                primary_subsystems = record.get("primary subsystems", "")
-                probe = record.get("codebase-specific probe (abbreviated)", "")
-                facts = ""
-                if _plain(primary_subsystems):
-                    facts = (
-                        '<dl class="record-facts"><div class="record-fact record-fact-primary-subsystems">'
-                        '<dt>Review in</dt>'
-                        f'<dd>{_inline(primary_subsystems)}</dd></div></dl>'
-                    )
-                articles.append(
-                    "".join(markers)
-                    + f'<article class="record record-concern-checklist" role="listitem" '
-                    f'aria-labelledby="{html.escape(record_id, quote=True)}" '
-                    f'data-record-label="{html.escape(f"concern {code_text}", quote=True)}">'
-                    '<header class="record-meta">'
-                    f'<h4 class="record-primary" id="{html.escape(record_id, quote=True)}">'
-                    f'<span data-identifier-defined>{_inline(code_raw)}</span></h4>{facts}</header>'
-                    f'<div class="record-body"><div class="record-probe">{_inline(probe)}</div></div>'
-                    '</article>'
-                )
-
-            rendered_groups.append(
-                f'<div class="concern-family" role="group" aria-labelledby="{html.escape(family_id, quote=True)}">'
-                f'<h3 class="concern-family-heading" id="{html.escape(family_id, quote=True)}" data-identifier-defined>'
-                f'<a class="heading-anchor" href="#{html.escape(family_id, quote=True)}" '
-                f'aria-label="{html.escape(f"Link to {family_label}", quote=True)}">§</a>'
-                f'<span>{html.escape(family_name)}</span>'
-                + (f'<span class="concern-territory">{html.escape(territory)}</span>' if territory else "")
-                + '</h3>'
-                f'<div class="record-list record-list-concern-checklist" role="list" '
-                f'aria-label="{html.escape(family_label, quote=True)}">{"".join(articles)}</div>'
-                '</div>'
-            )
-
-        return (
-            f'<div class="concern-checklist" aria-label="{html.escape(caption, quote=True)}">'
-            + "".join(rendered_groups)
-            + '</div>'
-        )
-
-    def _summary_list(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        items: list[str] = []
-        for values, markers in rows:
-            key, value = values[:2]
-            items.append(
-                "".join(markers)
-                + f'<div><dt>{_inline(key)}</dt><dd>{_inline(value)}</dd></div>'
-            )
-        return (
-            f'<dl class="summary-list" aria-label="{html.escape(caption, quote=True)}">'
-            + "".join(items)
-            + "</dl>"
-        )
-
-    def _subsystem_atlas(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        regions: dict[str, list[tuple[str, str, list[str]]]] = {}
-        for values, markers in rows:
-            region, subsystem, depth = values[:3]
-            regions.setdefault(_plain(region) or "Other", []).append((subsystem, depth, markers))
-
-        region_html: list[str] = []
-        for region, subsystems in regions.items():
-            items = "".join(
-                "".join(markers)
-                + '<li class="atlas-item">'
-                + f'<div class="atlas-subsystem" data-identifier-defined>{_inline(subsystem)}</div>'
-                + f'<div class="atlas-depth">{_atlas_depth(depth)}</div>'
-                + "</li>"
-                for subsystem, depth, markers in subsystems
-            )
-            region_html.append(
-                '<section class="atlas-region">'
-                '<header class="atlas-region-head">'
-                f'<h3>{html.escape(region)}</h3>'
-                f'<span class="atlas-region-count">{len(subsystems)} subsystem{"s" if len(subsystems) != 1 else ""}</span>'
-                '</header>'
-                f'<ul class="atlas-list">{items}</ul>'
-                '</section>'
-            )
-
-        label = html.escape(caption, quote=True)
-        return (
-            f'<div class="subsystem-atlas" role="group" aria-label="{label}">'
-            '<div class="atlas-summary">'
-            f'<strong>{sum(len(items) for items in regions.values())} subsystems</strong>'
-            f'<span>{len(regions)} architectural region{"s" if len(regions) != 1 else ""}</span>'
-            '<span>Names open the subsystem report</span>'
-            '</div>'
-            f'<div class="atlas-regions">{"".join(region_html)}</div>'
-            '</div>'
-        )
-
-    def _runtime_boundary_diagram(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        """Render recorded runtime relations as inline SVG plus readable HTML."""
-
-        def wrapped(value: str, width: int) -> list[str]:
-            plain = _plain(value).strip() or "Not recorded"
-            return textwrap.wrap(
-                plain,
-                width=width,
-                break_long_words=False,
-                break_on_hyphens=False,
-            ) or [plain]
-
-        def svg_text(
-            lines: list[str],
-            *,
-            x: float,
-            y: float,
-            css_class: str,
-            line_height: int,
-            anchor: str = "start",
-        ) -> str:
-            tspans = "".join(
-                f'<tspan x="{x:g}" dy="{0 if index == 0 else line_height}">'
-                f'{html.escape(line)}</tspan>'
-                for index, line in enumerate(lines)
-            )
-            return (
-                f'<text class="{css_class}" x="{x:g}" y="{y:g}" '
-                f'text-anchor="{anchor}">{tspans}</text>'
-            )
-
-        width = 960
-        source_x, source_width = 24, 244
-        target_x, target_width = 692, 244
-        mechanism_x, mechanism_width = 308, 344
-        current_y = 48
-        svg_rows: list[str] = []
-        details: list[str] = []
-
-        for index, (values, markers) in enumerate(rows):
-            source, language, target, mechanism, note = values[:5]
-            source_lines = wrapped(source, 26)
-            language_lines = wrapped(language, 32)
-            target_lines = wrapped(target, 27)
-            mechanism_lines = wrapped(mechanism, 42)
-
-            source_height = 42 + 17 * len(source_lines) + 15 * len(language_lines)
-            target_height = 42 + 17 * len(target_lines)
-            mechanism_height = 22 + 15 * len(mechanism_lines)
-            content_height = max(82, source_height, target_height, mechanism_height)
-            lane_height = content_height + 24
-            box_y = current_y + 12
-            center_y = box_y + content_height / 2
-            mechanism_y = center_y - mechanism_height / 2
-            lane_class = "runtime-svg-lane-even" if index % 2 else "runtime-svg-lane"
-
-            svg_rows.append(
-                f'<g class="runtime-svg-row">'
-                f'<rect class="{lane_class}" x="0" y="{current_y:g}" '
-                f'width="{width}" height="{lane_height:g}"/>'
-                f'<rect class="runtime-svg-node" x="{source_x}" y="{box_y:g}" '
-                f'width="{source_width}" height="{content_height:g}"/>'
-                f'<rect class="runtime-svg-node runtime-svg-target" x="{target_x}" y="{box_y:g}" '
-                f'width="{target_width}" height="{content_height:g}"/>'
-                f'<line class="runtime-svg-edge" x1="{source_x + source_width}" y1="{center_y:g}" '
-                f'x2="{target_x}" y2="{center_y:g}"/>'
-                f'<path class="runtime-svg-arrow" d="M {target_x:g} {center_y:g} '
-                f'L {target_x - 10:g} {center_y - 5:g} L {target_x - 10:g} {center_y + 5:g} Z"/>'
-                f'<rect class="runtime-svg-edge-label" x="{mechanism_x}" y="{mechanism_y:g}" '
-                f'width="{mechanism_width}" height="{mechanism_height:g}"/>'
-                + svg_text(
-                    source_lines,
-                    x=source_x + 14,
-                    y=box_y + 27,
-                    css_class="runtime-svg-title",
-                    line_height=17,
-                )
-                + svg_text(
-                    language_lines,
-                    x=source_x + 14,
-                    y=box_y + 34 + 17 * len(source_lines),
-                    css_class="runtime-svg-language",
-                    line_height=15,
-                )
-                + svg_text(
-                    target_lines,
-                    x=target_x + 14,
-                    y=box_y + 31,
-                    css_class="runtime-svg-title",
-                    line_height=17,
-                )
-                + svg_text(
-                    mechanism_lines,
-                    x=mechanism_x + mechanism_width / 2,
-                    y=mechanism_y + 15,
-                    css_class="runtime-svg-mechanism",
-                    line_height=15,
-                    anchor="middle",
-                )
-                + '</g>'
-            )
-
-            note_html = (
-                '<p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>'
-                f'{_inline(note)}</p>'
-                if _plain(note).strip()
-                else ""
-            )
-            details.append(
-                "".join(markers)
-                + '<article class="runtime-detail" role="listitem">'
-                '<header class="runtime-detail-head">'
-                f'<h3>{_inline(source)}</h3>'
-                f'<span class="runtime-detail-language">{_inline(language)}</span></header>'
-                '<div class="runtime-detail-body">'
-                '<p><span class="runtime-detail-label">Communicates with</span>'
-                f'{_inline(target)}</p>'
-                '<p><span class="runtime-detail-label">Mechanism</span>'
-                f'{_inline(mechanism)}</p>{note_html}</div></article>'
-            )
-            current_y += lane_height
-
-        count = len(rows)
-        boundary_word = "boundary" if count == 1 else "boundaries"
-        svg_height = current_y
-        svg = (
-            f'<svg class="runtime-boundary-svg" xmlns="http://www.w3.org/2000/svg" '
-            f'viewBox="0 0 {width} {svg_height}" role="img" '
-            'aria-labelledby="runtime-boundary-svg-title runtime-boundary-svg-description">'
-            '<title id="runtime-boundary-svg-title">Runtime boundary map</title>'
-            f'<desc id="runtime-boundary-svg-description">{count} recorded runtime {boundary_word}; '
-            'each row connects a runtime or process to its recorded target through the stated mechanism.</desc>'
-            '<text class="runtime-svg-column-label" x="24" y="27">Runtime or process</text>'
-            '<text class="runtime-svg-column-label" x="480" y="27" text-anchor="middle">Mechanism</text>'
-            '<text class="runtime-svg-column-label" x="692" y="27">Communicates with</text>'
-            + "".join(svg_rows)
-            + '</svg>'
-        )
-        label = html.escape(caption or "runtime boundary map", quote=True)
-        return (
-            '<div class="runtime-boundary-projection">'
-            f'<figure class="runtime-boundary-diagram" aria-label="{label}">'
-            '<figcaption class="runtime-diagram-caption">'
-            f'<strong>{count} recorded runtime {boundary_word}</strong>'
-            '<span>Runtime → communication mechanism → recorded target</span>'
-            '</figcaption>'
-            f'<div class="runtime-svg-scroll">{svg}</div></figure>'
-            '<div class="runtime-boundary-details" role="list" '
-            'aria-label="Complete runtime boundary details">'
-            + "".join(details)
-            + '</div></div>'
-        )
-
-    def _boundary_diagram(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        """Draw the recorded-boundary table as inline SVG (§2.5 item 2).
-
-        Columns are layers in table order, eight to a band; boxes are in table
-        order within a column. A line is drawn only for a row that names a seam
-        or an outgoing xref, so nothing the table does not record is drawn.
-        """
-        box_w, box_h, gap_x, gap_y, margin, per_band = 200, 44, 64, 16, 24, 8
-        layers: dict[str, list[str]] = {}
-        names: dict[str, str] = {}
-        touched: set[str] = set()
-        seams: dict[str, tuple[str, str]] = {}
-        xrefs: list[tuple[str, str, str]] = []
-        for values, _markers in rows:
-            layer, subsystem, boundary, other = values[:4]
-            sid = self._record_identifier(subsystem)
-            if sid not in names:
-                names[sid] = _plain(subsystem).removeprefix(sid).strip()
-                layers.setdefault(_plain(layer) or "unlayered", []).append(sid)
-            other_id = self._record_identifier(other) if _plain(other) not in ("", "—") else ""
-            if not other_id:
-                continue
-            touched.add(sid)
-            relation = _plain(boundary)
-            if "](seams.md#" in boundary:
-                seams.setdefault(self._record_identifier(boundary), (sid, other_id))
-            elif relation.endswith("→"):
-                xrefs.append((sid, other_id, relation.removesuffix("→").strip()))
-
-        columns = list(layers)
-        bands = [columns[i : i + per_band] for i in range(0, len(columns), per_band)]
-        boxes: dict[str, tuple[int, int]] = {}
-        parts_columns: list[str] = []
-        band_top = 0
-        for band in bands:
-            for position, layer in enumerate(band):
-                x = margin + position * (box_w + gap_x)
-                parts_columns.append(
-                    f'<text class="boundary-svg-column" x="{x}" y="{band_top + 30}">{html.escape(layer)}</text>'
-                )
-                for row, sid in enumerate(layers[layer]):
-                    boxes[sid] = (x, band_top + 44 + row * (box_h + gap_y))
-            tallest = max(len(layers[layer]) for layer in band)
-            band_top += 44 + tallest * (box_h + gap_y) + 24
-        width = 2 * margin + min(len(columns), per_band) * (box_w + gap_x) - gap_x
-        height = band_top
-
-        def ends(a: str, b: str) -> tuple[float, float, float, float]:
-            (ax, ay), (bx, by) = boxes[a], boxes[b]
-            if ax == bx:
-                if ay < by:
-                    return ax + box_w / 2, ay + box_h, bx + box_w / 2, by
-                return ax + box_w / 2, ay, bx + box_w / 2, by + box_h
-            if ax < bx:
-                return ax + box_w, ay + box_h / 2, bx, by + box_h / 2
-            return ax, ay + box_h / 2, bx + box_w, by + box_h / 2
-
-        def num(value: float) -> str:
-            return f"{round(value, 1):g}"
-
-        lines: list[str] = []
-        labels: list[str] = []
-        for seam_id, (a, b) in seams.items():
-            x1, y1, x2, y2 = ends(a, b)
-            lines.append(
-                f'<line class="boundary-svg-seam" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"/>'
-            )
-            mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-            label_w = 12 + 6.4 * len(seam_id)
-            labels.append(
-                f'<rect class="boundary-svg-label-box" x="{num(mx - label_w / 2)}" y="{num(my - 8)}" '
-                f'width="{num(label_w)}" height="16" rx="2"/>'
-                f'<text class="boundary-svg-label" x="{num(mx)}" y="{num(my + 3.5)}">{html.escape(seam_id)}</text>'
-            )
-        for a, b, _relation in xrefs:
-            x1, y1, x2, y2 = ends(a, b)
-            length = max(((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5, 1.0)
-            ux, uy = (x2 - x1) / length, (y2 - y1) / length
-            lines.append(
-                f'<line class="boundary-svg-xref" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"/>'
-                f'<path class="boundary-svg-arrow" d="M {num(x2)} {num(y2)} '
-                f'L {num(x2 - 10 * ux - 5 * uy)} {num(y2 - 10 * uy + 5 * ux)} '
-                f'L {num(x2 - 10 * ux + 5 * uy)} {num(y2 - 10 * uy - 5 * ux)} Z"/>'
-            )
-
-        nodes: list[str] = []
-        for sid, (x, y) in boxes.items():
-            name = names[sid]
-            shown = name if len(name) <= 28 else name[:27].rstrip() + "…"
-            nodes.append(
-                f'<g class="boundary-svg-node" data-subsystem="{html.escape(sid, quote=True)}">'
-                f"<title>{html.escape(f'{sid} {name}')}</title>"
-                f'<rect x="{x}" y="{y}" width="{box_w}" height="{box_h}" rx="3"/>'
-                f'<text class="boundary-svg-id" x="{x + 10}" y="{y + 18}">{html.escape(sid)}</text>'
-                f'<text class="boundary-svg-name" x="{x + 10}" y="{y + 35}">{html.escape(shown)}</text>'
-                "</g>"
-            )
-
-        total = len(names)
-        unconnected = total - len(touched)
-        census = (
-            f"{unconnected} of {total} subsystem{'s' if total != 1 else ''} "
-            f"{'has' if unconnected == 1 else 'have'} no recorded boundary"
-        )
-        seam_count = f"{len(seams)} seam{'s' if len(seams) != 1 else ''} as labelled lines"
-        xref_count = (
-            f"{len(xrefs)} recorded dependenc{'ies' if len(xrefs) != 1 else 'y'} as arrows"
-            if xrefs
-            else ""
-        )
-        drawn = "; ".join(part for part in (seam_count, xref_count) if part)
-        account = (
-            "Each arrow is listed in the dependency graph above, and each seam line in the seam topology below"
-            if xrefs
-            else "Each line is listed in the seam topology below"
-        )
-        svg = (
-            f'<svg class="boundary-svg" xmlns="http://www.w3.org/2000/svg" '
-            f'viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" '
-            'aria-labelledby="boundary-svg-title boundary-svg-description">'
-            '<title id="boundary-svg-title">Recorded boundaries</title>'
-            f'<desc id="boundary-svg-description">{total} subsystems in {len(columns)} layer '
-            f'column{"s" if len(columns) != 1 else ""}; {html.escape(drawn)}. {html.escape(census)}. '
-            'No line is inferred from a name or a layer.</desc>'
-            + "".join(parts_columns)
-            + f'<g class="boundary-svg-lines">{"".join(lines)}</g>'
-            + f'<g class="boundary-svg-nodes">{"".join(nodes)}</g>'
-            + f'<g class="boundary-svg-labels">{"".join(labels)}</g>'
-            + "</svg>"
-        )
-        label = html.escape(caption or "recorded boundaries", quote=True)
-        return (
-            '<div class="boundary-projection">'
-            f'<figure class="boundary-diagram" aria-label="{label}">'
-            '<figcaption class="runtime-diagram-caption">'
-            "<strong>Recorded boundaries</strong>"
-            f"<span>{html.escape(drawn)}</span>"
-            f"<span>{html.escape(census)}</span>"
-            f"<span>{account}</span>"
-            "</figcaption>"
-            f'<div class="boundary-svg-scroll">{svg}</div></figure></div>'
-        )
-
-    @staticmethod
-    def _record_identifier(value: str) -> str:
-        """The record ID a cell names: its link's label, whatever the ID's shape.
-
-        The renderer links every record ID it prints, so the label is the exact
-        ID (`auth`, `B04-R6`); a cell with no link falls back to the first
-        letters-dash-number token, the shape the renderer once assumed.
-        """
-
-        link = re.search(r"\[([^\]]+)\]\([^)]*\)", value)
-        if link:
-            return _plain(link.group(1))
-        plain = _plain(value)
-        match = re.search(r"\b[A-Za-z][A-Za-z0-9]*-\d+\b", plain)
-        return match.group(0) if match else plain
-
-    def _connection_topology(
-        self,
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-        *,
-        kind: str,
-    ) -> str:
-        edges: list[dict[str, Any]] = []
-        nodes: dict[str, str] = {}
-        adjacency: dict[str, set[str]] = {}
-
-        for values, markers in rows:
-            if kind == "seam":
-                key, left, detail, right = values[:4]
-                qualifier = ""
-                directed = False
-            else:
-                left, key, right, qualifier, detail = values[:5]
-                directed = True
-            left_id = self._record_identifier(left)
-            right_id = self._record_identifier(right)
-            nodes.setdefault(left_id, left)
-            nodes.setdefault(right_id, right)
-            adjacency.setdefault(left_id, set()).add(right_id)
-            adjacency.setdefault(right_id, set()).add(left_id)
-            edges.append(
-                {
-                    "key": key,
-                    "left": left_id,
-                    "right": right_id,
-                    "detail": detail,
-                    "qualifier": qualifier,
-                    "directed": directed,
-                    "markers": markers,
-                }
-            )
-
-        components: list[set[str]] = []
-        unseen = set(nodes)
-        while unseen:
-            start = min(unseen)
-            component: set[str] = set()
-            stack = [start]
-            while stack:
-                node = stack.pop()
-                if node in component:
-                    continue
-                component.add(node)
-                stack.extend(sorted(adjacency.get(node, set()) - component, reverse=True))
-            unseen -= component
-            components.append(component)
-        components.sort(key=lambda component: (-len(component), min(component)))
-
-        degree = {node: len(adjacency.get(node, set())) for node in nodes}
-        component_html: list[str] = []
-        for component_number, component in enumerate(components, start=1):
-            hub = sorted(component, key=lambda node: (-degree[node], node))[0]
-            component_edges = [
-                edge for edge in edges
-                if edge["left"] in component and edge["right"] in component
-            ]
-            spokes = [edge for edge in component_edges if hub in {edge["left"], edge["right"]}]
-            cross_edges = [edge for edge in component_edges if edge not in spokes]
-
-            spoke_html: list[str] = []
-            for edge in spokes:
-                peer = edge["right"] if edge["left"] == hub else edge["left"]
-                if edge["directed"]:
-                    outbound = edge["left"] == hub
-                    arrow = "→" if outbound else "←"
-                    peer_label = "To" if outbound else "From"
-                    direction = "Outgoing" if outbound else "Incoming"
-                else:
-                    arrow = "↔"
-                    peer_label = "With"
-                    direction = "Two-way seam"
-                qualifier = (
-                    f'<span class="topology-qualifier">{html.escape(direction)} · {_inline(edge["qualifier"])}</span>'
-                    if _plain(edge["qualifier"])
-                    else f'<span class="topology-qualifier">{html.escape(direction)}</span>'
-                )
-                spoke_html.append(
-                    "".join(edge["markers"])
-                    + '<article class="topology-spoke" role="listitem">'
-                    f'<div class="topology-edge-mark" aria-hidden="true">{arrow}</div>'
-                    '<div class="topology-edge-body">'
-                    '<p class="topology-edge-head">'
-                    f'<span class="topology-edge-key">{_inline(edge["key"])}</span>{qualifier}</p>'
-                    f'<p class="topology-peer"><span class="topology-peer-label">{peer_label}</span>'
-                    f'<span class="topology-node" data-identifier-defined>{_inline(nodes[peer])}</span></p>'
-                    f'<p class="topology-object">{_inline(edge["detail"])}</p>'
-                    '</div></article>'
-                )
-
-            cross_html = ""
-            if cross_edges:
-                cross_items: list[str] = []
-                for edge in cross_edges:
-                    arrow = "→" if edge["directed"] else "↔"
-                    qualifier = f' · {_inline(edge["qualifier"])}' if _plain(edge["qualifier"]) else ""
-                    cross_items.append(
-                        "".join(edge["markers"])
-                        + '<div class="topology-cross-edge">'
-                        f'<span class="topology-node" data-identifier-defined>{_inline(nodes[edge["left"]])}</span>'
-                        '<span class="topology-cross-relation">'
-                        f'<strong>{_inline(edge["key"])}</strong>{html.escape(arrow)}{qualifier}'
-                        f'<span class="topology-cross-object">{_inline(edge["detail"])}</span>'
-                        '</span>'
-                        f'<span class="topology-node" data-identifier-defined>{_inline(nodes[edge["right"]])}</span>'
-                        '</div>'
-                    )
-                cross_html = (
-                    '<div class="topology-cross"><p class="topology-cross-label">Other connection in this area</p>'
-                    f'<div class="topology-cross-list">{"".join(cross_items)}</div></div>'
-                )
-
-            component_label = html.escape(f"Connected area {component_number}", quote=True)
-            component_html.append(
-                f'<section class="topology-component" aria-label="{component_label}">'
-                '<header class="topology-hub">'
-                f'<p class="topology-hub-label">Connected area {component_number} · hub</p>'
-                f'<h3 class="topology-hub-title" data-identifier-defined>{_inline(nodes[hub])}</h3>'
-                f'<p class="topology-hub-count">{len(component)} subsystems · {len(component_edges)} connection{"s" if len(component_edges) != 1 else ""}</p>'
-                '</header>'
-                f'<div class="topology-spokes" role="list">{"".join(spoke_html)}</div>'
-                + cross_html
-                + '</section>'
-            )
-
-        noun = "seams" if kind == "seam" else "dependencies"
-        label = html.escape(caption, quote=True)
-        return (
-            f'<div class="topology topology-{kind}" role="group" aria-label="{label}">'
-            '<div class="topology-summary">'
-            f'<strong>{len(components)} connected area{"s" if len(components) != 1 else ""}</strong>'
-            f'<span>{len(nodes)} subsystems · {len(edges)} {noun}</span>'
-            '<span>Follow any name to its subsystem report</span>'
-            '</div>'
-            + "".join(component_html)
-            + '</div>'
-        )
-
-    def _coverage_index(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-    ) -> str:
-        """Sparse, task-oriented projection of the exact coverage matrix."""
-
-        concern_codes = [_plain(header) for header in headers[1:]]
-        totals = {state[0]: 0 for state in _COVERAGE_STATES.values()}
-        linchpin_total = 0
-        records: list[dict[str, Any]] = []
-
-        def outcome(value: str) -> tuple[str, str, str, bool] | None:
-            plain = _plain(value)
-            if not plain or plain == "—":
-                return None
-            for symbol, (key, label, mark) in _COVERAGE_STATES.items():
-                if symbol in plain:
-                    return key, label, mark, "🔗" in plain
-            return "unknown", "Recorded outcome", "?", "🔗" in plain
-
-        for values, markers in rows:
-            identity = values[0]
-            link = re.search(r"\[([^]]+)\]\(([^)]+)\)", identity)
-            subsystem_id = _plain(link.group(1)) if link else _plain(identity).split(" ", 1)[0]
-            route = _html_href(link.group(2)) if link else self._route(subsystem_id)
-            subsystem_name = _plain(identity)
-            if subsystem_name.startswith(subsystem_id):
-                subsystem_name = subsystem_name[len(subsystem_id) :].strip()
-            subsystem_name = subsystem_name or subsystem_id
-
-            reviews: list[dict[str, Any]] = []
-            counts: dict[str, int] = {}
-            for code, value in zip(concern_codes, values[1:], strict=True):
-                state = outcome(value)
-                if not state:
-                    continue
-                key, label, mark, linchpin = state
-                counts[key] = counts.get(key, 0) + 1
-                if key in totals:
-                    totals[key] += 1
-                if linchpin:
-                    linchpin_total += 1
-                reviews.append(
-                    {
-                        "code": code,
-                        "key": key,
-                        "label": label,
-                        "mark": mark,
-                        "linchpin": linchpin,
-                    }
-                )
-            records.append(
-                {
-                    "markers": markers,
-                    "id": subsystem_id,
-                    "name": subsystem_name,
-                    "route": route,
-                    "reviews": reviews,
-                    "counts": counts,
-                }
-            )
-
-        review_total = sum(len(record["reviews"]) for record in records)
-        intersection_total = len(records) * len(concern_codes)
-        unassessed = intersection_total - review_total
-
-        summary_items = (
-            (review_total, "Recorded reviews"),
-            (len(records), "Subsystems"),
-            (len(concern_codes), "Active concerns"),
-            (totals.get("confirmed-bug", 0), "Confirmed defects"),
-        )
-        summary = "".join(
-            '<div class="coverage-summary-item">'
-            f'<strong>{value:,}</strong><span>{html.escape(label)}</span></div>'
-            for value, label in summary_items
-        )
-
-        count_labels = {
-            "confirmed-bug": lambda count: f"{count} defect{'s' if count != 1 else ''}",
-            "confirmed-acceptable": lambda count: f"{count} accepted",
-            "ruled-out": lambda count: f"{count} ruled out",
-            "out-of-scope": lambda count: f"{count} out of scope",
-            "unresolved-competition": lambda count: f"{count} unresolved",
-            "unknown": lambda count: f"{count} recorded",
-        }
-
-        subsystem_items: list[str] = []
-        matrix_rows: list[str] = []
-        for record in records:
-            route = str(record["route"] or "")
-            name = str(record["name"])
-            subsystem_id = str(record["id"])
-            name_html = html.escape(name)
-            primary = (
-                f'<a href="{html.escape(route, quote=True)}">{name_html}</a>'
-                if route
-                else name_html
-            )
-            reviews = list(record["reviews"])
-            reviewed = len(reviews)
-            progress = reviewed / len(concern_codes) * 100 if concern_codes else 0
-            outcome_counts = "".join(
-                f'<span class="coverage-state-{html.escape(key, quote=True)}">'
-                f'{html.escape(count_labels[key](count))}</span>'
-                for key in (
-                    "confirmed-bug",
-                    "unresolved-competition",
-                    "confirmed-acceptable",
-                    "ruled-out",
-                    "out-of-scope",
-                    "unknown",
-                )
-                if (count := record["counts"].get(key, 0))
-            )
-
-            tokens: list[str] = []
-            review_map = {review["code"]: review for review in reviews}
-            matrix_cells: list[str] = []
-            for code in concern_codes:
-                review = review_map.get(code)
-                if not review:
-                    matrix_cells.append(
-                        '<td class="coverage-matrix-empty"><span title="Not assessed">'
-                        '<span aria-hidden="true">·</span><span class="visually-hidden">Not assessed</span>'
-                        '</span></td>'
-                    )
-                    continue
-
-                key = str(review["key"])
-                label = str(review["label"])
-                mark = str(review["mark"])
-                linchpin = bool(review["linchpin"])
-                destination = (
-                    f'{route}#concern-disposition-{slugify(code)}' if route else f'#{slugify(code)}'
-                )
-                description = f"{code} — {label} in {name}"
-                if linchpin:
-                    description += "; linchpin-dependent"
-                safe_description = html.escape(description, quote=True)
-                linchpin_html = (
-                    '<span class="coverage-linchpin" aria-hidden="true">◆</span>'
-                    if linchpin
-                    else ""
-                )
-                tokens.append(
-                    f'<a class="coverage-token coverage-state-{html.escape(key, quote=True)}" '
-                    f'href="{html.escape(destination, quote=True)}" title="{safe_description}" '
-                    f'aria-label="{safe_description}">'
-                    f'<span class="coverage-token-mark" aria-hidden="true">{html.escape(mark)}</span>'
-                    f'<span>{html.escape(code)}</span>{linchpin_html}</a>'
-                )
-                matrix_cells.append(
-                    f'<td class="coverage-matrix-cell coverage-state-{html.escape(key, quote=True)}">'
-                    f'<a href="{html.escape(destination, quote=True)}" title="{safe_description}" '
-                    f'aria-label="{safe_description}"><span class="coverage-matrix-mark" '
-                    f'aria-hidden="true">{html.escape(mark)}</span>{linchpin_html}</a></td>'
-                )
-
-            marker_html = "".join(record["markers"])
-            subsystem_items.append(
-                marker_html
-                + '<article class="coverage-subsystem">'
-                '<header class="coverage-subsystem-head">'
-                f'<h3 class="coverage-subsystem-title">{primary}</h3>'
-                f'<span class="coverage-subsystem-id" data-identifier-defined>{html.escape(subsystem_id)}</span></header>'
-                '<div class="coverage-measure">'
-                f'<p class="coverage-review-count">{reviewed} recorded review'
-                f'{"s" if reviewed != 1 else ""} of {len(concern_codes)}</p>'
-                f'<span class="coverage-progress" aria-hidden="true"><span style="width:{progress:.2f}%"></span></span>'
-                f'<p class="coverage-outcome-counts">{outcome_counts}</p></div>'
-                f'<div class="coverage-tokens" aria-label="Recorded concern reviews">{"".join(tokens)}</div>'
-                '</article>'
-            )
-            matrix_rows.append(
-                marker_html
-                + '<tr><th scope="row">'
-                + primary
-                + f'<span class="coverage-matrix-subsystem-id" data-identifier-defined>{html.escape(subsystem_id)}</span></th>'
-                + "".join(matrix_cells)
-                + '</tr>'
-            )
-
-        legend_items = [
-            (key, label, mark)
-            for key, label, mark in _COVERAGE_STATES.values()
-        ]
-        legend = "".join(
-            f'<span class="coverage-legend-item coverage-state-{html.escape(key, quote=True)}">'
-            f'<span class="coverage-token-mark" aria-hidden="true">{html.escape(mark)}</span>'
-            f'<span>{html.escape(label)}</span></span>'
-            for key, label, mark in legend_items
-        )
-        legend += (
-            '<span class="coverage-legend-item"><span class="coverage-linchpin" '
-            'aria-hidden="true">◆</span><span>Linchpin-dependent</span></span>'
-            '<span class="coverage-legend-item"><span class="coverage-matrix-empty" '
-            'aria-hidden="true">·</span><span>Not assessed</span></span>'
-        )
-
-        matrix_head = "".join(
-            f'<th scope="col"><a href="#{html.escape(slugify(code), quote=True)}">'
-            f'{html.escape(code)}</a></th>'
-            for code in concern_codes
-        )
-        matrix = (
-            '<div class="table-wrap coverage-matrix-wrap"><table class="coverage-matrix">'
-            '<caption>Full concern review matrix</caption><thead><tr><th scope="col">Subsystem</th>'
-            + matrix_head
-            + '</tr></thead><tbody>'
-            + "".join(matrix_rows)
-            + '</tbody></table></div>'
-        )
-        linchpin_note = (
-            f" {linchpin_total} review{'s are' if linchpin_total != 1 else ' is'} linchpin-dependent."
-            if linchpin_total
-            else ""
-        )
-        return (
-            '<div class="coverage-index">'
-            f'<div class="coverage-summary">{summary}</div>'
-            f'<p class="coverage-intro">Only the {review_total} recorded reviews are expanded below; '
-            f'{unassessed:,} unassessed intersections do not consume reading space. The thin rule '
-            'shows recorded coverage; the labelled markers show review outcomes.'
-            f'{html.escape(linchpin_note)}</p>'
-            f'<div class="coverage-subsystem-list">{"".join(subsystem_items)}</div>'
-            f'<div class="coverage-legend" aria-label="Review outcome legend">{legend}</div>'
-            '<details class="coverage-matrix-disclosure"><summary><span>Full cross-reference matrix</span>'
-            f'<span>{len(records)} subsystems × {len(concern_codes)} concerns</span></summary>'
-            '<p class="coverage-matrix-note">Use the matrix when exact row-and-column comparison matters. '
-            'Headers and subsystem names remain fixed while the matrix scrolls.</p>'
-            + matrix
-            + '</details></div>'
-        )
-
-    def _table(
-        self,
-        headers: list[str],
-        rows: list[tuple[list[str], list[str]]],
-        caption: str,
-    ) -> str:
-        signature = tuple(_header_key(header) for header in headers)
-        if signature == _SUBSYSTEM_ATLAS_PROJECTION:
-            return self._subsystem_atlas(rows, caption)
-        if signature == _DEPENDENCY_TOPOLOGY_PROJECTION:
-            return self._connection_topology(rows, caption, kind="dependency")
-        if signature == _SEAM_TOPOLOGY_PROJECTION:
-            return self._connection_topology(rows, caption, kind="seam")
-        if signature == _RUNTIME_BOUNDARY_PROJECTION:
-            return self._runtime_boundary_diagram(rows, caption)
-        if signature == _BOUNDARY_PROJECTION:
-            return self._boundary_diagram(rows, caption)
-        if signature == _CONCERN_CHECKLIST_PROJECTION:
-            return self._concern_checklist(headers, rows, caption)
-        if (
-            len(signature) > 1
-            and signature[0] == "subsystem"
-            and all(_IDENTIFIER_SHAPE.fullmatch(header.upper()) for header in signature[1:])
-        ):
-            return self._coverage_index(headers, rows)
-        projection = _RECORD_PROJECTIONS.get(signature)
-        if projection:
-            return self._record_list(headers, rows, caption, projection)
-        if signature in _SUMMARY_LIST_PROJECTIONS:
-            return self._summary_list(rows, caption)
-
-        lifecycle = signature in _LIFECYCLE_TABLE_PROJECTIONS
-        enum_table = signature == _ENUM_TABLE_PROJECTION
-        # `hot-spots.md`'s one measure table carries this page's filterable
-        # rows (§8.1.2). The severity facet is named by the band columns
-        # themselves: the table keeps critical+high and medium+low apart on
-        # purpose, and a filter that merged them into four severities would
-        # assert a resolution the columns do not record.
-        hot_spots = (
-            self.current_html_path == "hot-spots.html"
-            and signature[:1] == ("subsystem",)
-            and any(re.search(r"critical|medium", key) for key in signature)
-        )
-        severity_columns: list[tuple[int, str]] = []
-        if hot_spots:
-            self.filter_scope = "hot-spots"
-            for index, key in enumerate(signature):
-                if re.search(r"critical|medium", key):
-                    severity_columns.append((index, self._facet("severity", _plain(headers[index]))))
-        visible_headers = [header for index, header in enumerate(headers) if not lifecycle or index != 1]
-        head = "".join(f'<th scope="col">{_inline(cell)}</th>' for cell in visible_headers)
-        table_rows: list[str] = []
-        for values, markers in rows:
-            cells: list[str] = []
-            for index, value in enumerate(values):
-                if lifecycle and index == 1:
-                    continue
-                label = _plain(headers[index])
-                if lifecycle and index == 0:
-                    location = values[1]
-                    location_html = (
-                        f'<span class="table-detail"><span class="visually-hidden">Location: </span>{_inline(location)}</span>'
-                        if _plain(location)
-                        else ""
-                    )
-                    cells.append(
-                        f'<th scope="row" data-label="{html.escape(label, quote=True)}"><span class="table-key">{_inline(value)}</span>{location_html}</th>'
-                    )
-                else:
-                    literal = re.fullmatch(r"`([^`]+)`", value.strip()) if enum_table and index == 0 else None
-                    rendered = f"<code>{html.escape(literal.group(1))}</code>" if literal else _inline(value)
-                    cells.append(
-                        f'<td data-label="{html.escape(label, quote=True)}">{rendered}</td>'
-                    )
-            row_attrs = ""
-            if hot_spots:
-                subsystem = self._facet("subsystem", _record_key_text(values[0]))
-                bands = "|".join(
-                    label
-                    for index, label in severity_columns
-                    if index < len(values) and _positive_count(values[index])
-                )
-                row_attrs = (
-                    " data-filter-row"
-                    f' data-filter-subsystem="{html.escape(subsystem, quote=True)}"'
-                    f' data-filter-severity="{html.escape(bands, quote=True)}"'
-                )
-            table_rows.append("".join(markers) + f'<tr{row_attrs}>{"".join(cells)}</tr>')
-        kind = " lifecycle-table" if lifecycle else ""
-        return (
-            f'<div class="table-wrap{kind}"><table><caption>{html.escape(caption)}</caption>'
-            f'<thead><tr>{head}</tr></thead><tbody>{"".join(table_rows)}</tbody></table></div>'
-        )
-
-    def render(self, markdown: str) -> tuple[str, str]:
-        lines = markdown.splitlines()
-        title = "Conspectus"
-        body: list[str] = []
-        i = 0
-        in_section = False
-        in_disclosure = False
-        disclose = False
-        current_section = ""
-
-        while i < len(lines):
-            line = lines[i]
-            if not line.strip():
-                i += 1
-                continue
-
-            if line.startswith("<!--") and line.rstrip().endswith("-->"):
-                body.append(line)
-                i += 1
-                continue
-
-            if (
-                current_section in {"coverage-overview", "coverage-heatmap"}
-                and line.startswith("**Legend**:")
-            ):
-                i += 1
-                continue
-
-            anchor = re.fullmatch(r'<a\s+id="([a-zA-Z0-9_.:-]+)"></a>', line.strip())
-            if anchor:
-                body.append(f'<span id="{html.escape(anchor.group(1), quote=True)}" class="record-anchor"></span>')
-                i += 1
-                continue
-
-            fence = re.match(r"^```\s*([\w-]*)\s*$", line)
-            if fence:
-                language = fence.group(1).lower()
-                code_lines: list[str] = []
-                i += 1
-                while i < len(lines) and not lines[i].startswith("```"):
-                    code_lines.append(lines[i])
-                    i += 1
-                i += 1 if i < len(lines) else 0
-                source = "\n".join(code_lines)
-                if language == "mermaid":
-                    body.append(self._mermaid(source))
-                else:
-                    lang_class = f' class="language-{html.escape(language, quote=True)}"' if language else ""
-                    body.append(f"<pre><code{lang_class}>{html.escape(source)}</code></pre>")
-                continue
-
-            heading = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
-            if heading:
-                level = len(heading.group(1))
-                raw = heading.group(2)
-                if level == 1:
-                    title = _plain(raw)
-                    i += 1
-                    continue
-                display_raw = raw
-                if (
-                    self.current_html_path == "concern-checklist.html"
-                    and level == 2
-                    and re.fullmatch(r"Active concerns(?:\s+\(\d+\))?", _plain(raw), re.IGNORECASE)
-                ):
-                    display_raw = "Active concerns"
-                self._note_heading(level, display_raw)
-                if level == 2:
-                    if in_disclosure:
-                        body.append("</details>")
-                        in_disclosure = False
-                    if in_section:
-                        body.append("</section>")
-                    current_section = slugify(_plain(display_raw))
-                    body.append(f'<section class="section-{html.escape(current_section, quote=True)}">')
-                    in_section = True
-                    # The guide's last section holds the tables a reader never
-                    # meets as a label; it stays closed until asked for.
-                    disclose = self.current_html_path == "how-to-read.html" and current_section == "full-vocabulary"
-                anchor_id = self._heading_slug(display_raw)
-                label = html.escape(f"Link to {_plain(display_raw)}", quote=True)
-                # The Unresolved lens nests the subsystem under resolution
-                # state and severity, so its subsystem headings are one level
-                # deeper than the History lens's.
-                finding_group = (self.current_html_path == "findings.html" and level == 4) or (
-                    self.current_html_path == "resolved-findings.html" and level == 3
-                )
-                heading_class = ' class="finding-subsystem-heading"' if finding_group else ""
-                definition_context = " data-identifier-defined" if finding_group else ""
-                body.append(
-                    f'<h{level}{heading_class} id="{anchor_id}"{definition_context}>'
-                    f'<a class="heading-anchor" href="#{anchor_id}" aria-label="{label}">§</a>'
-                    f'{_inline(display_raw)}</h{level}>'
-                )
-                if level == 2 and disclose:
-                    body.append('<details class="vocabulary-disclosure"><summary>Show the full vocabulary</summary>')
-                    in_disclosure = True
-                    disclose = False
-                i += 1
-                continue
-
-            if line.startswith("|") and i + 1 < len(lines) and _is_table_separator(lines[i + 1]):
-                headers = _split_table_row(line)
-                i += 2
-                rows: list[tuple[list[str], list[str]]] = []
-                pending_markers: list[str] = []
-                while i < len(lines):
-                    if lines[i].startswith("<!--") and lines[i].rstrip().endswith("-->"):
-                        pending_markers.append(lines[i])
-                        i += 1
-                        continue
-                    if not lines[i].startswith("|"):
-                        break
-                    rows.append((_split_table_row(lines[i]), pending_markers))
-                    pending_markers = []
-                    i += 1
-                # A table before the first `##` (the Files index is one) has no
-                # section to name it. The page's own title is a true caption;
-                # "Data" is furniture that tells a screen-reader user nothing.
-                caption = current_section.replace("-", " ") or title or "Data"
-                normalized_rows = []
-                for values, markers in rows:
-                    values += [""] * max(0, len(headers) - len(values))
-                    normalized_rows.append((values[: len(headers)], markers))
-                body.append(self._table(headers, normalized_rows, caption))
-                continue
-
-            if _LIST_ITEM.match(line):
-                markup, i = _render_list(lines, i)
-                body.append(markup)
-                continue
-
-            if line.startswith(">"):
-                quote: list[str] = []
-                while i < len(lines) and lines[i].startswith(">"):
-                    quote.append(lines[i][1:].lstrip())
-                    i += 1
-                body.append(f"<blockquote><p>{_inline(' '.join(quote))}</p></blockquote>")
-                continue
-
-            paragraph = [line.strip()]
-            i += 1
-            while i < len(lines) and lines[i].strip():
-                candidate = lines[i]
-                if re.match(r"^(#{1,6})\s+", candidate) or candidate.startswith(("```", "|", ">", "<!--", '<a id="')) or re.match(r"^\s*([-*+] |\d+\. )", candidate):
-                    break
-                paragraph.append(candidate.strip())
-                i += 1
-            body.append(f"<p>{_inline(' '.join(paragraph))}</p>")
-
-        if in_disclosure:
-            body.append("</details>")
-        if in_section:
-            body.append("</section>")
-        return title, "\n".join(_compose_prose_runs(body))
-
-
-_LIST_ITEM = re.compile(r"^(\s*)([-*+] |\d+\. )(.*)$")
-
-
-def _render_list(lines: list[str], start: int, nested: bool = False) -> tuple[str, int]:
-    """Render the list whose first item is `lines[start]`; return it and the next line.
-
-    An item indented deeper than the list's first item is a child list of the
-    preceding item, one level at a time, so a claim's statement is its own `<li>`
-    and its coordinates a `<ul>` inside it.  At the top level an item indented
-    less than the first is still a sibling, as it always was; a nested list ends
-    at the first item shallower than its own.
-    """
-
-    first = _LIST_ITEM.match(lines[start])
-    assert first is not None
-    base = len(first.group(1))
-    ordered = first.group(2)[0].isdigit()
-    tag = "ol" if ordered else "ul"
-    items: list[str] = []
-    i = start
-    while i < len(lines):
-        item = _LIST_ITEM.match(lines[i])
-        if not item:
-            break
-        indent = len(item.group(1))
-        if nested and indent < base:
-            break
-        if indent > base and items:
-            child, i = _render_list(lines, i, nested=True)
-            items[-1] = items[-1][: -len("</li>")] + child + "</li>"
-            continue
-        if item.group(2)[0].isdigit() != ordered:
-            break
-        value = item.group(3)
-        i += 1
-        continuation: list[str] = []
-        while i < len(lines) and lines[i].startswith(("  ", "    ")) and not _LIST_ITEM.match(lines[i]):
-            continuation.append(lines[i].strip())
-            i += 1
-        if continuation:
-            value += " " + " ".join(continuation)
-        items.append(f"<li>{_inline(value)}</li>")
-    return f"<{tag}>{''.join(items)}</{tag}>", i
-
-
-def _compose_prose_runs(elements: list[str]) -> list[str]:
-    """Give finite runs of sustained prose an editorial multicolumn surface.
-
-    Source order remains ordinary paragraphs. Only adjacent top-level
-    paragraphs with enough text to form a useful reading field are wrapped;
-    headings, lists, records, tables, figures, and code always terminate a run.
-    """
-
-    composed: list[str] = []
-    run: list[str] = []
-
-    def flush() -> None:
-        if not run:
-            return
-        character_count = sum(len(re.sub(r"<[^>]+>", "", paragraph)) for paragraph in run)
-        use_columns = (len(run) >= 2 and character_count >= 700) or character_count >= 1300
-        if use_columns:
-            composed.append('<div class="prose-flow">' + "".join(run) + "</div>")
-        else:
-            composed.extend(run)
-        run.clear()
-
-    for element in elements:
-        if element.startswith("<p>") and element.endswith("</p>"):
-            run.append(element)
-            continue
-        flush()
-        composed.append(element)
-    flush()
-    return composed
-
-
 def _page_eyebrow(page: SitePage) -> str:
     if page.kind == "subsystem":
         record = html.escape(page.record_id or "record")
@@ -3310,7 +2786,7 @@ def _nav(pages: list[SitePage], current: SitePage) -> str:
     scanning the rail meets the group's own pages before its divisions.
     """
 
-    assert_nav_groups([(page.markdown_path, page.group) for page in pages])
+    assert_nav_groups([(page.path, page.group) for page in pages])
     chunks: list[str] = []
     for group in NAV_GROUPS:
         items = [page for page in pages if page.group == group]
@@ -3384,7 +2860,7 @@ def _shell(
         if page.use_when
         else ""
     )
-    guide_href = _rel_link(page.html_path, GUIDE_PAGE.replace(".md", ".html"))
+    guide_href = _rel_link(page.html_path, GUIDE_PAGE)
     terms_para = (
         f'<p class="page-terms">{html.escape(TERMS_LABEL)} '
         + " · ".join(
@@ -3398,7 +2874,6 @@ def _shell(
     notice_para = (
         f'<p class="page-notice" role="note">{html.escape(notice)}</p>' if notice else ""
     )
-    md_link = _rel_link(page.html_path, page.markdown_path)
     home_link = _rel_link(page.html_path, "index.html")
     record_status = _status_html(page.status) if page.status else ""
     status_meta = f'<span class="snapshot-item">Survey depth&nbsp; {record_status}</span>' if record_status else ""
@@ -3453,7 +2928,7 @@ def _shell(
     <p class="search-status" data-search-status role="status" aria-live="polite"></p>
     <nav class="rail-nav">{nav}</nav>
     <div class="rail-foot">
-      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="{html.escape(md_link, quote=True)}">Markdown source</a></div>
+      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button></div>
     </div>
   </aside>
   <main class="document" id="content">
@@ -3475,7 +2950,6 @@ def _shell(
         </div>
       </header>
       <article class="content content-{html.escape(slugify(page.kind), quote=True)}"{filter_attrs}>{body}</article>
-      <footer class="page-foot"><p><a href="{html.escape(md_link, quote=True)}">Inspect Markdown</a></p></footer>
     </div>
   </main>
 </div>
@@ -3516,14 +2990,17 @@ def render_html_projection(
     previous_files: dict[str, str] | None = None,
     locus_index: dict[str, Any] | None = None,
     notice: str = "",
+    models: dict[str, Page] | None = None,
 ) -> HtmlProjectionResult:
-    """Render HTML companions from finished Markdown and retire old HTML.
+    """Print each page's HTML from its model and retire old HTML.
 
-    `notice` is the command-line render notice the Markdown ends with; the HTML
-    moves it from the end of the body into the page head.
+    `models` holds the pages the renderers built, by plan id, after the
+    cross-reference pass. `notice` is the command-line render notice; the HTML
+    prints it in the page head.
     """
 
     previous_files = previous_files or {}
+    models = models or {}
     route_map = {
         page.record_id: page.html_path
         for page in pages
@@ -3547,31 +3024,29 @@ def render_html_projection(
         index_target.parent.mkdir(parents=True, exist_ok=True)
         index_target.write_text(index_text)
 
+    readme_target = output / README_PATH
+    files[README_PATH] = sha256_bytes(README_TEXT.encode("utf-8"))
+    if not readme_target.is_file() or readme_target.read_text() != README_TEXT:
+        readme_target.write_text(README_TEXT)
+
     for page in pages:
-        source = output / page.markdown_path
-        if not source.is_file():
-            warnings.append(f"HTML source missing for {page.markdown_path}")
+        model = models.get(page.path)
+        if model is None:
+            warnings.append(f"HTML source missing for {page.path}")
             continue
-        parser = MarkdownRenderer(
+        body = write_html(
+            model,
             route_map,
-            page.html_path,
             repository_url=str(context.get("repository_url") or "") or None,
         )
-        source_title, body = parser.render(
-            strip_page_head(
-                strip_notice(source.read_text(), notice),
-                page.hint,
-                page.use_when,
-                terms_line(page.markdown_path, page.terms),
-            )
-        )
+        facets = model.facets
         document = _shell(
             page,
             pages,
-            source_title,
+            model.title,
             body,
             context,
-            (parser.filter_scope, parser.facets),
+            (facets.scope, dict(facets.values)) if facets else ("", {}),
             notice,
         )
         target = output / page.html_path

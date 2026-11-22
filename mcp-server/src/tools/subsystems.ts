@@ -11,6 +11,8 @@ import {
   enforceForwardPrerequisites,
   enforceMonotonicTransition,
   heldBeforeParking,
+  importedSurveyBodies,
+  readNarratives,
   readSubsystemStatus,
   recordStatusTransition,
   requireActiveSession,
@@ -307,18 +309,19 @@ export const subsystemTools: ToolDefinition[] = [
   {
     name: "reset_subsystem",
     description:
-      "Discard a subsystem's survey artifacts and reset its status to " +
+      "Discard a subsystem's survey and reset its status to " +
       "an earlier phase, or re-run the phase it stands at; it never " +
       "climbs (a parked subsystem stands at the depth it was parked " +
       "from). This is the only path that regresses a " +
       "subsystem's knowledge depth — the normal update_subsystem_status " +
       "tool rejects regressions. reset_subsystem deletes dependent rows " +
-      "(dispositions, findings, field-notes, xrefs, artifact manifest " +
-      "entries for this subsystem) so the conspectus remains internally " +
-      "consistent with the new status. Explanations are append-only: " +
-      "instead of deleting them it appends a withdrawn row, with the " +
-      "reason as its body, for each slot that has one (this needs an " +
-      "active session), so the resurveyed subsystem owes a new explanation. " +
+      "(dispositions, findings, field-notes, xrefs) so the conspectus " +
+      "remains internally consistent with the new status. Explanations, " +
+      "narratives and imported survey bodies are append-only: instead of " +
+      "deleting them it appends a withdrawn row, with the reason as its " +
+      "body, for each slot, narrative or body that stands (this needs an " +
+      "active session), so the resurveyed subsystem owes a new explanation " +
+      "and a new structure narrative. " +
       "The reason is recorded for " +
       "audit; supply enough context that a future analyst understands " +
       "why the earlier survey was discarded.",
@@ -386,20 +389,64 @@ export const subsystemTools: ToolDefinition[] = [
         )
         .all(id) as Array<{ slot: string; ref_sha: string }>;
       const withdrawnSlots = [...new Set(explained.map((row) => row.slot))];
+      // The same holds for a narrative (PLAN §2.1) and for an imported survey
+      // body (§2.4): neither is deleted, each is withdrawn by a new row, and
+      // the new row is attributed to a session.
+      const narrated = readNarratives(ctx.db, "subsystem", id).rows;
+      const importedSurveys = importedSurveyBodies(ctx.db, id);
       const withdrawnBy =
-        explained.length > 0 ? requireActiveSession(ctx, "reset_subsystem") : null;
+        explained.length > 0 || narrated.length > 0 || importedSurveys.length > 0
+          ? requireActiveSession(ctx, "reset_subsystem")
+          : null;
       // The withdrawn row has to resolve in the workspace or the reader would skip
       // it and fall back to the row it withdraws, so it is written at the
       // workspace's current revision. When that cannot be resolved, one row is
       // written at each revision the slot's rows name: whichever of them a later
       // workspace still reaches, a withdrawal at that revision outranks it.
       let withdrawals = explained;
-      if (explained.length > 0) {
+      let narrativeRevision: string | null = null;
+      if (explained.length > 0 || narrated.length > 0) {
         try {
           const head = resolveWorkspaceCommit(ctx, "HEAD");
           withdrawals = withdrawnSlots.map((slot) => ({ slot, ref_sha: head }));
+          narrativeRevision = head;
         } catch {
           /* no revision to name here, so the rows' own revisions stand */
+        }
+      }
+
+      // A flow mark is append-only and holds its claim ON DELETE RESTRICT, so a
+      // reset below structural cannot delete a claim that carries one, current
+      // or withdrawn (final review F1/codex). Every version of such a claim's
+      // key is kept, and the current one is closed at the workspace's head by an
+      // `invalidated` event: its marks stop being current with it, as they do
+      // for any closed claim, and the key is free for the next survey.
+      const prefix = `${id}/`;
+      const markedKeys =
+        toStatus === "unmapped" || toStatus === "scoping"
+          ? (
+              ctx.db
+                .prepare(
+                  `SELECT DISTINCT c.claim_key FROM claim_marks m JOIN claims c ON c.claim_id = m.claim_id
+                    WHERE substr(c.claim_key, 1, length(?)) = ?`,
+                )
+                .all(prefix, prefix) as Array<{ claim_key: string }>
+            ).map((row) => row.claim_key)
+          : [];
+      let retiredBy: string | null = null;
+      let retiredAt: string | null = null;
+      if (markedKeys.length > 0) {
+        retiredBy = requireActiveSession(ctx, "reset_subsystem");
+        try {
+          retiredAt = resolveWorkspaceCommit(ctx, "HEAD");
+        } catch {
+          return {
+            ok: false,
+            error:
+              `cannot reset ${id} to '${toStatus}': ${markedKeys.length} of its claims carry flow marks, ` +
+              `which are append-only, so those claims are closed rather than deleted, and the workspace ` +
+              `has no HEAD revision to close them at.`,
+          };
         }
       }
 
@@ -420,9 +467,6 @@ export const subsystemTools: ToolDefinition[] = [
         deleted.xrefs = ctx.db
           .prepare("DELETE FROM xrefs WHERE from_id = ? OR to_id = ?")
           .run(id, id).changes;
-        deleted.artifacts = ctx.db
-          .prepare("DELETE FROM artifacts WHERE subsystem_id = ?")
-          .run(id).changes;
         // file_ledger rows are preserved unless the reset target is
         // scoping or earlier — they are the scope itself, not survey
         // output.
@@ -447,9 +491,11 @@ export const subsystemTools: ToolDefinition[] = [
           // claim_validity_events cascade. Every version under the prefix goes,
           // current and historical alike: a surviving predecessor whose
           // successor had been deleted would be a history with a hole in it.
-          const prefix = `${id}/`;
-          const owned =
-            "SELECT claim_id FROM claims WHERE substr(claim_key, 1, length(:prefix)) = :prefix";
+          const marked =
+            "SELECT DISTINCT c.claim_key FROM claim_marks m JOIN claims c ON c.claim_id = m.claim_id";
+          const owned = `SELECT claim_id FROM claims
+                          WHERE substr(claim_key, 1, length(:prefix)) = :prefix
+                            AND claim_key NOT IN (${marked})`;
           deleted.claim_supersessions = ctx.db
             .prepare(
               `DELETE FROM claim_supersessions
@@ -458,8 +504,48 @@ export const subsystemTools: ToolDefinition[] = [
             )
             .run({ prefix }).changes;
           deleted.claims = ctx.db
-            .prepare("DELETE FROM claims WHERE substr(claim_key, 1, length(?)) = ?")
-            .run(prefix, prefix).changes;
+            .prepare(`DELETE FROM claims WHERE claim_id IN (${owned})`)
+            .run({ prefix }).changes;
+          deleted.claims_retired = 0;
+          if (retiredAt !== null && retiredBy !== null) {
+            const standing = ctx.db
+              .prepare(
+                `SELECT c.claim_id,
+                        (SELECT evidence_id FROM claim_evidence e
+                          WHERE e.claim_id = c.claim_id AND e.role = 'supports'
+                          ORDER BY evidence_id LIMIT 1) AS evidence_id,
+                        (SELECT evidence_id FROM claim_marks m
+                          WHERE m.claim_id = c.claim_id ORDER BY id LIMIT 1) AS mark_evidence_id
+                   FROM claims c
+                  WHERE substr(c.claim_key, 1, length(:prefix)) = :prefix
+                    AND c.claim_key IN (${marked})
+                    AND c.valid_until_sha IS NULL`,
+              )
+              .all({ prefix }) as Array<{
+              claim_id: string;
+              evidence_id: number | null;
+              mark_evidence_id: number | null;
+            }>;
+            for (const claim of standing) {
+              ctx.db
+                .prepare("UPDATE claims SET valid_until_sha = ? WHERE claim_id = ?")
+                .run(retiredAt, claim.claim_id);
+              ctx.db
+                .prepare(
+                  `INSERT INTO claim_validity_events
+                     (claim_id, event_type, at_sha, reason, evidence_id, session_id)
+                   VALUES (?, 'invalidated', ?, ?, ?, ?)`,
+                )
+                .run(
+                  claim.claim_id,
+                  retiredAt,
+                  `reset_subsystem to ${toStatus}: ${reason}`,
+                  claim.evidence_id ?? claim.mark_evidence_id,
+                  retiredBy,
+                );
+            }
+            deleted.claims_retired = standing.length;
+          }
         }
         for (const slot of withdrawals) {
           ctx.db
@@ -468,6 +554,24 @@ export const subsystemTools: ToolDefinition[] = [
                VALUES ('subsystem', ?, ?, 'withdrawn', ?, ?, ?)`,
             )
             .run(id, slot.slot, reason, slot.ref_sha, withdrawnBy);
+        }
+        // The narrative reader takes the newest row per key, so a withdrawal
+        // needs no revision that resolves; it names the workspace's head when
+        // there is one and the row it withdraws otherwise.
+        for (const row of narrated) {
+          ctx.db
+            .prepare(
+              `INSERT INTO narratives (subject_type, subject_id, section, topic, disposition, body, ref_sha, session_id)
+               VALUES ('subsystem', ?, ?, ?, 'withdrawn', ?, ?, ?)`,
+            )
+            .run(id, row.section, row.topic, reason, narrativeRevision ?? row.ref_sha, withdrawnBy);
+        }
+        for (const survey of importedSurveys) {
+          ctx.db
+            .prepare(
+              "INSERT INTO imported_artifact_withdrawals (path, reason, session_id) VALUES (?, ?, ?)",
+            )
+            .run(survey.path, reason, withdrawnBy);
         }
         ctx.db
           .prepare(
@@ -493,6 +597,8 @@ export const subsystemTools: ToolDefinition[] = [
         new_status: toStatus,
         deleted,
         withdrawn_explanations: withdrawnSlots.length,
+        withdrawn_narratives: narrated.length,
+        withdrawn_imported_surveys: importedSurveys.length,
       });
     },
   },

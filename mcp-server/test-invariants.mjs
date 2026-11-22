@@ -30,6 +30,7 @@ import { writeCitedSources } from "./fixtures/cited-source.mjs";
 import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
 import { examineScope } from "./fixtures/examine-scope.mjs";
 import { stableClaimKey } from "./fixtures/claim-key.mjs";
+import { answerStructure } from "./fixtures/structure-narrative.mjs";
 
 let passed = 0,
   failed = 0;
@@ -285,16 +286,8 @@ function advanceTo(ctx, id, status) {
       seedVocabularyDischarge(ctx, id);
     }
     if (order[i] === "concerns") {
-      // Structural prerequisite: subsystem-survey artifact registered.
-      call(
-        "register_artifact",
-        {
-          path: `${id}-survey.md`,
-          kind: "subsystem-survey",
-          subsystem_id: id,
-        },
-        ctx,
-      );
+      // Structural prerequisite: the structure narrative answered.
+      answerStructure(ctx, id, headSha(ctx));
     }
     if (order[i] === "adversarial") {
       // Concerns prerequisite: ≥1 disposition. Use a fixture concern so
@@ -1038,7 +1031,7 @@ t("a claim closed at a later commit no longer satisfies the structural gate", ()
   }
 });
 
-t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
+t("advance to 'concerns' without a structure narrative is rejected", () => {
   const { ctx, cleanup } = freshCtx();
   try {
     startSession(ctx);
@@ -1054,7 +1047,7 @@ t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     assertThrows(
       () => call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx),
-      "no subsystem-survey artifact",
+      "no structure narrative has been recorded or declined",
     );
   } finally {
     cleanup();
@@ -1075,11 +1068,7 @@ t("advance to 'adversarial' without dispositions is rejected", () => {
     seedStructuralClaim(ctx, "B-01", "a.ts");
     seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
-    call(
-      "register_artifact",
-      { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" },
-      ctx,
-    );
+    answerStructure(ctx, "B-01", headSha(ctx));
     call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
     assertThrows(
       () => call("update_subsystem_status", { id: "B-01", status: "adversarial" }, ctx),
@@ -1120,11 +1109,7 @@ t("phase prerequisites: happy path passes all gates", () => {
     seedStructuralClaim(ctx, "B-01", "a.ts");
     seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
-    call(
-      "register_artifact",
-      { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" },
-      ctx,
-    );
+    answerStructure(ctx, "B-01", headSha(ctx));
     call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
     call("add_concern", { code: "CC-gate", category: "cache", origin: "seeded" }, ctx);
     call(

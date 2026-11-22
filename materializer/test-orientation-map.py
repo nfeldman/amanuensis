@@ -4,27 +4,28 @@ name (design/orientation/PLAN.md §2.5 item 1, §2.7, §4 O7, D3).
 
 Turns red when:
 
-  - the Markdown H1 of `master-plan.md` is anything but "Subsystem map" (the
-    old "Master plan" heading, or a heading that differs from the page title);
+  - the H1 of `master-plan.html` is anything but "Subsystem map" (the old
+    "Master plan" heading, or a heading that differs from the page title);
   - `master-plan.html` has no `class="subsystem-atlas"`, has more than one, or
     carries a number of `atlas-item` entries other than one per subsystem — the
     fixture has three layers and one subsystem at every survey depth the schema
     admits, so a filter on any status or layer drops a row;
-  - the atlas does not sit above the per-layer tables, in either view;
+  - the atlas does not sit above the per-layer record lists;
   - an atlas row's region, subsystem ID, name, link or survey depth differs from
     the subsystem's recorded layer, ID, name and status, or a deferred
-    subsystem's depth reads as anything but "deferred"; or an HTML depth is not
-    the status chip of the recorded value;
-  - the atlas's regions are not the layers, in the order the per-layer tables
+    subsystem's depth reads as anything but "deferred"; or a depth is not the
+    status chip of the recorded value;
+  - the atlas's regions are not the layers, in the order the per-layer sections
     follow, or a region's count differs from its subsystems;
-  - the Markdown carries the atlas table (Region | Subsystem | Survey depth)
-    with a different set of rows than the HTML atlas shows, or a depth cell
-    that is the stored value rather than the contract's label (the HTML prints
-    the label, so the two views would disagree);
-  - the per-layer tables are gone or changed: each layer keeps its own `##`
-    heading and its Priority/ID/Name/Status table with one row per subsystem;
-  - a store with no subsystems renders an atlas table or atlas element instead
-    of the existing sentence, or loses the "Subsystem map" H1;
+  - an atlas row lacks any of its three fields (region, subsystem, survey
+    depth), sits under a heading, follows another block, or prints a depth that
+    is the stored value rather than the contract's label;
+  - the atlas and the per-layer record lists hold different rows;
+  - the per-layer record lists are gone or changed: each layer keeps its own
+    `<h2>` heading and a record list presenting Priority/ID/Name/Status, one
+    record per subsystem;
+  - a store with no subsystems renders an atlas element instead of the existing
+    sentence, or loses the "Subsystem map" H1;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -110,7 +111,6 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # What PLAN.md §2.5 and D3 fix, written out here rather than imported.
 # ---------------------------------------------------------------------------
 PAGE_TITLE = "Subsystem map"
-ATLAS_HEADER = ["Region", "Subsystem", "Survey depth"]
 SHA = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"
 
 # id, name, status, layer, scope — three layers, every legal survey depth (so a
@@ -206,43 +206,35 @@ def read(path: Path) -> str | None:
 # ---------------------------------------------------------------------------
 # Readers
 # ---------------------------------------------------------------------------
-LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-
-
-def md_visible(text: str) -> str:
-    text = LINK.sub(r"\1", text)
-    return " ".join(re.sub(r"\*\*(.+?)\*\*|`([^`]*)`", lambda m: m.group(1) or m.group(2) or "", text).split())
-
-
 def html_text(fragment: str) -> str:
     return " ".join(htmllib.unescape(re.sub(r"<[^>]+>", "", fragment)).split())
 
 
-def md_h1s(text: str) -> list[str]:
-    return [line[2:].strip() for line in text.splitlines() if line.startswith("# ")]
+def html_h1s(page: str) -> list[str]:
+    return [html_text(h1) for h1 in re.findall(r"<h1\b[^>]*>(.*?)</h1>", page, re.S)]
 
 
-def md_tables(text: str) -> list[tuple[str, list[str], list[list[str]]]]:
-    """(the `##` heading above it, header cells, body rows) for every table."""
+def html_layers(page: str) -> dict[str, dict[str, list[str]]]:
+    """{layer: fact labels, record IDs, names and statuses} for every `<h2>` section
+    that holds a subsystem record list."""
 
-    out: list[tuple[str, list[str], list[list[str]]]] = []
-    heading = ""
-    current: tuple[str, list[str], list[list[str]]] | None = None
-    for line in text.splitlines():
-        stripped = line.strip()
-        if line.startswith("## "):
-            heading = line[3:].strip()
-        if not stripped.startswith("|"):
-            current = None
+    out: dict[str, dict[str, list[str]]] = {}
+    for heading, body in re.findall(r'<h2 id="([^"]*)"[^>]*>.*?</h2>(.*?)(?=<h2\b|\Z)', page, re.S):
+        if 'class="record-list record-list-subsystem"' not in body:
             continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-        if all(cell and set(cell) <= {"-", ":", " "} for cell in cells):
-            continue
-        if current is None:
-            current = (heading, cells, [])
-            out.append(current)
-        else:
-            current[2].append(cells)
+        records = re.findall(r'<article class="record record-subsystem"[^>]*>(.*?)</article>', body, re.S)
+
+        def fact(label: str, record: str) -> str | None:
+            found = re.search(rf'<dt>{label}</dt><dd>(.*?)</dd>', record, re.S)
+            return html_text(found.group(1)) if found else None
+
+        names = [re.search(r'<h3 class="record-primary"[^>]*>(.*?)</h3>', rec, re.S) for rec in records]
+        out[heading] = {
+            "labels": [html_text(dt) for dt in re.findall(r"<dt>(.*?)</dt>", records[0], re.S)] if records else [],
+            "ids": [fact("ID", rec) or "" for rec in records],
+            "names": [html_text(m.group(1)) if m else "" for m in names],
+            "statuses": [fact("Status", rec) or "" for rec in records],
+        }
     return out
 
 
@@ -261,7 +253,7 @@ def html_atlas(page: str) -> list[tuple[str, int, list[tuple[str, str, str]]]] |
         name = html_text(re.search(r"<h3>(.*?)</h3>", region, re.S).group(1))  # type: ignore[union-attr]
         count = re.search(r'class="atlas-region-count">(\d+) subsystem', region)
         items: list[tuple[str, str, str]] = []
-        for item in re.findall(r'<li class="atlas-item">(.*?)</li>', region, re.S):
+        for item in re.findall(r'<li class="atlas-item"[^>]*>(.*?)</li>', region, re.S):
             link = re.search(r'<a\b[^>]*href="([^"]*)"', item)
             subsystem = re.search(r'<div class="atlas-subsystem"[^>]*>(.*?)</div>', item, re.S)
             depth = re.search(r'<div class="atlas-depth">(.*?)</div>', item, re.S)
@@ -308,33 +300,29 @@ def main() -> int:
         summary: dict[str, Any] = publish(storage) if seeded else {}
         empty_summary: dict[str, Any] = publish(empty) if seeded else {}
         docs = storage / "docs"
-        md = read(docs / "master-plan.md")
         page = read(docs / "master-plan.html")
 
         def published() -> str | None:
             for label, result, folder in (("seeded", summary, docs), ("empty", empty_summary, empty / "docs")):
                 if not result or result.get("_returncode") != 0 or result.get("ok") is False:
                     return f"the materializer did not publish the {label} fixture — {result.get('_diagnostic', result)}"
-                if not (folder / "master-plan.md").is_file() or not (folder / "master-plan.html").is_file():
-                    return f"the {label} fixture wrote no master-plan.md and master-plan.html"
+                if not (folder / "master-plan.html").is_file():
+                    return f"the {label} fixture wrote no master-plan.html"
             return None
 
         check("the fixtures publish", published)
 
         def title_is_one_name() -> str | None:
-            if md is None or page is None:
-                return "master-plan.md or master-plan.html is not published"
-            h1s = md_h1s(md)
+            if page is None:
+                return "master-plan.html is not published"
+            h1s = html_h1s(page)
             if h1s != [PAGE_TITLE]:
-                return f"the Markdown's H1 headings are {h1s}, not [{PAGE_TITLE!r}] (D3)"
-            if "Master plan" in md or "Master plan" in html_text(page):
+                return f"the HTML's H1 headings are {h1s}, not [{PAGE_TITLE!r}] (D3)"
+            if "Master plan" in html_text(page):
                 return "the old heading 'Master plan' still appears on the page"
-            title = re.search(r"<h1\b[^>]*>(.*?)</h1>", page, re.S)
-            if not title or html_text(title.group(1)) != PAGE_TITLE:
-                return f"the HTML's H1 is {html_text(title.group(1)) if title else None!r}, not {PAGE_TITLE!r}"
             return None
 
-        check("the page's H1 is 'Subsystem map' in both views, and 'Master plan' is gone", title_is_one_name)
+        check("the page's H1 is 'Subsystem map' and 'Master plan' is gone", title_is_one_name)
 
         # -- the atlas in HTML ------------------------------------------------
         def atlas_item_per_subsystem() -> str | None:
@@ -392,8 +380,8 @@ def main() -> int:
         check("the atlas rows are the recorded subsystems: region, ID, name, link, depth", atlas_rows_match_record)
 
         def depth_chips() -> str | None:
-            # The Markdown prints the label; the HTML still shows it as the
-            # status chip of the stored value, not as plain text.
+            # The text prints the contract's label; the markup still carries the
+            # status chip of the stored value, not plain text.
             if page is None:
                 return "master-plan.html is not published"
             chips = re.findall(r'<div class="atlas-depth"><span class="status\b[^"]*\bstatus-([a-z-]+)"', page)
@@ -402,106 +390,108 @@ def main() -> int:
 
         check("each atlas depth is the status chip of its recorded value", depth_chips)
 
-        # -- the atlas in Markdown -------------------------------------------
-        def md_atlas_table() -> str | None:
-            if md is None:
-                return "master-plan.md is not published"
-            tables = md_tables(md)
-            atlas = [t for t in tables if t[1] == ATLAS_HEADER]
-            if len(atlas) != 1:
-                return f"{len(atlas)} tables headed {ATLAS_HEADER}, expected one"
-            heading, _header, body = atlas[0]
-            if heading:
-                return f"the atlas table sits under '## {heading}'; it belongs above the per-layer tables"
-            if tables[0][1] != ATLAS_HEADER:
-                return "a table precedes the atlas; it belongs above the per-layer tables"
+        # -- the atlas rows, field by field ------------------------------------
+        def atlas_fields() -> str | None:
+            if page is None:
+                return "master-plan.html is not published"
+            start = page.find('<div class="subsystem-atlas"')
+            if start < 0:
+                return "no subsystem-atlas element to read"
+            if re.search(r"<h2\b", page[page.find('<article class="content') : start]):
+                return "the atlas sits under an <h2> heading; it belongs above the per-layer sections"
+            if not re.search(r'<article class="content[^"]*">\s*<div class="subsystem-atlas"', page):
+                return "a block precedes the atlas; it belongs above the per-layer sections"
+            regions = html_atlas(page)
+            if regions is None:
+                return "no subsystem-atlas element to read"
             expected = expected_rows()
-            if len(body) != len(expected):
-                return f"{len(body)} atlas rows, expected {len(expected)}"
-            for cells, (layer, sid, name, status) in zip(body, expected, strict=True):
-                if len(cells) != 3:
-                    return f"atlas row {cells} does not have three cells"
-                if md_visible(cells[0]) != layer:
-                    return f"{sid}: region cell {cells[0]!r}, layer is {layer!r}"
-                link = LINK.search(cells[1])
-                if not link or sid not in link.group(1) and sid not in cells[1]:
-                    return f"{sid}: subsystem cell {cells[1]!r} carries no ID link"
-                if not any(slug_href(sid, name) in target for _text, target in LINK.findall(cells[1])):
-                    return f"{sid}: subsystem cell {cells[1]!r} does not link to {slug_href(sid, name)}"
-                if name not in md_visible(cells[1]):
-                    return f"{sid}: subsystem cell {cells[1]!r} lacks the name {name!r}"
-                if md_visible(cells[2]).strip().lower() != DEPTH_LABEL[status]:
-                    return f"{sid}: depth cell {cells[2]!r}, the contract's label for {status!r} is {DEPTH_LABEL[status]!r}"
+            seen = [(name, text, href, depth) for name, _count, items in regions for text, href, depth in items]
+            if len(seen) != len(expected):
+                return f"{len(seen)} atlas rows, expected {len(expected)}"
+            for (region, text, href, depth), (layer, sid, name, status) in zip(seen, expected, strict=True):
+                if not region or not text or not href or not depth:
+                    return f"{sid}: an atlas row lacks a region, subsystem, link or depth ({region!r}, {text!r}, {href!r}, {depth!r})"
+                if region != layer:
+                    return f"{sid}: region {region!r}, layer is {layer!r}"
+                if not re.search(rf"\b{re.escape(sid)}\b", text):
+                    return f"{sid}: subsystem cell {text!r} carries no ID"
+                if not href.startswith(slug_href(sid, name)):
+                    return f"{sid}: subsystem cell links to {href!r}, not {slug_href(sid, name)}"
+                if name not in text:
+                    return f"{sid}: subsystem cell {text!r} lacks the name {name!r}"
+                if depth.strip().lower() != DEPTH_LABEL[status]:
+                    return f"{sid}: depth {depth!r}, the contract's label for {status!r} is {DEPTH_LABEL[status]!r}"
             return None
 
-        check("the Markdown carries the Region | Subsystem | Survey depth table, above the layers", md_atlas_table)
+        check("the atlas carries Region, Subsystem and Survey depth for every row, above the layers", atlas_fields)
 
-        def views_agree() -> str | None:
-            if md is None or page is None:
-                return "a view is not published"
+        def atlas_matches_layers() -> str | None:
+            if page is None:
+                return "master-plan.html is not published"
             regions = html_atlas(page)
-            tables = [t for t in md_tables(md) if t[1] == ATLAS_HEADER]
-            if regions is None or len(tables) != 1:
-                return "one view carries no atlas to compare"
-            html_rows = [
-                (region, re.findall(r"[A-Z]-\d+", text)[0] if re.findall(r"[A-Z]-\d+", text) else text, depth.strip().lower())
+            layers = html_layers(page)
+            if regions is None or not layers:
+                return "the page carries no atlas or no per-layer record list to compare"
+            atlas_rows = [
+                (region, (re.findall(r"[A-Z]-\d+", text) or [text])[0], depth.strip().lower())
                 for region, _count, items in regions
                 for text, _href, depth in items
             ]
-            md_rows = [
-                (md_visible(cells[0]), (re.findall(r"[A-Z]-\d+", cells[1]) or [cells[1]])[0], md_visible(cells[2]).strip().lower())
-                for cells in tables[0][2]
+            layer_rows = [
+                (layer, sid, status.strip().lower())
+                for layer in LAYER_ORDER
+                for sid, status in zip(layers.get(layer, {}).get("ids", []), layers.get(layer, {}).get("statuses", []), strict=True)
             ]
-            if html_rows != md_rows:
-                return f"HTML atlas rows {html_rows} differ from Markdown rows {md_rows}"
+            if atlas_rows != layer_rows:
+                return f"atlas rows {atlas_rows} differ from the per-layer record lists {layer_rows}"
             return None
 
-        check("the HTML atlas and the Markdown table hold the same rows", views_agree)
+        check("the atlas and the per-layer record lists hold the same rows", atlas_matches_layers)
 
         def atlas_above_layers() -> str | None:
-            if md is None or page is None:
-                return "a view is not published"
-            first_layer = md.find(f"## {LAYER_ORDER[0]}")
-            atlas_at = md.find("| Region |")
-            if first_layer < 0 or atlas_at < 0 or atlas_at > first_layer:
-                return "the Markdown atlas does not precede the first per-layer heading"
+            if page is None:
+                return "master-plan.html is not published"
             html_atlas_at = page.find('class="subsystem-atlas"')
             first_layer_html = page.find(f'<h2 id="{LAYER_ORDER[0]}"')
+            first_list = page.find('class="record-list record-list-subsystem"')
             if html_atlas_at < 0 or first_layer_html < 0 or html_atlas_at > first_layer_html:
                 return "the HTML atlas does not precede the first per-layer section"
+            if first_list < 0 or html_atlas_at > first_list:
+                return "the HTML atlas does not precede the first per-layer record list"
             return None
 
-        check("the atlas sits above the per-layer tables in both views", atlas_above_layers)
+        check("the atlas sits above the per-layer sections", atlas_above_layers)
 
         # -- what stays ---------------------------------------------------------
         def layers_kept() -> str | None:
-            if md is None:
-                return "master-plan.md is not published"
-            by_layer = {t[0]: t for t in md_tables(md) if t[0]}
+            if page is None:
+                return "master-plan.html is not published"
+            by_layer = html_layers(page)
             for layer in LAYER_ORDER:
-                table = by_layer.get(layer)
-                if table is None:
-                    return f"the per-layer table under '## {layer}' is gone"
-                if table[1][:4] != ["Priority", "ID", "Name", "Status"]:
-                    return f"the '{layer}' table's columns are {table[1]}"
-                ids = [md_visible(row[1]) for row in table[2]]
-                want = [sid for sid, _n, _s, lay, _sc in SUBSYSTEMS if lay == layer]
-                if sorted(ids) != sorted(want):
-                    return f"the '{layer}' table lists {ids}, expected {want}"
+                section = by_layer.get(layer)
+                if section is None:
+                    return f"the per-layer section '<h2 id=\"{layer}\">' with its record list is gone"
+                labels = section["labels"]
+                if [label for label in ("Priority", "ID", "Status") if label not in labels] or not any(section["names"]):
+                    return f"the '{layer}' records present {labels}, not Priority/ID/Name/Status"
+                if sorted(section["ids"]) != sorted(want := [sid for sid, _n, _s, lay, _sc in SUBSYSTEMS if lay == layer]):
+                    return f"the '{layer}' record list holds {section['ids']}, expected {want}"
+                names = [name for _sid, name, _s, lay, _sc in SUBSYSTEMS if lay == layer]
+                if sorted(section["names"]) != sorted(names):
+                    return f"the '{layer}' record list names {section['names']}, expected {names}"
             return None
 
-        check("each layer keeps its own heading and its Priority/ID/Name/Status table", layers_kept)
+        check("each layer keeps its own heading and a Priority/ID/Name/Status record list", layers_kept)
 
         def empty_store() -> str | None:
-            text = read(empty / "docs" / "master-plan.md")
             page_html = read(empty / "docs" / "master-plan.html")
-            if text is None or page_html is None:
+            if page_html is None:
                 return "the empty store's master plan is not published"
-            if md_h1s(text) != [PAGE_TITLE]:
-                return f"the empty store's H1 headings are {md_h1s(text)}"
-            if "No subsystems registered yet" not in text:
+            if html_h1s(page_html) != [PAGE_TITLE]:
+                return f"the empty store's H1 headings are {html_h1s(page_html)}"
+            if "No subsystems registered yet" not in html_text(page_html):
                 return "the empty store lost its 'No subsystems registered yet' sentence"
-            if any(t[1] == ATLAS_HEADER for t in md_tables(text)) or 'class="subsystem-atlas"' in page_html:
+            if 'class="atlas-item"' in page_html or 'class="subsystem-atlas"' in page_html:
                 return "a store with no subsystems renders an atlas"
             return None
 

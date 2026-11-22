@@ -1,10 +1,27 @@
-import { ok, optString, requireEnum, requireString, type ToolDefinition } from "../helpers.js";
+import {
+  ok,
+  optString,
+  requireEnum,
+  requireString,
+  type ToolDefinition,
+  ToolError,
+} from "../helpers.js";
+
+/**
+ * The territories `concern-territories.md` declares, by id: T1 to T11. An id
+ * of the same spelling that the catalog does not declare names nothing
+ * (F4/codex, slice-S1); SO4's gate holds this list to the catalog's headings.
+ */
+export const TERRITORY_IDS: readonly string[] = Array.from({ length: 11 }, (_, i) => `T${i + 1}`);
+export const isTerritoryId = (value: string) => TERRITORY_IDS.includes(value);
+/** A probe is a sentence or two; the cap keeps `list_concerns`, which serves every row, bounded. */
+const PROBE_CAP = 1200;
 
 export const concernTools: ToolDefinition[] = [
   {
     name: "list_concerns",
     description:
-      "Return concern codes with status and origin. Use status_filter='active' to get the working checklist; 'retired' and 'merged' are excluded by default only if a filter is passed.",
+      "Return concern codes with status, origin, the territory each was seeded from and the probe that tests it. Use status_filter='active' to get the working checklist; 'retired' and 'merged' are excluded by default only if a filter is passed.",
     inputSchema: {
       type: "object",
       properties: { status_filter: { type: "string" } },
@@ -15,11 +32,13 @@ export const concernTools: ToolDefinition[] = [
       const rows = statusFilter
         ? ctx.db
             .prepare(
-              "SELECT code, category, origin, status, notes FROM concerns WHERE status = ? ORDER BY code",
+              "SELECT code, category, origin, status, notes, territory, probe FROM concerns WHERE status = ? ORDER BY code",
             )
             .all(statusFilter)
         : ctx.db
-            .prepare("SELECT code, category, origin, status, notes FROM concerns ORDER BY code")
+            .prepare(
+              "SELECT code, category, origin, status, notes, territory, probe FROM concerns ORDER BY code",
+            )
             .all();
       return rows;
     },
@@ -27,7 +46,7 @@ export const concernTools: ToolDefinition[] = [
   {
     name: "add_concern",
     description:
-      "Add a concern to the calibrated checklist. origin='seeded' for concerns derived from territory map; 'discovered' for those found mid-survey. Use codes like CC-1 (cache coherence #1), SC-3 (seam contract #3).",
+      "Add a concern to the calibrated checklist. origin='seeded' for concerns derived from territory map; 'discovered' for those found mid-survey. Use codes like CC-1 (cache coherence #1), SC-3 (seam contract #3). territory is the id of the territory of concern-territories.md the concern was seeded from (T1, T2, …) and probe is the codebase-specific check that tests it, in at most 1200 bytes; adding a code again updates them when given and keeps them when not.",
     inputSchema: {
       type: "object",
       properties: {
@@ -36,6 +55,8 @@ export const concernTools: ToolDefinition[] = [
         origin: { type: "string", enum: ["seeded", "discovered"] },
         discovered_in: { type: "string" },
         notes: { type: "string" },
+        territory: { type: "string", enum: [...TERRITORY_IDS] },
+        probe: { type: "string" },
       },
       required: ["code", "origin"],
       additionalProperties: false,
@@ -46,15 +67,29 @@ export const concernTools: ToolDefinition[] = [
       const category = optString(args, "category");
       const discoveredIn = optString(args, "discovered_in");
       const notes = optString(args, "notes");
+      const territory = optString(args, "territory");
+      const probe = optString(args, "probe");
+      if (territory !== null && !isTerritoryId(territory)) {
+        throw new ToolError(
+          `add_concern refuses: territory is the id of a territory in concern-territories.md, ${TERRITORY_IDS[0]} to ${TERRITORY_IDS.at(-1)}, such as T7. Name it by id, not in words.`,
+        );
+      }
+      if (probe !== null && Buffer.byteLength(probe, "utf8") > PROBE_CAP) {
+        throw new ToolError(
+          `add_concern refuses: a probe is limited to ${PROBE_CAP} bytes. Say the check in fewer; the cap counts UTF-8 bytes.`,
+        );
+      }
       ctx.db
         .prepare(
-          `INSERT INTO concerns (code, category, origin, discovered_in, notes, status)
-           VALUES (?, ?, ?, ?, ?, 'active')
+          `INSERT INTO concerns (code, category, origin, discovered_in, notes, status, territory, probe)
+           VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
            ON CONFLICT(code) DO UPDATE SET
              category=excluded.category,
-             notes=excluded.notes`,
+             notes=excluded.notes,
+             territory=COALESCE(excluded.territory, concerns.territory),
+             probe=COALESCE(excluded.probe, concerns.probe)`,
         )
-        .run(code, category, origin, discoveredIn, notes);
+        .run(code, category, origin, discoveredIn, notes, territory, probe);
       return ok();
     },
   },

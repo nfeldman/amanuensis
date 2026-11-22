@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Gate for orientation packet O14 — say what the Markdown view leaves out
-(design/orientation/PLAN.md §4 O14, "Publishing defects", §7.2).
+"""Gate for orientation packet O14 — say what the views paragraph says
+(design/orientation/PLAN.md §4 O14, "Publishing defects", §7.2). Store-only
+SO13 left HTML as the only view and rewrote the paragraph for it
+(design/store-only/PLAN.md §6, §8 SO13); this gate holds the new wording.
 
 Turns red when, on a seeded store:
 
-  - the publish does not write index.html beside index.md, or the guide
-    (how-to-read) in either view;
-  - the guide's Markdown "What this site is" section does not end with the
-    paragraph "Each page is written twice from the same record: ... A copy of
-    the Markdown alone leaves those out.", word for word, as its last paragraph
-    and after Appendix C's own paragraph, or that paragraph carries a backtick;
-  - the guide's HTML "What this site is" section does not end with the same
-    paragraph, or Appendix C's paragraph no longer comes first in either view;
+  - the publish does not write index.html or the guide (how-to-read.html);
+  - the guide's "What this site is" section does not end with the paragraph
+    "Each page is HTML, written to one directory that starts at index.html.
+    ... reads the same.", word for word, as its last paragraph and after
+    Appendix C's own paragraph, or that paragraph carries a code element or a
+    backtick;
   - the paragraph appears anywhere but the guide's "What this site is" section
     (the overview must stay unchanged, §7.2), or appears twice;
-  - the first 600 bytes of the guide's Markdown carry a backtick;
+  - the first 600 bytes of the guide's visible text carry a backtick or code;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -42,10 +42,12 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -103,9 +105,9 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # ---------------------------------------------------------------------------
 SECTION = "What this site is"
 VIEWS_PARAGRAPH = (
-    "Each page is written twice from the same record: as HTML, which adds the diagrams, the"
-    " search and the definitions shown on hover, and as Markdown. Both are written to the same"
-    " directory; the HTML starts at index.html. A copy of the Markdown alone leaves those out."
+    "Each page is HTML, written to one directory that starts at index.html. The diagrams, the"
+    " search and the definitions shown on hover need nothing outside that directory, so a copy"
+    " of the whole directory reads the same."
 )
 SITE_OPENING = "This site is the record of an AI agent's survey of"
 BYTES_WITHOUT_CODE = 600
@@ -136,11 +138,16 @@ def seed(storage: Path) -> None:
         " VALUES (?, ?, ?, ?, ?, ?, ?)",
         list(SUBSYSTEMS),
     )
+    # The pages read the imports the store holds, never a file in storage.
+    import_onboarding(
+        db,
+        session_id="o14",
+        entry_point="# Where to begin\n\nStart at the reader.\n",
+        onboarding_report="# Onboarding\n\nOne repository.\n",
+        concern_checklist="# Checklist\n\n## Active concerns\n\n- none\n",
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text("# Where to begin\n\nStart at the reader.\n")
-    (storage / "onboarding-report.md").write_text("# Onboarding\n\nOne repository.\n")
-    (storage / "concern-checklist.md").write_text("# Checklist\n\n## Active concerns\n\n- none\n")
 
 
 def publish(storage: Path) -> dict[str, Any]:
@@ -177,22 +184,6 @@ def squash(text: str) -> str:
     return " ".join(text.split())
 
 
-def md_section_paragraphs(text: str, title: str) -> list[str] | None:
-    """The blank-line-separated paragraphs of the H2 section `title`, whitespace squashed."""
-
-    lines: list[str] | None = None
-    for line in text.splitlines():
-        if line.startswith("## "):
-            if lines is not None:
-                break
-            lines = [] if line[3:].strip() == title else None
-        elif lines is not None:
-            lines.append(line)
-    if lines is None:
-        return None
-    return [squash(block) for block in "\n".join(lines).split("\n\n") if block.strip()]
-
-
 def html_text(fragment: str) -> str:
     return squash(htmllib.unescape(re.sub(r"<[^>]+>", "", fragment)))
 
@@ -209,12 +200,45 @@ def html_section_paragraphs(text: str, title: str) -> list[str] | None:
     return None
 
 
-def visible(text: str) -> str:
-    return re.sub(r"\*\*(.+?)\*\*|\*(.+?)\*", lambda m: m.group(1) or m.group(2) or "", text)
+class _Head(HTMLParser):
+    """The visible text of a page up to a byte budget, and whether a `<code>`
+    element opened inside that budget."""
+
+    def __init__(self, budget: int) -> None:
+        super().__init__(convert_charrefs=True)
+        self.budget = budget
+        self.text = ""
+        self.code_in_head = False
+        self._skip = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("script", "style"):
+            self._skip += 1
+        if tag == "code" and len(self.text.encode("utf-8")) < self.budget:
+            self.code_in_head = True
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("script", "style") and self._skip:
+            self._skip -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip:
+            self.text += data
+
+
+def html_section_markup(text: str, title: str) -> str | None:
+    """The markup between the `<h2>` named `title` and the next `<h2>`."""
+
+    heads = list(re.finditer(r"<h2\b[^>]*>(.*?)</h2>", text, re.S))
+    for index, match in enumerate(heads):
+        if html_text(match.group(1)).lstrip("§").strip() == title:
+            end = heads[index + 1].start() if index + 1 < len(heads) else len(text)
+            return text[match.end() : end]
+    return None
 
 
 def main() -> int:
-    emit("GATE O14 — what the Markdown view leaves out")
+    emit("GATE O14 — what the views paragraph says, for the one view left")
     emit("")
 
     with tempfile.TemporaryDirectory(prefix="o14-gate-") as tmp:
@@ -229,9 +253,7 @@ def main() -> int:
             emit(f"  FAIL fixture: could not seed a store — {scrub(repr(exc))}")
         summary: dict[str, Any] = publish(storage) if seeded else {}
         docs = storage / "docs"
-        guide_md = read(docs / "how-to-read.md") or ""
         guide_html = read(docs / "how-to-read.html") or ""
-        index_md = read(docs / "index.md")
         index_html = read(docs / "index.html")
 
         def published() -> str | None:
@@ -245,52 +267,52 @@ def main() -> int:
             missing = [
                 name
                 for name, body in (
-                    ("index.md", index_md),
                     ("index.html", index_html),
-                    ("how-to-read.md", guide_md),
                     ("how-to-read.html", guide_html),
                 )
                 if not body
             ]
             return f"not written: {', '.join(missing)}" if missing else None
 
-        check("the publish writes index.html beside index.md, and the guide in both views", both_views_written)
+        check("the publish writes the overview and the guide as HTML", both_views_written)
 
-        # -- Markdown ------------------------------------------------------
-        def markdown_ends_with_paragraph() -> str | None:
-            paras = md_section_paragraphs(guide_md, SECTION)
-            if paras is None:
-                return f"the guide's Markdown has no '{SECTION}' section"
-            shown = [visible(p) for p in paras]
-            if not shown[0].startswith(SITE_OPENING):
-                return f"the section's first paragraph is not Appendix C's: {shown[:1]!r}"
-            if len(shown) < 2:
-                return "the section has only Appendix C's paragraph; the views paragraph is missing"
-            if shown[-1] != VIEWS_PARAGRAPH:
-                return f"the section's last paragraph is {shown[-1][:200]!r}, not the views paragraph"
-            if "`" in paras[-1]:
-                return "the views paragraph carries a backtick"
+        # -- the views paragraph is plain text ---------------------------------
+        def views_paragraph_has_no_code() -> str | None:
+            section = html_section_markup(guide_html, SECTION)
+            if section is None:
+                return f"how-to-read.html has no '{SECTION}' section"
+            paras = re.findall(r"<p\b[^>]*>(.*?)</p>", section, re.S)
+            if len(paras) < 2:
+                return "how-to-read.html has only Appendix C's paragraph; the views paragraph is missing"
+            if "<code" in paras[-1] or "`" in html_text(paras[-1]):
+                return "the views paragraph in how-to-read.html carries code or a backtick"
             return None
 
-        check("Markdown: 'What this site is' ends with the views paragraph, no backticks", markdown_ends_with_paragraph)
+        check("'What this site is' ends with the views paragraph, with no code", views_paragraph_has_no_code)
 
         def no_backtick_up_top() -> str | None:
-            head = guide_md.encode("utf-8")[:BYTES_WITHOUT_CODE].decode("utf-8", "ignore")
+            start = guide_html.find('<header class="page-head"')
+            parser = _Head(BYTES_WITHOUT_CODE)
+            parser.feed(guide_html[start:] if start >= 0 else guide_html)
+            parser.close()
+            head = parser.text.encode("utf-8")[:BYTES_WITHOUT_CODE].decode("utf-8", "ignore")
             if "`" in head:
                 return f"a backtick sits at byte {head.index('`')}"
+            if parser.code_in_head:
+                return "how-to-read.html opens a <code> element within the first 600 bytes of visible text"
             return None
 
-        check("the first 600 bytes of the guide carry no backtick", no_backtick_up_top)
+        check("the first 600 bytes of the guide's visible text carry no backtick or code", no_backtick_up_top)
 
-        # -- HTML ----------------------------------------------------------
+        # -- the paragraph closes the section -------------------------------
         def html_ends_with_paragraph() -> str | None:
             paras = html_section_paragraphs(guide_html, SECTION)
             if paras is None:
-                return f"the guide's HTML has no '{SECTION}' section"
+                return f"how-to-read.html has no '{SECTION}' section"
             if not paras[0].startswith(SITE_OPENING):
                 return f"the section's first paragraph is not Appendix C's: {paras[:1]!r}"
             if len(paras) < 2:
-                return "the section has only Appendix C's paragraph; the views paragraph is missing"
+                return "how-to-read.html has only Appendix C's paragraph; the views paragraph is missing"
             if paras[-1] != VIEWS_PARAGRAPH:
                 return f"the section's last paragraph is {paras[-1][:200]!r}, not the views paragraph"
             return None
@@ -299,46 +321,37 @@ def main() -> int:
 
         # -- the paragraph lives there only ---------------------------------
         def said_once_per_view() -> str | None:
-            for name, body, flatten in (
-                ("how-to-read.md", guide_md, squash),
-                ("how-to-read.html", guide_html, html_text),
-            ):
-                count = flatten(visible(body)).count(VIEWS_PARAGRAPH)
-                if count != 1:
-                    return f"{name} says it {count} times, not once"
+            count = html_text(guide_html).count(VIEWS_PARAGRAPH)
+            if count != 1:
+                return f"how-to-read.html says it {count} times, not once"
             return None
 
-        check("the guide says it exactly once in each view", said_once_per_view)
+        check("the guide says it exactly once", said_once_per_view)
 
         def overview_unchanged() -> str | None:
-            for name, body, flatten in (
-                ("index.md", index_md or "", squash),
-                ("index.html", index_html or "", html_text),
-            ):
-                flat = flatten(visible(body))
-                for probe in ("written twice", "Markdown alone", "leaves those out"):
-                    if probe in flat:
-                        return f"{name} carries {probe!r}; the overview is not changed (§7.2)"
+            flat = html_text(index_html or "")
+            for probe in ("Each page is HTML", "nothing outside that directory", "reads the same"):
+                if probe in flat:
+                    return f"index.html carries {probe!r}; the overview is not changed (§7.2)"
             return None
 
         check("the overview does not carry the paragraph (§7.2)", overview_unchanged)
 
         def other_pages_do_not() -> str | None:
-            # Both views of every page: an HTML-only copy is still a repeat.
-            pages = sorted([*docs.rglob("*.md"), *docs.rglob("*.html")])
+            pages = sorted(docs.rglob("*.html"))
             if not any(path.name == "architecture.html" for path in pages):
                 return "the fixture published no architecture.html to check"
             for path in pages:
                 if path.stem == "how-to-read":
                     continue
                 body = read(path) or ""
-                flat = html_text(visible(body)) if path.suffix == ".html" else squash(visible(body))
-                for probe in ("written twice", "Markdown alone", "leaves those out"):
+                flat = html_text(body)
+                for probe in ("Each page is HTML", "nothing outside that directory", "reads the same"):
                     if probe in flat:
                         return f"{path.relative_to(docs)} repeats the paragraph ({probe!r})"
             return None
 
-        check("no other page repeats the paragraph, in either view", other_pages_do_not)
+        check("no other page repeats the paragraph", other_pages_do_not)
         check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
 
         # -- CI ------------------------------------------------------------

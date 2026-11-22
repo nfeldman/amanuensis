@@ -1,4 +1,4 @@
-"""Page renderers — each function returns (markdown_text, sources_dict).
+"""Page renderers — each function returns (page model, sources_dict).
 
 The sources dict maps source identifiers to their content hashes so the
 manifest can detect when to re-render. DB sources are keyed as
@@ -14,7 +14,7 @@ import re
 import sqlite3
 import subprocess
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from hashlib import sha1, sha256
 from pathlib import Path
@@ -25,16 +25,81 @@ from .diagrams import (
     BOUNDARY_HEADING,
     RUNTIME_BOUNDARY_ABSENT,
     RUNTIME_BOUNDARY_COLUMNS,
-    boundary_view,
-    concern_coverage_heatmap,
-    runtime_boundary_map,
+    badge_note,
+    boundary_blocks,
+    coverage_bars_model,
+    coverage_blocks,
+    dependency_section,
+    depth_cell,
+    finding_badges,
+    flow_strip_blocks,
+    hot_spot_access,
+    hot_spot_measures,
+    runtime_boundary_blocks,
+    runtime_boundary_rows,
     runtime_boundary_state,
-    seam_graph,
-    staleness_map,
-    subsystem_dependency_view,
+    seam_blocks,
+    seam_contract_model,
+    staleness_blocks,
+    status_ladder_model,
+    survey_workflow_model,
 )
-from .lint import composite_index_violations, explanation_refusal, orientation_violations
-from .manifest import sha256_bytes, sha256_json
+from .legacy_prose import (
+    ImportedBody,
+    imported_bodies,
+    imported_page,
+    imports_source,
+    render_body,
+)
+from .lint import (
+    THESIS_REFUSED,
+    THESIS_REFUSED_COMPOSITE,
+    composite_index_violations,
+    explanation_refusal,
+    orientation_violations,
+)
+from .manifest import sha256_json
+from .page import (
+    Anchor,
+    Atlas,
+    AtlasItem,
+    AtlasRegion,
+    Block,
+    Chip,
+    Code,
+    CodeSpan,
+    ConcernChecklist,
+    ConcernFamily,
+    ConcernItem,
+    Details,
+    Emph,
+    EnumTable,
+    Facets,
+    Fact,
+    Heading,
+    Inline,
+    Inlines,
+    Link,
+    List,
+    ListItem,
+    Marked,
+    Page,
+    Paragraph,
+    Quote,
+    Record,
+    RecordList,
+    RecordMarker,
+    Row,
+    RowFilter,
+    Section,
+    Strong,
+    SummaryItem,
+    SummaryList,
+    Table,
+    Text,
+    Topology,
+)
+from .prose import _plain, inlines, render_prose
 from .readback import (
     CARRIED_HEADING,
     CARRIED_UNDECIDED,
@@ -44,6 +109,8 @@ from .readback import (
     EXPLANATION_ELIGIBLE_STATUSES,
     FINDING_LENS_PAGES,
     LEDGER_STALE_SECTIONS,
+    NARRATIVE_LABELS,
+    PROJECT_NARRATIVE_PAGES,
     UNMEASURED,
     WHY_NO_REVISION,
     WHY_NO_TREE,
@@ -57,19 +124,26 @@ from .readback import (
     carried_page,
     carried_records,
     carry_was_run,
+    checklist_concerns,
     effective_explanations,
+    effective_narratives,
+    effective_territory_dispositions,
     explanation_rows,
     finding_marker,
     finding_page,
     git_paths,
     ledger_stale_anchor,
     ledger_stale_marker,
+    narrative_heading,
+    narrative_text,
+    project_purpose_text,
     reconciliation_standing,
     resolve_workspace,
     revision_resolves,
+    territory_label,
     workspace_is_bound,
 )
-from .slugs import matrix_page, matrix_slug, subsystem_page
+from .slugs import matrix_page, matrix_slug, slugify, subsystem_page
 from .vocabulary import (
     ID_KINDS,
     OBLIGATION_BEARING_SQL,
@@ -84,7 +158,9 @@ from .vocabulary import (
     values_of,
 )
 
-RenderResult = tuple[str, dict[str, str]]
+# A renderer returns the page model it built (store-only PLAN §3.2 step 4) and the
+# hash of each source it read.
+RenderResult = tuple[Page, dict[str, str]]
 
 # The resolution states each findings page renders, from the one definition in
 # readback.py, and their human labels from the enum source (spec §6.1, §10).
@@ -106,6 +182,161 @@ def _one_line(text: Any) -> str:
 def _table_cell(text: Any) -> str:
     """An authored value as one table cell: a line break would end the row."""
     return _one_line(text).replace("|", "/")
+
+
+def _heading(level: int, text: str) -> Heading:
+    return Heading(level, inlines(text))
+
+
+def _caption(title: str) -> str:
+    """What a table is captioned by: the words of the section it sits in."""
+
+    return slugify(_plain(title)).replace("-", " ")
+
+
+def _section(title: str, *blocks: Block) -> Section:
+    """A level-2 section: its heading, then the blocks, named by the heading's words."""
+
+    return Section(slugify(_plain(title)), (_heading(2, title), *blocks))
+
+
+def _paragraph(text: str) -> Paragraph:
+    return Paragraph(inlines(text))
+
+
+def _paragraphs(text: str) -> list[Paragraph]:
+    """A free-text value as paragraphs: a blank line ends one, and its lines are joined."""
+
+    return [
+        _paragraph(" ".join(line.strip() for line in chunk.splitlines()))
+        for chunk in re.split(r"\n\s*\n", text.strip())
+        if chunk.strip()
+    ]
+
+
+def _bullets(items: Sequence[str]) -> List:
+    return List(False, tuple(ListItem(inlines(item)) for item in items))
+
+
+def _summary(caption: str, pairs: Sequence[tuple[str, str]]) -> SummaryList:
+    """Metric/value facts, which the HTML prints as a definition list."""
+
+    return SummaryList(caption, tuple(SummaryItem(inlines(key), inlines(value)) for key, value in pairs))
+
+
+def _table(caption: str, headers: Sequence[str], body: Sequence[Sequence[str | Inlines]]) -> Table:
+    """A table of text cells, each read through the inline grammar."""
+
+    return Table(
+        caption,
+        tuple(inlines(header) for header in headers),
+        tuple(
+            Row(tuple(cell if isinstance(cell, Inlines) else inlines(cell.strip()) for cell in cells))
+            for cells in body
+        ),
+    )
+
+
+def _marked_rows(table: Table, marks: Sequence[tuple[str, str]]) -> Table:
+    """A table whose rows each print one record: each row carries its record and state (§3.5)."""
+
+    return replace(
+        table,
+        rows=tuple(replace(row, record=record, state=state) for row, (record, state) in zip(table.rows, marks, strict=True)),
+    )
+
+
+def _status_cell(status: str) -> Inlines:
+    """A survey depth as its chip, the word beside the colour the badge once printed."""
+
+    badge = _badge(status)
+    if badge.startswith("·"):
+        return inlines(badge)
+    return Inlines((Chip("status", status),), badge)
+
+
+def _words(text: Inlines) -> str:
+    """An inline run as text, a code span between backticks and a link as `[label](href)`."""
+
+    def one(node: Inline) -> str:
+        if isinstance(node, CodeSpan):
+            return f"`{node.text}`"
+        if isinstance(node, Chip):
+            return node.value
+        if isinstance(node, Link):
+            return f"[{node.label}]({node.href})"
+        if isinstance(node, Strong):
+            return f"**{''.join(one(child) for child in node.children)}**"
+        if isinstance(node, Emph):
+            return f"*{''.join(one(child) for child in node.children)}*"
+        return getattr(node, "text", "")
+
+    return "".join(one(node) for node in text.nodes)
+
+
+def page_text(page: Page) -> str:
+    """The page's words, a line to a heading, paragraph, list item or table row.
+
+    The overview's composite-index lint reads it (it works on lines), and so do
+    the tests that check what a page says of the record. It is a reading aid, not
+    a format anyone publishes: no `.md` is written from it.
+    """
+
+    lines: list[str] = []
+
+    def row(*cells: Inlines | str) -> str:
+        return "| " + " | ".join(cell if isinstance(cell, str) else _words(cell) for cell in cells) + " |"
+
+    def table(headers: Sequence[Inlines | str], body: Sequence[Sequence[Inlines | str]]) -> None:
+        lines.extend([row(*headers), "|" + "---|" * len(headers), *(row(*cells) for cells in body)])
+
+    def items(block: List, indent: str) -> None:
+        for number, item in enumerate(block.items, start=1):
+            lines.append(f"{indent}{f'{number}.' if block.ordered else '-'} {_words(item.text)}")
+            for child in item.children:
+                items(child, indent + "    ")
+
+    def walk(blocks: Sequence[Block]) -> None:
+        for block in blocks:
+            if isinstance(block, Section | Details | Marked):
+                walk(block.blocks)
+            elif isinstance(block, Heading):
+                lines.extend(["", f"{'#' * block.level} {_words(block.text)}", ""])
+            elif isinstance(block, Paragraph):
+                lines.extend([_words(block.text), ""])
+            elif isinstance(block, List):
+                items(block, "")
+                lines.append("")
+            elif isinstance(block, SummaryList):
+                table(["Metric", "Value"], [(item.key, item.value) for item in block.items])
+            elif isinstance(block, Table | EnumTable):
+                table(block.headers, [row_.cells for row_ in block.rows])
+            elif isinstance(block, Atlas):
+                table(
+                    ["Region", "Subsystem", "Survey depth"],
+                    [(region.name, item.subsystem, item.depth) for region in block.regions for item in region.items],
+                )
+            elif isinstance(block, Topology):
+                if block.kind == "seam":
+                    table(
+                        ["Seam", "Party A", "Shared object", "Party B"],
+                        [(e.key, e.left, e.detail, e.right) for e in block.edges],
+                    )
+                else:
+                    table(
+                        ["From", "Relationship", "To", "Strength", "Context"],
+                        [(e.left, e.key, e.right, e.qualifier, e.detail) for e in block.edges],
+                    )
+            elif isinstance(block, RecordList):
+                for record in block.records:
+                    lines.append(f"- {_words(record.key)}: " + "; ".join(
+                        f"{fact.key} {_words(fact.value)}" for fact in (*record.facts, *record.fields)
+                    ))
+                lines.append("")
+
+    lines.append(f"# {page.title}")
+    walk(page.blocks)
+    return "\n".join(lines) + "\n"
 
 
 def _fmt_time(ts: str | None) -> str:
@@ -197,6 +428,17 @@ AGEING_NOT_MEASURED = "Whether the files it cites have changed since is not meas
 AGEING_PATH_LIMIT = 5
 NARRATIVE_IN_RECORD = "The survey artifact is rendered below, under Survey record."
 
+# Stored narratives (store-only PLAN §2.1): each prints under its topic with the
+# date and revision it was recorded at, and how far its cited files have moved.
+NARRATIVE_PROVENANCE = "*Recorded on {date} at revision `{sha}` from {n} evidence row(s). {ageing}*"
+NARRATIVE_NO_FILES = "*Recorded on {date} at revision `{sha}`. It cites no file.*"
+NARRATIVE_DECLINED = "A survey session {declined} to write this at `{sha}` on {date}. {reason}"
+NARRATIVE_NO_CLAIMS = "No structural claim is recorded for this subsystem."
+CHALLENGE_HEADING = "Challenge"
+AS_WRITTEN_HEADING = "As written at onboarding"
+CHECKLIST_TITLE = "Calibrated review checklist"
+CHECKLIST_HEADERS = ("Code", "Category", "Territory", "Probe", "Primary subsystems")
+
 # §9.1's five structural categories, as the `claim_key` segment that names each
 # and the heading it groups under.  Any other segment a survey recorded is its
 # own group, headed by the segment's humanised name (§2.2), so the register says
@@ -227,13 +469,6 @@ def _like_prefix(sid: str) -> str:
     return f"{escaped}/%"
 
 
-# CommonMark fences: three or more backticks or tildes, indented at most three
-# spaces.  Tracking only the backtick form let a `~~~` block's contents through
-# as prose, and a `#` inside one was demoted as if it were a document heading
-# (slice-S3, F10/codex).
-_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
-
-
 def narrative_placement(*, has_account: bool, has_claims: bool, has_artifact: bool) -> str:
     """Where a subsystem's survey narrative renders (spec §2.3).
 
@@ -248,44 +483,6 @@ def narrative_placement(*, has_account: bool, has_claims: bool, has_artifact: bo
     if has_account:
         return "survey-record"
     return "structure-narrative" if has_claims else "inventory-fallback"
-
-
-_LINE_BREAK = re.compile(r"\r\n|[\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029]")
-
-
-def _nest_prose(text: str, under: int) -> str:
-    """Shift a recorded document's ATX headings beneath a page heading.
-
-    An artifact was written as a document of its own and opens at `#`.  Rendered
-    verbatim inside a page section, its first heading would close the section it
-    was placed in and the reader would be told the narrative sits somewhere it
-    does not.  Only the heading *level* moves; the heading text, the order, and
-    every other line are the recorded bytes.  Levels saturate at six rather than
-    wrapping, so a deeply nested source flattens instead of re-opening the page.
-    A line ends at every break the HTML projection's `splitlines()` recognizes, so
-    a heading cannot wait behind a carriage return; each such break becomes a
-    newline on the page.
-    """
-
-    out: list[str] = []
-    fence: tuple[str, int] | None = None
-    for line in _LINE_BREAK.split(text):
-        opener = _FENCE.match(line)
-        if fence is None:
-            # CommonMark: a fence opens on three or more backticks or tildes.
-            if opener:
-                fence = (opener.group(1)[0], len(opener.group(1)))
-        elif opener and opener.group(1)[0] == fence[0] and len(opener.group(1)) >= fence[1]:
-            # …and closes only on the same character, at least as long. A
-            # shorter run, or the other character, is content.
-            fence = None
-        if fence is None and not opener:
-            match = re.match(r"^(#{1,6})(\s)", line)
-            if match:
-                level = min(6, len(match.group(1)) + under)
-                line = "#" * level + line[len(match.group(1)) :]
-        out.append(line)
-    return "\n".join(out)
 
 
 def _claim_segment(sid: str, claim_key: str) -> str | None:
@@ -357,21 +554,14 @@ def _evidence_text(rows: list[dict[str, Any]]) -> str:
         files.append(text if role == "supports" else f"{text} ({role})")
     return "evidence: " + ", ".join(files)
 
-THESIS_SOURCE = "entry-point.md"
+#: What a refusal of the thesis names as its source when no row is cited.
+THESIS_SOURCE = "the project purpose"
 THESIS_SECTION_PATTERN = re.compile(
     r"^#{1,6}\s*what is this (?:codebase|project)\??\s*$", re.IGNORECASE
 )
 THESIS_ABSENT = (
-    "No thesis section is recorded; add a 'What is this codebase?' section to "
-    "`entry-point.md`."
-)
-THESIS_REFUSED = (
-    "The recorded thesis carries status vocabulary and was not published; "
-    "correct `entry-point.md`."
-)
-THESIS_REFUSED_COMPOSITE = (
-    "The recorded thesis presents a composite index of the record and was not "
-    "published; correct `entry-point.md`."
+    "No thesis section is recorded; record the project's purpose with "
+    "`record_explanation`."
 )
 
 
@@ -384,6 +574,21 @@ class Thesis:
     violations: tuple[str, ...] = ()
     #: `absent`, `refused` or `filled`: the state the census reads (§2.5).
     state: str = "filled"
+    #: Where the text came from, for the publish warning.
+    source: str = THESIS_SOURCE
+    #: The explanation row it prints, as its mark, and that row's state (§3.5).
+    record: str = ""
+    record_state: str = ""
+
+
+def thesis_blocks(thesis: Thesis) -> tuple[Block, ...]:
+    """The thesis as the overview prints it: a stored purpose carries its row's mark.
+
+    The overview and the read-back both build it here (§3.5).
+    """
+
+    blocks = tuple(render_prose(thesis.text))
+    return (Marked(thesis.record, thesis.record_state, blocks),) if thesis.record else blocks
 
 
 def _thesis_body(prose: str) -> str:
@@ -414,17 +619,33 @@ def _thesis_body(prose: str) -> str:
 
 
 def read_thesis(storage: Path) -> Thesis:
-    """The thesis taken by heading, from `entry-point.md` and nowhere else.
+    """The thesis `entry-point.md` carries, read from the file.
+
+    No page calls this: the overview prints the project's purpose, a record, and
+    the materializer opens no prose file (store-only PLAN §3.3). It stays as the
+    reference the import's gate compares what `import_artifact_bodies` copied in
+    against, by the one rule `thesis_from_prose` holds.
+    """
+
+    path = storage / "entry-point.md"
+    return thesis_from_prose(path.read_text() if path.is_file() else "")
+
+
+def thesis_from_prose(prose: str) -> Thesis:
+    """The thesis taken by heading from an entry point's text.
 
     The first paragraph is deliberately not a fallback: `entry-point.md` is a
     dated reading path recorded by an earlier session, and its opening paragraph
     carries no contract to describe the project. When the named section is
-    absent the page says which section to add, which is a fact about the record
-    rather than a sentence about the codebase that nobody wrote (§7.2).
+    absent there is no thesis.
+
+    Only the import (`legacy_extract`) calls this, over the bytes it copied into
+    the store, not over a file on disk, which may have changed since (F3/codex,
+    slice-S1). No page reads the entry point: the thesis is the project's
+    purpose, a record (store-only PLAN §3.3).
     """
 
-    path = storage / THESIS_SOURCE
-    body = _thesis_body(path.read_text()) if path.is_file() else ""
+    body = _thesis_body(prose)
     if not body:
         return Thesis(THESIS_ABSENT, recorded=False, state="absent")
     violations = tuple(orientation_violations(body))
@@ -442,10 +663,51 @@ def read_thesis(storage: Path) -> Thesis:
     return Thesis(body, recorded=True)
 
 
-def thesis_state(storage: Path) -> str:
+PROJECT_PURPOSE_DECLINED = (
+    f"No thesis is recorded: a survey session {_DECLINED} to write one at"
+    " `{sha}`. {reason}"
+)
+
+
+def project_thesis(conn: sqlite3.Connection, storage: Path) -> Thesis:
+    """The overview's thesis: the effective project purpose.
+
+    Store-only PLAN §3.3 sources the thesis from the effective project-purpose
+    explanation, recorded or imported, and §2.2 requires a purpose recorded at
+    onboarding to render. What the slot holds for a stored purpose is decided by
+    `project_purpose_text`, the function the read-back's census owes it by, so
+    the page and the census cannot disagree (F1/codex, slice-S1). A store with
+    no effective purpose has no thesis: the slot says so, and no file is read.
+    """
+
+    for (subject_type, _sid, slot), reading in effective_explanations(conn, storage).items():
+        if subject_type != "project" or slot != "purpose":
+            continue
+        owed = project_purpose_text(reading)
+        if owed is None or reading.row is None:
+            break
+        text, violations = owed
+        source = f"the project purpose (explanation row {reading.row['id']})"
+        if reading.state == "declined":
+            text = PROJECT_PURPOSE_DECLINED.format(
+                sha=str(reading.row["ref_sha"])[:8], reason=text.strip()
+            )
+        return Thesis(
+            text,
+            recorded=True,
+            violations=violations,
+            state="refused" if violations else "filled",
+            source=source,
+            record=f"explanation:{reading.row['id']}",
+            record_state=reading.state,
+        )
+    return Thesis(THESIS_ABSENT, recorded=False, state="absent")
+
+
+def thesis_state(conn: sqlite3.Connection, storage: Path) -> str:
     """The thesis slot's state for the project: the overview prints by it too."""
 
-    return read_thesis(storage).state
+    return project_thesis(conn, storage).state
 
 
 #: What a page is titled when nothing in the record names the project. A
@@ -514,7 +776,37 @@ def _package_name(workspace: Path) -> str | None:
     return None
 
 
-def project_name(storage: Path) -> str:
+def recorded_project_name(conn: sqlite3.Connection) -> str | None:
+    """The name the store records for the project, or None.
+
+    The newest `project_profile` row decides; the import writes one from the
+    onboarding report's `**Codebase**:` line. A store whose profile was never
+    written but which holds that report as an import reads the name from the
+    imported text, by the same rule (store-only PLAN §3.3).
+    """
+
+    if table_exists(conn, "project_profile"):
+        profile = row(conn, "SELECT name FROM project_profile ORDER BY id DESC LIMIT 1")
+        if profile and str(profile["name"]).strip():
+            return str(profile["name"]).strip()
+    for imported in imported_bodies(conn, kind="onboarding-report"):
+        recorded = project_name_from_report(imported.body)
+        if recorded:
+            return recorded
+    return None
+
+
+def project_name_from_report(text: str) -> str | None:
+    """`recorded_project_name` over the onboarding report's text."""
+
+    for line in text.splitlines():
+        if line.startswith("**Codebase**:"):
+            recorded = line.partition(":")[2].strip().split(" — ", 1)[0].strip()
+            return recorded or None
+    return None
+
+
+def project_name(conn: sqlite3.Connection, storage: Path) -> str:
     """The project's own name, which is the projection's primary identity.
 
     Amanuensis is the producing method and never the title
@@ -522,8 +814,9 @@ def project_name(storage: Path) -> str:
     separate").
 
     Three sources, in the order of how deliberately each was chosen: the name
-    onboarding recorded, the name the repository binding resolved, and the name
-    the workspace's package manifest declares. A directory name is not among
+    the store records (a profile, or the imported onboarding report), the name the
+    repository binding resolved, and the name the workspace's package manifest
+    declares. A directory name is not among
     them at any position. A store surveyed from a second worktree, a scratch
     clone, or a temporary checkout answers with the same project name as the
     first, because none of those change the binding — and where the record
@@ -531,14 +824,9 @@ def project_name(storage: Path) -> str:
     checkout's folder as an identity.
     """
 
-    report = storage / "onboarding-report.md"
-    if report.is_file():
-        for line in report.read_text().splitlines():
-            if line.startswith("**Codebase**:"):
-                recorded = line.partition(":")[2].strip().split(" — ", 1)[0].strip()
-                if recorded:
-                    return recorded
-                break
+    recorded = recorded_project_name(conn)
+    if recorded:
+        return recorded
     bound = _binding_name(storage)
     if bound:
         return bound
@@ -683,20 +971,21 @@ LEDGER_NO_REASON = "No reason recorded"
 LEDGER_NO_REVISION = "no revision recorded"
 
 
-def _ledger_groups(sid: str, files: Sequence[Mapping[str, object]]) -> list[str]:
+def _ledger_blocks(sid: str, files: Sequence[Mapping[str, object]]) -> list[Block]:
     """The file ledger as groups of rows sharing `(classification, why_in_scope)` (§2.4).
 
     `file_ledger.ref_sha` is set for every classification and `examined_at` only
     for examined rows, so the revision on a candidate or exempt row is the one it
     was recorded at, and only an examined row's revision is an examination.
     Groups keep the ledger's order: classification, then the group's first path.
+    Each group is one item, its files a list inside it.
     """
 
     groups: dict[tuple[str, str], list[Mapping[str, object]]] = {}
     for f in files:
         key = (str(f["classification"] or "—"), str(f["why_in_scope"] or "").strip())
         groups.setdefault(key, []).append(f)
-    out: list[str] = []
+    items: list[ListItem] = []
     for (classification, why), members in groups.items():
         # An absent revision is not a revision: the row says it has none, and the
         # head counts only the ones recorded.
@@ -709,9 +998,7 @@ def _ledger_groups(sid: str, files: Sequence[Mapping[str, object]]) -> list[str]
         else:
             revision = LEDGER_NO_REVISION
         reason = " ".join(why.split()) or LEDGER_NO_REASON
-        out.append(
-            f"- **{reason}** — {classification}, {_count(len(members), 'file')}, {revision}"
-        )
+        paths: list[ListItem] = []
         for m in members:
             path = str(m["file_path"])
             sha = str(m["ref_sha"] or "")
@@ -719,25 +1006,48 @@ def _ledger_groups(sid: str, files: Sequence[Mapping[str, object]]) -> list[str]
                 f" (`{sha[:8]}`)" if len(revisions) > 1 and sha else
                 f" ({LEDGER_NO_REVISION})" if revisions and not sha else ""
             )
-            out.append(f'    - <a id="{ledger_entry_anchor(sid, path)}"></a>`{path}`{own}')
-    out.append("")
-    return out
+            paths.append(ListItem(inlines(f'<a id="{ledger_entry_anchor(sid, path)}"></a>`{path}`{own}')))
+        items.append(
+            ListItem(
+                inlines(f"**{reason}** — {classification}, {_count(len(members), 'file')}, {revision}"),
+                (List(False, tuple(paths)),),
+            )
+        )
+    return [List(False, tuple(items))]
 
 
-def _metric_table(pairs: Sequence[tuple[str, str]]) -> list[str]:
-    """Metric/value facts, which the HTML projection renders as a definition list."""
+def _concern_review(dispositions: Sequence[Mapping[str, Any]], caption: str) -> RecordList:
+    """The concern review as the record list the HTML prints: a record per disposition."""
 
-    out = ["| Metric | Value |", "|---|---|"]
-    out.extend(f"| {metric} | {value} |" for metric, value in pairs)
-    out.append("")
-    return out
-
-
-def _prose_source(storage: Path, rel: str) -> dict[str, str]:
-    p = storage / rel
-    if not p.is_file():
-        return {}
-    return {f"prose:{rel}": sha256_bytes(p.read_bytes())}
+    records: list[Record] = []
+    for number, d in enumerate(dispositions, start=1):
+        code = str(d["concern_code"])
+        key_text = code or f"Record {number}"
+        anchor_text = re.sub(r"^concern\s+", "", key_text)
+        facts = [
+            Fact(name, inlines(value))
+            for name, value in (
+                ("classification", str(d["classification"]).strip()),
+                ("evidence quality", str(d["evidence_quality"]).strip()),
+                ("linchpin?", "🔗" if d["linchpin_dependent"] else ""),
+            )
+            if _plain(value)
+        ]
+        rationale = _table_cell(d["rationale"] or "—")
+        records.append(
+            Record(
+                markers=(),
+                key=inlines(f"**{code}**"),
+                key_text=key_text,
+                slug_text=_plain(f"concern-disposition-{anchor_text}"),
+                facts=tuple(facts),
+                fields=(Fact("rationale", inlines(rationale)),) if _plain(rationale) else (),
+                path=_plain(f"**{code}**"),
+                record=f"disposition:{d['subsystem_id']}:{code}",
+                state=str(d["classification"]),
+            )
+        )
+    return RecordList("concern-disposition", caption, tuple(records))
 
 
 def _ageing_sentence(
@@ -786,6 +1096,285 @@ def _provenance_line(
     )
 
 
+def _survey_row(imported: ImportedBody) -> dict[str, str]:
+    """An import in the shape the survey provenance and dated line read."""
+
+    return {
+        "path": imported.path,
+        "content_hash": imported.registered_hash,
+        "ref_sha": imported.ref_sha,
+        "written_at": imported.written_at,
+    }
+
+
+def _imported_blocks(
+    bodies: Sequence[ImportedBody], under: int, section: str, path: str
+) -> list[Block]:
+    """Imported bodies as blocks: each behind its label, its headings moved under `under`.
+
+    `section` is the title of the page section they print in, which names their
+    tables' captions.
+    """
+
+    out: list[Block] = []
+    for body in bodies:
+        out.append(_paragraph(body.label()))
+        # Its blocks carry its mark, so the read-back can find the body on the page (§3.5).
+        out.append(Marked(f"imported-body:{body.path}", "", render_body(body.body, under=under, section=section, path=path)))
+    return out
+
+
+def narrative_body(record: Mapping[str, Any], level: int = 3) -> Marked:
+    """A narrative's body (or its declination) as the blocks that carry its mark (§3.5).
+
+    The page prints these and the read-back renders them again from the store to
+    compare with what the page carries, so both read the body one way.
+    """
+
+    text, _is_body = narrative_text(record)
+    mark = f"narrative:{record['id']}"
+    if str(record["disposition"]) == "declined":
+        sentence = NARRATIVE_DECLINED.format(
+            declined=_DECLINED,
+            sha=str(record["ref_sha"])[:8],
+            date=_stored_date(record["recorded_at"]),
+            reason=text.strip(),
+        )
+        return Marked(mark, "declined", tuple(render_prose(sentence)))
+    return Marked(mark, "recorded", tuple(render_prose(text.strip(), under=level)))
+
+
+def _narrative_blocks(
+    records: Sequence[Mapping[str, Any]],
+    level: int,
+    workspace: Path,
+    bound: bool,
+    head: str,
+    warn: Callable[[str], None] | None,
+    *,
+    untitled: bool = True,
+) -> list[Block]:
+    """Stored narratives as blocks, each under its topic at heading `level`.
+
+    A narrative with no topic prints under
+    its section's label; with `untitled` false it prints under whatever heading
+    already names its section. A text the orientation lint refuses is replaced by
+    the refusal sentence and reported through `warn`. The body is stored prose,
+    read in the §3.4 grammar.
+    """
+
+    out: list[Block] = []
+    for record in records:
+        text, is_body = narrative_text(record)
+        if not is_body and warn is not None:
+            warn(
+                f"{record['subject_id']}: the recorded {record['section']} narrative was not"
+                " published because it carries survey-status vocabulary or a count fraction"
+            )
+        if untitled or str(record["topic"]).strip():
+            out.append(_heading(level, _one_line(narrative_heading(record))))
+        date = _stored_date(record["recorded_at"])
+        sha = str(record["ref_sha"])[:8]
+        out.append(narrative_body(record, level))
+        if str(record["disposition"]) == "declined" or not is_body:
+            continue
+        files = record.get("cited_files") or []
+        out.append(
+            _paragraph(
+                NARRATIVE_PROVENANCE.format(
+                    date=date,
+                    sha=sha,
+                    n=len(files),
+                    ageing=_ageing_sentence(workspace, bound, record, head),
+                )
+                if files
+                else NARRATIVE_NO_FILES.format(date=date, sha=sha)
+            )
+        )
+    return out
+
+
+def _narrative_source(name: str, head: str, records: Sequence[Mapping[str, Any]]) -> dict[str, str]:
+    """The manifest source for the narratives a page printed.
+
+    The effective rows with their cited files, and the checked revision their
+    ageing line is measured against, so a new row, a withdrawal or a moved
+    head re-renders the page.
+    """
+
+    return _db_source(name, {"head": head, "rows": list(records)})
+
+
+def _record_page_sources(conn: sqlite3.Connection, kind: str) -> dict[str, Any]:
+    """What the generated part of one of the three project pages reads."""
+
+    if kind == "concern-checklist":
+        return {
+            "concerns": checklist_concerns(conn),
+            "territories": effective_territory_dispositions(conn),
+        }
+    return {}
+
+
+def _project_narratives(
+    conn: sqlite3.Connection, storage: Path, kind: str
+) -> list[dict[str, Any]]:
+    """The project narratives the page for `kind` prints, in the contract's section order."""
+
+    page = {
+        "onboarding-report": "onboarding-report.html",
+        "entry-point": "entry-point.html",
+    }.get(kind)
+    if page is None:
+        return []
+    order = list(NARRATIVE_LABELS)
+    chosen = [
+        record
+        for record in effective_narratives(conn, storage, "project")
+        if record["subject_type"] == "project" and PROJECT_NARRATIVE_PAGES.get(record["section"]) == page
+    ]
+    return sorted(chosen, key=lambda r: (order.index(str(r["section"])), int(r["first_id"])))
+
+
+def _flat_cell(text: Any) -> str:
+    """An authored value as one line, its pipes kept: a table cell as the page prints it."""
+
+    return " ".join(str(text).split())
+
+
+def _checklist_blocks(
+    concerns: Sequence[Mapping[str, Any]], territories: Sequence[Mapping[str, Any]]
+) -> list[Block]:
+    out: list[Block] = []
+    if concerns:
+        groups: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
+        for c in concerns:
+            category = _plain(_table_cell(c["category"] or "—"))
+            territory = _plain(_flat_cell(territory_label(c["territory"]) or "—"))
+            groups.setdefault((category, territory), []).append(c)
+        families: list[ConcernFamily] = []
+        for (category, territory), members in groups.items():
+            name = category.replace("-", " ").capitalize()
+            items: list[ConcernItem] = []
+            for number, c in enumerate(members, start=1):
+                code = f"**{c['code']}**"
+                code_text = _plain(code) or f"Concern {number}"
+                where = ", ".join(f"**{sid}**" for sid in c["subsystems"]) or "—"
+                items.append(
+                    ConcernItem(
+                        code=inlines(code),
+                        code_text=code_text,
+                        slug_text=_plain(f"concern-checklist-{code_text}"),
+                        primary_subsystems=inlines(where),
+                        probe=inlines(_flat_cell(c["probe"] or "—")),
+                    )
+                )
+            families.append(ConcernFamily(name, territory, _plain(f"{name} concerns"), tuple(items)))
+        out.append(
+            _section(
+                "Concerns",
+                _paragraph(
+                    "Each concern the survey checks, the kind of territory it came from, and"
+                    " the probe that tests it in this codebase."
+                ),
+                ConcernChecklist(_caption("Concerns"), tuple(families)),
+            )
+        )
+    if territories:
+        out.append(
+            _section(
+                "Territories",
+                _paragraph(
+                    "Whether each kind of territory applies to this project. A territory that"
+                    " does not apply names the condition that rules it out."
+                ),
+                _marked_rows(
+                    _table(
+                        _caption("Territories"),
+                        ("Territory", "Disposition", "Condition"),
+                        [
+                            [
+                                _flat_cell(territory_label(t["territory"])),
+                                str(t["disposition"]),
+                                _flat_cell(t["condition"] or "—"),
+                            ]
+                            for t in territories
+                        ],
+                    ),
+                    [(f"territory:{t['territory']}", str(t["disposition"])) for t in territories],
+                ),
+            )
+        )
+    return out
+
+
+def record_page_exists(conn: sqlite3.Connection, storage: Path, kind: str) -> bool:
+    """Whether the page for `kind` has anything to print: a record or an unwithdrawn import."""
+
+    if imported_bodies(conn, kind=kind):
+        return True
+    if kind == "concern-checklist":
+        return bool(checklist_concerns(conn) or effective_territory_dispositions(conn))
+    return bool(_project_narratives(conn, storage, kind))
+
+
+def record_page_imports_only(conn: sqlite3.Connection, storage: Path, kind: str) -> bool:
+    """Whether the record page of `kind` prints only its imports, as `imported_page` does."""
+
+    extra = _record_page_sources(conn, kind)
+    return not (
+        _project_narratives(conn, storage, kind) or extra.get("concerns") or extra.get("territories")
+    )
+
+
+def record_page(
+    conn: sqlite3.Connection,
+    storage: Path,
+    kind: str,
+    title: str,
+    warn: Callable[[str], None] | None = None,
+) -> RenderResult | None:
+    """Onboarding record, Review checklist or Where to begin, from the store.
+
+    The records come first, each section under its own heading; what an earlier
+    version wrote by hand follows under "As written at onboarding" with its label
+    (D1). A store with only an import prints that page as `imported_page` does,
+    so an import-only publication is unchanged.
+    """
+
+    bodies = imported_bodies(conn, kind=kind)
+    narratives = _project_narratives(conn, storage, kind)
+    extra = _record_page_sources(conn, kind)
+    concerns, territories = extra.get("concerns", []), extra.get("territories", [])
+    path = f"{kind}.html"
+    if not (narratives or concerns or territories):
+        return imported_page(conn, kind, title, path)
+    workspace = resolve_workspace(storage)
+    bound = workspace_is_bound(workspace)
+    head = _checked_head(conn)
+    blocks: list[Block] = []
+    section: str | None = None
+    held: list[Block] = []
+    for record in narratives:
+        if record["section"] != section:
+            if section is not None:
+                blocks.append(_section(NARRATIVE_LABELS.get(section, section), *held))
+            section = str(record["section"])
+            held = []
+        held += _narrative_blocks([record], 3, workspace, bound, head, warn, untitled=False)
+    if section is not None:
+        blocks.append(_section(NARRATIVE_LABELS.get(section, section), *held))
+    blocks += _checklist_blocks(concerns, territories)
+    if bodies:
+        blocks.append(_section(AS_WRITTEN_HEADING, *_imported_blocks(bodies, 2, AS_WRITTEN_HEADING, path)))
+    sources = (
+        _narrative_source(f"narratives:{kind}", head, narratives)
+        | _db_source(f"checklist:{kind}", extra)
+        | imports_source(f"imports:{kind}", bodies)
+    )
+    return Page(title, path, tuple(blocks)), sources
+
+
 def _survey_notes_line(artifact: Mapping[str, Any], account: Mapping[str, Any]) -> str:
     """The italic line that dates a survey artifact against the recorded account.
 
@@ -801,6 +1390,42 @@ def _survey_notes_line(artifact: Mapping[str, Any], account: Mapping[str, Any]) 
         f" {str(account['ref_sha'] or '')[:8] or 'not recorded'}; where the two disagree,"
         " the later one is the current reading.*"
     )
+
+
+def explanation_body(
+    subject_type: str,
+    subject_id: str,
+    slot: str,
+    reading: ExplanationReading,
+    warn: Callable[[str], None] | None = None,
+) -> tuple[Marked, bool] | None:
+    """An effective explanation's printed body, marked with its row, and whether it is the body.
+
+    A subsystem's purpose (recorded or declined) and account (recorded), and the
+    project's account (recorded or declined), print here; anything else is not a
+    body a page prints and is None. The page and the read-back both build it here
+    (§3.5).
+    """
+
+    row = reading.row
+    project = subject_type == "project"
+    if row is None or reading.state not in ("recorded", "declined"):
+        return None
+    if project and slot != "account":
+        return None  # the project's purpose is the overview's thesis, read on its own
+    if not project and slot == "account" and reading.state == "declined":
+        return None  # a declined account prints one sentence under the survey record
+    text, is_body = _published_explanation(
+        subject_id if not project else "project", slot, str(row["body"]), warn
+    )
+    sha = str(row["ref_sha"])[:8]
+    if reading.state == "recorded":
+        blocks = render_prose(text.strip()) if project else render_prose(text.strip(), under=2)
+    elif project:
+        blocks = (_paragraph(PROJECT_ACCOUNT_DECLINED.format(sha=sha, reason=text.strip())),)
+    else:
+        blocks = render_prose(PURPOSE_DECLINED.format(sha=sha, reason=text.strip()))
+    return Marked(f"explanation:{row['id']}", reading.state, tuple(blocks)), is_body
 
 
 def _published_explanation(
@@ -900,8 +1525,8 @@ def _checked_head(conn: sqlite3.Connection) -> str:
 # as `finding_state_current` partitions findings. The page a contradiction's
 # record renders on is read from that one predicate, so the record, the
 # timeline that links to it, and the reader all agree about where it is.
-DISAGREEMENTS_PAGE = "disagreements.md"
-CONTRADICTIONS_PAGE = "contradictions.md"
+DISAGREEMENTS_PAGE = "disagreements.html"
+CONTRADICTIONS_PAGE = "contradictions.html"
 
 
 def contradiction_page(resolution: str | None) -> str:
@@ -940,9 +1565,9 @@ def checked_revision(conn: sqlite3.Connection) -> str:
     )
 
 
-def _empty_lens(
+def _empty_lens_blocks(
     conn: sqlite3.Connection, nothing: str, scope: str, basis: str
-) -> list[str]:
+) -> list[Block]:
     """What a lens page with no rows says instead of "none" (§6.1, C28).
 
     An empty page is the one place a reader cannot check the record against
@@ -954,12 +1579,14 @@ def _empty_lens(
     """
 
     return [
-        nothing,
-        "",
-        f"- **Scope** — {scope}",
-        f"- **Basis** — {basis}",
-        f"- **Checked revision** — {checked_revision(conn)}.",
-        "",
+        _paragraph(nothing),
+        _bullets(
+            [
+                f"**Scope** — {scope}",
+                f"**Basis** — {basis}",
+                f"**Checked revision** — {checked_revision(conn)}.",
+            ]
+        ),
     ]
 
 
@@ -974,7 +1601,7 @@ def _empty_lens(
 OVERVIEW_IDENTITY = (
     "An architecture survey of {name}. An AI agent running Amanuensis read the"
     " repository, without changing it, and recorded what it found here. New to this"
-    " site? Start with [{guide}](how-to-read.md)."
+    " site? Start with [{guide}](how-to-read.html)."
 )
 
 # The read-back is recorded after the pages are written, so the overview can only
@@ -1005,11 +1632,11 @@ def render_index(
     prose (§11.1).
     """
 
-    name = project_name(storage)
-    thesis = read_thesis(storage)
+    name = project_name(conn, storage)
+    thesis = project_thesis(conn, storage)
     if thesis.violations and warn is not None:
         warn(
-            f"{THESIS_SOURCE}: the recorded thesis was not published because it "
+            f"{thesis.source}: the recorded thesis was not published because it "
             + "; ".join(thesis.violations)
         )
 
@@ -1081,67 +1708,49 @@ def render_index(
 
     # 1. Identity.  The project is the subject; Amanuensis is the method that
     #    recorded it (`reporting-style.md`).
-    out = [
-        f"# {name}",
-        "",
-        OVERVIEW_IDENTITY.format(name=name, guide=GUIDE_TITLE),
-        "",
-        # 2. Thesis — by heading, from entry-point.md, or the named instruction.
-        "## What is this codebase?",
-        "",
-        thesis.text,
-        "",
-        # 3. Four status dimensions, each a separate named fact.
-        "## Where the record stands",
-        "",
-        "### Source alignment",
-        "",
+    alignment_pairs = [
+        (
+            "Checked at",
+            f"{_short(checked)} on `{branch}`"
+            + (
+                f", {_fmt_time(alignment['last_checked_at'])}"
+                if alignment["last_checked_at"]
+                else ""
+            ),
+        ),
+        ("Repository head", _relation(checked, alignment["workspace_head"])),
+        (
+            # The row is named for the question, not for one remote. Which
+            # ref answered it belongs in the value, where it is a fact about
+            # this workspace rather than a heading that changes shape.
+            "Upstream head",
+            _relation(checked, alignment["origin_head"])
+            + (f" (`{alignment['upstream_ref']}`)" if alignment.get("upstream_ref") else ""),
+        ),
+        (
+            # §11.2 measures freshness on `scoped_files`, never on the
+            # obligation count. A ledger whose scoped rows all happen to be
+            # exempt has been read exactly, and saying it was not measured
+            # would hide a real reading behind the sentence reserved for
+            # having no ledger at all -- and put this row at odds with the
+            # HTML strip, which reads `scoped_files` on the same store.
+            "Files carrying a survey obligation marked stale",
+            f"{stale_obligation} of {obligation}"
+            if obligation
+            else (
+                "none of the scoped files carries a survey obligation"
+                if scoped
+                else "not measured by this projection"
+            ),
+        ),
+        (
+            "Scoped files exempt from that obligation, marked stale",
+            f"{stale_exempt} of {scoped - obligation}"
+            if scoped > obligation
+            else "none in scope",
+        ),
     ]
-    out += _metric_table(
-        [
-            (
-                "Checked at",
-                f"{_short(checked)} on `{branch}`"
-                + (
-                    f", {_fmt_time(alignment['last_checked_at'])}"
-                    if alignment["last_checked_at"]
-                    else ""
-                ),
-            ),
-            ("Repository head", _relation(checked, alignment["workspace_head"])),
-            (
-                # The row is named for the question, not for one remote. Which
-                # ref answered it belongs in the value, where it is a fact about
-                # this workspace rather than a heading that changes shape.
-                "Upstream head",
-                _relation(checked, alignment["origin_head"])
-                + (f" (`{alignment['upstream_ref']}`)" if alignment.get("upstream_ref") else ""),
-            ),
-            (
-                # §11.2 measures freshness on `scoped_files`, never on the
-                # obligation count. A ledger whose scoped rows all happen to be
-                # exempt has been read exactly, and saying it was not measured
-                # would hide a real reading behind the sentence reserved for
-                # having no ledger at all -- and put this row at odds with the
-                # HTML strip, which reads `scoped_files` on the same store.
-                "Files carrying a survey obligation marked stale",
-                f"{stale_obligation} of {obligation}"
-                if obligation
-                else (
-                    "none of the scoped files carries a survey obligation"
-                    if scoped
-                    else "not measured by this projection"
-                ),
-            ),
-            (
-                "Scoped files exempt from that obligation, marked stale",
-                f"{stale_exempt} of {scoped - obligation}"
-                if scoped > obligation
-                else "none in scope",
-            ),
-        ]
-    )
-    out += ["### Survey coverage", ""]
+    # 3. Four status dimensions, each a separate named fact.
     if not standing.stands:
         files_read = unmeasured
     elif standing.obligation_paths:
@@ -1152,7 +1761,9 @@ def render_index(
         files_read = f"{examined_tracked} of {standing.obligation_paths}"
     else:
         files_read = "no tracked path carries a survey obligation"
-    out += _metric_table(
+    caption = _caption("Where the record stands")
+    coverage_summary = _summary(
+        caption,
         [
             (
                 "Subsystems by survey depth",
@@ -1163,9 +1774,8 @@ def render_index(
                 COVERAGE_ROW_UNLEDGERED,
                 unmeasured if not standing.stands else str(standing.unledgered),
             ),
-        ]
+        ],
     )
-    out += ["### Open engineering work", ""]
     # A defect this store confirmed and a defect it inherited and has not looked
     # at are different facts, so the carried count is its own row and is never
     # summed into `Findings open` (§5.6). The row is published when a carry is
@@ -1183,80 +1793,104 @@ def render_index(
         ("Contradictions unresolved", str(unresolved["n"] or 0)),
         ("Decisions open", str(decisions["n"] or 0)),
     ]
-    out += _metric_table(work)
-    out += ["### Publication integrity", ""]
     if verification:
-        out += [PUBLICATION_INTEGRITY_LAG, ""]
-        out += _metric_table(
-            [
-                *(
-                    (
-                        f"{axis.title()} axis",
-                        "green" if int(verification[f"{axis}_ok"] or 0) else "red",
-                    )
-                    for axis in ("state", "coverage", "content")
-                ),
-                ("Read back at", _fmt_time(str(verification["verified_at"]))),
-            ]
+        integrity: tuple[Block, ...] = (
+            _paragraph(PUBLICATION_INTEGRITY_LAG),
+            _summary(
+                caption,
+                [
+                    *(
+                        (
+                            f"{axis.title()} axis",
+                            "green" if int(verification[f"{axis}_ok"] or 0) else "red",
+                        )
+                        for axis in ("state", "coverage", "content")
+                    ),
+                    ("Read back at", _fmt_time(str(verification["verified_at"]))),
+                ],
+            ),
         )
     else:
-        out += [
-            "No publication read-back is recorded for this store, so none of the"
-            " three axes has a result to report.",
-            "",
-        ]
-
-    # 4. One linked count per resolution state, generated from the enum source so
-    #    the line cannot drift from the enum (§7.2 step 4, §10).
-    out += ["## Findings by resolution state", ""]
-    out += _metric_table(
-        [
-            (
-                f"[{RESOLUTION_LABELS.get(state, state)}]({finding_page(state)})",
-                str(state_counts.get(state, 0)),
-            )
-            for state in values_of("finding_resolution_state")
-        ]
-    )
-
-    # 5. One route into each lens (§1.1, §7.1).
-    out += [
-        "## The four lenses",
-        "",
-        "- **Codebase** — [Subsystem map](master-plan.md): every region, grouped by"
-        " layer, with the boundaries and terms recorded for it.",
-        "- **Unresolved** — [Open findings](findings.md): defects open or awaiting"
-        " verification at the checked revision.",
-        "- **History** — [Resolved findings](resolved-findings.md): the records that"
-        " reached a terminal state, with the basis each one rests on.",
-        f"- **Method** — [{GUIDE_TITLE}](how-to-read.md): what each page is for,"
-        " the terms it uses, and how a survey works.",
-        "",
-    ]
-
-    if latest_session:
-        out += [
-            "## Latest session",
-            "",
-            f"`{latest_session['intent']}` — started {_fmt_time(latest_session['started_at'])}"
-            + (
-                f" · ended {_fmt_time(latest_session['ended_at'])}"
-                if latest_session["ended_at"]
-                else " · **active**"
+        integrity = (
+            _paragraph(
+                "No publication read-back is recorded for this store, so none of the"
+                " three axes has a result to report."
             ),
-            "",
-        ]
+        )
 
-    text = "\n".join(out) + "\n"
+    blocks: list[Block] = [
+        _paragraph(OVERVIEW_IDENTITY.format(name=name, guide=GUIDE_TITLE)),
+        # 2. Thesis — the project purpose, else by heading from entry-point.md,
+        #    or the named instruction.
+        _section("What is this codebase?", *thesis_blocks(thesis)),
+        _section(
+            "Where the record stands",
+            _heading(3, "Source alignment"),
+            _summary(caption, alignment_pairs),
+            _heading(3, "Survey coverage"),
+            coverage_summary,
+            _heading(3, "Open engineering work"),
+            _summary(caption, work),
+            _heading(3, "Publication integrity"),
+            *integrity,
+        ),
+        # 4. One linked count per resolution state, generated from the enum source so
+        #    the line cannot drift from the enum (§7.2 step 4, §10).
+        _section(
+            "Findings by resolution state",
+            _summary(
+                _caption("Findings by resolution state"),
+                [
+                    (
+                        f"[{RESOLUTION_LABELS.get(state, state)}]({finding_page(state)})",
+                        str(state_counts.get(state, 0)),
+                    )
+                    for state in values_of("finding_resolution_state")
+                ],
+            ),
+        ),
+        # 5. One route into each lens (§1.1, §7.1).
+        _section(
+            "The four lenses",
+            _bullets(
+                [
+                    "**Codebase** — [Subsystem map](master-plan.html): every region, grouped by"
+                    " layer, with the boundaries and terms recorded for it.",
+                    "**Unresolved** — [Open findings](findings.html): defects open or awaiting"
+                    " verification at the checked revision.",
+                    "**History** — [Resolved findings](resolved-findings.html): the records that"
+                    " reached a terminal state, with the basis each one rests on.",
+                    f"**Method** — [{GUIDE_TITLE}](how-to-read.html): what each page is for,"
+                    " the terms it uses, and how a survey works.",
+                ]
+            ),
+        ),
+    ]
+    if latest_session:
+        blocks.append(
+            _section(
+                "Latest session",
+                _paragraph(
+                    f"`{latest_session['intent']}` — started {_fmt_time(latest_session['started_at'])}"
+                    + (
+                        f" · ended {_fmt_time(latest_session['ended_at'])}"
+                        if latest_session["ended_at"]
+                        else " · **active**"
+                    )
+                ),
+            )
+        )
+
+    page = Page(name, "index.html", tuple(blocks))
     # Over the page as published, not over the thesis alone. C32's rule is about
     # what the overview carries, so a renderer that grows a composite row is the
     # same violation as a session that writes one into `entry-point.md`, and
-    # only a lint over the rendered bytes sees both. Until slice-S7 this check
+    # only a lint over the rendered words sees both. Until slice-S7 this check
     # lived in the packet's gate, where it could report on a publish it could
     # not stop (F5/codex).
     if warn is not None:
-        for message in composite_index_violations(text):
-            warn(f"index.md: the overview may not publish a composite index — {message}")
+        for message in composite_index_violations(page_text(page)):
+            warn(f"index.html: the overview may not publish a composite index — {message}")
 
     sources = {
         **_db_source("index:alignment", alignment),
@@ -1269,9 +1903,9 @@ def render_index(
         **_db_source("index:verification", verification or {}),
         **_db_source("index:session", latest_session or {}),
         **_db_source("index:identity", {"project_name": name}),
-        **_prose_source(storage, THESIS_SOURCE),
+        **_db_source("index:purpose", {"state": thesis.state, "text": thesis.text}),
     }
-    return text, sources
+    return page, sources
 
 
 def render_architecture(
@@ -1286,7 +1920,7 @@ def render_architecture(
     # modules, so a change to either predicate could head an atlas "Subsystem
     # dependency graph" — a page asserting edges no row records (§9.2). The
     # `xrefs` rows above stay for the manifest source hash only.
-    dependency_heading, dependency_body = subsystem_dependency_view(conn)
+    dependency_heading, dependency_body = dependency_section(conn, _caption)
 
     # §3.7: the project account and a line per subsystem open the page. Read by
     # the function the subsystem pages and the read-back read.
@@ -1295,65 +1929,44 @@ def render_architecture(
     head = _checked_head(conn)
     workspace = resolve_workspace(storage)
     bound = workspace_is_bound(workspace)
-    fit = ["## " + ARCHITECTURE_FIT_HEADING, ""]
-    if account.state == "recorded" and account.row is not None:
-        text, is_body = _published_explanation(
-            "project", "account", str(account.row["body"]), warn
-        )
-        fit += [_nest_prose(text.strip(), 2), ""]
-        if is_body:
-            fit += [_provenance_line(workspace, bound, account.row, head), ""]
-    elif account.state == "declined" and account.row is not None:
-        text, _is_body = _published_explanation(
-            "project", "account", str(account.row["body"]), warn
-        )
-        fit += [
-            PROJECT_ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=text.strip()),
-            "",
-        ]
+    fit: list[Block] = []
+    printed = explanation_body("project", "project", "account", account, warn)
+    if printed is not None and account.row is not None:
+        body, is_body = printed
+        fit.append(body)
+        if is_body and account.state == "recorded":
+            fit.append(_paragraph(_provenance_line(workspace, bound, account.row, head)))
     else:
-        fit += [PROJECT_ACCOUNT_ABSENT, ""]
+        fit.append(_paragraph(PROJECT_ACCOUNT_ABSENT))
+    lines = []
     for s in subs:
         sid = str(s["id"])
         excerpt = _excerpt(sid, _reading(readings, "subsystem", sid, "purpose"), warn)
-        fit.append(f"- **{sid} — {_one_line(s['name'])}**: {excerpt}")
-    fit.append("")
+        lines.append(f"**{sid} — {_one_line(s['name'])}**: {excerpt}")
+    if lines:
+        fit.append(_bullets(lines))
     explanations = explanation_rows(conn)
 
-    out = [
-        "# Architecture",
-        "",
-        *fit,
-        "## Runtime boundary map",
-        "",
-        runtime_boundary_map(storage),
-        "",
-        f"## {dependency_heading}",
-        "",
-        dependency_body,
-        "",
-        # §2.5 item 2: the HTML draws this section's table as the boundary SVG,
-        # recognised by its header signature as the runtime table is.
-        f"## {BOUNDARY_HEADING}",
-        "",
-        boundary_view(conn),
-        "",
-        "## Seam topology",
-        "",
-        seam_graph(conn),
-        "",
-        "## Staleness map",
-        "",
-        staleness_map(conn),
-    ]
+    blocks: tuple[Block, ...] = (
+        _section(ARCHITECTURE_FIT_HEADING, *fit),
+        _section(
+            "Runtime boundary map",
+            *runtime_boundary_blocks(conn, _caption("Runtime boundary map")),
+        ),
+        _section(dependency_heading, *dependency_body),
+        # §2.5 item 2: the HTML draws this section's table as the boundary SVG.
+        _section(BOUNDARY_HEADING, *boundary_blocks(conn, _caption(BOUNDARY_HEADING))),
+        _section("Seam topology", *seam_blocks(conn, _caption("Seam topology"))),
+        _section("Staleness map", *staleness_blocks(conn)),
+    )
     sources = {
         **_db_source("arch:xrefs", xrefs),
         **_db_source("arch:subs", subs),
         **_db_source("arch:seams", seams),
         **_db_source("arch:explanations", {"head": head, "rows": explanations}),
-        **_prose_source(storage, "onboarding-report.md"),
+        **_db_source("arch:runtime", runtime_boundary_rows(conn)),
     }
-    return "\n".join(out) + "\n", sources
+    return Page("Architecture", "architecture.html", blocks), sources
 
 
 # ---------------------------------------------------------------------------
@@ -1397,51 +2010,106 @@ def render_master_plan(
     finds_by_ss = {f["subsystem_id"]: f for f in finds}
     readings = effective_explanations(conn, storage)
 
+    blocks: list[Block] = []
     if not subs:
-        body = ["_No subsystems registered yet. Run the Amanuensis coordinator to onboard._"]
+        blocks.append(_paragraph("_No subsystems registered yet. Run the Amanuensis coordinator to onboard._"))
     else:
         # Group by layer.
         layers: dict[str, list[dict[str, Any]]] = {}
         for s in subs:
             layers.setdefault(s["layer"] or "unlayered", []).append(s)
         # The atlas comes first and always has one row per subsystem, whether or
-        # not any edge is recorded (§2.5): the HTML turns this three-column table
-        # into the region cards the architecture page already uses. The depth
-        # is the contract's label in both views, never the stored value.
+        # not any edge is recorded (§2.5): the HTML turns it into the region cards
+        # the architecture page already uses. The depth is the contract's label,
+        # never the stored value. It opens the page before any section, so the
+        # page's own title is its caption.
         depth_labels = labels("subsystem_status")
-        body = [
-            "| Region | Subsystem | Survey depth |",
-            "|---|---|---|",
-        ]
+        badges = finding_badges(conn)
+        regions: dict[str, list[AtlasItem]] = {}
         for layer, items in layers.items():
             for s in items:
-                body.append(
-                    f"| {_table_cell(layer)} | **[{s['id']}]({subsystem_page(str(s['id']), str(s['name']))})**"
-                    f" {_table_cell(s['name'])} | {_table_cell(depth_labels.get(s['status'], s['status']))} |"
+                regions.setdefault(_plain(_table_cell(layer)) or "Other", []).append(
+                    AtlasItem(
+                        inlines(f"**[{s['id']}]({subsystem_page(str(s['id']), str(s['name']))})** {_table_cell(s['name'])}"),
+                        depth_cell(_table_cell(depth_labels.get(s["status"], s["status"]))),
+                        record=f"subsystem:{s['id']}",
+                        state=str(s["status"]),
+                        badges=badges.get(str(s["id"]), ()),
+                    )
                 )
-        body.append("")
+        blocks.append(
+            Atlas("Subsystem map", tuple(AtlasRegion(name, tuple(items)) for name, items in regions.items()))
+        )
+        blocks.extend(badge_note(conn, badges))
         for layer, items in layers.items():
-            body.append(f"## {layer}")
-            body.append("")
-            body.append("| Priority | ID | Name | Status | Purpose | Scope | Jump-in | Findings |")
-            body.append("|---|---|---|---|---|---|---|---|")
-            for s in items:
+            records: list[Record] = []
+            for number, s in enumerate(items, start=1):
                 f = finds_by_ss.get(s["id"], {"n": 0, "open_bugs": 0})
+                sid = str(s["id"])
                 priority = "—" if s.get("priority") is None else str(s["priority"])
-                body.append(
-                    f"| {priority} | **{s['id']}** | {s['name']} | {_badge(s['status'])} | "
-                    f"{_table_cell(_excerpt(str(s['id']), _reading(readings, 'subsystem', str(s['id']), 'purpose'), warn))} | "
-                    f"{_table_cell(s['scope'] or '—')} | "
-                    f"{_table_cell(s['jump_in_reading'] or '—')} | "
-                    f"{f['n']} ({f.get('open_bugs', 0)} open) |"
+                key_text = _plain(str(s["name"])) or f"Record {number}"
+                cells: list[tuple[str, Inlines]] = [
+                    ("id", Inlines((Strong((Text(sid),)),), sid)),
+                    ("status", _status_cell(str(s["status"]))),
+                    ("findings", inlines(f"{f['n']} ({f.get('open_bugs', 0)} open)")),
+                    ("priority", inlines(priority)),
+                    (
+                        "purpose",
+                        inlines(_table_cell(_excerpt(sid, _reading(readings, "subsystem", sid, "purpose"), warn))),
+                    ),
+                    ("scope", inlines(_table_cell(s["scope"] or "—"))),
+                    ("jump-in", inlines(_table_cell(s["jump_in_reading"] or "—"))),
+                ]
+                # A fact or field with nothing to print is left out, as the table's reader left it.
+                facts = [Fact(key, value) for key, value in cells[:4] if value.plain]
+                fields = [Fact(key, value) for key, value in cells[4:] if value.plain]
+                records.append(
+                    Record(
+                        markers=(),
+                        key=inlines(str(s["name"])),
+                        key_text=key_text,
+                        slug_text=_plain(f"subsystem-{key_text}"),
+                        facts=tuple(facts),
+                        fields=tuple(fields),
+                        path=_plain(str(s["name"])),
+                        subsystem_id=sid,
+                        record=f"subsystem:{sid}",
+                        state=str(s["status"]),
+                    )
                 )
-            body.append("")
-    text = "# Subsystem map\n\n" + "\n".join(body) + "\n"
+            blocks.append(_section(layer, RecordList("subsystem", _caption(layer), tuple(records))))
     return (
-        text,
+        Page("Subsystem map", "master-plan.html", tuple(blocks)),
         _db_source("master-plan:subs", subs)
         | _db_source("master-plan:finds", finds)
         | _db_source("master-plan:explanations", explanation_rows(conn)),
+    )
+
+
+def subsystem_claims(conn: sqlite3.Connection, sid: str) -> list[dict[str, Any]]:
+    """The current claims a subsystem's page prints: about it, keyed under it, or citing its files.
+
+    The page and the read-back's census both ask this function (§3.5).
+    """
+
+    return rows(
+        conn,
+        """
+        SELECT c.claim_id, c.claim_key, c.subject_type, c.subject_id, c.statement,
+               c.epistemic_kind, c.asserted_at_sha
+          FROM claims c
+         WHERE c.valid_until_sha IS NULL
+           AND (c.subject_id = ?
+                OR c.claim_key LIKE ? ESCAPE '\\'
+                OR EXISTS (SELECT 1
+                             FROM claim_evidence ce
+                             JOIN evidence e ON e.id = ce.evidence_id
+                            WHERE ce.claim_id = c.claim_id
+                              AND e.file_path IN (SELECT file_path FROM file_ledger
+                                                   WHERE subsystem_id = ?)))
+         ORDER BY c.claim_key
+        """,
+        (sid, _like_prefix(sid), sid),
     )
 
 
@@ -1530,42 +2198,14 @@ def render_subsystem(
     # other, which is the divergence §13 calls a false green.  `valid_until_sha
     # IS NULL` is ADR-0001's current: a claim closed by `apply_change_impact`
     # is history, and history is not rendered here.
-    claims = rows(
-        conn,
-        """
-        SELECT c.claim_id, c.claim_key, c.subject_type, c.subject_id, c.statement,
-               c.epistemic_kind, c.asserted_at_sha
-          FROM claims c
-         WHERE c.valid_until_sha IS NULL
-           AND (c.subject_id = ?
-                OR c.claim_key LIKE ? ESCAPE '\\'
-                OR EXISTS (SELECT 1
-                             FROM claim_evidence ce
-                             JOIN evidence e ON e.id = ce.evidence_id
-                            WHERE ce.claim_id = c.claim_id
-                              AND e.file_path IN (SELECT file_path FROM file_ledger
-                                                   WHERE subsystem_id = ?)))
-         ORDER BY c.claim_key
-        """,
-        (sid, _like_prefix(str(sid)), sid),
-    )
+    claims = subsystem_claims(conn, str(sid))
 
-    # The per-subsystem survey artifact — hand-authored markdown lives in
-    # storage root as <ID>-<slug>.md or similar. We look for any registered
-    # artifact with kind='subsystem-survey' and this subsystem_id.
-    survey_rows = rows(
-        conn,
-        "SELECT path, content_hash, ref_sha, written_at FROM artifacts"
-        " WHERE kind = 'subsystem-survey' AND subsystem_id = ?",
-        (sid,),
-    )
-    survey_prose = ""
-    prose_sources: dict[str, str] = {}
-    for sv in survey_rows:
-        prose_path = storage / sv["path"]
-        if prose_path.is_file():
-            survey_prose += prose_path.read_text() + "\n\n"
-            prose_sources.update(_prose_source(storage, sv["path"]))
+    # The per-subsystem survey bodies: the imports of an earlier version's
+    # hand-written survey files, which the store holds as written. A body a
+    # subsystem reset withdrew is not printed (store-only PLAN §3.3, §5.4).
+    surveys = imported_bodies(conn, kind="subsystem-survey", subsystem_id=str(sid))
+    survey_rows = [_survey_row(imported) for imported in surveys]
+    survey_prose = "".join(imported.body + "\n\n" for imported in surveys)
 
     # The effective explanation (§3.2), read by the function the read-back reads
     # so the page and its custody check cannot name different rows.
@@ -1583,30 +2223,33 @@ def render_subsystem(
     workspace = resolve_workspace(storage)
     bound = workspace_is_bound(workspace)
 
-    out = [
-        f"# {sid} — {s['name']}",
-        "",
-        f"**Status**: {_badge(s['status'])}  ",
-        f"**Layer**: {s.get('layer') or '—'}",
-        "",
+    # The survey's stored prose for this subsystem (store-only PLAN §2.1): one
+    # row in force per section and topic, read by the function the read-back reads.
+    narratives = effective_narratives(conn, storage, str(sid))
+    by_section = {
+        section: [r for r in narratives if r["section"] == section]
+        for section in ("structure", "concern-reasoning", "challenge")
+    }
+
+    path = subsystem_page(str(sid), str(s["name"]))
+    blocks: list[Block] = [
+        # The status line prints the subsystem's depth, so it carries the record's mark (§3.5).
+        Marked(
+            f"subsystem:{sid}",
+            str(s["status"]),
+            (_paragraph(f"**Status**: {_badge(s['status'])} **Layer**: {s.get('layer') or '—'}"),),
+        ),
     ]
 
     # 0. Purpose — only from an effective record, recorded or declined. A page
     #    with neither keeps today's opening: Scope and the no-purpose sentence.
-    if purpose.state in ("recorded", "declined") and purpose.row is not None:
-        text, is_body = _published_explanation(
-            str(sid), "purpose", str(purpose.row["body"]), warn
-        )
-        out += ["## Purpose", ""]
-        if purpose.state == "recorded":
-            out += [_nest_prose(text.strip(), 2), ""]
-            if is_body:
-                out += [_provenance_line(workspace, bound, purpose.row, checked_head), ""]
-        else:
-            out += [
-                PURPOSE_DECLINED.format(sha=str(purpose.row["ref_sha"])[:8], reason=text.strip()),
-                "",
-            ]
+    printed = explanation_body("subsystem", str(sid), "purpose", purpose, warn)
+    if printed is not None and purpose.row is not None:
+        body, is_body = printed
+        held: list[Block] = [body]
+        if purpose.state == "recorded" and is_body:
+            held.append(_paragraph(_provenance_line(workspace, bound, purpose.row, checked_head)))
+        blocks.append(_section("Purpose", *held))
 
     # 1. Scope — verbatim, under that heading, never as a purpose sentence.
     #
@@ -1615,53 +2258,52 @@ def render_subsystem(
     # recorded scope — a file-and-boundary list — sits alone under the first
     # heading and reads as a statement of what the subsystem is for, which is
     # the relabelling §3.1 forbids and BP6 names (F10/codex).
-    out += ["## Scope", ""]
+    scope: list[Block] = []
     if purpose.state == "not-recorded":
-        out += [NO_PURPOSE_WITH_SCOPE if s.get("scope") else NO_PURPOSE_ALONE, ""]
+        scope.append(_paragraph(NO_PURPOSE_WITH_SCOPE if s.get("scope") else NO_PURPOSE_ALONE))
     if s.get("scope"):
-        out += [str(s["scope"]), ""]
+        scope += render_prose(str(s["scope"]))
     elif files:
-        out += [
-            "No scope statement is recorded for this subsystem. The file ledger in"
-            " its survey record is the only account of what belongs to it.",
-            "",
-        ]
+        scope.append(
+            _paragraph(
+                "No scope statement is recorded for this subsystem. The file ledger in"
+                " its survey record is the only account of what belongs to it."
+            )
+        )
     else:
-        out += [
-            "No scope statement is recorded for this subsystem, and no file is"
-            " recorded in its ledger. Nothing here states what it contains.",
-            "",
-        ]
+        scope.append(
+            _paragraph(
+                "No scope statement is recorded for this subsystem, and no file is"
+                " recorded in its ledger. Nothing here states what it contains."
+            )
+        )
     survey_note = str(s.get("notes") or "").strip()
     if survey_note:
-        out += [
-            f"### {SURVEY_NOTE_HEADING}",
-            "",
-            f"*{SURVEY_NOTE_LABEL}*",
-            "",
-            _nest_prose(survey_note, 3),
-            "",
+        scope += [
+            _heading(3, SURVEY_NOTE_HEADING),
+            _paragraph(f"*{SURVEY_NOTE_LABEL}*"),
+            *render_prose(survey_note, under=3),
         ]
+    blocks.append(_section("Scope", *scope))
 
     # 2. Start here.
     if s.get("jump_in_reading"):
-        out += ["## Start here", "", str(s["jump_in_reading"]), ""]
+        blocks.append(_section("Start here", *render_prose(str(s["jump_in_reading"]))))
 
-    # 2b. How it works — the recorded account, nested so that it cannot open a
-    #     heading above H3. A declined account prints one sentence under the
-    #     survey record instead.
-    if account.state == "recorded" and account.row is not None:
-        text, is_body = _published_explanation(
-            str(sid), "account", str(account.row["body"]), warn
-        )
-        out += ["## How it works", "", _nest_prose(text.strip(), 2), ""]
+    # 2b. How it works — the recorded account. A declined account prints one
+    #     sentence under the survey record instead.
+    printed = explanation_body("subsystem", str(sid), "account", account, warn)
+    if account.state == "recorded" and printed is not None and account.row is not None:
+        body, is_body = printed
+        held = [body]
         if is_body:
-            out += [_provenance_line(workspace, bound, account.row, checked_head), ""]
+            held.append(_paragraph(_provenance_line(workspace, bound, account.row, checked_head)))
+        blocks.append(_section("How it works", *held))
 
     # 3. Structure — current claims, grouped by what each one records (§7.3).
     #    With none, §9.1's literal and the labelled narrative fallback: unbound
     #    prose is never presented where a revision-bound inventory belongs.
-    out += ["## Structure", ""]
+    structure: list[Block] = []
     placement = narrative_placement(
         has_account=account.state == "recorded",
         has_claims=bool(claims),
@@ -1673,75 +2315,90 @@ def render_subsystem(
         f", written on {_stored_date(sv['written_at'])}"
         for sv in survey_rows
     )
+    source = f" Its source is {provenance}." if provenance else ""
+
+    def survey_narrative() -> list[Block]:
+        return [
+            _heading(3, SURVEY_NARRATIVE),
+            _paragraph(f"*{NARRATIVE_LABEL}.*{source}"),
+            *_imported_blocks(surveys, 3, "Structure", path),
+        ]
+
     epistemic_labels = labels("claim_epistemic_kind")
     if claims:
-        out += [
-            "What the survey recorded as claims about this subsystem, grouped by what"
-            " each one states. Every claim is bound to the revision it was asserted at"
-            " and to the evidence attached to it; a superseded claim is not shown here.",
-            "",
-        ]
+        structure.append(
+            _paragraph(
+                "What the survey recorded as claims about this subsystem, grouped by what"
+                " each one states. Every claim is bound to the revision it was asserted at"
+                " and to the evidence attached to it; a superseded claim is not shown here."
+            )
+        )
         claim_evidence = _claim_evidence(conn, [str(c["claim_id"]) for c in claims])
         for heading, group in _claim_groups(str(sid), claims):
-            out += [f"### {heading}", ""]
+            structure.append(_heading(3, heading))
+            if heading == _CLAIM_KIND_HEADING["flow"]:
+                structure.extend(flow_strip_blocks(conn, str(sid)))
+            # The statement is the item's first text and its coordinates are
+            # one nested item, so a reader meets the sentence before the key
+            # (§2.2).  Whitespace runs collapse because a line break inside the
+            # statement would end the item.
+            items = []
             for c in group:
                 kind = str(c["epistemic_kind"] or "")
-                # The statement is the item's first text and its coordinates are
-                # one nested item, so a reader meets the sentence before the key
-                # (§2.2).  Whitespace runs collapse because a newline inside the
-                # statement would end the item.
-                out += [
-                    f"- {' '.join(str(c['statement'] or '—').split())}",
-                    f"    - `{c['claim_key']}` · subject `{c['subject_id']}`"
+                coordinates = (
+                    f"`{c['claim_key']}` · subject `{c['subject_id']}`"
                     f" · {epistemic_labels.get(kind, kind) or '—'}"
                     f" · asserted at {_short(str(c['asserted_at_sha'] or ''))}"
-                    f" · {_evidence_text(claim_evidence.get(str(c['claim_id']), []))}",
-                ]
-            out.append("")
+                    f" · {_evidence_text(claim_evidence.get(str(c['claim_id']), []))}"
+                )
+                items.append(
+                    ListItem(
+                        inlines(" ".join(str(c["statement"] or "—").split())),
+                        (List(False, (ListItem(inlines(coordinates)),)),),
+                        record=f"claim:{c['claim_id']}",
+                    )
+                )
+            structure.append(List(False, tuple(items)))
+        structure += _narrative_blocks(
+            by_section["structure"], 3, workspace, bound, checked_head, warn
+        )
         if placement == "structure-narrative":
-            out += [
-                f"### {SURVEY_NARRATIVE}",
-                "",
-                f"*{NARRATIVE_LABEL}.*" + (f" Its source is {provenance}." if provenance else ""),
-                "",
-                _nest_prose(survey_prose.strip(), 3),
-                "",
-            ]
-    else:
-        out += ["### " + NO_STRUCTURAL_CLAIMS, ""]
+            structure += survey_narrative()
+    elif by_section["structure"]:
+        # A recorded narrative is the reading here: it leads, bound to its
+        # revision, and the imported body follows as the earlier account.
+        structure += [_heading(3, NO_STRUCTURAL_CLAIMS), _paragraph(NARRATIVE_NO_CLAIMS)]
+        structure += _narrative_blocks(by_section["structure"], 3, workspace, bound, checked_head, warn)
         if placement == "inventory-fallback":
-            out += [
-                "No structural claim is recorded for this subsystem."
-                f" *{NARRATIVE_LABEL}.*"
-                + (f" Its source is {provenance}." if provenance else ""),
-                "",
-                _nest_prose(survey_prose.strip(), 3),
-                "",
+            structure += survey_narrative()
+        elif placement == "survey-record":
+            structure.append(_paragraph(NARRATIVE_IN_RECORD + source))
+    else:
+        structure.append(_heading(3, NO_STRUCTURAL_CLAIMS))
+        if placement == "inventory-fallback":
+            structure += [
+                _paragraph(f"No structural claim is recorded for this subsystem. *{NARRATIVE_LABEL}.*{source}"),
+                *_imported_blocks(surveys, 3, "Structure", path),
             ]
         elif placement == "survey-record":
-            out += [
-                f"No structural claim is recorded for this subsystem. {NARRATIVE_IN_RECORD}"
-                + (f" Its source is {provenance}." if provenance else ""),
-                "",
-            ]
+            structure.append(
+                _paragraph(f"No structural claim is recorded for this subsystem. {NARRATIVE_IN_RECORD}{source}")
+            )
         else:
-            out += [
-                "No structural claim is recorded for this subsystem, and no narrative was"
-                " left in its place."
-                + (f" The survey artifact is {provenance}." if provenance else ""),
-                "",
-            ]
+            structure.append(
+                _paragraph(
+                    "No structural claim is recorded for this subsystem, and no narrative was"
+                    " left in its place."
+                    + (f" The survey artifact is {provenance}." if provenance else "")
+                )
+            )
+    blocks.append(_section("Structure", *structure))
 
     # 4. Boundaries — seams and recorded edges.
     if seams or xrefs:
-        out += ["## Boundaries", ""]
+        boundaries: list[Block] = []
         if seams:
-            out += [
-                "### Seams",
-                "",
-                "| Seam | Shared object | Other party | Assessable |",
-                "|---|---|---|---|",
-            ]
+            seam_rows: list[Sequence[str]] = []
             for sm in seams:
                 other = sm["party_b"] if sm["party_a"] == sid else sm["party_a"]
                 assessable = (
@@ -1749,94 +2406,101 @@ def render_subsystem(
                     if int(sm["assessable"] or 0)
                     else "not yet: both parties must be `mapped`"
                 )
-                out.append(
-                    f"| **{sm['id']}** | {_table_cell(sm['shared_object'])} | **{other}** |"
-                    f" {assessable} |"
+                seam_rows.append(
+                    (f"**{sm['id']}**", _table_cell(sm["shared_object"]), f"**{other}**", assessable)
                 )
-            out.append("")
-        if xrefs:
-            out += [
-                "### Recorded edges",
-                "",
-                "| From | → | To | Relationship | Strength | Context |",
-                "|---|---|---|---|---|---|",
+            boundaries += [
+                _heading(3, "Seams"),
+                _table(_caption("Boundaries"), ("Seam", "Shared object", "Other party", "Assessable"), seam_rows),
             ]
-            for x in xrefs:
-                out.append(
-                    f"| **{x['from_id']}** | → | **{x['to_id']}** | {x['relationship']} | "
-                    f"{x['strength']} | {_table_cell(x['context'] or '—')} |"
-                )
-            out.append("")
+        if xrefs:
+            boundaries += [
+                _heading(3, "Recorded edges"),
+                _table(
+                    _caption("Boundaries"),
+                    ("From", "→", "To", "Relationship", "Strength", "Context"),
+                    [
+                        (
+                            f"**{x['from_id']}**",
+                            "→",
+                            f"**{x['to_id']}**",
+                            f"{x['relationship']}",
+                            f"{x['strength']}",
+                            _table_cell(x["context"] or "—"),
+                        )
+                        for x in xrefs
+                    ],
+                ),
+            ]
+        blocks.append(_section("Boundaries", *boundaries))
 
     # 5. Vocabulary — §4.5's three states, never collapsed into two. A
     #    subsystem that answered "none" and one nobody asked are different
     #    facts, and the section renders for both: a page that simply omits the
     #    heading makes the silent state unrepresentable (VP4(e)).
-    out += ["## Vocabulary", ""]
+    vocabulary: list[Block] = []
     if vocab:
-        out += [f"- **{v['term']}** — {v['gloss']}" for v in vocab]
-        out.append("")
+        vocabulary.append(_bullets([f"**{v['term']}** — {_one_line(v['gloss'])}" for v in vocab]))
     if vocabulary_state == "declined":
-        out += [
-            f"**Domain vocabulary** — none. {_declination_sentence(declined[0])}",
-            "",
-        ]
+        vocabulary.append(
+            _paragraph(f"**Domain vocabulary** — none. {_declination_sentence(declined[0])}")
+        )
     elif vocabulary_state == "not-recorded":
-        out += [
-            f"{VOCABULARY_NOT_RECORDED}"
-            f" {meanings('vocabulary_discharge').get('not-recorded', '')}",
-            "",
-        ]
+        vocabulary.append(
+            _paragraph(
+                f"{VOCABULARY_NOT_RECORDED}"
+                f" {meanings('vocabulary_discharge').get('not-recorded', '')}"
+            )
+        )
     if vocabulary_state == "terms" and declined:
         # Kept, not erased: a later pass that found a term supersedes the
         # judgment without unsaying it (GP18, §4.3).
-        out += [
-            f"### {SUPERSEDED_HEADING}",
-            "",
-            _declination_sentence(declined[0]),
-            "",
-        ]
+        vocabulary += [_heading(3, SUPERSEDED_HEADING), _paragraph(_declination_sentence(declined[0]))]
+    blocks.append(_section("Vocabulary", *vocabulary))
 
     # 6. Known defects here — links, never a second full record (§6.2).
-    open_states = FINDING_LENS_STATES.get("findings.md", ())
+    open_states = FINDING_LENS_STATES.get("findings.html", ())
     open_findings = [f for f in findings if str(f["resolution_state"]) in open_states]
     resolved = [f for f in findings if str(f["resolution_state"]) not in open_states]
-    out += ["## Known defects here", ""]
+    defects: list[Block] = []
     # Subsystem pages live one directory down, so every link to a top-level
-    # lens page is written relative to this page. A bare `findings.md` here
-    # resolves to `subsystems/findings.md` and turns the coverage axis red.
+    # lens page is written relative to this page. A bare `findings.html` here
+    # resolves to `subsystems/findings.html` and turns the coverage axis red.
     up = "../"
     if open_findings:
-        out += [
-            f"{_count(len(open_findings), 'defect')} here"
-            f" {'is' if len(open_findings) == 1 else 'are'} open or awaiting"
-            " verification. Each one's full record, with its evidence, is on"
-            f" [Open findings]({up}findings.md).",
-            "",
-        ]
+        defects.append(
+            _paragraph(
+                f"{_count(len(open_findings), 'defect')} here"
+                f" {'is' if len(open_findings) == 1 else 'are'} open or awaiting"
+                " verification. Each one's full record, with its evidence, is on"
+                f" [Open findings]({up}findings.html)."
+            )
+        )
+        lines = []
         for f in open_findings:
-            page = finding_page(str(f["resolution_state"])) or "findings.md"
+            page = finding_page(str(f["resolution_state"])) or "findings.html"
             state = RESOLUTION_LABELS.get(
                 str(f["resolution_state"]), str(f["resolution_state"])
             )
-            out.append(
-                f"- {f['symptom']}"
+            lines.append(
+                f"{_one_line(f['symptom'])}"
                 f" — [{f['finding_id']}]({up}{page}#{str(f['finding_id']).lower()})"
                 f" · {_sev_badge(str(f['severity']))} · {state}"
             )
-        out.append("")
+        defects.append(_bullets(lines))
     else:
-        out += ["No defect here is open or awaiting verification.", ""]
+        defects.append(_paragraph("No defect here is open or awaiting verification."))
     if resolved:
-        out += [
-            f"{_count(len(resolved), 'further defect')} here reached a terminal"
-            f" state; {'it is' if len(resolved) == 1 else 'they are'} recorded on"
-            f" [Resolved findings]({up}resolved-findings.md).",
-            "",
-        ]
+        defects.append(
+            _paragraph(
+                f"{_count(len(resolved), 'further defect')} here reached a terminal"
+                f" state; {'it is' if len(resolved) == 1 else 'they are'} recorded on"
+                f" [Resolved findings]({up}resolved-findings.html)."
+            )
+        )
+    blocks.append(_section("Known defects here", *defects))
 
     # 7. Standing (§2.5): what this subsystem's record entitles a reader to claim.
-    out += ["## Standing", ""]
     # Read through `file_standing` and counted by the same predicates
     # `describe_locus` uses for a subsystem (§2.5, `mcp-server/src/standing.ts`),
     # so the page and the tool cannot report different coverage for one store.
@@ -1858,15 +2522,10 @@ def render_subsystem(
     }
     assessable_seams = sum(1 for sm in seams if int(sm["assessable"] or 0))
     status = str(s["status"] or "unmapped")
+    ladder = status_ladder_model(conn, str(sid), guide_href="../how-to-read.html")
     # What the ladder status authorizes and what it cannot justify, from the one
     # enum source (§10). A count without that sentence beside it reads as
     # coverage; it is an upper bound on what may be claimed.
-    out += [
-        f"**{SUBSYSTEM_STATUS_LABELS.get(status, status)}** —"
-        f" {SUBSYSTEM_STATUS_MEANINGS.get(status, 'no meaning is recorded for this status.')}"
-        f" It cannot justify {SUBSYSTEM_STATUS_LIMITS.get(status, 'more than it records')}.",
-        "",
-    ]
     # A ledger with no rows has no denominator, and `0 of 0` reads as coverage
     # of an empty set rather than as nothing measured (VP4).
     ledger_facts: list[tuple[str, str]] = (
@@ -1879,94 +2538,95 @@ def render_subsystem(
         if standing
         else [("Ledger", "no file is recorded, so nothing here is measured")]
     )
-    out += _metric_table(
-        [
-            *ledger_facts,
-            (
-                "Active concerns with a disposition recorded here",
-                f"{len(on_active)} of {len(active_concerns)}"
-                + (f" — {breakdown}" if breakdown else ""),
+    blocks.append(
+        _section(
+            "Standing",
+            _paragraph(
+                f"**{SUBSYSTEM_STATUS_LABELS.get(status, status)}** —"
+                f" {SUBSYSTEM_STATUS_MEANINGS.get(status, 'no meaning is recorded for this status.')}"
+                f" It cannot justify {SUBSYSTEM_STATUS_LIMITS.get(status, 'more than it records')}."
             ),
-            (
-                "Findings by resolution state",
-                ", ".join(
-                    f"{count} {RESOLUTION_LABELS.get(state, state).lower()}"
-                    for state, count in by_state.items()
-                    if count
-                )
-                or "none recorded",
+            ladder,
+            coverage_bars_model(conn, str(sid)),
+            _summary(
+                _caption("Standing"),
+                [
+                    *ledger_facts,
+                    (
+                        "Active concerns with a disposition recorded here",
+                        f"{len(on_active)} of {len(active_concerns)}"
+                        + (f" — {breakdown}" if breakdown else ""),
+                    ),
+                    (
+                        "Findings by resolution state",
+                        ", ".join(
+                            f"{count} {RESOLUTION_LABELS.get(state, state).lower()}"
+                            for state, count in by_state.items()
+                            if count
+                        )
+                        or "none recorded",
+                    ),
+                    (
+                        "Seams assessable from both sides",
+                        f"{assessable_seams} of {len(seams)}" if seams else "no seam names this subsystem",
+                    ),
+                ],
             ),
-            (
-                "Seams assessable from both sides",
-                f"{assessable_seams} of {len(seams)}" if seams else "no seam names this subsystem",
-            ),
-        ]
+        )
     )
 
     # 8. Survey record — apparatus, last.
-    out += ["## Survey record", ""]
+    record: list[Block] = []
     if account.state == "declined" and account.row is not None:
         reason, _is_body = _published_explanation(
             str(sid), "account", str(account.row["body"]), warn
         )
-        out += [
-            ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=reason.strip()),
-            "",
-        ]
-    out += ["### File ledger", ""]
+        record += render_prose(
+            ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=reason.strip())
+        )
+    record.append(_heading(3, "File ledger"))
     if files:
-        out += _ledger_groups(str(sid), files)
+        record += _ledger_blocks(str(sid), files)
     else:
-        out += ["No file is recorded in this subsystem's ledger.", ""]
+        record.append(_paragraph("No file is recorded in this subsystem's ledger."))
 
-    out += ["### Concern review", ""]
+    record.append(_heading(3, "Concern review"))
     if dispositions:
-        out += [
-            "| Concern | Classification | Evidence quality | Linchpin? | Rationale |",
-            "|---|---|---|---|---|",
-        ]
-        for d in dispositions:
-            lp = "🔗" if d["linchpin_dependent"] else ""
-            out.append(
-                f"| **{d['concern_code']}** | {d['classification']} | {d['evidence_quality']} | "
-                f"{lp} | {_table_cell(d['rationale'] or '—')} |"
-            )
-        out.append("")
+        record.append(_concern_review(dispositions, _caption("Survey record")))
     else:
-        out += ["No concern has been dispositioned in this subsystem.", ""]
+        record.append(_paragraph("No concern has been dispositioned in this subsystem."))
+    if by_section["concern-reasoning"]:
+        record.append(
+            _paragraph(
+                "The survey's reasoning about the concerns it reviewed here is on"
+                f" [Review coverage]({'../'}concerns.html#concern-reasoning), under this subsystem."
+            )
+        )
+    if by_section["challenge"]:
+        record.append(_heading(3, CHALLENGE_HEADING))
+        record += _narrative_blocks(by_section["challenge"], 4, workspace, bound, checked_head, warn)
 
     if survey_prose and placement in ("survey-record", "none"):
-        out += ["### Survey artifact", ""]
+        record.append(_heading(3, "Survey artifact"))
         if placement == "survey-record" and account.row is not None:
-            out += [
-                _survey_notes_line(sv, account.row)
-                for sv in survey_rows
-                if (storage / sv["path"]).is_file()
-            ]
-            out.append("")
-        out += [_nest_prose(survey_prose, 3)]
+            record += [_paragraph(_survey_notes_line(sv, account.row)) for sv in survey_rows]
+        record += _imported_blocks(surveys, 3, "Survey record", path)
     elif placement == "structure-narrative":
-        out += [
-            "### Survey artifact",
-            "",
-            NARRATIVE_POINTER + (f" Its source is {provenance}." if provenance else ""),
-            "",
-        ]
+        record += [_heading(3, "Survey artifact"), _paragraph(NARRATIVE_POINTER + source)]
     elif survey_prose:
         # §7.3 keeps the artifact in the survey record and §9.1 promotes it into
         # Structure when no claim stands in its place.  Rendering it twice would
         # make one page carry two copies of one witness, so the apparatus points
         # at the reading instead of repeating it.
-        out += [
-            "### Survey artifact",
-            "",
-            "The survey artifact is rendered above, under Structure, because no"
-            " structural claim is recorded to stand in its place."
-            + (f" Its source is {provenance}." if provenance else ""),
-            "",
+        record += [
+            _heading(3, "Survey artifact"),
+            _paragraph(
+                "The survey artifact is rendered above, under Structure, because no"
+                " structural claim is recorded to stand in its place." + source
+            ),
         ]
+    blocks.append(_section("Survey record", *record))
 
-    text = "\n".join(out).rstrip() + "\n"
     sources: dict[str, str] = (
         _db_source(f"subsystem:{sid}:row", s)
         | _db_source(f"subsystem:{sid}:files", files)
@@ -1978,12 +2638,13 @@ def render_subsystem(
         | _db_source(f"subsystem:{sid}:seams", seams)
         | _db_source(f"subsystem:{sid}:concerns", active_concerns)
         | _db_source(f"subsystem:{sid}:standing", standing)
+        | _db_source(f"subsystem:{sid}:ladder", ladder)
         | _db_source(f"subsystem:{sid}:claims", claims)
-        | _db_source(f"subsystem:{sid}:artifacts", survey_rows)
+        | imports_source(f"subsystem:{sid}:imports", surveys)
         | _db_source(f"subsystem:{sid}:explanations", {"head": checked_head, "rows": explanations})
-        | prose_sources
+        | _narrative_source(f"subsystem:{sid}:narratives", checked_head, narratives)
     )
-    return text, sources
+    return Page(_plain(f"{sid} — {s['name']}"), path, tuple(blocks)), sources
 
 
 # ---------------------------------------------------------------------------
@@ -2015,35 +2676,6 @@ def _finding_rows(
     )
 
 
-def _finding_table(subsystem_rows: Sequence[dict[str, Any]], level: int = 3) -> list[str]:
-    """One subsystem's findings as full marked records (spec §6.2).
-
-    `level` is where the subsystem sits in the page's own hierarchy: the
-    Unresolved lens nests it under resolution state and then severity, the
-    History lens under resolution state alone.
-    """
-    subsystem_id = str(subsystem_rows[0]["subsystem_id"])
-    subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
-    out = [
-        f"{'#' * level} [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
-        "",
-        f"| ID | Status | Symptom | {WHY_IT_MATTERS} | Root cause | Ref SHA |",
-        "|---|---|---|---|---|---|",
-    ]
-    for f in subsystem_rows:
-        out.append(finding_marker(str(f["finding_id"])))
-        context = _table_cell(f.get("business_context") or "")
-        out.append(
-            f"| <a id=\"{f['finding_id'].lower()}\"></a>**{f['finding_id']}** | "
-            f"{f['resolution_state']} | "
-            f"{_table_cell(f['symptom'])} | {context} | "
-            f"{_table_cell(f['root_cause'])} | "
-            f"`{(f['ref_sha'] or '—')[:8]}` |"
-        )
-    out.append("")
-    return out
-
-
 def _by_subsystem(fs: Sequence[dict[str, Any]]) -> list[list[dict[str, Any]]]:
     """Group rows by subsystem, keeping the order the query established."""
     groups: dict[str, list[dict[str, Any]]] = {}
@@ -2069,13 +2701,13 @@ _STATE_HINTS: dict[str, str] = {
 # one page, the rule §6.2 already fixes for findings, which is what lets the
 # read-back census count exactly one marker per corpus.
 CARRIED_LEAD = {
-    "findings.md": (
+    "findings.html": (
         "_{n} carried forward from an earlier store and still undecided. An"
         " inherited defect is an obligation to re-find it, rule it out with"
         " evidence, or mark it repaired at a commit — not a defect this survey"
         " confirmed, and not counted among the findings open above._"
     ),
-    "resolved-findings.md": (
+    "resolved-findings.html": (
         "_{n} carried forward from an earlier store and decided here. The"
         " archived record is what the predecessor held; the outcome is what this"
         " store did about it._"
@@ -2102,20 +2734,56 @@ def _successor_pages(conn: sqlite3.Connection) -> dict[str, str]:
     }
 
 
-def _carried_section(
+def _finding_record(f: Mapping[str, Any]) -> Record:
+    """One finding as the record the HTML prints: its lede, then what the symptom goes on to say."""
+
+    finding_id = str(f["finding_id"])
+    key = f'<a id="{finding_id.lower()}"></a>**{finding_id}**'
+    key_text = _plain(key)
+    symptom = _table_cell(f["symptom"])
+    state = str(f["resolution_state"])
+    ref = f"`{(f['ref_sha'] or '—')[:8]}`"
+    parts = re.split(r"(?<=[.!?])\s+", symptom, maxsplit=1)
+    fields: list[Fact] = []
+    if len(parts) == 2 and _plain(parts[1]):
+        fields.append(Fact("observed behavior", inlines(parts[1])))
+    context = _table_cell(f.get("business_context") or "")
+    if _plain(context):
+        fields.append(Fact("why it matters", inlines(context)))
+    fields.append(Fact("root cause", inlines(_table_cell(f["root_cause"]))))
+    return Record(
+        markers=(finding_marker(finding_id),),
+        key=inlines(key),
+        key_text=key_text,
+        slug_text=_plain(f"finding-{key_text}"),
+        facts=(
+            Fact("status", Inlines((Chip("status", _plain(state), show_hint=False),), _plain(state))),
+            Fact("ref sha", inlines(ref)),
+        ),
+        fields=tuple(fields),
+        lede=inlines(parts[0]),
+        path=key_text,
+        revision=_plain(ref),
+        subsystem_id=key_text,
+        record=f"finding:{finding_id}",
+        state=state,
+    )
+
+
+def _carried_blocks(
     records: Sequence[dict[str, Any]],
     page: str,
     successors: dict[str, str],
-) -> list[str]:
+) -> list[Block]:
     """Every carried record for one lens, each as a full marked record."""
 
     if not records:
         return []
     outcome_labels = labels("carried_finding_outcome")
-    out = [f"## {CARRIED_HEADING}", ""]
+    body: list[Block] = []
     lead = CARRIED_LEAD.get(page)
     if lead:
-        out += [lead.format(n=_count(len(records), "inherited obligation")), ""]
+        body.append(_paragraph(lead.format(n=_count(len(records), "inherited obligation"))))
     for record in records:
         store_id = str(record["archived_store_id"])
         archived_id = str(record["archived_finding_id"])
@@ -2125,23 +2793,18 @@ def _carried_section(
             if outcome == CARRIED_UNDECIDED
             else outcome_labels.get(outcome, outcome)
         )
-        out += [
-            f"### {archived_id} · {_sev_badge(str(record['severity']))} · {heading}",
-            "",
-            f"{carried_marker(store_id, archived_id)}"
-            f'<a id="{carried_anchor(store_id, archived_id)}"></a>',
-            "",
-            f"- **Carried from** `{store_id}` at {_short(str(record['archived_anchor_sha']))},"
+        facts = [
+            f"**Carried from** `{store_id}` at {_short(str(record['archived_anchor_sha']))},"
             f" recorded there as `{record['archived_resolution']}`",
-            f"- **Subsystem there** {record['subsystem_id']}",
+            f"**Subsystem there** {record['subsystem_id']}",
         ]
         if outcome == CARRIED_UNDECIDED:
-            out.append(
-                f"- **Outcome** `{CARRIED_UNDECIDED}` — nobody here has re-found it,"
+            facts.append(
+                f"**Outcome** `{CARRIED_UNDECIDED}` — nobody here has re-found it,"
                 " ruled it out, or recorded a repair"
             )
         else:
-            detail = f"- **Outcome** `{outcome}`"
+            detail = f"**Outcome** `{outcome}`"
             successor = str(record.get("successor_id") or "")
             if successor:
                 target = successors.get(successor)
@@ -2152,19 +2815,31 @@ def _carried_section(
                 )
             elif record.get("repaired_sha"):
                 detail += f" — repaired at {_short(str(record['repaired_sha']))}"
-            out.append(detail)
+            facts.append(detail)
             if record.get("rationale"):
-                out.append(f"- **Recorded because** {record['rationale']}")
-        out += ["", str(record["symptom"]), ""]
+                facts.append(f"**Recorded because** {_one_line(record['rationale'])}")
+        body += [
+            Heading(
+                3,
+                inlines(f"{archived_id} · {_sev_badge(str(record['severity']))} · {heading}"),
+                finding_group=page == "resolved-findings.html",
+            ),
+            _paragraph(
+                f"{carried_marker(store_id, archived_id)}"
+                f'<a id="{carried_anchor(store_id, archived_id)}"></a>'
+            ),
+            _bullets(facts),
+            *_paragraphs(str(record["symptom"])),
+        ]
         if record.get("root_cause"):
-            out += [f"**Root cause, as archived.** {record['root_cause']}", ""]
-    return out
+            body.append(_paragraph(f"**Root cause, as archived.** {_one_line(record['root_cause'])}"))
+    return [_section(CARRIED_HEADING, *body)]
 
 
 def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The Unresolved lens: open defects and repairs awaiting verification.
 
-    Resolved records render on `resolved-findings.md` instead, each with its
+    Resolved records render on `resolved-findings.html` instead, each with its
     marker, so every finding is a full record on exactly one page (spec §6.2).
     """
     # §6.1 orders the Unresolved lens state-major: every open finding, by
@@ -2175,13 +2850,26 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     # a denominator a reader can see.
     fs = _finding_rows(
         conn,
-        FINDING_LENS_STATES["findings.md"],
+        FINDING_LENS_STATES["findings.html"],
         """CASE v.resolution_state WHEN 'open' THEN 0 ELSE 1 END,
                      CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
                        WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END,
                      f.subsystem_id, f.finding_id""",
     )
-    out = ["# Open findings", ""]
+    blocks: list[Block] = []
+    # The Unresolved lens's records are this page's filterable rows (§8.1.2).
+    # Subsystem and severity are the headings a record already sits under, so
+    # the filter narrows on the page's own grouping and not on a second,
+    # restated classification.
+    facets: dict[str, list[str]] = {}
+
+    def facet(key: str, value: str) -> str:
+        if value:
+            values = facets.setdefault(key, [])
+            if value not in values:
+                values.append(value)
+        return value
+
     if not fs:
         resolved = row(
             conn,
@@ -2192,11 +2880,11 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             conn,
             "SELECT COUNT(*) AS n FROM file_ledger WHERE classification='examined'",
         ) or {"n": 0}
-        out += _empty_lens(
+        blocks += _empty_lens_blocks(
             conn,
             "No finding is open or awaiting verification."
             f" {_count(int(resolved['n'] or 0), 'resolved record')} are on"
-            " [Resolved findings](resolved-findings.md).",
+            " [Resolved findings](resolved-findings.html).",
             "defects with no terminal resolution event, and repairs recorded against a"
             " commit with no evidence yet that they hold.",
             f"`finding_state_current` over `findings`, read across"
@@ -2214,23 +2902,42 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             state_rows = [f for f in fs if f["resolution_state"] == state]
             if not state_rows:
                 continue
-            out += [f"## {heading}", ""]
-            out += [_STATE_HINTS[state].format(n=len(state_rows)), ""]
+            body: list[Block] = [_paragraph(_STATE_HINTS[state].format(n=len(state_rows)))]
             for sev in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
                 sev_rows = [f for f in state_rows if f["severity"] == sev]
                 if not sev_rows:
                     continue
-                out += [f"### {sev.title()} findings", ""]
+                body.append(_heading(3, f"{sev.title()} findings"))
                 for subsystem_rows in _by_subsystem(sev_rows):
-                    out += _finding_table(subsystem_rows, level=4)
+                    subsystem_id = str(subsystem_rows[0]["subsystem_id"])
+                    subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
+                    body.append(
+                        Heading(
+                            4,
+                            inlines(f"[{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})"),
+                            finding_group=True,
+                        )
+                    )
+                    group = facet("subsystem", _plain(subsystem_name))
+                    band = facet("severity", sev.title())
+                    records = tuple(
+                        replace(_finding_record(f), filter=RowFilter(group, band)) for f in subsystem_rows
+                    )
+                    body.append(RecordList("finding", _caption(heading), records))
+            blocks.append(_section(heading, *body))
     # §5.6: obligations inherited from an earlier store, still undecided here.
     carried = [
         record
         for record in carried_records(conn)
-        if carried_page(str(record["outcome"])) == "findings.md"
+        if carried_page(str(record["outcome"])) == "findings.html"
     ]
-    out += _carried_section(carried, "findings.md", _successor_pages(conn))
-    return "\n".join(out) + "\n", {
+    blocks += _carried_blocks(carried, "findings.html", _successor_pages(conn))
+    page_facets = (
+        Facets("findings", tuple((key, tuple(values)) for key, values in facets.items()))
+        if fs
+        else None
+    )
+    return Page("Open findings", "findings.html", tuple(blocks), page_facets), {
         **_db_source("findings:open", fs),
         **_db_source("findings:carried", carried),
     }
@@ -2287,7 +2994,7 @@ def _cited_path(path: str, ledgered: set[str]) -> str:
     """
 
     if path in ledgered:
-        return f"[`{path}`](files.md#{file_anchor(path)})"
+        return f"[`{path}`](files.html#{file_anchor(path)})"
     return f"`{path}`"
 
 
@@ -2328,9 +3035,9 @@ def _resolution_basis(
     return BASIS_NONE, NO_BASIS_SENTENCE
 
 
-def _resolved_records(
+def _resolved_blocks(
     subsystem_rows: Sequence[dict[str, Any]], bases: dict[str, tuple[str, str]]
-) -> list[str]:
+) -> list[Block]:
     """One subsystem's resolved findings as full marked records (§6.2, §7.7).
 
     A register rather than a table: the basis is a sentence, not a peer column,
@@ -2340,24 +3047,24 @@ def _resolved_records(
 
     subsystem_id = str(subsystem_rows[0]["subsystem_id"])
     subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
-    out = [
-        f"### [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
-        "",
+    out: list[Block] = [
+        Heading(
+            3,
+            inlines(f"[{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})"),
+            finding_group=True,
+        )
     ]
     for f in subsystem_rows:
         fid = str(f["finding_id"])
         kind, detail = bases[fid]
-        out.append(finding_marker(fid))
-        out.append(f'<a id="{fid.lower()}"></a>')
-        out += [f"#### {fid} · `{f['severity']}`", ""]
-        out += [str(f["symptom"]).strip(), ""]
+        facts: list[str] = []
         context = _one_line(f.get("business_context") or "")
         if context:
-            out.append(f"- **{WHY_IT_MATTERS}** — {context}")
-        out.append(f"- **Root cause** — {_one_line(f['root_cause'])}")
+            facts.append(f"**{WHY_IT_MATTERS}** — {context}")
+        facts.append(f"**Root cause** — {_one_line(f['root_cause'])}")
         recorded = str(f["resolution_recorded_at"] or "")
-        out.append(
-            f"- **Resolution** — `{f['resolution_state']}`"
+        facts.append(
+            f"**Resolution** — `{f['resolution_state']}`"
             + (
                 f", recorded {_fmt_time(recorded)}."
                 if recorded
@@ -2365,12 +3072,24 @@ def _resolved_records(
             )
         )
         if f["fix_sha"] or f["fix_location"]:
-            out.append(
-                f"- **Repair** — {_short(str(f['fix_sha'] or ''))} at"
+            facts.append(
+                f"**Repair** — {_short(str(f['fix_sha'] or ''))} at"
                 f" `{f['fix_location'] or 'no location recorded'}`."
             )
-        out.append(f"- **Basis** — `{kind}`: {_one_line(detail)}")
-        out.append("")
+        facts.append(f"**Basis** — `{kind}`: {_one_line(detail)}")
+        out += [
+            RecordMarker(finding_marker(fid)),
+            Anchor(fid.lower()),
+            Marked(
+                f"finding:{fid}",
+                str(f["resolution_state"]),
+                (
+                    _heading(4, f"{fid} · `{f['severity']}`"),
+                    *_paragraphs(str(f["symptom"])),
+                    _bullets(facts),
+                ),
+            ),
+        ]
     return out
 
 
@@ -2392,7 +3111,7 @@ def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderR
 
     fs = _finding_rows(
         conn,
-        FINDING_LENS_STATES["resolved-findings.md"],
+        FINDING_LENS_STATES["resolved-findings.html"],
         "v.resolution_recorded_at DESC, f.subsystem_id, f.finding_id",
     )
     events = _resolution_events(conn)
@@ -2409,65 +3128,65 @@ def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderR
     carried = [
         record
         for record in carried_records(conn)
-        if carried_page(str(record["outcome"])) == "resolved-findings.md"
+        if carried_page(str(record["outcome"])) == "resolved-findings.html"
     ]
-    carried_block = _carried_section(carried, "resolved-findings.md", _successor_pages(conn))
-    carried_source = _db_source("findings:carried-resolved", carried)
+    carried_block = _carried_blocks(carried, "resolved-findings.html", _successor_pages(conn))
+    sources = {
+        **_db_source("findings:resolved", fs),
+        **_db_source("findings:resolved-basis", bases),
+        **_db_source("findings:carried-resolved", carried),
+    }
 
-    out = ["# Resolved findings", ""]
+    blocks: list[Block] = []
     if not fs:
-        out += _empty_lens(
+        blocks += _empty_lens_blocks(
             conn,
             "No finding has reached a terminal state.",
             "findings recorded verified-fixed, ruled out, or accepted, each with the"
             " basis its resolution rests on.",
             "`finding_state_current` over `findings` and `finding_resolution_events`.",
         )
-        out += carried_block
-        return "\n".join(out) + "\n", {
-            **_db_source("findings:resolved", fs),
-            **_db_source("findings:resolved-basis", bases),
-            **carried_source,
-        }
+        blocks += carried_block
+        return Page("Resolved findings", "resolved-findings.html", tuple(blocks)), sources
 
-    out += [
-        "_Each record carries the basis its resolution rests on, labelled by kind."
-        " A verified repair rests on evidence; a claim ruled out or a behaviour"
-        " accepted rests on an argument someone authorized to make it recorded._",
-        "",
-    ]
+    blocks.append(
+        _paragraph(
+            "_Each record carries the basis its resolution rests on, labelled by kind."
+            " A verified repair rests on evidence; a claim ruled out or a behaviour"
+            " accepted rests on an argument someone authorized to make it recorded._"
+        )
+    )
 
     unbacked = [f for f in fs if bases[str(f["finding_id"])][0] == BASIS_NONE]
     if unbacked:
         ids = ", ".join(
             f"[**{f['finding_id']}**](#{str(f['finding_id']).lower()})" for f in unbacked
         )
-        out += [
-            f"## {NO_BASIS_HEADING}",
-            "",
-            f"{_count(len(unbacked), 'record')} below reached a terminal state with"
-            " neither verification evidence nor a recorded rationale. The store says"
-            f" they are closed and does not say on what: {ids}.",
-            "",
-        ]
+        blocks.append(
+            _section(
+                NO_BASIS_HEADING,
+                _paragraph(
+                    f"{_count(len(unbacked), 'record')} below reached a terminal state with"
+                    " neither verification evidence nor a recorded rationale. The store says"
+                    f" they are closed and does not say on what: {ids}."
+                ),
+            )
+        )
 
-    for state in FINDING_LENS_STATES["resolved-findings.md"]:
+    for state in FINDING_LENS_STATES["resolved-findings.html"]:
         state_rows = [f for f in fs if f["resolution_state"] == state]
         if not state_rows:
             continue
-        out += [f"## {RESOLUTION_LABELS.get(state, state)}", ""]
+        body: list[Block] = []
         hint = _RESOLVED_STATE_HINTS.get(state)
         if hint:
-            out += [hint.format(n=_count(len(state_rows), "record")), ""]
+            body.append(_paragraph(hint.format(n=_count(len(state_rows), "record"))))
         for subsystem_rows in _by_subsystem(state_rows):
-            out += _resolved_records(subsystem_rows, bases)
+            body += _resolved_blocks(subsystem_rows, bases)
+        blocks.append(_section(RESOLUTION_LABELS.get(state, state), *body))
 
-    out += carried_block
-    return "\n".join(out) + "\n", {
-        **_db_source("findings:resolved", fs),
-        **_db_source("findings:resolved-basis", bases),
-        **carried_source,
-    }
+    blocks += carried_block
+    return Page("Resolved findings", "resolved-findings.html", tuple(blocks)), sources
 
 
 def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -2475,70 +3194,125 @@ def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         conn,
         "SELECT code, category, origin, status, discovered_in, notes FROM concerns ORDER BY status, code",
     )
-    out = ["# Concerns", "", "## Coverage overview", "", concern_coverage_heatmap(conn), ""]
+    blocks: list[Block] = [_section("Coverage overview", *coverage_blocks(conn))]
     active = [c for c in cs if c["status"] == "active"]
     retired = [c for c in cs if c["status"] in ("retired", "merged")]
-    if active:
-        out += ["## Active concerns", "", "| Code | Category | Origin | Discovered in | Notes |", "|---|---|---|---|---|"]
-        for c in active:
-            out.append(
-                f"| <a id=\"{c['code'].lower()}\"></a>**{c['code']}** | {c['category'] or '—'} | "
-                f"{c['origin']} | {c['discovered_in'] or '—'} | {_table_cell(c['notes'] or '')} |"
+    # Each subsystem's concern reasoning, the survey's account of why its
+    # concerns apply where they do (store-only PLAN §8 SO9).
+    reasoning = [r for r in effective_narratives(conn, storage) if r["section"] == "concern-reasoning"]
+    if reasoning:
+        workspace = resolve_workspace(storage)
+        bound = workspace_is_bound(workspace)
+        head = str(
+            (row(conn, "SELECT last_checked_sha FROM git_state WHERE repo_id='default'") or {}).get(
+                "last_checked_sha"
             )
-        out.append("")
+            or ""
+        )
+        names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
+        held: list[Block] = [
+            _paragraph("Why each subsystem's concerns apply where they do, in the survey's words.")
+        ]
+        for sid in dict.fromkeys(str(r["subject_id"]) for r in reasoning):
+            held.append(_heading(3, f"{sid} — {_one_line(names.get(sid, sid))}"))
+            held += _narrative_blocks(
+                [r for r in reasoning if r["subject_id"] == sid], 4, workspace, bound, head, None
+            )
+        blocks.append(_section("Concern reasoning", *held))
+    if active:
+        blocks.append(
+            _section(
+                "Active concerns",
+                RecordList(
+                    "concern",
+                    _caption("Active concerns"),
+                    tuple(
+                        _record(
+                            "concern",
+                            f"<a id=\"{c['code'].lower()}\"></a>**{c['code']}**",
+                            (
+                                ("category", c["category"] or "—"),
+                                ("origin", c["origin"]),
+                                ("discovered in", c["discovered_in"] or "—"),
+                            ),
+                            (("notes", _table_cell(c["notes"] or "")),),
+                            number,
+                        )
+                        for number, c in enumerate(active, start=1)
+                    ),
+                ),
+            )
+        )
     if retired:
-        out += ["## Retired/merged concerns", ""]
-        for c in retired:
-            out.append(f"- **{c['code']}** — {c['status']} · {c['notes'] or ''}")
-        out.append("")
-    return "\n".join(out) + "\n", _db_source("concerns:all", cs) | _db_source(
+        blocks.append(
+            _section(
+                "Retired/merged concerns",
+                _bullets([f"**{c['code']}** — {c['status']} · {_one_line(c['notes'] or '')}" for c in retired]),
+            )
+        )
+    return Page("Concerns", "concerns.html", tuple(blocks)), _db_source("concerns:all", cs) | _db_source(
         "concerns:disp", rows(conn, "SELECT * FROM dispositions")
-    ) | _db_source("concerns:subs", rows(conn, "SELECT id FROM subsystems"))
+    ) | _db_source("concerns:subs", rows(conn, "SELECT id FROM subsystems")) | _db_source(
+        "concerns:reasoning", reasoning
+    )
+
+
+def _record(
+    kind: str,
+    key_raw: str,
+    facts: Sequence[tuple[str, str]],
+    fields: Sequence[tuple[str, str]],
+    number: int,
+) -> Record:
+    """One row of a record table as the record the HTML prints: its facts, then its content fields."""
+
+    key_text = _plain(key_raw) or f"Record {number}"
+    anchor_text = re.sub(r"^concern\s+", "", key_text) if kind == "concern-disposition" else key_text
+    return Record(
+        markers=(),
+        key=inlines(key_raw.strip()),
+        key_text=key_text,
+        slug_text=_plain(f"{kind}-{anchor_text}"),
+        facts=tuple(Fact(name, inlines(value.strip())) for name, value in facts if _plain(value)),
+        fields=tuple(Fact(name, inlines(value.strip())) for name, value in fields if _plain(value)),
+        path=_plain(key_raw),
+    )
 
 
 def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     seams = rows(conn, "SELECT * FROM seams ORDER BY id")
     assess = rows(conn, "SELECT * FROM seam_assessability")
     asmap = {a["seam_id"]: a for a in assess}
-    out = ["# Seams", "", seam_graph(conn), ""]
+    blocks: list[Block] = list(seam_blocks(conn, "Seams"))
     if not seams:
-        out.append("_No seams recorded yet._")
+        blocks.append(_paragraph("_No seams recorded yet._"))
     else:
-        out += [
-            "| Seam | Shared object | Kind | Parties | Assessable? | Notes |",
-            "|---|---|---|---|---|---|",
-        ]
-        for s in seams:
+        blocks.extend(seam_contract_model(conn, str(s["id"])) for s in seams)
+        records: list[Record] = []
+        for number, s in enumerate(seams, start=1):
             a = asmap.get(s["id"], {})
-            assessable = "✅" if a.get("assessable") else "⏳"
-            parties = f"**{s['party_a']}** ↔ **{s['party_b']}**"
-            out.append(
-                f"| <a id=\"{s['id'].lower()}\"></a>**{s['id']}** | {_table_cell(s['shared_object'])} | {s['shared_object_kind'] or '—'} | "
-                f"{parties} | {assessable} | {_table_cell(s['notes'] or '')} |"
+            records.append(
+                _record(
+                    "seam",
+                    f"<a id=\"{s['id'].lower()}\"></a>**{s['id']}**",
+                    (
+                        ("kind", s["shared_object_kind"] or "—"),
+                        ("parties", f"**{s['party_a']}** ↔ **{s['party_b']}**"),
+                        ("assessable?", "✅" if a.get("assessable") else "⏳"),
+                    ),
+                    (("shared object", _table_cell(s["shared_object"])), ("notes", _table_cell(s["notes"] or ""))),
+                    number,
+                )
             )
-        out.append("")
-    return "\n".join(out) + "\n", _db_source("seams:all", seams) | _db_source("seams:assess", assess)
-
-
-def _contradiction_records(
-    cs: Sequence[dict[str, Any]], columns: Sequence[str], cell: Any
-) -> list[str]:
-    """One contradiction per row, anchored so an event can link back to it."""
-
-    out = [f"| {' | '.join(columns)} |", "|" + "---|" * len(columns)]
-    for c in cs:
-        anchor = contradiction_anchor(c["id"])
-        out.append(
-            f'| <a id="{anchor}"></a>**#{c["id"]}** | ' + " | ".join(cell(c)) + " |"
-        )
-    out.append("")
-    return out
+            records[-1] = replace(records[-1], record=f"seam:{s['id']}")
+        blocks.append(RecordList("seam", "Seams", tuple(records)))
+    return Page("Seams", "seams.html", tuple(blocks)), _db_source("seams:all", seams) | _db_source("seams:assess", assess)
 
 
 def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The History lens for contradictions: the ones the evidence settled.
 
-    Rows still standing move to `disagreements.md` (§6.1, §7.1). Keeping a copy
+    Rows still standing move to `disagreements.html` (§6.1, §7.1). Keeping a copy
     here would put one record in two lenses, and an event linking back to "the
     contradiction" would have two places to land.
     """
@@ -2563,38 +3337,29 @@ def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResu
         "SELECT COUNT(*) AS n FROM contradictions"
         " WHERE COALESCE(resolution,'unresolved')='unresolved'",
     ) or {"n": 0}
-    out = ["# Conflicting evidence", ""]
     if not cs:
-        out += _empty_lens(
+        blocks = _empty_lens_blocks(
             conn,
             "No disagreement between findings has been settled."
             f" {_count(int(standing['n'] or 0), 'pair')} still stand"
-            " undiscriminated, on [Records that disagree](disagreements.md).",
+            " undiscriminated, on [Records that disagree](disagreements.html).",
             "pairs of findings that made incompatible claims about one locus, and the"
             " evidence or argument that chose between them.",
             "`contradictions` whose resolution is recorded, with"
             " `contradiction_resolution_events` for the account of how.",
         )
-        return "\n".join(out) + "\n", {
+        return Page("Conflicting evidence", "contradictions.html", tuple(blocks)), {
             **_db_source("contradictions:resolved", cs),
             **_db_source("contradictions:events", sorted(events)),
             **_db_source("contradictions:standing", standing),
         }
 
-    out += [
-        "_Two findings made incompatible claims about the same locus and the record"
-        " now says which one holds. The disagreement is kept rather than smoothed"
-        " away, so a reader who forms the overturned reading again meets the"
-        " argument that settled it. Disagreements still standing are on"
-        " [Records that disagree](disagreements.md)._",
-        "",
-    ]
-
-    def cell(c: dict[str, Any]) -> list[str]:
+    def cells(c: dict[str, Any]) -> list[str]:
         event = events.get(int(c["id"]))
         rationale = _table_cell((event or {}).get("rationale") or "")
         scope_note = _table_cell(c["scope_note"] or "")
         return [
+            f'<a id="{contradiction_anchor(c["id"])}"></a>**#{c["id"]}**',
             f"**{c['finding_a']}** / **{c['finding_b']}**",
             f"`{c['resolution']}`",
             f"`{c['shared_location']}`" if c["shared_location"] else "—",
@@ -2602,12 +3367,21 @@ def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResu
             rationale or scope_note or "No account of the resolution is recorded.",
         ]
 
-    out += _contradiction_records(
-        cs,
-        ("Record", "Findings", "Resolution", "Shared locus", "Settled", "On what"),
-        cell,
-    )
-    return "\n".join(out) + "\n", {
+    blocks = [
+        _paragraph(
+            "_Two findings made incompatible claims about the same locus and the record"
+            " now says which one holds. The disagreement is kept rather than smoothed"
+            " away, so a reader who forms the overturned reading again meets the"
+            " argument that settled it. Disagreements still standing are on"
+            " [Records that disagree](disagreements.html)._"
+        ),
+        _table(
+            "Conflicting evidence",
+            ("Record", "Findings", "Resolution", "Shared locus", "Settled", "On what"),
+            [cells(c) for c in cs],
+        ),
+    ]
+    return Page("Conflicting evidence", "contradictions.html", tuple(blocks)), {
         **_db_source("contradictions:resolved", cs),
         **_db_source("contradictions:events", sorted(events)),
     }
@@ -2618,35 +3392,38 @@ def render_diagnosticity(conn: sqlite3.Connection, storage: Path) -> RenderResul
         conn,
         "SELECT id, subsystem_id, symptom, outcome, leading_concern, created_at FROM diagnosticity_sessions ORDER BY created_at DESC",
     )
-    out = [
-        "# Diagnosticity matrices",
-        "",
-        "_When two or more concerns could each explain the same symptom, we open a "
-        "[diagnosticity matrix](https://en.wikipedia.org/wiki/Analysis_of_competing_hypotheses) "
-        "and evaluate evidence row-by-row across the competing concerns. Evidence consistent "
-        "with all concerns has zero diagnostic value; evidence that contradicts only one is "
-        "decisive. We rank by inconsistency — the concern with the most contradicting evidence "
-        "is rejected first. Linchpin evidence (single-point-of-failure for the leading "
-        "hypothesis) is flagged explicitly._",
-        "",
+    blocks: list[Block] = [
+        _paragraph(
+            "_When two or more concerns could each explain the same symptom, we open a "
+            "[diagnosticity matrix](https://en.wikipedia.org/wiki/Analysis_of_competing_hypotheses) "
+            "and evaluate evidence row-by-row across the competing concerns. Evidence consistent "
+            "with all concerns has zero diagnostic value; evidence that contradicts only one is "
+            "decisive. We rank by inconsistency — the concern with the most contradicting evidence "
+            "is rejected first. Linchpin evidence (single-point-of-failure for the leading "
+            "hypothesis) is flagged explicitly._"
+        )
     ]
     if not matrices:
-        out.append("_No diagnosticity matrices recorded._")
+        blocks.append(_paragraph("_No diagnosticity matrices recorded._"))
     else:
-        out += [
-            "| ID | Subsystem | Symptom | Outcome | Leading concern | Opened |",
-            "|---|---|---|---|---|---|",
-        ]
-        for m in matrices:
-            mid = f"DM-{m['id']}"
-            out.append(
-                f"| [**{mid}**](diagnosticity/{matrix_slug(m['id'])}.md) | "
-                f"**{m['subsystem_id'] or '—'}** | {_table_cell(m['symptom'] or '')} | "
-                f"{m['outcome']} | {m['leading_concern'] or '—'} | "
-                f"{_fmt_time(m['created_at'])} |"
+        blocks.append(
+            _table(
+                "Diagnosticity matrices",
+                ("ID", "Subsystem", "Symptom", "Outcome", "Leading concern", "Opened"),
+                [
+                    [
+                        f"[**DM-{m['id']}**](diagnosticity/{matrix_slug(m['id'])}.md)",
+                        f"**{m['subsystem_id'] or '—'}**",
+                        _table_cell(m["symptom"] or ""),
+                        str(m["outcome"]),
+                        m["leading_concern"] or "—",
+                        _fmt_time(m["created_at"]),
+                    ]
+                    for m in matrices
+                ],
             )
-        out.append("")
-    return "\n".join(out) + "\n", _db_source("diagnosticity:index", matrices)
+        )
+    return Page("Diagnosticity matrices", "diagnosticity.html", tuple(blocks)), _db_source("diagnosticity:index", matrices)
 
 
 def render_diagnosticity_matrix(
@@ -2689,53 +3466,60 @@ def render_diagnosticity_matrix(
             "ambiguous": "~",
         }.get(verdict or "", "—")
 
-    out = [
-        f"# DM-{mid} · {m['symptom']}",
-        "",
-        f"**Subsystem**: **{m['subsystem_id'] or '—'}**  ",
-        f"**Shared location**: `{m['shared_location'] or '—'}`  ",
+    head = [
+        f"**Subsystem**: **{m['subsystem_id'] or '—'}**",
+        f"**Shared location**: `{m['shared_location'] or '—'}`",
         f"**Outcome**: {m['outcome']}",
     ]
     if m.get("leading_concern"):
-        out.append(f"**Leading concern**: **{m['leading_concern']}**  ")
+        head.append(f"**Leading concern**: **{m['leading_concern']}**")
     if m.get("linchpin_note"):
-        out.append(f"**Linchpin note**: {m['linchpin_note']}")
-    out += ["", "## Matrix", ""]
+        head.append(f"**Linchpin note**: {m['linchpin_note']}")
+    blocks: list[Block] = [_paragraph(" ".join(head))]
+
+    matrix: list[Block] = []
     if not concerns or not evidence:
-        out.append("_Matrix has no concerns or evidence rows._")
+        matrix.append(_paragraph("_Matrix has no concerns or evidence rows._"))
     else:
-        # Header: evidence row x concerns
-        header = "| Evidence | " + " | ".join(f"**{c['concern_code']}**" for c in concerns) + " | Diagnostic value |"
-        sep = "|---|" + "|".join(["---"] * len(concerns)) + "|---|"
-        out += [header, sep]
+        body: list[list[str]] = []
         for e in evidence:
             loc = f"`{e['file_path']}`"
             if e["symbol"]:
                 loc += f" · `{e['symbol']}`"
             loc += f" · _{e['kind']}_"
-            cells_row = [
-                _cell_emoji(cell_map.get((c["concern_code"], e["id"]), {}).get("verdict"))
-                for c in concerns
-            ]
             v = value_map.get(e["id"], {})
-            dv = f"{v.get('n_contradicts', 0)}✗ / {v.get('n_consistent', 0)}✓"
-            out.append(f"| {loc} | " + " | ".join(cells_row) + f" | {dv} |")
-        out += ["", "**Cell legend**: ✓ consistent · ✗ contradicts · · irrelevant · ~ ambiguous", ""]
+            body.append(
+                [
+                    loc,
+                    *(_cell_emoji(cell_map.get((c["concern_code"], e["id"]), {}).get("verdict")) for c in concerns),
+                    f"{v.get('n_contradicts', 0)}✗ / {v.get('n_consistent', 0)}✓",
+                ]
+            )
+        matrix.append(
+            _table(
+                "matrix",
+                ("Evidence", *(f"**{c['concern_code']}**" for c in concerns), "Diagnostic value"),
+                body,
+            )
+        )
+        matrix.append(_paragraph("**Cell legend**: ✓ consistent · ✗ contradicts · · irrelevant · ~ ambiguous"))
+    blocks.append(_section("Matrix", *matrix))
 
     if evidence:
-        out += ["## Evidence detail", ""]
+        detail: list[Block] = []
         for e in evidence:
-            out.append(f"### Evidence #{e['id']}")
-            out.append("")
-            out.append(f"`{e['file_path']}` · `{e.get('symbol') or '—'}` · _{e['kind']}_ · ref `{(e['ref_sha'] or '')[:8]}`")
+            detail.append(_heading(3, f"Evidence #{e['id']}"))
+            detail.append(
+                _paragraph(
+                    f"`{e['file_path']}` · `{e.get('symbol') or '—'}` · _{e['kind']}_ · ref `{(e['ref_sha'] or '')[:8]}`"
+                )
+            )
             if e.get("excerpt"):
-                out += ["", "```", e["excerpt"], "```"]
+                detail.append(Code("", "\n".join(str(e["excerpt"]).splitlines())))
             if e.get("note"):
-                out.append("")
-                out.append(f"_{e['note']}_")
-            out.append("")
+                detail.append(_paragraph(f"_{_one_line(e['note'])}_"))
+        blocks.append(_section("Evidence detail", *detail))
 
-    text = "\n".join(out) + "\n"
     sources = (
         _db_source(f"matrix:{mid}:session", m)
         | _db_source(f"matrix:{mid}:concerns", concerns)
@@ -2743,7 +3527,8 @@ def render_diagnosticity_matrix(
         | _db_source(f"matrix:{mid}:cells", cells)
         | _db_source(f"matrix:{mid}:value", value)
     )
-    return text, sources
+    title = _plain(f"DM-{mid} · {m['symptom']}")
+    return Page(title, matrix_page(mid), tuple(blocks)), sources
 
 
 # §4.5's three states, named once. `terms`, `declined` and `not-recorded` are
@@ -2879,9 +3664,6 @@ PLACEHOLDER_SENTENCES: tuple[str, ...] = (
     PROJECT_ACCOUNT_ABSENT,
 )
 
-_THESIS_HEADING = "## What is this codebase?"
-_RUNTIME_HEADING = "## Runtime boundary map"
-
 
 def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, str]]:
     """One row per slot that applies and is unfilled, from the predicates the pages use.
@@ -2895,40 +3677,45 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
     """
 
     census: list[dict[str, str]] = []
-    state = thesis_state(storage)
+    state = thesis_state(conn, storage)
     if state == "absent":
         census.append(
             {
                 "slot": "thesis",
-                "page": "index.md",
+                "page": "index.html",
                 "subject": "project",
                 "state": state,
-                "discharge": f"add a '{_THESIS_HEADING}' section to {THESIS_SOURCE}",
+                # Only a recorded purpose discharges it: the server refuses to
+                # decline the project's purpose (`explanations.ts`; F4/codex).
+                "discharge": (
+                    "call record_explanation with subject_type project and slot purpose;"
+                    " the project's purpose cannot be declined"
+                ),
             }
         )
     elif state == "refused":
         census.append(
             {
                 "slot": "thesis",
-                "page": "index.md",
+                "page": "index.html",
                 "subject": "project",
                 "state": state,
                 "discharge": (
-                    f"correct the '{_THESIS_HEADING}' section of {THESIS_SOURCE}, so that it"
-                    " carries no status vocabulary and no composite figure"
+                    "call record_explanation with subject_type project and slot purpose,"
+                    " so that it carries no status vocabulary and no composite figure"
                 ),
             }
         )
-    if runtime_boundary_state(storage) == "absent":
+    if runtime_boundary_state(conn) == "absent":
         census.append(
             {
                 "slot": "runtime-boundary-map",
-                "page": "architecture.md",
+                "page": "architecture.html",
                 "subject": "project",
                 "state": "absent",
                 "discharge": (
-                    f"add a '{_RUNTIME_HEADING}' table with the columns"
-                    f" {', '.join(RUNTIME_BOUNDARY_COLUMNS)} to onboarding-report.md"
+                    "call record_runtime_boundary for each edge between runtimes, with the"
+                    f" columns {', '.join(RUNTIME_BOUNDARY_COLUMNS)}"
                 ),
             }
         )
@@ -2989,7 +3776,7 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
         census.append(
             {
                 "slot": "project-account",
-                "page": "architecture.md",
+                "page": "architecture.html",
                 "subject": "project",
                 "state": "not-recorded",
                 "discharge": (
@@ -3006,38 +3793,31 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         conn,
         "SELECT term, gloss, expansion, subsystem_id, first_seen FROM vocabulary ORDER BY COALESCE(subsystem_id, ''), term",
     )
-    out = ["# Glossary", ""]
+    blocks: list[Block] = []
+
+    def term_blocks(t: dict[str, Any]) -> list[Block]:
+        out: list[Block] = [_heading(3, str(t["term"])), _paragraph(f"_{t['gloss']}_")]
+        if t.get("expansion"):
+            out += render_prose(str(t["expansion"]).strip())
+        if t.get("first_seen"):
+            out.append(_paragraph(f"First seen: `{t['first_seen']}`"))
+        return out
+
     if not terms:
-        out.append("_No vocabulary recorded._")
+        blocks.append(_paragraph("_No vocabulary recorded._"))
     else:
         # Codebase-wide first, then grouped by subsystem.
         global_terms = [t for t in terms if not t["subsystem_id"]]
         scoped = [t for t in terms if t["subsystem_id"]]
         if global_terms:
-            out += ["## Codebase-wide", ""]
-            for t in global_terms:
-                out.append(f"### {t['term']}")
-                out += ["", f"_{t['gloss']}_"]
-                if t.get("expansion"):
-                    out += ["", t["expansion"]]
-                if t.get("first_seen"):
-                    out += ["", f"First seen: `{t['first_seen']}`"]
-                out.append("")
+            blocks.append(_section("Codebase-wide", *(b for t in global_terms for b in term_blocks(t))))
         if scoped:
             # Group by subsystem_id.
             by_ss: dict[str, list[dict[str, Any]]] = {}
             for t in scoped:
                 by_ss.setdefault(t["subsystem_id"], []).append(t)
             for sid, items in by_ss.items():
-                out += [f"## Scoped to **{sid}**", ""]
-                for t in items:
-                    out.append(f"### {t['term']}")
-                    out += ["", f"_{t['gloss']}_"]
-                    if t.get("expansion"):
-                        out += ["", t["expansion"]]
-                    if t.get("first_seen"):
-                        out += ["", f"First seen: `{t['first_seen']}`"]
-                    out.append("")
+                blocks.append(_section(f"Scoped to **{sid}**", *(b for t in items for b in term_blocks(t))))
 
     # §4.5: a subsystem that answered "none" is listed, with its reason, so a
     # reader can tell it from a subsystem nobody asked. The denominator is
@@ -3056,27 +3836,23 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         sid for sid in registered if states[sid] == "terms" and declined.get(sid)
     ]
     if current or superseded:
-        out += [
-            f"## {VOCABULARY_INDEX_HEADING} ({len(current)} of {len(registered)})",
-            "",
-        ]
-    if current:
-        for sid in current:
-            out.append(f"- **{sid}** — {_declination_sentence(declined[sid][0])}")
-        out.append("")
-    elif superseded:
-        out += [
-            "No subsystem's current state is a declination.",
-            "",
-        ]
-    if superseded:
-        out += [
-            f"{_count(len(superseded), 'further subsystem')} declared none earlier and"
-            " has since recorded a term; the judgment is kept on each subsystem's page"
-            f" as superseded history: {', '.join(f'**{sid}**' for sid in superseded)}.",
-            "",
-        ]
-    return "\n".join(out) + "\n", {
+        index: list[Block] = []
+        if current:
+            index.append(
+                _bullets([f"**{sid}** — {_declination_sentence(declined[sid][0])}" for sid in current])
+            )
+        elif superseded:
+            index.append(_paragraph("No subsystem's current state is a declination."))
+        if superseded:
+            index.append(
+                _paragraph(
+                    f"{_count(len(superseded), 'further subsystem')} declared none earlier and"
+                    " has since recorded a term; the judgment is kept on each subsystem's page"
+                    f" as superseded history: {', '.join(f'**{sid}**' for sid in superseded)}."
+                )
+            )
+        blocks.append(_section(f"{VOCABULARY_INDEX_HEADING} ({len(current)} of {len(registered)})", *index))
+    return Page("Glossary", "vocabulary.html", tuple(blocks)), {
         **_db_source("vocab:all", terms),
         **_db_source("vocab:declined", declined),
     }
@@ -3085,7 +3861,7 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
 def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The Unresolved lens for leads: observations still open (§6.1, §7.1).
 
-    Closed leads move to `resolved-leads.md`, where the page states what the
+    Closed leads move to `resolved-leads.html`, where the page states what the
     store does not record about how they got there. `field_notes.follow_up` is
     free text whose one reserved value is `open`, so membership is the negation
     of that value rather than a list of terminal ones.
@@ -3102,21 +3878,20 @@ def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         conn,
         "SELECT COUNT(*) AS n FROM field_notes WHERE COALESCE(follow_up,'open')<>'open'",
     ) or {"n": 0}
-    out = [
-        "# Leads",
-        "",
-        "_Observations from every survey pass that are not yet findings: patterns, "
-        "anomalies, connections, tensions, and candidate concerns recorded when a "
-        "reader noticed something the phase structure did not ask for. Closed leads "
-        "are on [Resolved leads and questions](resolved-leads.md)._",
-        "",
+    blocks: list[Block] = [
+        _paragraph(
+            "_Observations from every survey pass that are not yet findings: patterns, "
+            "anomalies, connections, tensions, and candidate concerns recorded when a "
+            "reader noticed something the phase structure did not ask for. Closed leads "
+            "are on [Resolved leads and questions](resolved-leads.html)._"
+        )
     ]
     if not notes:
-        out += _empty_lens(
+        blocks += _empty_lens_blocks(
             conn,
             "No lead is open."
             f" {_count(int(closed['n'] or 0), 'closed lead')} are on"
-            " [Resolved leads and questions](resolved-leads.md).",
+            " [Resolved leads and questions](resolved-leads.html).",
             "observations a survey pass recorded that are not yet findings and have"
             " not been closed.",
             "`field_notes` whose `follow_up` is still `open`.",
@@ -3132,17 +3907,21 @@ def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             items = by_cat.get(cat, [])
             if not items:
                 continue
-            out += [f"## {cat.replace('-', ' ').capitalize()}", ""]
-            out += [f"_{_count(len(items), 'open lead')}._", ""]
+            leads = []
             for n in items:
-                anchor = lead_anchor(n["id"])
                 loc = f" @ `{n['location']}`" if n["location"] else ""
-                out.append(
-                    f'- <a id="{anchor}"></a>{n["observation"]}{loc}'
+                leads.append(
+                    f'<a id="{lead_anchor(n["id"])}"></a>{_one_line(n["observation"])}{loc}'
                     f" · _recorded {_fmt_time(n['created_at'])}_"
                 )
-            out.append("")
-    return "\n".join(out) + "\n", {
+            blocks.append(
+                _section(
+                    cat.replace("-", " ").capitalize(),
+                    _paragraph(f"_{_count(len(items), 'open lead')}._"),
+                    _bullets(leads),
+                )
+            )
+    return Page("Leads", "field-notes.html", tuple(blocks)), {
         **_db_source("notes:open", notes),
         **_db_source("notes:closed-count", closed),
     }
@@ -3240,12 +4019,12 @@ def render_stale(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         for s in rows(conn, "SELECT id, name FROM subsystems")
     }
 
-    out = ["# Stale knowledge", ""]
+    blocks: list[Block] = []
     git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
     checked = str(git.get("last_checked_sha") or "")
     branch = str(git.get("canonical_branch") or "not recorded")
     if not freshness["scoped_files"]:
-        out += _empty_lens(
+        blocks += _empty_lens_blocks(
             conn,
             "No file is recorded in the ledger, so this projection does not measure"
             " freshness. Nothing below is a claim that the survey is current; it is"
@@ -3255,46 +4034,51 @@ def render_stale(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             "`file_ledger`, read for rows marked stale by `detect_changes`.",
         )
     else:
-        out += [
-            f"{freshness['stale_obligation']} of {freshness['obligation_files']} files"
-            f" carrying a survey obligation are recorded as changed since the revision"
-            f" the ledger names, checked at {_short(checked)} on `{branch}`."
-            f" {freshness['stale_exempt']} of"
-            f" {freshness['scoped_files'] - freshness['obligation_files']} scoped files"
-            " exempt from that obligation have also changed; they are counted on the"
-            " [overview](index.md) and are not recorded here, because drift in"
-            " generated or vendored territory is not survey staleness.",
-            "",
-        ]
+        blocks.append(
+            _paragraph(
+                f"{freshness['stale_obligation']} of {freshness['obligation_files']} files"
+                f" carrying a survey obligation are recorded as changed since the revision"
+                f" the ledger names, checked at {_short(checked)} on `{branch}`."
+                f" {freshness['stale_exempt']} of"
+                f" {freshness['scoped_files'] - freshness['obligation_files']} scoped files"
+                " exempt from that obligation have also changed; they are counted on the"
+                " [overview](index.html) and are not recorded here, because drift in"
+                " generated or vendored territory is not survey staleness."
+            )
+        )
 
     for heading, classifications in LEDGER_STALE_SECTIONS:
-        out += [f"## {heading}", ""]
+        body: list[Block] = []
         for classification in classifications:
             in_class = [r for r in ledger if r["classification"] == classification]
             stale_rows = [r for r in in_class if int(r["stale"] or 0)]
             copy = LEDGER_STALE_SECTION_COPY.get(classification, LEDGER_STALE_FALLBACK_COPY)
-            out += [
-                _denominator_sentence(copy["measured"], len(stale_rows), len(in_class))
-                if in_class
-                else copy["absent"],
-                "",
-            ]
+            body.append(
+                _paragraph(
+                    _denominator_sentence(copy["measured"], len(stale_rows), len(in_class))
+                    if in_class
+                    else copy["absent"]
+                )
+            )
             if stale_rows:
-                out += _ledger_stale_table(stale_rows, names, copy["revision"])
+                body.append(_ledger_stale_table(stale_rows, names, copy["revision"], _caption(heading)))
+        blocks.append(_section(heading, *body))
 
-    text = "\n".join(out) + "\n"
     sources = {
         **_db_source("stale:ledger", ledger),
         **_db_source("stale:freshness", freshness),
         **_db_source("stale:git", git),
         **_db_source("stale:names", names),
     }
-    return text, sources
+    return Page("Stale knowledge", "stale.html", tuple(blocks)), sources
 
 
 def _ledger_stale_table(
-    stale_rows: Sequence[dict[str, Any]], names: dict[str, str], revision_column: str
-) -> list[str]:
+    stale_rows: Sequence[dict[str, Any]],
+    names: dict[str, str],
+    revision_column: str,
+    caption: str,
+) -> Table:
     """One section's stale rows as full marked records (§6.2).
 
     The ledger is a register: the path and the account of why it is in scope
@@ -3303,26 +4087,25 @@ def _ledger_stale_table(
     actually records for this classification.
     """
 
-    out = [
-        f"| File | Owner | {revision_column} | Drift recorded | Reason | Why in scope |",
-        "|---|---|---|---|---|---|",
-    ]
+    body: list[Row] = []
     for r in stale_rows:
         subsystem_id = str(r["subsystem_id"])
         file_path = str(r["file_path"])
         name = names.get(subsystem_id, subsystem_id)
         anchor = ledger_stale_anchor(subsystem_id, file_path)
-        out.append(ledger_stale_marker(subsystem_id, file_path))
-        out.append(
-            f'| <a id="{anchor}"></a>`{file_path}` |'
-            f" [{name}]({subsystem_page(subsystem_id, name)}) |"
-            f" `{(str(r['ref_sha'] or '—'))[:8]}` |"
-            f" {_fmt_time(r['stale_since']) if r['stale_since'] else '—'} |"
-            f" {_table_cell(r['stale_reason'] or 'not recorded')} |"
-            f" {_table_cell(r['why_in_scope'] or '—')} |"
+        cells = (
+            f'<a id="{anchor}"></a>`{file_path}`',
+            f"[{name}]({subsystem_page(subsystem_id, name)})",
+            f"`{(str(r['ref_sha'] or '—'))[:8]}`",
+            _fmt_time(r["stale_since"]) if r["stale_since"] else "—",
+            _table_cell(r["stale_reason"] or "not recorded"),
+            _table_cell(r["why_in_scope"] or "—"),
         )
-    out.append("")
-    return out
+        body.append(
+            Row(tuple(inlines(cell) for cell in cells), (ledger_stale_marker(subsystem_id, file_path),))
+        )
+    headers = ("File", "Owner", revision_column, "Drift recorded", "Reason", "Why in scope")
+    return Table(caption, tuple(inlines(header) for header in headers), tuple(body))
 
 
 # The reader's guide is generated, not written (§7.8, §10.2). Its terms and
@@ -3335,13 +4118,11 @@ def _ledger_stale_table(
 # sees as a label.
 GUIDE_TITLE = "How to read this survey"
 SURVEY_SECTION = "How a survey works"
-HOW_TO_READ_INTRO = f"# {GUIDE_TITLE}\n"
-
-HOW_TO_READ_CLOSING = ""
 
 # Appendix C, "What this site is". The project name is the only variable. The
-# second paragraph (PLAN §4 O14) says what the Markdown view leaves out; it has
-# no code span, since the guide's first 600 bytes carry none.
+# second paragraph (PLAN §4 O14, rewritten by store-only SO13 for the one view
+# left) says where the site starts and what a copy must keep; it has no code
+# span, since the guide's first 600 bytes carry none.
 SITE_IS = (
     "This site is the record of an AI agent's survey of {name}. The agent read the code,"
     " recorded what it concluded and the code each conclusion rests on, and listed what it"
@@ -3349,15 +4130,15 @@ SITE_IS = (
     " at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
 )
 SITE_VIEWS = (
-    "Each page is written twice from the same record: as HTML, which adds the diagrams, the"
-    " search and the definitions shown on hover, and as Markdown. Both are written to the same"
-    " directory; the HTML starts at index.html. A copy of the Markdown alone leaves those out."
+    "Each page is HTML, written to one directory that starts at index.html. The diagrams, the"
+    " search and the definitions shown on hover need nothing outside that directory, so a copy"
+    " of the whole directory reads the same."
 )
 
 # A term's `pages` may name a family; the family's listing page stands for it.
 _FAMILY_LISTINGS: dict[str, tuple[str, str]] = {
-    "subsystems/*.md": ("Subsystem pages", "master-plan.md"),
-    "diagnosticity/*.md": ("Evidence tables", "diagnosticity.md"),
+    "subsystems/*.md": ("Subsystem pages", "master-plan.html"),
+    "diagnosticity/*.md": ("Evidence tables", "diagnosticity.html"),
 }
 
 
@@ -3371,17 +4152,18 @@ def page_terms(page: str) -> tuple[tuple[str, str], ...]:
     """The `READER_TERMS` entries a page names, as `(term, anchor slug)` in contract order.
 
     A term's `pages` holds exact page paths, or a family glob (`subsystems/*.md`)
-    for every page directly under that directory.
+    for every page directly under that directory. The contract names pages by the
+    stem the server shares; a page here is its `.html` path.
     """
 
     found: list[tuple[str, str]] = []
     for entry in READER_TERMS:
         for pattern in entry.get("pages") or ():  # type: ignore[union-attr]
-            pattern = str(pattern)
+            pattern = str(pattern).removesuffix(".md") + ".html"
             if pattern == page or (
-                pattern.endswith("/*.md")
-                and page.startswith(pattern[: -len("*.md")])
-                and "/" not in page[len(pattern) - len("*.md") :]
+                pattern.endswith("/*.html")
+                and page.startswith(pattern[: -len("*.html")])
+                and "/" not in page[len(pattern) - len("*.html") :]
             ):
                 term = str(entry["term"])
                 found.append((term, term_slug(term)))
@@ -3400,8 +4182,8 @@ def _enum_heading(name: str) -> str:
     return str(title) if title else name.replace("_", " ").capitalize()
 
 
-def _site_is(name: str) -> list[str]:
-    return ["## What this site is", "", SITE_IS.format(name=name), "", SITE_VIEWS, ""]
+def _site_is(name: str) -> Section:
+    return _section("What this site is", _paragraph(SITE_IS.format(name=name)), _paragraph(SITE_VIEWS))
 
 
 # Appendix C, "How a survey works". The surrounding sentences are constants; the
@@ -3452,89 +4234,92 @@ _NUMBER_WORDS = {2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven
 _WHEN = {"end": "when the pass is done", "start": "as the pass starts"}
 
 
-def _survey_passes_section() -> list[str]:
+def _survey_passes_section() -> Section:
     """Appendix C's "How a survey works", the pass table generated from the contract."""
 
     spec = [dict(p) for p in SURVEY_PASSES]
     count = len(spec)
-    out = [
-        f"## {SURVEY_SECTION}",
-        "",
-        SURVEY_LEAD,
-        "",
-        SURVEY_ONBOARDING,
-        "",
-        SURVEY_EACH.format(passes=_NUMBER_WORDS.get(count, str(count))),
-        "",
-        "| Pass | What the agent does | Survey depth it sets, and when | What that depth means |",
-        "|---|---|---|---|",
-    ]
+    passes: list[list[str]] = []
     for p in spec:
         status = str(p["status"])
         label = SUBSYSTEM_STATUS_LABELS.get(status, status)
-        out.append(
-            f"| {_table_cell(p['pass'])} | {_table_cell(p['does'])} |"
-            f" **{_table_cell(label)}**, {_WHEN.get(str(p['set_when']), str(p['set_when']))} |"
-            f" {_table_cell(SUBSYSTEM_STATUS_MEANINGS.get(status, ''))} |"
+        passes.append(
+            [
+                _table_cell(p["pass"]),
+                _table_cell(p["does"]),
+                f"**{_table_cell(label)}**, {_WHEN.get(str(p['set_when']), str(p['set_when']))}",
+                _table_cell(SUBSYSTEM_STATUS_MEANINGS.get(status, "")),
+            ]
         )
     under_way = [
         f"*{SUBSYSTEM_STATUS_LABELS.get(str(p['status']), p['status'])}*"
         for p in spec
         if p["set_when"] == "start"
     ]
-    out += ["", SURVEY_IN_PROGRESS.format(labels=" or ".join(under_way)), ""]
-    out += [SURVEY_REFRESH, "", f"### {EXPECTS_HEADING}", "", *SURVEY_EXPECTS, ""]
     phases = [int(str(p["phase"])) for p in spec]
     survey_phases = f"{min(phases)}–{max(phases)}"
     named = ", ".join(f"{p['pass']} ({p['phase']})" for p in spec)
-    out += [
-        f"### {PHASES_HEADING}",
-        "",
-        PHASES_LEAD,
-        "",
-        "| Numbering | Phases | What they are |",
-        "|---|---|---|",
-        f"| Onboarding | {ONBOARDING_PHASES} | {ONBOARDING_PHASES_MEANING} |",
-        f"| Subsystem survey | {survey_phases} | {_table_cell(named)}, in order. |",
-        "",
-    ]
-    return out
+    caption = _caption(SURVEY_SECTION)
+    return _section(
+        SURVEY_SECTION,
+        _paragraph(SURVEY_LEAD),
+        _paragraph(SURVEY_ONBOARDING),
+        _paragraph(SURVEY_EACH.format(passes=_NUMBER_WORDS.get(count, str(count)))),
+        _table(
+            caption,
+            ["Pass", "What the agent does", "Survey depth it sets, and when", "What that depth means"],
+            passes,
+        ),
+        _paragraph(SURVEY_IN_PROGRESS.format(labels=" or ".join(under_way))),
+        survey_workflow_model(),
+        status_ladder_model(),
+        _paragraph(SURVEY_REFRESH),
+        _heading(3, EXPECTS_HEADING),
+        _bullets([item.removeprefix("- ") for item in SURVEY_EXPECTS]),
+        _heading(3, PHASES_HEADING),
+        _paragraph(PHASES_LEAD),
+        _table(
+            caption,
+            ["Numbering", "Phases", "What they are"],
+            [
+                ["Onboarding", ONBOARDING_PHASES, ONBOARDING_PHASES_MEANING],
+                ["Subsystem survey", survey_phases, f"{_table_cell(named)}, in order."],
+            ],
+        ),
+    )
 
 
-def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list[str]:
+def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> Section:
     """One entry per `READER_TERMS` row, anchored for the pages that link to it."""
 
     # Only planned pages are linked: a term's `pages` may name a prose page this
     # store has no source for, and a link to it would not resolve (read-back).
     labels = {route[0]: route[1] for route in routes}
-    out: list[str] = [
-        "## Terms",
-        "",
-        "Words this site uses in a particular sense. Each entry says where you will meet it.",
-        "",
+    blocks: list[Block] = [
+        _paragraph("Words this site uses in a particular sense. Each entry says where you will meet it."),
     ]
     for entry in READER_TERMS:
         term = str(entry["term"])
-        out += [f'<a id="term-{term_slug(term)}"></a>', "", f"### {term}", ""]
+        blocks += [Anchor(f"term-{term_slug(term)}"), _heading(3, term)]
         aliases = [str(alias) for alias in entry.get("aliases") or ()]  # type: ignore[union-attr]
         if aliases:
-            out += [f"*Also called: {', '.join(aliases)}.*", ""]
-        out += [str(entry["definition"]), ""]
+            blocks.append(_paragraph(f"*Also called: {', '.join(aliases)}.*"))
+        blocks.append(_paragraph(str(entry["definition"])))
         links: list[str] = []
         for page in entry.get("pages") or ():  # type: ignore[union-attr]
             page = str(page)
             if page in _FAMILY_LISTINGS:
                 label, target = _FAMILY_LISTINGS[page]
-            elif page in labels:
-                label, target = labels[page], page
+            elif (target := page.removesuffix(".md") + ".html") in labels:
+                label = labels[target]
             else:
                 continue  # not planned for this store (a prose page with no source)
             link = f"[{label}]({target})"
             if link not in links:
                 links.append(link)
         if links:
-            out += [f"Seen on: {', '.join(links)}", ""]
-    return out
+            blocks.append(_paragraph(f"Seen on: {', '.join(links)}"))
+    return _section("Terms", *blocks)
 
 
 # Appendix B, "How IDs are formed" (PLAN §2.2 items 1 and 2, D1). The kinds come
@@ -3611,71 +4396,102 @@ def _id_examples(conn: sqlite3.Connection) -> dict[str, str]:
     return {kind: example for kind, example in found.items() if example}
 
 
-def _ids_section(conn: sqlite3.Connection) -> list[str]:
+def _ids_section(conn: sqlite3.Connection) -> Section:
     """Appendix B's table of ID kinds, with this store's examples and letter key."""
 
-    out = [f"## {IDS_SECTION}", "", IDS_LEAD, ""]
     key = subsystem_letter_key(
         [(str(r["id"]), r["layer"]) for r in rows(conn, "SELECT id, layer FROM subsystems ORDER BY id")]
     )
-    if key:
-        out += [key, ""]
     examples = _id_examples(conn)
-    out += [
-        "| Kind | Shape | Names | Chosen by | Example here | Links to |",
-        "|---|---|---|---|---|---|",
+    kinds = [
+        [
+            _table_cell(str(kind["kind"])),
+            _table_cell(kind["shape"]),
+            _table_cell(kind["names"]),
+            _table_cell(kind["chosen_by"]),
+            _table_cell(examples.get(str(kind["kind"]), NO_EXAMPLE)),
+            _table_cell(kind["links_to"]),
+        ]
+        for kind in ID_KINDS
     ]
-    for kind in ID_KINDS:
-        name = str(kind["kind"])
-        out.append(
-            f"| {_table_cell(name)} | {_table_cell(kind['shape'])} | {_table_cell(kind['names'])}"
-            f" | {_table_cell(kind['chosen_by'])} | {_table_cell(examples.get(name, NO_EXAMPLE))}"
-            f" | {_table_cell(kind['links_to'])} |"
-        )
-    out.append("")
-    return out
+    return _section(
+        IDS_SECTION,
+        _paragraph(IDS_LEAD),
+        *((_paragraph(key),) if key else ()),
+        _table(
+            _caption(IDS_SECTION),
+            ["Kind", "Shape", "Names", "Chosen by", "Example here", "Links to"],
+            kinds,
+        ),
+    )
 
 
-def _enum_tables(heading: str, lede: str, reader_facing: bool) -> list[str]:
+def _enum_tables(heading: str, lede: str, reader_facing: bool) -> tuple[Block, ...]:
     """The enum tables whose `reader_facing` flag matches, in declared order."""
 
-    out: list[str] = [f"## {heading}", "", lede, ""]
+    blocks: list[Block] = [_paragraph(lede)]
     for name, definition in VOCABULARY.items():
         if bool(definition.get("reader_facing")) != reader_facing:
             continue
         axis = str(definition.get("axis") or "")
-        out += [
-            f"### {_enum_heading(name)}",
-            "",
-            f"Stored as `{name}`" + (f" · {axis} axis" if axis else ""),
-            "",
-            "| Value | Label | What it means | What it cannot justify |",
-            "|---|---|---|---|",
+        blocks += [
+            _heading(3, _enum_heading(name)),
+            _paragraph(f"Stored as `{name}`" + (f" · {axis} axis" if axis else "")),
+            EnumTable(
+                _caption(heading),
+                tuple(
+                    inlines(header)
+                    for header in ("Value", "Label", "What it means", "What it cannot justify")
+                ),
+                tuple(
+                    Row(
+                        (
+                            # The stored value prints literally, as the code it is.
+                            Inlines((CodeSpan(str(entry["value"])),), str(entry["value"])),
+                            inlines(_table_cell(entry["label"])),
+                            inlines(_table_cell(entry["meaning"])),
+                            inlines(_table_cell(entry["cannot_justify"])),
+                        )
+                    )
+                    for entry in definition.get("values") or ()  # type: ignore[union-attr]
+                ),
+            ),
         ]
-        for entry in definition.get("values") or ():  # type: ignore[union-attr]
-            out.append(
-                f"| `{entry['value']}` | {_table_cell(entry['label'])}"
-                f" | {_table_cell(entry['meaning'])}"
-                f" | {_table_cell(entry['cannot_justify'])} |"
-            )
-        out.append("")
-    return out
+    return tuple(blocks)
 
 
-def _vocabulary_tables() -> list[str]:
-    """Status values, then the full vocabulary, from the enum source (§7.8)."""
+def _vocabulary_tables() -> tuple[Section, Section]:
+    """Status values, then the full vocabulary, from the enum source (§7.8).
 
-    return _enum_tables(
-        "Status values",
-        "The values this site prints as labels, from the vocabulary contract, version"
-        f" `{VOCABULARY_CONTRACT_VERSION}`: the same source the server checks writes"
-        " against. Each table gives the label, what it means, and what it cannot justify.",
-        True,
-    ) + _enum_tables(
-        "Full vocabulary",
-        "The remaining values the record stores, which the pages rarely print as labels."
-        " They come from the same contract.",
-        False,
+    The second section holds the tables a reader never meets as a label, so it
+    stays closed until asked for.
+    """
+
+    status = "Status values"
+    full = "Full vocabulary"
+    return (
+        _section(
+            status,
+            *_enum_tables(
+                status,
+                "The values this site prints as labels, from the vocabulary contract, version"
+                f" `{VOCABULARY_CONTRACT_VERSION}`: the same source the server checks writes"
+                " against. Each table gives the label, what it means, and what it cannot justify.",
+                True,
+            ),
+        ),
+        _section(
+            full,
+            Details(
+                "Show the full vocabulary",
+                _enum_tables(
+                    full,
+                    "The remaining values the record stores, which the pages rarely print as labels."
+                    " They come from the same contract.",
+                    False,
+                ),
+            ),
+        ),
     )
 
 
@@ -3683,12 +4499,12 @@ def _vocabulary_tables() -> list[str]:
 # row. The row routes to the page that lists the family's members: the
 # subsystem map and the competing-explanations index.
 _SUBGROUP_ROWS: dict[str, tuple[str, str, str]] = {
-    "Subsystems": ("Subsystem pages", "master-plan.md", "one page per subsystem"),
-    "Evidence matrices": ("Evidence tables", "diagnosticity.md", "one page per evidence matrix"),
+    "Subsystems": ("Subsystem pages", "master-plan.html", "one page per subsystem"),
+    "Evidence matrices": ("Evidence tables", "diagnosticity.html", "one page per evidence matrix"),
 }
 
 
-def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list[str]:
+def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> Section:
     """The index of pages, generated from the page plan (§7.8, PLAN §2.4).
 
     Written from the plan rather than by hand so a page cannot be published and
@@ -3699,27 +4515,24 @@ def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list
     """
 
     lens_meanings = meanings("lens")
-    out: list[str] = [
-        "## Pages on this site",
-        "",
-        "Every kind of page this survey publishes, grouped by lens. The lens says"
-        " what kind of claim a page carries. Subsystem pages and evidence tables"
-        " take one row each; the pages they stand for are listed on the pages"
-        " the rows link to.",
-        "",
+    title = "Pages on this site"
+    blocks: list[Block] = [
+        _paragraph(
+            "Every kind of page this survey publishes, grouped by lens. The lens says"
+            " what kind of claim a page carries. Subsystem pages and evidence tables"
+            " take one row each; the pages they stand for are listed on the pages"
+            " the rows link to."
+        ),
     ]
     groups: dict[str, list[tuple[str, str, str, str, str, str]]] = {}
     for route in routes:
         groups.setdefault(route[3], []).append(route)
     for group, members in groups.items():
-        out += [f"### {group}", ""]
+        blocks.append(_heading(3, group))
         meaning = lens_meanings.get(group.lower())
         if meaning:
-            out += [meaning, ""]
-        out += [
-            "| Page | What it shows | Use it when |",
-            "|---|---|---|",
-        ]
+            blocks.append(_paragraph(meaning))
+        pages: list[list[str]] = []
         done: set[str] = set()
         for path, label, hint, _group, subgroup, use_when in members:
             if subgroup:
@@ -3730,16 +4543,13 @@ def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list
                 name, target, scope = _SUBGROUP_ROWS.get(
                     subgroup, (subgroup, path, "one page per record")
                 )
-                out.append(
-                    f"| [{name}]({target}) | {_table_cell(f'{len(family)} pages, {scope}.')}"
-                    f" | {_table_cell(use_when)} |"
+                pages.append(
+                    [f"[{name}]({target})", _table_cell(f"{len(family)} pages, {scope}."), _table_cell(use_when)]
                 )
                 continue
-            out.append(
-                f"| [{label}]({path}) | {_table_cell(hint)} | {_table_cell(use_when)} |"
-            )
-        out.append("")
-    return out
+            pages.append([f"[{label}]({path})", _table_cell(hint), _table_cell(use_when)])
+        blocks.append(_table(_caption(title), ["Page", "What it shows", "Use it when"], pages))
+    return _section(title, *blocks)
 
 
 def render_how_to_read(
@@ -3755,17 +4565,17 @@ def render_how_to_read(
     `verified-fixed`. Nothing kept them in step, so nothing did.
     """
 
-    body = [HOW_TO_READ_INTRO, ""]
-    body += _site_is(project_name(storage))
-    body += _route_tables(routes or ())
-    body += _survey_passes_section()
-    body += _terms_section(routes or ())
-    body += _ids_section(conn)
-    body += _vocabulary_tables()
-    body += [HOW_TO_READ_CLOSING]
-    text = "\n".join(body)
-    return text, {
-        "synthetic:how-to-read": _hash_text(text),
+    sections = [
+        _site_is(project_name(conn, storage)),
+        _route_tables(routes or ()),
+        _survey_passes_section(),
+        _terms_section(routes or ()),
+        _ids_section(conn),
+        *_vocabulary_tables(),
+    ]
+    page = Page(GUIDE_TITLE, "how-to-read.html", tuple(sections))
+    return page, {
+        "synthetic:how-to-read": _hash_text(repr(page)),
         "synthetic:how-to-read-contract": _hash_text(VOCABULARY_CONTRACT_VERSION),
     }
 
@@ -3800,7 +4610,7 @@ HOW_TO_ANSWER = (
 def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The Unresolved lens for decisions: questions still open (§6.1, §7.1).
 
-    Answered, dismissed, and superseded questions move to `resolved-leads.md`.
+    Answered, dismissed, and superseded questions move to `resolved-leads.html`.
     This page is the decision docket: what is still unsettled, what each
     question blocked, and the assumption the survey proceeded with so a reader
     can tell how much of the record rests on it.
@@ -3818,32 +4628,31 @@ def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResu
         "SELECT COUNT(*) AS n FROM open_questions"
         " WHERE COALESCE(resolution,'open')<>'open'",
     ) or {"n": 0}
-    out = [
-        "# Decisions needed",
-        "",
-        "_Questions the survey could not settle on its own. Each records what it "
-        "blocked and the assumption the survey proceeded with, so a reader can see "
-        "which readings would change if the assumption turns out wrong. Questions "
-        "already settled are on "
-        "[Resolved leads and questions](resolved-leads.md)._",
-        "",
-        HOW_TO_ANSWER,
-        "",
+    sources = {
+        **_db_source("open_questions:open", questions),
+        **_db_source("open_questions:closed-count", closed),
+    }
+    blocks: list[Block] = [
+        _paragraph(
+            "_Questions the survey could not settle on its own. Each records what it "
+            "blocked and the assumption the survey proceeded with, so a reader can see "
+            "which readings would change if the assumption turns out wrong. Questions "
+            "already settled are on "
+            "[Resolved leads and questions](resolved-leads.html)._"
+        ),
+        _paragraph(HOW_TO_ANSWER),
     ]
     if not questions:
-        out += _empty_lens(
+        blocks += _empty_lens_blocks(
             conn,
             "No question is open."
             f" {_count(int(closed['n'] or 0), 'settled question')} are on"
-            " [Resolved leads and questions](resolved-leads.md).",
+            " [Resolved leads and questions](resolved-leads.html).",
             "questions the survey could not settle, with what each one blocked and"
             " the assumption used to keep moving.",
             "`open_questions` whose resolution is still `open`.",
         )
-        return "\n".join(out) + "\n", {
-            **_db_source("open_questions:open", questions),
-            **_db_source("open_questions:closed-count", closed),
-        }
+        return Page("Decisions needed", "open-questions.html", tuple(blocks)), sources
 
     by_cat: dict[str, list[dict[str, Any]]] = {}
     for q in questions:
@@ -3855,45 +4664,25 @@ def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResu
         items = by_cat.get(cat, [])
         if not items:
             continue
-        out += [f"## {cat.replace('-', ' ').capitalize()}", ""]
-        out += [f"_{_count(len(items), 'open question')}._", ""]
+        body: list[Block] = [_paragraph(f"_{_count(len(items), 'open question')}._")]
         for q in items:
             loc = f" · subsystem **{q['subsystem_id']}**" if q["subsystem_id"] else ""
             phase = f" · phase `{q['phase']}`" if q["phase"] else ""
-            out.append(f'<a id="{question_anchor(q["id"])}"></a>')
-            out += [f"### #{q['id']}{loc}{phase}", ""]
-            out += [f"> {q['question']}", ""]
+            facts = []
             if q["what_blocked"]:
-                out.append(f"- **What this blocked** — {q['what_blocked']}")
+                facts.append(f"**What this blocked** — {_one_line(q['what_blocked'])}")
             if q["what_assumed"]:
-                out.append(
-                    f"- **Assumption the survey proceeded with** — {q['what_assumed']}"
-                )
-            out.append(f"- **Recorded** — {_fmt_time(q['created_at'])}.")
-            out.append("")
+                facts.append(f"**Assumption the survey proceeded with** — {_one_line(q['what_assumed'])}")
+            facts.append(f"**Recorded** — {_fmt_time(q['created_at'])}.")
+            body += [
+                Anchor(question_anchor(q["id"])),
+                _heading(3, f"#{q['id']}{loc}{phase}"),
+                Quote(inlines(_one_line(q["question"]))),
+                _bullets(facts),
+            ]
+        blocks.append(_section(cat.replace("-", " ").capitalize(), *body))
 
-    return "\n".join(out) + "\n", {
-        **_db_source("open_questions:open", questions),
-        **_db_source("open_questions:closed-count", closed),
-    }
-
-
-# ---------------------------------------------------------------------------
-# Prose passthroughs (onboarding report, entry-point, concern-checklist)
-# ---------------------------------------------------------------------------
-
-
-def passthrough_prose(storage: Path, rel_source: str, title: str) -> RenderResult | None:
-    p = storage / rel_source
-    if not p.is_file():
-        return None
-    body = p.read_text()
-    # Prepend a banner only if the source doesn't already open with an H1: the
-    # page head (hint and use_when) is inserted under the page's H1, so a source
-    # opening with "## " still needs one.
-    if not re.match(r"#[ \t]", body.lstrip()):
-        body = f"# {title}\n\n{body}"
-    return body, _prose_source(storage, rel_source)
+    return Page("Decisions needed", "open-questions.html", tuple(blocks)), sources
 
 
 # ---------------------------------------------------------------------------
@@ -3948,7 +4737,7 @@ def _open_defects_by_path(conn: sqlite3.Connection) -> dict[str, int]:
     """
 
     counts: dict[str, int] = {}
-    open_states = FINDING_LENS_STATES.get("findings.md", ())
+    open_states = FINDING_LENS_STATES.get("findings.html", ())
     if not open_states:
         return counts
     placeholders = ",".join("?" for _ in open_states)
@@ -3999,25 +4788,26 @@ def render_files(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     for entry in standing:
         by_path.setdefault(str(entry["file_path"]), []).append(entry)
 
-    out = ["# Files", ""]
+    blocks: list[Block] = []
     if not by_path:
-        out += [
-            "No file is recorded in the ledger, so this index has nothing to show."
-            " That is a statement about the record, not about the repository: no"
-            " path here has been read, excluded, or even scoped.",
-            "",
-        ]
+        blocks.append(
+            _paragraph(
+                "No file is recorded in the ledger, so this index has nothing to show."
+                " That is a statement about the record, not about the repository: no"
+                " path here has been read, excluded, or even scoped."
+            )
+        )
     else:
-        out += [
-            f"{_count(len(by_path), 'distinct path')} across"
-            f" {_count(len(standing), 'ledger row')},"
-            f" read at {_short(checked)}. Every owner of a path is listed, and the"
-            " examined revision is the one that owner recorded — two subsystems"
-            " may have read the same file at different revisions.",
-            "",
-            "| File | Owners | Standing | Examined at | Open defects |",
-            "|---|---|---|---|---|",
-        ]
+        blocks.append(
+            _paragraph(
+                f"{_count(len(by_path), 'distinct path')} across"
+                f" {_count(len(standing), 'ledger row')},"
+                f" read at {_short(checked)}. Every owner of a path is listed, and the"
+                " examined revision is the one that owner recorded — two subsystems"
+                " may have read the same file at different revisions."
+            )
+        )
+        body: list[list[str]] = []
         for file_path in sorted(by_path):
             owners = by_path[file_path]
             states = {str(o["standing_state"]) for o in owners}
@@ -4037,21 +4827,24 @@ def render_files(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 f"#{ledger_entry_anchor(str(o['subsystem_id']), file_path)})"
                 for o in owners
             )
-            out.append(
-                f'| <a id="{file_anchor(file_path)}"></a>`{file_path}` |'
-                f" {owner_links} |"
-                f" {STANDING_LABELS.get(headline, headline)} |"
-                f" {revision} |"
-                f" {defects.get(file_path, 0)} |"
+            body.append(
+                [
+                    f'<a id="{file_anchor(file_path)}"></a>`{file_path}`',
+                    owner_links,
+                    STANDING_LABELS.get(headline, headline),
+                    revision,
+                    str(defects.get(file_path, 0)),
+                ]
             )
-        out.append("")
+        blocks.append(_table("Files", ("File", "Owners", "Standing", "Examined at", "Open defects"), body))
+    blocks.append(coverage_bars_model(conn))
 
     sources = {
         **_db_source("files:standing", standing),
         **_db_source("files:defects", defects),
         **_db_source("files:git", git),
     }
-    return "\n".join(out) + "\n", sources
+    return Page("Files", "files.html", tuple(blocks)), sources
 
 
 def _tracked_paths(
@@ -4127,7 +4920,7 @@ def _gap_denominator(
     unit: str,
     clause: str,
     reason: str | None = None,
-) -> list[str]:
+) -> list[Block]:
     """One section's headline: the count, its unit, and its denominator.
 
     A bare zero is not a reading. Without the denominator beside it, a section
@@ -4145,8 +4938,8 @@ def _gap_denominator(
             f"No {unit} is recorded, so this gap is not measured here. That is a"
             " statement about the record, not a claim that the gap is closed."
         )
-        return [sentence if reason is None else f"{sentence} {reason}", ""]
-    return [f"**{numerator} of {denominator}** {unit} {clause}", ""]
+        return [_paragraph(sentence if reason is None else f"{sentence} {reason}")]
+    return [_paragraph(f"**{numerator} of {denominator}** {unit} {clause}")]
 
 
 def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -4209,16 +5002,10 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         for d in rows(conn, "SELECT subsystem_id, concern_code FROM dispositions")
     }
 
-    out = [
-        "# Not yet surveyed",
-        "",
-        f"Counted at {_short(checked)} on `{branch}`.",
-        "",
-    ]
+    blocks: list[Block] = [_paragraph(f"Counted at {_short(checked)} on `{branch}`.")]
 
     # 1. Unledgered paths, over tracked paths.
-    out += ["## Paths with no ledger row", ""]
-    out += _gap_denominator(
+    held: list[Block] = _gap_denominator(
         len(unledgered),
         tracked,
         "tracked paths",
@@ -4230,17 +5017,16 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         by_directory: dict[str, list[str]] = {}
         for entry in unledgered:
             path = str(entry["file_path"])
-            head = path.split("/", 1)[0] if "/" in path else "(repository root)"
-            by_directory.setdefault(head, []).append(path)
+            directory = path.split("/", 1)[0] if "/" in path else "(repository root)"
+            by_directory.setdefault(directory, []).append(path)
         for directory in sorted(by_directory, key=lambda d: (-len(by_directory[d]), d)):
             paths = by_directory[directory]
-            out += [f"### {directory} — {_count(len(paths), 'path')}", ""]
-            out += [f"- `{path}`" for path in paths]
-            out.append("")
+            held.append(_heading(3, f"{directory} — {_count(len(paths), 'path')}"))
+            held.append(_bullets([f"`{path}`" for path in paths]))
+    blocks.append(_section("Paths with no ledger row", *held))
 
     # 2. Candidate rows, over obligation-bearing ledger rows.
-    out += ["## Files in scope that no one has read", ""]
-    out += _gap_denominator(
+    held = _gap_denominator(
         len(candidates),
         len(ledger),
         "ledger rows that carry a survey obligation",
@@ -4255,20 +5041,25 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
             entries = by_subsystem[subsystem_id]
             name = names.get(subsystem_id, subsystem_id)
             owned = sum(1 for r in ledger if str(r["subsystem_id"]) == subsystem_id)
-            out += [
-                f"### {name} **{subsystem_id}** — {len(entries)} unread of"
-                f" {_count(owned, 'row')} carrying an obligation",
-                "",
-            ]
-            out += [
-                f"- `{entry['file_path']}` — {entry['why_in_scope'] or 'no reason recorded'}"
-                for entry in entries
-            ]
-            out.append("")
+            held.append(
+                _heading(
+                    3,
+                    f"{name} **{subsystem_id}** — {len(entries)} unread of"
+                    f" {_count(owned, 'row')} carrying an obligation",
+                )
+            )
+            held.append(
+                _bullets(
+                    [
+                        f"`{entry['file_path']}` — {_one_line(entry['why_in_scope'] or 'no reason recorded')}"
+                        for entry in entries
+                    ]
+                )
+            )
+    blocks.append(_section("Files in scope that no one has read", *held))
 
     # 3. Deferred subsystems, over subsystems.
-    out += ["## Subsystems set aside", ""]
-    out += _gap_denominator(
+    held = _gap_denominator(
         len(deferred),
         len(subsystems),
         "subsystems",
@@ -4277,15 +5068,21 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         " depth.",
     )
     if deferred:
-        out += ["| Subsystem | Layer | Recorded reason |", "|---|---|---|"]
-        for s in deferred:
-            reason = _table_cell(s["notes"] or "")
-            out.append(
-                f"| [{s['name']}]({subsystem_page(str(s['id']), str(s['name']))})"
-                f" **{s['id']}** | {s['layer'] or '—'} |"
-                f" {reason or 'No reason is recorded.'} |"
+        held.append(
+            _table(
+                _caption("Subsystems set aside"),
+                ("Subsystem", "Layer", "Recorded reason"),
+                [
+                    [
+                        f"[{s['name']}]({subsystem_page(str(s['id']), str(s['name']))}) **{s['id']}**",
+                        s["layer"] or "—",
+                        _table_cell(s["notes"] or "") or "No reason is recorded.",
+                    ]
+                    for s in deferred
+                ],
             )
-        out.append("")
+        )
+    blocks.append(_section("Subsystems set aside", *held))
 
     # 4. Unassessed seam sides, over 2 × seams.
     unassessed: list[tuple[str, str, str, str]] = []
@@ -4302,8 +5099,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
             else:
                 continue
             unassessed.append((str(seam["seam_id"]), side, other, why))
-    out += ["## Seam sides no one has assessed", ""]
-    out += _gap_denominator(
+    held = _gap_denominator(
         len(unassessed),
         2 * len(seams),
         "(seam, side) pairs",
@@ -4311,16 +5107,24 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         " assessed from one side only is half-known, and counting seams would report"
         " it as covered.",
     )
-    out += [PER_PARTY_PROXY, ""]
+    held.append(_paragraph(PER_PARTY_PROXY))
     if unassessed:
-        out += ["| Seam | Unassessed party | Other party | Why |", "|---|---|---|---|"]
-        for seam_id, side, other, why in unassessed:
-            out.append(
-                f"| **{seam_id}** | [{names.get(side, side)}]"
-                f"({subsystem_page(side, names.get(side, side))}) **{side}** |"
-                f" **{other}** | {why} |"
+        held.append(
+            _table(
+                _caption("Seam sides no one has assessed"),
+                ("Seam", "Unassessed party", "Other party", "Why"),
+                [
+                    [
+                        f"**{seam_id}**",
+                        f"[{names.get(side, side)}]({subsystem_page(side, names.get(side, side))}) **{side}**",
+                        f"**{other}**",
+                        why,
+                    ]
+                    for seam_id, side, other, why in unassessed
+                ],
             )
-        out.append("")
+        )
+    blocks.append(_section("Seam sides no one has assessed", *held))
 
     # 5. Undispositioned (subsystem, active concern) pairs.
     missing: dict[str, list[str]] = {}
@@ -4330,8 +5134,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
             if pair not in dispositioned:
                 missing.setdefault(str(s["id"]), []).append(str(concern["code"]))
     undispositioned = sum(len(codes) for codes in missing.values())
-    out += ["## Concerns no one has dispositioned here", ""]
-    out += _gap_denominator(
+    held = _gap_denominator(
         undispositioned,
         len(subsystems) * len(active_concerns),
         "(subsystem, active concern) pairs",
@@ -4341,16 +5144,22 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         " tested against it.",
     )
     if missing:
-        out += ["| Subsystem | Undispositioned | Concerns |", "|---|---|---|"]
-        for subsystem_id in sorted(missing):
-            codes = missing[subsystem_id]
-            name = names.get(subsystem_id, subsystem_id)
-            out.append(
-                f"| [{name}]({subsystem_page(subsystem_id, name)}) **{subsystem_id}** |"
-                f" {len(codes)} of {len(active_concerns)} |"
-                f" {', '.join(f'**{code}**' for code in codes)} |"
+        held.append(
+            _table(
+                _caption("Concerns no one has dispositioned here"),
+                ("Subsystem", "Undispositioned", "Concerns"),
+                [
+                    [
+                        f"[{names.get(subsystem_id, subsystem_id)}]"
+                        f"({subsystem_page(subsystem_id, names.get(subsystem_id, subsystem_id))}) **{subsystem_id}**",
+                        f"{len(missing[subsystem_id])} of {len(active_concerns)}",
+                        ", ".join(f"**{code}**" for code in missing[subsystem_id]),
+                    ]
+                    for subsystem_id in sorted(missing)
+                ],
             )
-        out.append("")
+        )
+    blocks.append(_section("Concerns no one has dispositioned here", *held))
 
     sources = {
         **_db_source("gaps:unledgered", unledgered),
@@ -4363,7 +5172,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         **_db_source("gaps:dispositions", sorted(dispositioned)),
         **_db_source("gaps:git", git),
     }
-    return "\n".join(out) + "\n", sources
+    return Page("Not yet surveyed", "not-yet-surveyed.html", tuple(blocks)), sources
 
 
 # ---------------------------------------------------------------------------
@@ -4415,9 +5224,9 @@ def render_disagreements(conn: sqlite3.Connection, storage: Path) -> RenderResul
         for s in rows(conn, "SELECT id, name FROM subsystems")
     }
 
-    out = ["# Records that disagree", ""]
+    blocks: list[Block] = []
     if not (contradictions or matrices or competing):
-        out += _empty_lens(
+        blocks += _empty_lens_blocks(
             conn,
             "No record stands undiscriminated.",
             "findings that cannot both be right, evidence matrices the evidence does"
@@ -4426,49 +5235,56 @@ def render_disagreements(conn: sqlite3.Connection, storage: Path) -> RenderResul
             "`contradictions`, `diagnosticity_sessions`, and `dispositions`, each read"
             " for the state that means *the record does not say which*.",
         )
-        return "\n".join(out) + "\n", {
+        return Page("Records that disagree", "disagreements.html", tuple(blocks)), {
             **_db_source("disagreements:contradictions", contradictions),
             **_db_source("disagreements:matrices", matrices),
             **_db_source("disagreements:dispositions", competing),
         }
 
-    out += [
-        "_Each record below is a place where the survey could have written one"
-        " reading and did not, because the evidence it had does not choose. That is"
-        " information: it says where a further pass would change the record, and"
-        " what kind of evidence it would take. Records the evidence did settle are"
-        " on [Conflicting evidence](contradictions.md)._",
-        "",
-    ]
+    blocks.append(
+        _paragraph(
+            "_Each record below is a place where the survey could have written one"
+            " reading and did not, because the evidence it had does not choose. That is"
+            " information: it says where a further pass would change the record, and"
+            " what kind of evidence it would take. Records the evidence did settle are"
+            " on [Conflicting evidence](contradictions.html)._"
+        )
+    )
 
-    out += ["## Findings that cannot both be right", ""]
+    def rows_of(*cells: str) -> Row:
+        return Row(tuple(inlines(cell) for cell in cells))
+
+    heading = "Findings that cannot both be right"
     if contradictions:
-        out += [f"_{_count(len(contradictions), 'pair')} with no recorded resolution._", ""]
-        out += [
-            "| Record | Findings | Shared locus | Conflict | Detected |",
-            "|---|---|---|---|---|",
+        body: list[Block] = [
+            _paragraph(f"_{_count(len(contradictions), 'pair')} with no recorded resolution._"),
+            Table(
+                _caption(heading),
+                tuple(inlines(h) for h in ("Record", "Findings", "Shared locus", "Conflict", "Detected")),
+                tuple(
+                    Row(
+                        tuple(
+                            inlines(cell)
+                            for cell in (
+                                f'<a id="{contradiction_anchor(c["id"])}"></a>**#{c["id"]}**',
+                                f"**{c['finding_a']}** / **{c['finding_b']}**",
+                                f"`{c['shared_location']}`" if c["shared_location"] else "—",
+                                _table_cell(c["conflict_type"]),
+                                _fmt_time(c["detected_at"]),
+                            )
+                        )
+                    )
+                    for c in contradictions
+                ),
+            ),
         ]
-        for c in contradictions:
-            anchor = contradiction_anchor(c["id"])
-            locus = f"`{c['shared_location']}`" if c["shared_location"] else "—"
-            conflict = _table_cell(c["conflict_type"])
-            out.append(
-                f'| <a id="{anchor}"></a>**#{c["id"]}** |'
-                f" **{c['finding_a']}** / **{c['finding_b']}** | {locus} |"
-                f" {conflict} | {_fmt_time(c['detected_at'])} |"
-            )
-        out.append("")
     else:
-        out += ["No pair of findings is recorded as disagreeing.", ""]
+        body = [_paragraph("No pair of findings is recorded as disagreeing.")]
+    blocks.append(_section(heading, *body))
 
-    out += ["## Competing explanations the evidence has not chosen between", ""]
+    heading = "Competing explanations the evidence has not chosen between"
     if matrices:
-        out += [
-            f"_{_count(len(matrices), 'matrix', 'matrices')} still open or recorded as"
-            " unresolved competition. The full matrix is on its own page._",
-            "",
-        ]
-        out += ["| Matrix | Subsystem | Symptom | Outcome | Opened |", "|---|---|---|---|---|"]
+        table_rows: list[Row] = []
         for m in matrices:
             subsystem_id = str(m["subsystem_id"] or "")
             subsystem = (
@@ -4477,42 +5293,65 @@ def render_disagreements(conn: sqlite3.Connection, storage: Path) -> RenderResul
                 if subsystem_id
                 else "—"
             )
-            out.append(
-                f"| [DM-{m['id']}]({matrix_page(int(m['id']))}) | {subsystem} |"
-                f" {_table_cell(m['symptom'] or '')} |"
-                f" `{m['outcome'] or 'open'}` | {_fmt_time(m['created_at'])} |"
+            table_rows.append(
+                rows_of(
+                    f"[DM-{m['id']}]({matrix_page(int(m['id']))})",
+                    subsystem,
+                    _table_cell(m["symptom"] or ""),
+                    f"`{m['outcome'] or 'open'}`",
+                    _fmt_time(m["created_at"]),
+                )
             )
-        out.append("")
+        body = [
+            _paragraph(
+                f"_{_count(len(matrices), 'matrix', 'matrices')} still open or recorded as"
+                " unresolved competition. The full matrix is on its own page._"
+            ),
+            Table(
+                _caption(heading),
+                tuple(inlines(h) for h in ("Matrix", "Subsystem", "Symptom", "Outcome", "Opened")),
+                tuple(table_rows),
+            ),
+        ]
     else:
-        out += ["No evidence matrix is open or recorded as unresolved competition.", ""]
+        body = [_paragraph("No evidence matrix is open or recorded as unresolved competition.")]
+    blocks.append(_section(heading, *body))
 
-    out += ["## Concern reviews that recorded a competition", ""]
+    heading = "Concern reviews that recorded a competition"
     if competing:
-        out += [
-            f"_{_count(len(competing), 'review')} where two or more concerns each"
-            " explain what was observed and the evidence does not separate them._",
-            "",
-        ]
-        out += [
-            "| Subsystem | Concern | Strongest evidence | Linchpin | Recorded | Rationale |",
-            "|---|---|---|---|---|---|",
-        ]
+        table_rows = []
         for d in competing:
             subsystem_id = str(d["subsystem_id"])
             name = names.get(subsystem_id, subsystem_id)
-            quality = f"`{d['evidence_quality']}`" if d["evidence_quality"] else "not recorded"
-            linchpin = "yes" if int(d["linchpin_dependent"] or 0) else "no"
-            rationale = _table_cell(d["rationale"] or "No rationale is recorded.")
-            out.append(
-                f"| [{name}]({subsystem_page(subsystem_id, name)}) **{subsystem_id}** |"
-                f" **{d['concern_code']}** | {quality} | {linchpin} |"
-                f" {_fmt_time(d['assessed_at'])} | {rationale} |"
+            table_rows.append(
+                rows_of(
+                    f"[{name}]({subsystem_page(subsystem_id, name)}) **{subsystem_id}**",
+                    f"**{d['concern_code']}**",
+                    f"`{d['evidence_quality']}`" if d["evidence_quality"] else "not recorded",
+                    "yes" if int(d["linchpin_dependent"] or 0) else "no",
+                    _fmt_time(d["assessed_at"]),
+                    _table_cell(d["rationale"] or "No rationale is recorded."),
+                )
             )
-        out.append("")
+        body = [
+            _paragraph(
+                f"_{_count(len(competing), 'review')} where two or more concerns each"
+                " explain what was observed and the evidence does not separate them._"
+            ),
+            Table(
+                _caption(heading),
+                tuple(
+                    inlines(h)
+                    for h in ("Subsystem", "Concern", "Strongest evidence", "Linchpin", "Recorded", "Rationale")
+                ),
+                tuple(table_rows),
+            ),
+        ]
     else:
-        out += ["No concern review recorded an unresolved competition.", ""]
+        body = [_paragraph("No concern review recorded an unresolved competition.")]
+    blocks.append(_section(heading, *body))
 
-    return "\n".join(out) + "\n", {
+    return Page("Records that disagree", "disagreements.html", tuple(blocks)), {
         **_db_source("disagreements:contradictions", contradictions),
         **_db_source("disagreements:matrices", matrices),
         **_db_source("disagreements:dispositions", competing),
@@ -4561,46 +5400,6 @@ HOT_SPOT_COLUMN_NOTES: tuple[str, ...] = (
 )
 
 
-def _hot_spot_access(conn: sqlite3.Connection) -> dict[str, int]:
-    """Recorded accesses per subsystem, by way of the entry each one names.
-
-    `access_log` records an entry, not a subsystem, so an access reaches a
-    subsystem only through an `entries` row that carries one. When none does,
-    §7.6 omits the column rather than printing a column of zeros: zero recorded
-    accesses and no access recording at all are different claims (VP4).
-    """
-
-    return {
-        str(r["subsystem_id"]): int(r["n"] or 0)
-        for r in rows(
-            conn,
-            "SELECT e.subsystem_id, COUNT(*) AS n"
-            "  FROM access_log a"
-            "  JOIN entries e ON e.id = a.entry_id AND e.tier = a.entry_tier"
-            " WHERE e.subsystem_id IS NOT NULL"
-            " GROUP BY e.subsystem_id",
-        )
-    }
-
-
-def _weakest_quality(qualities: Sequence[str | None]) -> str:
-    """The weakest rung recorded among some confirmed-bug reviews, or `—`.
-
-    A review that records no quality at all is weaker than any recorded rung —
-    there is nothing to read the claim against — so it wins the comparison.
-    """
-
-    if not qualities:
-        return "—"
-    ladder = values_of("evidence_quality")
-    if any(not quality for quality in qualities):
-        return "not recorded"
-    return max(
-        (str(q) for q in qualities),
-        key=lambda q: ladder.index(q) if q in ladder else len(ladder),
-    )
-
-
 def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """One row per subsystem, nine separate measures, one declared sort (§7.6).
 
@@ -4613,59 +5412,11 @@ def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     del storage  # every measure is a property of the durable tables
 
     subs = rows(conn, "SELECT id, name, layer FROM subsystems ORDER BY id")
-    findings = rows(
-        conn,
-        "SELECT v.subsystem_id, f.severity, v.resolution_state"
-        "  FROM finding_state_current v"
-        "  JOIN findings f ON f.finding_id = v.finding_id"
-        " WHERE v.resolution_state IN ('open','fixed-pending-verification')",
-    )
-    contradiction_parties = rows(
-        conn,
-        "SELECT DISTINCT c.id, f.subsystem_id"
-        "  FROM contradictions c"
-        "  JOIN findings f ON f.finding_id IN (c.finding_a, c.finding_b)"
-        " WHERE COALESCE(c.resolution,'unresolved')='unresolved'"
-        "   AND f.subsystem_id IS NOT NULL",
-    )
-    competing_matrices = rows(
-        conn,
-        "SELECT subsystem_id, COUNT(*) AS n FROM diagnosticity_sessions"
-        " WHERE COALESCE(outcome,'open') IN ('open','unresolved-competition')"
-        "   AND subsystem_id IS NOT NULL GROUP BY subsystem_id",
-    )
-    competing_reviews = rows(
-        conn,
-        "SELECT subsystem_id, COUNT(*) AS n FROM dispositions"
-        " WHERE classification='unresolved-competition' GROUP BY subsystem_id",
-    )
-    bug_reviews = rows(
-        conn,
-        "SELECT subsystem_id, evidence_quality FROM dispositions"
-        " WHERE classification='confirmed-bug'",
-    )
-    ledger = rows(
-        conn,
-        "SELECT subsystem_id, COALESCE(classification,'candidate') AS classification,"
-        f" COALESCE(stale,0) AS stale FROM file_ledger WHERE {OBLIGATION_BEARING_SQL}",
-    )
-    seams = rows(
-        conn,
-        "SELECT seam_id, party_a, party_b, assessable FROM seam_assessability"
-        " ORDER BY seam_id",
-    )
-    seam_concern_parties = {
-        str(d["subsystem_id"])
-        for d in rows(
-            conn,
-            "SELECT DISTINCT subsystem_id FROM dispositions WHERE concern_code LIKE 'SC-%'",
-        )
-    }
-    access = _hot_spot_access(conn)
+    access = hot_spot_access(conn)
 
-    out = ["# Hot spots", ""]
+    blocks: list[Block] = []
     if not subs:
-        out += _empty_lens(
+        blocks += _empty_lens_blocks(
             conn,
             "No subsystem is recorded, so there is nothing to compare.",
             "one row per subsystem, each column a separate measure of unresolved work"
@@ -4673,68 +5424,29 @@ def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             "`findings`, `contradictions`, `diagnosticity_sessions`, `dispositions`,"
             " `file_ledger`, and `seam_assessability`.",
         )
-        return "\n".join(out) + "\n", _db_source("hotspots:subsystems", subs)
+        return Page("Hot spots", "hot-spots.html", tuple(blocks)), _db_source("hotspots:subsystems", subs)
 
-    measures: list[dict[str, Any]] = []
-    for s in subs:
-        sid = str(s["id"])
-        owned = [f for f in findings if str(f["subsystem_id"]) == sid]
-        open_rows = [f for f in owned if f["resolution_state"] == "open"]
-        crit_high = sum(1 for f in open_rows if f["severity"] in ("CRITICAL", "HIGH"))
-        med_low = sum(1 for f in open_rows if f["severity"] in ("MEDIUM", "LOW"))
-        awaiting = sum(
-            1 for f in owned if f["resolution_state"] == "fixed-pending-verification"
-        )
-        undiscriminated = (
-            sum(1 for c in contradiction_parties if str(c["subsystem_id"]) == sid)
-            + sum(int(m["n"] or 0) for m in competing_matrices if str(m["subsystem_id"]) == sid)
-            + sum(int(r["n"] or 0) for r in competing_reviews if str(r["subsystem_id"]) == sid)
-        )
-        quality = _weakest_quality(
-            [r["evidence_quality"] for r in bug_reviews if str(r["subsystem_id"]) == sid]
-        )
-        owned_rows = [r for r in ledger if str(r["subsystem_id"]) == sid]
-        unread = sum(1 for r in owned_rows if r["classification"] == "candidate")
-        stale = sum(1 for r in owned_rows if int(r["stale"] or 0))
-        party_seams = [
-            seam for seam in seams if sid in (str(seam["party_a"]), str(seam["party_b"]))
-        ]
-        unassessed = 0
-        for seam in party_seams:
-            assessable = int(seam["assessable"] or 0)
-            for side in (str(seam["party_a"]), str(seam["party_b"])):
-                if not assessable or side not in seam_concern_parties:
-                    unassessed += 1
-        measures.append(
-            {
-                "id": sid,
-                "name": str(s["name"] or sid),
-                "crit_high": crit_high,
-                "med_low": med_low,
-                "awaiting": awaiting,
-                "undiscriminated": undiscriminated,
-                "quality": quality,
-                "unread": unread,
-                "obligation": len(owned_rows),
-                "unread_fraction": (unread / len(owned_rows)) if owned_rows else 0.0,
-                "stale": stale,
-                "unassessed_sides": unassessed,
-                "seam_sides": 2 * len(party_seams),
-                "access": access.get(sid),
-            }
-        )
+    measures = hot_spot_measures(conn)
 
     measures.sort(
         key=lambda m: (-m["crit_high"], -m["med_low"], -m["unread_fraction"], m["id"])
     )
 
-    out += [
-        "_Rows are ordered by open critical and high defects, then open medium and low, then the unread fraction._",
-        "",
-    ]
+    blocks.append(
+        _paragraph(
+            "_Rows are ordered by open critical and high defects, then open medium and low, then the unread fraction._"
+        )
+    )
 
+    # The one measure table carries this page's filterable rows (§8.1.2). The
+    # severity facet is named by the band columns themselves: the table keeps
+    # critical+high and medium+low apart on purpose, and a filter that merged
+    # them into four severities would assert a resolution the columns do not
+    # record.
     headers = list(HOT_SPOT_COLUMNS) + ([ACCESS_COLUMN] if access else [])
-    out += [f"| {' | '.join(headers)} |", "|" + "---|" * len(headers)]
+    bands = {1: HOT_SPOT_COLUMNS[1], 2: HOT_SPOT_COLUMNS[2]}
+    subsystem_names: list[str] = []
+    table_rows: list[Row] = []
     for m in measures:
         cells = [
             f"[{m['name']}]({subsystem_page(m['id'], m['name'])}) **{m['id']}**",
@@ -4749,35 +5461,42 @@ def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         ]
         if access:
             cells.append(str(m["access"] or 0))
-        out.append(f"| {' | '.join(cells)} |")
-    out.append("")
+        name = _plain(str(m["name"]))
+        if name and name not in subsystem_names:
+            subsystem_names.append(name)
+        severity = "|".join(
+            label for index, label in bands.items() if int(cells[index]) > 0
+        )
+        table_rows.append(Row(tuple(inlines(cell) for cell in cells), (), RowFilter(name, severity)))
+    blocks.append(Table("Hot spots", tuple(inlines(header) for header in headers), tuple(table_rows)))
 
-    out += ["## What each column measures", ""]
-    for note in HOT_SPOT_COLUMN_NOTES:
-        out += [note, ""]
-    out += [
-        "**Unassessed seam sides** counts `(seam, side)` pairs over twice the seams"
-        " this subsystem is party to: a seam assessed from one side only is"
-        " half-known, and counting seams would report it as covered."
-        f" {PER_PARTY_PROXY}",
-        "",
-    ]
-    if access:
-        out += [
+    notes: list[Block] = [_paragraph(note) for note in HOT_SPOT_COLUMN_NOTES]
+    notes.append(
+        _paragraph(
+            "**Unassessed seam sides** counts `(seam, side)` pairs over twice the seams"
+            " this subsystem is party to: a seam assessed from one side only is"
+            " half-known, and counting seams would report it as covered."
+            f" {PER_PARTY_PROXY}"
+        )
+    )
+    notes.append(
+        _paragraph(
             f"**{ACCESS_COLUMN}** counts the accesses recorded against entries this"
             " subsystem owns. It measures what the survey read, not what the"
-            " repository runs.",
-            "",
-        ]
-    else:
-        out += [
-            f"No **{ACCESS_COLUMN}** column is shown: no recorded access reaches a"
+            " repository runs."
+            if access
+            else f"No **{ACCESS_COLUMN}** column is shown: no recorded access reaches a"
             " subsystem, and a column of zeros would read as a measurement that was"
-            " taken.",
-            "",
-        ]
+            " taken."
+        )
+    )
+    blocks.append(_section("What each column measures", *notes))
 
-    return "\n".join(out) + "\n", {
+    facets = Facets(
+        "hot-spots",
+        (("severity", tuple(bands.values())), ("subsystem", tuple(subsystem_names))),
+    )
+    return Page("Hot spots", "hot-spots.html", tuple(blocks), facets), {
         **_db_source("hotspots:measures", measures),
         **_db_source("hotspots:access", access),
     }
@@ -4796,7 +5515,7 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
     deletes their event tables. A finding's severity re-grades are a third
     trail (`finding_severity_events`), read when the store has the table.
     Every other family carries a mutable terminal column and is reported on
-    `resolved-leads.md`, which says so (§1.1, C58).
+    `resolved-leads.html`, which says so (§1.1, C58).
     """
 
     del storage  # the two event tables are the only source
@@ -4832,7 +5551,6 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
         " ORDER BY e.id DESC",
     )
 
-    out = ["# Resolution history", ""]
     sources = {
         **_db_source("history:finding-events", finding_events),
         **_db_source("history:contradiction-events", contradiction_events),
@@ -4840,7 +5558,7 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
     if severity_events:
         sources.update(_db_source("history:severity-events", severity_events))
     if not (finding_events or contradiction_events or severity_events):
-        out += _empty_lens(
+        blocks = _empty_lens_blocks(
             conn,
             "No resolution event is recorded.",
             "every state a finding or a contradiction was recorded in, newest first,"
@@ -4848,7 +5566,7 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
             "`finding_resolution_events` and `contradiction_resolution_events`, the"
             " two tables nothing updates or deletes.",
         )
-        return "\n".join(out) + "\n", sources
+        return Page("Resolution history", "resolution-history.html", tuple(blocks)), sources
 
     timeline: list[tuple[str, int, int, list[str]]] = []
     for e in finding_events:
@@ -4913,23 +5631,22 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
         )
     timeline.sort(key=lambda entry: (entry[0], entry[1], entry[2]), reverse=True)
 
-    out += [
-        "_Every state a finding or a contradiction was recorded in, and every"
-        " re-grade of a finding's severity, newest first, with the account given"
-        " at the time. Nothing here is rewritten when a"
-        " record moves on: a repair that was later defeated keeps the event that"
-        " recorded it, which is how a regression is visible at all. Each row links"
-        " to where that record is written in full today._",
-        "",
+    blocks = [
+        _paragraph(
+            "_Every state a finding or a contradiction was recorded in, and every"
+            " re-grade of a finding's severity, newest first, with the account given"
+            " at the time. Nothing here is rewritten when a"
+            " record moves on: a repair that was later defeated keeps the event that"
+            " recorded it, which is how a regression is visible at all. Each row links"
+            " to where that record is written in full today._"
+        ),
+        _table(
+            "Resolution history",
+            ("Recorded", "Record", "State", "Session", "Account"),
+            [cells for _at, _rank, _id, cells in timeline],
+        ),
     ]
-    out += [
-        "| Recorded | Record | State | Session | Account |",
-        "|---|---|---|---|---|",
-    ]
-    out += [f"| {' | '.join(cells)} |" for _at, _rank, _id, cells in timeline]
-    out.append("")
-
-    return "\n".join(out) + "\n", sources
+    return Page("Resolution history", "resolution-history.html", tuple(blocks)), sources
 
 
 # §1.1's two statements about what the store keeps for the record families that
@@ -4965,10 +5682,13 @@ def render_resolved_leads(conn: sqlite3.Connection, storage: Path) -> RenderResu
         "SELECT * FROM field_notes WHERE COALESCE(follow_up,'open')<>'open'"
         " ORDER BY id DESC",
     )
+    sources = {
+        **_db_source("resolved-leads:questions", questions),
+        **_db_source("resolved-leads:notes", notes),
+    }
 
-    out = ["# Resolved leads and questions", ""]
     if not (questions or notes):
-        out += _empty_lens(
+        blocks = _empty_lens_blocks(
             conn,
             "No question has been settled and no lead has been closed.",
             "questions answered, dismissed, or superseded, and leads closed either by"
@@ -4976,75 +5696,71 @@ def render_resolved_leads(conn: sqlite3.Connection, storage: Path) -> RenderResu
             "`open_questions.resolution` and `field_notes.follow_up`, both mutable"
             " columns with no event table behind them.",
         )
-        return "\n".join(out) + "\n", {
-            **_db_source("resolved-leads:questions", questions),
-            **_db_source("resolved-leads:notes", notes),
-        }
+        return Page("Resolved leads and questions", "resolved-leads.html", tuple(blocks)), sources
 
-    out += [
-        "_These two families reach a terminal state in a column, not in an event"
-        " table. The record says what state they are in; for how they got there it"
-        " says only what is written below. Findings and contradictions do keep an"
-        " event trail, on [Resolution history](resolution-history.md)._",
-        "",
+    blocks: list[Block] = [
+        _paragraph(
+            "_These two families reach a terminal state in a column, not in an event"
+            " table. The record says what state they are in; for how they got there it"
+            " says only what is written below. Findings and contradictions do keep an"
+            " event trail, on [Resolution history](resolution-history.html)._"
+        )
     ]
 
-    out += ["## Questions", ""]
+    settled: list[Block] = []
     if questions:
-        out += [
-            f"_{_count(len(questions), 'question')} settled, newest first by the time"
-            f" recorded. {QUESTION_TERMINAL_LIMIT}_",
-            "",
-        ]
+        settled.append(
+            _paragraph(
+                f"_{_count(len(questions), 'question')} settled, newest first by the time"
+                f" recorded. {QUESTION_TERMINAL_LIMIT}_"
+            )
+        )
         for q in questions:
-            settled = (
-                _fmt_time(q["resolved_at"]) if q["resolved_at"] else "not recorded"
-            )
-            subsystem = (
-                f" · subsystem **{q['subsystem_id']}**" if q["subsystem_id"] else ""
-            )
-            out.append(f'<a id="{question_anchor(q["id"])}"></a>')
-            out += [f"### #{q['id']} · {q['category']}{subsystem}", ""]
-            out += [f"> {q['question']}", ""]
-            out.append(f"- **Settled** — `{q['resolution']}`, {settled}.")
-            out.append(
-                f"- **Answer** — {q['answer']}"
+            when = _fmt_time(q["resolved_at"]) if q["resolved_at"] else "not recorded"
+            subsystem = f" · subsystem **{q['subsystem_id']}**" if q["subsystem_id"] else ""
+            facts = [
+                f"**Settled** — `{q['resolution']}`, {when}.",
+                f"**Answer** — {_one_line(q['answer'])}"
                 if q["answer"]
-                else "- **Answer** — No answer is recorded."
-            )
+                else "**Answer** — No answer is recorded.",
+            ]
             if q["what_blocked"]:
-                out.append(f"- **What it blocked** — {q['what_blocked']}")
-            out.append("")
+                facts.append(f"**What it blocked** — {_one_line(q['what_blocked'])}")
+            settled += [
+                Anchor(question_anchor(q["id"])),
+                _heading(3, f"#{q['id']} · {q['category']}{subsystem}"),
+                Quote(inlines(_one_line(q["question"]))),
+                _bullets(facts),
+            ]
     else:
-        out += ["No question has been answered, dismissed, or superseded.", ""]
+        settled.append(_paragraph("No question has been answered, dismissed, or superseded."))
+    blocks.append(_section("Questions", *settled))
 
-    out += ["## Leads", ""]
+    closed: list[Block] = []
     if notes:
-        out += [
-            f"_{_count(len(notes), 'lead')} closed. {LEAD_TERMINAL_LIMIT}_",
-            "",
+        closed += [
+            _paragraph(f"_{_count(len(notes), 'lead')} closed. {LEAD_TERMINAL_LIMIT}_"),
+            _table(
+                "leads",
+                ("Lead", "Category", "Opened", "Closed as", "Observation"),
+                [
+                    [
+                        f'<a id="{lead_anchor(n["id"])}"></a>**#{n["id"]}**',
+                        str(n["category"]),
+                        _fmt_time(n["created_at"]),
+                        str(n["follow_up"]),
+                        _table_cell(n["observation"])
+                        + (f" @ `{n['location']}`" if n["location"] else ""),
+                    ]
+                    for n in notes
+                ],
+            ),
         ]
-        out += [
-            "| Lead | Category | Opened | Closed as | Observation |",
-            "|---|---|---|---|---|",
-        ]
-        for n in notes:
-            anchor = lead_anchor(n["id"])
-            observation = _table_cell(n["observation"])
-            location = f" @ `{n['location']}`" if n["location"] else ""
-            out.append(
-                f'| <a id="{anchor}"></a>**#{n["id"]}** | {n["category"]} |'
-                f" {_fmt_time(n['created_at'])} | {n['follow_up']} |"
-                f" {observation}{location} |"
-            )
-        out.append("")
     else:
-        out += ["No lead has been closed.", ""]
+        closed.append(_paragraph("No lead has been closed."))
+    blocks.append(_section("Leads", *closed))
 
-    return "\n".join(out) + "\n", {
-        **_db_source("resolved-leads:questions", questions),
-        **_db_source("resolved-leads:notes", notes),
-    }
+    return Page("Resolved leads and questions", "resolved-leads.html", tuple(blocks)), sources
 
 
 def render_sessions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -5072,85 +5788,101 @@ def render_sessions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         "       verified_at FROM projection_verification_runs"
         " ORDER BY verified_at DESC, run_id DESC",
     )
+    sources = {
+        **_db_source("sessions:sessions", sessions),
+        **_db_source("sessions:refreshes", refreshes),
+        **_db_source("sessions:verifications", verifications),
+    }
 
-    out = ["# Sessions and publications", ""]
     if not (sessions or refreshes or verifications):
-        out += _empty_lens(
+        blocks = _empty_lens_blocks(
             conn,
             "Nothing is recorded as having run against this conspectus.",
             "the survey sessions that were opened, the refresh runs that were"
             " dispatched, and the publications whose read-back was verified.",
             "`sessions`, `refresh_runs`, and `projection_verification_runs`.",
         )
-        return "\n".join(out) + "\n", {
-            **_db_source("sessions:sessions", sessions),
-            **_db_source("sessions:refreshes", refreshes),
-            **_db_source("sessions:verifications", verifications),
-        }
+        return Page("Sessions and publications", "sessions.html", tuple(blocks)), sources
 
-    out += [
-        "_What ran against this conspectus, and what each run produced. A session"
-        " still without an end is one that was never closed, which is a fact about"
-        " the record rather than about the work._",
-        "",
+    blocks: list[Block] = [
+        _paragraph(
+            "_What ran against this conspectus, and what each run produced. A session"
+            " still without an end is one that was never closed, which is a fact about"
+            " the record rather than about the work._"
+        )
     ]
 
-    out += ["## Survey sessions", ""]
-    if sessions:
-        out += ["| Session | Intent | Started | Ended | Outcome |", "|---|---|---|---|---|"]
-        for s in sessions:
-            intent = _table_cell(s["intent"] or "")
-            out.append(
-                f"| `{s['session_id']}` | `{intent}` | {_fmt_time(s['started_at'])} |"
-                f" {_fmt_time(s['ended_at']) if s['ended_at'] else 'not closed'} |"
-                f" {_table_cell(s['outcome'] or 'not recorded')} |"
+    blocks.append(
+        _section(
+            "Survey sessions",
+            _table(
+                "survey sessions",
+                ("Session", "Intent", "Started", "Ended", "Outcome"),
+                [
+                    [
+                        f"`{s['session_id']}`",
+                        f"`{_table_cell(s['intent'] or '')}`",
+                        _fmt_time(s["started_at"]),
+                        _fmt_time(s["ended_at"]) if s["ended_at"] else "not closed",
+                        _table_cell(s["outcome"] or "not recorded"),
+                    ]
+                    for s in sessions
+                ],
             )
-        out.append("")
-    else:
-        out += ["No survey session is recorded.", ""]
+            if sessions
+            else _paragraph("No survey session is recorded."),
+        )
+    )
 
-    out += ["## Refresh runs", ""]
-    if refreshes:
-        out += [
-            "| Run | Status | Base | Head | Provider | Model | Completed |",
-            "|---|---|---|---|---|---|---|",
-        ]
-        for r in refreshes:
-            out.append(
-                f"| `{r['run_id']}` | `{r['status']}` | {_short(str(r['base_sha'] or ''))} |"
-                f" {_short(str(r['head_sha'] or ''))} | {r['selected_provider']} |"
-                f" `{r['model']}` |"
-                f" {_fmt_time(r['completed_at']) if r['completed_at'] else 'not completed'} |"
+    blocks.append(
+        _section(
+            "Refresh runs",
+            _table(
+                "refresh runs",
+                ("Run", "Status", "Base", "Head", "Provider", "Model", "Completed"),
+                [
+                    [
+                        f"`{r['run_id']}`",
+                        f"`{r['status']}`",
+                        _short(str(r["base_sha"] or "")),
+                        _short(str(r["head_sha"] or "")),
+                        str(r["selected_provider"]),
+                        f"`{r['model']}`",
+                        _fmt_time(r["completed_at"]) if r["completed_at"] else "not completed",
+                    ]
+                    for r in refreshes
+                ],
             )
-        out.append("")
-    else:
-        out += ["No refresh run is recorded.", ""]
+            if refreshes
+            else _paragraph("No refresh run is recorded."),
+        )
+    )
 
-    out += ["## Publication read-back", ""]
-    if verifications:
-        out += [
-            "| Run | Mode | State | Coverage | Content | Verified |",
-            "|---|---|---|---|---|---|",
-        ]
-        for v in verifications:
-            axes = " | ".join(
-                "green" if int(v[f"{axis}_ok"] or 0) else "red"
-                for axis in ("state", "coverage", "content")
+    blocks.append(
+        _section(
+            "Publication read-back",
+            _table(
+                "publication read back",
+                ("Run", "Mode", "State", "Coverage", "Content", "Verified"),
+                [
+                    [
+                        f"`{v['run_id']}`",
+                        f"`{v['mode']}`",
+                        *(
+                            "green" if int(v[f"{axis}_ok"] or 0) else "red"
+                            for axis in ("state", "coverage", "content")
+                        ),
+                        _fmt_time(v["verified_at"]),
+                    ]
+                    for v in verifications
+                ],
             )
-            out.append(
-                f"| `{v['run_id']}` | `{v['mode']}` | {axes} |"
-                f" {_fmt_time(v['verified_at'])} |"
-            )
-        out.append("")
-    else:
-        out += [
-            "No publication read-back is recorded, so none of the three axes has a"
-            " result to report.",
-            "",
-        ]
+            if verifications
+            else _paragraph(
+                "No publication read-back is recorded, so none of the three axes has a"
+                " result to report."
+            ),
+        )
+    )
 
-    return "\n".join(out) + "\n", {
-        **_db_source("sessions:sessions", sessions),
-        **_db_source("sessions:refreshes", refreshes),
-        **_db_source("sessions:verifications", verifications),
-    }
+    return Page("Sessions and publications", "sessions.html", tuple(blocks)), sources

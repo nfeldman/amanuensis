@@ -5,12 +5,14 @@
 //   exit 0  `GATE EX14 GREEN`          — every assertion held
 //   exit 1  `GATE EX14 RED: <reason>`  — an assertion fired
 //
+// The pages are HTML, the only view a publication has (store-only PLAN §3.2);
+// `dev/read-html-page.mjs` reads a section, a status and a sentence from them.
 // It reads tracked files as HEAD commits them, because a receipt binds to what is
 // committed and not to what is on disk, and it asserts in the order §5 lists:
 //
-//   1. every subsystem page has `## Purpose`, or shows a status nothing may be
+//   1. every subsystem page has a Purpose section, or shows a status nothing may be
 //      recorded for;
-//   2. every page with `## Purpose` also has `## How it works` or the
+//   2. every page with a Purpose section also has a How it works section or the
 //      account-declination sentence;
 //   3. the census names the commit the receipts were recorded at and holds no
 //      explanation slot;
@@ -47,6 +49,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { sectionText, statusOf, textOf } from "./read-html-page.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SELF = "dev/test-explanations-published.mjs";
@@ -104,8 +107,8 @@ function committedJson(path) {
 }
 
 function committedPaths(directory) {
-  // -z: without it git quotes a non-ASCII name, and a quoted `café.md"` fails
-  // the .md filter, so its page escaped the check.
+  // -z: without it git quotes a non-ASCII name, and a quoted `café.html"` fails
+  // the .html filter, so its page escaped the check.
   const run = spawnSync("git", ["ls-tree", "-r", "--name-only", "-z", "HEAD", "--", directory], {
     cwd: REPO,
     encoding: "utf8",
@@ -133,21 +136,15 @@ function vocabulary() {
 }
 
 /** The word on a page's status line, or null when the page has none it can read. */
-function pageStatus(text, statuses) {
-  const line = text.split("\n").find((candidate) => candidate.startsWith("**Status**:"));
-  if (!line) return null;
-  const words = line.replace("**Status**:", "").trim().split(/\s+/);
-  const word = words[words.length - 1];
-  return statuses.includes(word) ? word : null;
+function pageStatus(html, statuses) {
+  const word = statusOf(html);
+  return word !== null && statuses.includes(word) ? word : null;
 }
 
 /** The text of a level-two section, or null when the page has no such heading. */
-function section(text, heading) {
-  const lines = text.split("\n");
-  const start = lines.indexOf(`## ${heading}`);
-  if (start < 0) return null;
-  const end = lines.findIndex((line, index) => index > start && /^#{1,2} /.test(line));
-  return lines.slice(start + 1, end < 0 ? undefined : end).join("\n").trim();
+function section(html, heading) {
+  const text = sectionText(html, heading);
+  return text === null ? null : text.trim();
 }
 
 function purposeProblem(page, text, vocab) {
@@ -162,7 +159,7 @@ function purposeProblem(page, text, vocab) {
 function accountProblem(page, text, vocab) {
   if (section(text, "Purpose") === null) return null;
   if (section(text, "How it works")) return null;
-  if (text.includes(vocab.accountDeclined)) return null;
+  if (textOf(text).includes(vocab.accountDeclined)) return null;
   return `${page} has a Purpose and neither a How it works section nor the account-declination sentence`;
 }
 
@@ -183,11 +180,11 @@ function censusProblem(census, receiptCommits) {
 
 function architectureProblem(text, vocab) {
   const body = section(text, FIT_HEADING);
-  if (body === null) return `docs/architecture.md has no '${FIT_HEADING}' section`;
-  if (text.includes(NO_PROJECT_ACCOUNT)) return "docs/architecture.md carries the no-account sentence";
-  if (text.includes(vocab.projectDeclined)) return "docs/architecture.md carries a declined project account";
+  if (body === null) return `docs/architecture.html has no '${FIT_HEADING}' section`;
+  if (textOf(text).includes(NO_PROJECT_ACCOUNT)) return "docs/architecture.html carries the no-account sentence";
+  if (textOf(text).includes(vocab.projectDeclined)) return "docs/architecture.html carries a declined project account";
   if (!/^\*Written by a survey session at `[0-9a-f]{8}` from \d+ evidence row\(s\)\./m.test(body)) {
-    return `docs/architecture.md's '${FIT_HEADING}' section has no account with a provenance line`;
+    return `docs/architecture.html's '${FIT_HEADING}' section has no account with a provenance line`;
   }
   return null;
 }
@@ -206,10 +203,12 @@ function progressProblem(progress, owed) {
 // Each check over a fixture it must refuse and one it must pass. Reds name what
 // the check failed to do, so a broken control cannot read as a broken tree.
 function runControls(vocab) {
+  // A page as the materializer prints it: the status line, then each section
+  // under its level-two heading.
+  const heading = (title) => `<h2 id="${title.toLowerCase().replace(/\W+/g, "-")}"><a class="heading-anchor" href="#x">§</a>${title}</h2>`;
+  const sec = (title, ...paragraphs) => `<section>${heading(title)}${paragraphs.map((text) => `<p>${text}</p>`).join("")}</section>`;
   const page = (status, ...sections) =>
-    [`# **B-99** — Fixture`, "", `**Status**: 🟡 ${status}  `, "", ...sections].join("\n");
-  const purpose = "## Purpose\n\nWhat it is for.\n\n*Written by a survey session at `abcdef12` from 2 evidence row(s).*\n";
-  const account = "## How it works\n\nHow it does it.\n";
+    `<article class="content content-subsystem"><p><strong>Status</strong>: <span class="status status-survey status-${status}">${status}</span> <strong>Layer</strong>: x</p>${sections.join("")}</article>`;
   const refuse = (problem, what) => {
     if (problem === null) red(`the control ${what} was not refused, so that check cannot fail`);
   };
@@ -217,21 +216,26 @@ function runControls(vocab) {
     if (problem !== null) red(`the control ${what} was refused: ${problem}`);
   };
 
-  refuse(purposeProblem("x", page("structural", "## Scope\n\nA scope.\n"), vocab), "structural page with no Purpose");
-  refuse(purposeProblem("x", page("structural", "## Purpose\n\n## Scope\n\nA scope.\n"), vocab), "empty Purpose");
-  refuse(purposeProblem("x", "# A page\n\n## Scope\n", vocab), "page with no status line");
-  refuse(purposeProblem("x", page("Purpose", "## Purpose\n\nA purpose.\n"), vocab), "unknown status");
-  pass(purposeProblem("x", page("unmapped", "## Scope\n\nA scope.\n"), vocab), "unmapped page with no Purpose");
+  const purpose = sec("Purpose", "What it is for.", "<em>Written by a survey session at <code>abcdef12</code> from 2 evidence row(s).</em>");
+  const account = sec("How it works", "How it does it.");
+  const scope = sec("Scope", "A scope.");
+  const declined = (sentence) => `${sentence.slice(0, -1)}<code>abcdef12</code>. A reason.`;
+
+  refuse(purposeProblem("x", page("structural", scope), vocab), "structural page with no Purpose");
+  refuse(purposeProblem("x", page("structural", sec("Purpose"), scope), vocab), "empty Purpose");
+  refuse(purposeProblem("x", `<article class="content">${scope}</article>`, vocab), "page with no status line");
+  refuse(purposeProblem("x", page("Purpose", sec("Purpose", "A purpose.")), vocab), "unknown status");
+  pass(purposeProblem("x", page("unmapped", scope), vocab), "unmapped page with no Purpose");
   pass(purposeProblem("x", page("structural", purpose), vocab), "structural page with a Purpose");
 
   refuse(accountProblem("x", page("structural", purpose), vocab), "page with a Purpose and neither account");
-  refuse(accountProblem("x", page("structural", purpose, "## How it works\n\n## Structure\n"), vocab), "empty account");
+  refuse(accountProblem("x", page("structural", purpose, sec("How it works"), sec("Structure")), vocab), "empty account");
   pass(accountProblem("x", page("structural", purpose, account), vocab), "page with a Purpose and an account");
   pass(
-    accountProblem("x", page("structural", purpose, `## Survey record\n\n${vocab.accountDeclined}abcdef12\`. A reason.\n`), vocab),
+    accountProblem("x", page("structural", purpose, sec("Survey record", declined(vocab.accountDeclined))), vocab),
     "page with a Purpose and a declined account",
   );
-  pass(accountProblem("x", page("unmapped", "## Scope\n"), vocab), "page with no Purpose");
+  pass(accountProblem("x", page("unmapped", scope), vocab), "page with no Purpose");
 
   const sha = "a".repeat(40);
   const receipts = [["receipt", sha]];
@@ -243,12 +247,13 @@ function runControls(vocab) {
   }
   pass(censusProblem({ commit: sha, unfilled_slots: [{ slot: "subsystem-vocabulary", subject: "B-99" }] }, receipts), "census with another slot");
 
-  const provenance = "*Written by a survey session at `abcdef12` from 2 evidence row(s). None changed.*";
-  refuse(architectureProblem("# A\n\n## Other\n", vocab), "architecture page with no section");
-  refuse(architectureProblem(`## ${FIT_HEADING}\n\n${NO_PROJECT_ACCOUNT}\n`, vocab), "architecture page with the no-account sentence");
-  refuse(architectureProblem(`## ${FIT_HEADING}\n\n${vocab.projectDeclined}abcdef12\`. A reason.\n`, vocab), "architecture page with a declined account");
-  refuse(architectureProblem(`## ${FIT_HEADING}\n\n**B-01 — x**: Not recorded\n`, vocab), "architecture page with only per-subsystem lines");
-  pass(architectureProblem(`## ${FIT_HEADING}\n\nThe account.\n\n${provenance}\n`, vocab), "architecture page with an account");
+  const provenance = "<em>Written by a survey session at <code>abcdef12</code> from 2 evidence row(s). None changed.</em>";
+  const architecture = (...sections) => `<article class="content content-architecture">${sections.join("")}</article>`;
+  refuse(architectureProblem(architecture(sec("Other", "x")), vocab), "architecture page with no section");
+  refuse(architectureProblem(architecture(sec(FIT_HEADING, NO_PROJECT_ACCOUNT)), vocab), "architecture page with the no-account sentence");
+  refuse(architectureProblem(architecture(sec(FIT_HEADING, declined(vocab.projectDeclined))), vocab), "architecture page with a declined account");
+  refuse(architectureProblem(architecture(sec(FIT_HEADING, "<strong>B-01 — x</strong>: Not recorded")), vocab), "architecture page with only per-subsystem lines");
+  pass(architectureProblem(architecture(sec(FIT_HEADING, "The account.", provenance)), vocab), "architecture page with an account");
 
   refuse(progressProblem({ subjects_done: 1, subjects: [] }, []), "progress count off its list");
   refuse(progressProblem({ subjects_done: 1, subjects: ["B-01"], status: "blocked" }, ["B-01"]), "blocked progress");
@@ -261,7 +266,7 @@ function runControls(vocab) {
 }
 
 function checkPages(vocab) {
-  const pages = committedPaths("docs/subsystems").filter((path) => path.endsWith(".md"));
+  const pages = committedPaths("docs/subsystems").filter((path) => path.endsWith(".html"));
   if (!pages.length) red("a surveyed subsystem page has no Purpose section: docs/subsystems has no page at all");
   const texts = pages.map((path) => [path, committedOrRed(path)]);
   for (const [path, text] of texts) {
@@ -282,14 +287,14 @@ function checkCensus() {
 }
 
 function checkArchitecture(vocab) {
-  const problem = architectureProblem(committedOrRed("docs/architecture.md"), vocab);
+  const problem = architectureProblem(committedOrRed("docs/architecture.html"), vocab);
   if (problem) red(problem);
 }
 
 function checkRefusals() {
   for (const path of committedPaths("docs")) {
-    if (!/\.(md|html)$/.test(path)) continue;
-    if (REFUSED_SENTENCE.test(committedOrRed(path))) red(`${path} carries a refused-explanation sentence`);
+    if (!path.endsWith(".html")) continue;
+    if (REFUSED_SENTENCE.test(textOf(committedOrRed(path)))) red(`${path} carries a refused-explanation sentence`);
   }
 }
 
@@ -333,7 +338,9 @@ function checkMeasure() {
     if (archive.status !== 0) red("the committed docs tree could not be archived");
     const untar = spawnSync("tar", ["-xf", join(scratch, "docs.tar"), "-C", scratch], { encoding: "utf8" });
     if (untar.status !== 0) red("the committed docs tree could not be unpacked");
-    const measure = spawnSync(process.execPath, [join(REPO, "dev/measure-reader-prose.mjs"), join(scratch, "docs")], { cwd: REPO, encoding: "utf8" });
+    // An entry with no basis was measured before the output was HTML only.
+    const basis = last?.basis ?? "markdown";
+    const measure = spawnSync(process.execPath, [join(REPO, "dev/measure-reader-prose.mjs"), join(scratch, "docs"), "--basis", basis], { cwd: REPO, encoding: "utf8" });
     if (measure.status !== 0) red("dev/measure-reader-prose.mjs did not measure the committed docs tree");
     if (JSON.stringify(JSON.parse(measure.stdout).totals) !== JSON.stringify(last?.totals)) {
       red(`${MEASURE}'s last entry ('${last?.label}') is not the measure of the committed docs`);

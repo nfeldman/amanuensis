@@ -31,7 +31,12 @@
 //   5. a source whose read-back is not green on all three axes — state,
 //      coverage and content;
 //   6. a destination holding files its own manifest does not claim, which are
-//      somebody else's and are not this script's to replace.
+//      somebody else's and are not this script's to replace;
+//   7. a source whose contract names a page that is not HTML — a Markdown page,
+//      or anything but the search index and the README — and a source with no
+//      `README.md`. The publication is HTML only (store-only PLAN §6, D10): a
+//      copy carries every `.html` page, `search-index.js`, the two receipt files
+//      and the one content-free README, and nothing else.
 //
 // Nothing is written before all six pass. The promotion itself stages a copy
 // beside the destination and renames it into place, keeping the previous
@@ -61,13 +66,15 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const CONTRACT_NAME = ".projection-contract.json";
 const MANIFEST_NAME = ".manifest.json";
+const README_NAME = "README.md";
+const SEARCH_INDEX_NAME = "search-index.js";
 const MATERIALIZER = join(REPO, "materializer", "materialize.py");
 const READBACK_AXES = ["state", "coverage", "content"];
 
@@ -169,6 +176,12 @@ function matchContract(directory, label) {
     if (!rel || rel.startsWith("/") || rel.includes("..")) {
       refuse(`${label}'s contract names an unusable page path ${JSON.stringify(page?.path ?? null)}`);
     }
+    if (rel.endsWith(".md") && rel !== README_NAME) {
+      refuse(`${label}'s contract names the Markdown page ${rel}: a publication is HTML only, so there is nothing to copy it as`);
+    }
+    if (!rel.endsWith(".html") && rel !== SEARCH_INDEX_NAME && rel !== README_NAME) {
+      refuse(`${label}'s contract names ${rel}, which is neither an HTML page, the search index nor the README`);
+    }
     if (claimed.has(rel)) refuse(`${label}'s contract names ${rel} twice`);
     claimed.add(rel);
     const pagePath = join(directory, rel);
@@ -187,6 +200,9 @@ function matchContract(directory, label) {
     refuse(
       `${label} holds ${unclaimed.length} file(s) its contract does not claim: ${unclaimed.slice(0, 5).join(", ")}`,
     );
+  }
+  if (!claimed.has(README_NAME)) {
+    refuse(`${label}'s contract does not name ${README_NAME}: a copy without it shows GitHub's directory view only .html source`);
   }
   return { contract, pageCount: pages.length };
 }
@@ -247,7 +263,9 @@ function unmanagedAt(directory) {
   const owned = new Set([
     CONTRACT_NAME,
     MANIFEST_NAME,
-    ...(Array.isArray(manifest?.pages) ? manifest.pages : [])
+    // A manifest written before the output was HTML only has no `views` key, and
+    // its pages were files; a later one's pages are ids, which claim no file.
+    ...(Array.isArray(manifest?.pages) && !Array.isArray(manifest?.views) ? manifest.pages : [])
       .map((page) => String(page?.path ?? ""))
       .filter(Boolean),
     ...(Array.isArray(manifest?.projection_files) ? manifest.projection_files : [])
@@ -314,7 +332,16 @@ function main() {
   const backup = existsSync(destination)
     ? join(parent, `.${options.destination.split("/").pop()}.amanuensis-previous-${randomUUID().slice(0, 8)}`)
     : null;
-  cpSync(source, stage, { recursive: true });
+  // HTML, the search index, the two receipt files and the README, and nothing
+  // else; the checks above already refused a source holding any other file.
+  cpSync(source, stage, {
+    recursive: true,
+    filter: (path) => {
+      if (statSync(path).isDirectory()) return true;
+      const rel = relative(source, path);
+      return rel.endsWith(".html") || [SEARCH_INDEX_NAME, README_NAME, CONTRACT_NAME, MANIFEST_NAME].includes(rel);
+    },
+  });
   if (backup) renameSync(destination, backup);
   let promoted = false;
   let promotionReadback = null;

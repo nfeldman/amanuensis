@@ -1,0 +1,389 @@
+
+(() => {
+  const root = document.documentElement;
+  const body = document.body;
+  const themeButton = document.querySelector('[data-theme-toggle]');
+  const themeStorageKey = 'amanuensis-theme';
+  const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+  let storedTheme = null;
+  try { storedTheme = localStorage.getItem(themeStorageKey); } catch (_) {}
+  if (storedTheme === 'light' || storedTheme === 'dark') root.dataset.theme = storedTheme;
+
+  const updateThemeLabel = () => {
+    if (!themeButton) return;
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
+    themeButton.textContent = dark ? 'Light theme' : 'Dark theme';
+    themeButton.setAttribute('aria-label', dark ? 'Use light theme' : 'Use dark theme');
+  };
+  const applyTheme = (theme) => {
+    if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+    else delete root.dataset.theme;
+    updateThemeLabel();
+  };
+  updateThemeLabel();
+  themeButton?.addEventListener('click', () => {
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
+    const theme = dark ? 'light' : 'dark';
+    applyTheme(theme);
+    try { localStorage.setItem(themeStorageKey, theme); } catch (_) {}
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== themeStorageKey) return;
+    applyTheme(event.newValue);
+  });
+  systemTheme.addEventListener?.('change', updateThemeLabel);
+
+  const menuButton = document.querySelector('[data-nav-toggle]');
+  const navRail = document.querySelector('.nav-rail');
+  const documentInner = document.querySelector('.document-inner');
+  const narrow = matchMedia('(max-width: 900px)');
+  const setMenuOpen = (open, restoreFocus = false) => {
+    const effectiveOpen = Boolean(open && narrow.matches);
+    body.classList.toggle('nav-open', effectiveOpen);
+    menuButton?.setAttribute('aria-expanded', String(effectiveOpen));
+    if (navRail) navRail.inert = narrow.matches && !effectiveOpen;
+    if (documentInner) documentInner.inert = effectiveOpen;
+    if (effectiveOpen) navRail?.querySelector('a, input, button')?.focus();
+    else if (restoreFocus) menuButton?.focus();
+  };
+  setMenuOpen(false);
+  menuButton?.addEventListener('click', () => setMenuOpen(!body.classList.contains('nav-open')));
+  navRail?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenuOpen(false)));
+  narrow.addEventListener?.('change', () => setMenuOpen(false));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && body.classList.contains('nav-open')) setMenuOpen(false, true);
+  });
+
+  // ---------------------------------------------------------------------
+  // Search over pages, ledger paths, and cited symbols (spec §8.1.1).
+  // The combobox is built here rather than served: an input announced as a
+  // combobox that no script can expand promises a control the reader does not
+  // have. Without script the rail still lists every page, and every result's
+  // target is reachable from it.
+  // ---------------------------------------------------------------------
+  const search = document.querySelector('[data-nav-search]');
+  const searchStatus = document.querySelector('[data-search-status]');
+  const locus = (window.__amanuensisLocusIndex && typeof window.__amanuensisLocusIndex === 'object')
+    ? window.__amanuensisLocusIndex : {};
+  const locusPaths = Array.isArray(locus.paths) ? locus.paths : [];
+  const locusSymbols = Array.isArray(locus.symbols) ? locus.symbols : [];
+  const RESULT_LIMIT = 24;
+  let listbox = null;
+  let options = [];
+  let activeIndex = -1;
+  let priorFocus = null;
+
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (!target || target === search || target === document.body) return;
+    if (listbox && listbox.contains(target)) return;
+    priorFocus = target;
+  });
+
+  if (search && searchStatus) {
+    listbox = document.createElement('ul');
+    listbox.id = 'conspectus-search-results';
+    listbox.className = 'search-results';
+    listbox.setAttribute('role', 'listbox');
+    listbox.setAttribute('aria-label', 'Search results');
+    searchStatus.insertAdjacentElement('afterend', listbox);
+    search.setAttribute('role', 'combobox');
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-controls', listbox.id);
+    search.setAttribute('aria-activedescendant', '');
+    search.setAttribute('aria-autocomplete', 'list');
+    search.setAttribute('aria-haspopup', 'listbox');
+  }
+
+  const rootPrefix = body.dataset.root || '';
+  const entries = [];
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    const link = item.querySelector('a');
+    if (!link) return;
+    const name = item.querySelector('.nav-name');
+    entries.push({
+      kind: 'Page',
+      label: name ? name.textContent.trim() : link.textContent.trim(),
+      detail: '',
+      haystack: (item.dataset.search || '').toLocaleLowerCase(),
+      href: link.getAttribute('href') || ''
+    });
+  });
+  locusPaths.forEach((item) => {
+    if (!item || typeof item.p !== 'string') return;
+    const owners = Array.isArray(item.o) ? item.o.join(', ') : '';
+    entries.push({
+      kind: 'File',
+      label: item.p,
+      detail: [owners, item.s || ''].filter(Boolean).join(' · '),
+      haystack: (item.p + ' ' + owners + ' ' + (item.s || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
+    });
+  });
+  locusSymbols.forEach((item) => {
+    if (!item || typeof item.y !== 'string') return;
+    entries.push({
+      kind: 'Symbol',
+      label: item.y,
+      detail: item.p || '',
+      haystack: (item.y + ' ' + (item.p || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
+    });
+  });
+
+  const closeList = (restoreFocus) => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-activedescendant', '');
+    searchStatus.textContent = '';
+    if (!restoreFocus) return;
+    if (priorFocus && priorFocus.isConnected && typeof priorFocus.focus === 'function') priorFocus.focus();
+    else search.blur();
+  };
+
+  const setActive = (index) => {
+    if (!options.length) return;
+    const next = ((index % options.length) + options.length) % options.length;
+    options.forEach((option, position) => {
+      option.setAttribute('aria-selected', position === next ? 'true' : 'false');
+    });
+    activeIndex = next;
+    search.setAttribute('aria-activedescendant', options[next].id);
+    options[next].scrollIntoView({ block: 'nearest' });
+  };
+
+  const activate = (index) => {
+    const option = options[index];
+    if (!option) return;
+    const href = option.dataset.href || '';
+    closeList(false);
+    if (!href) return;
+    const parts = href.split('#');
+    const fragment = parts.length > 1 ? parts[1] : '';
+    const here = location.pathname.split('/').pop();
+    const target = parts[0] ? parts[0].split('/').pop() : here;
+    if (fragment && target === here) {
+      const node = document.getElementById(fragment);
+      if (node) {
+        if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
+        location.hash = '#' + fragment;
+        node.focus();
+        return;
+      }
+    }
+    location.href = href;
+  };
+
+  const renderResults = () => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-activedescendant', '');
+    const needle = search.value.trim().toLocaleLowerCase();
+    if (!needle) {
+      search.setAttribute('aria-expanded', 'false');
+      searchStatus.textContent = '';
+      return;
+    }
+    const matches = entries.filter((entry) => entry.haystack.indexOf(needle) !== -1);
+    matches.slice(0, RESULT_LIMIT).forEach((entry, position) => {
+      const option = document.createElement('li');
+      option.id = 'conspectus-search-option-' + position;
+      option.className = 'search-option';
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', 'false');
+      option.dataset.href = entry.href;
+      const kind = document.createElement('span');
+      kind.className = 'search-option-kind';
+      kind.textContent = entry.kind;
+      const label = document.createElement('span');
+      label.className = 'search-option-label';
+      label.textContent = entry.label;
+      option.append(kind, label);
+      if (entry.detail) {
+        const detail = document.createElement('span');
+        detail.className = 'search-option-detail';
+        detail.textContent = entry.detail;
+        option.append(detail);
+      }
+      option.addEventListener('click', () => activate(position));
+      listbox.append(option);
+      options.push(option);
+    });
+    search.setAttribute('aria-expanded', options.length ? 'true' : 'false');
+    if (!matches.length) searchStatus.textContent = 'No match in this projection.';
+    else if (matches.length > options.length) {
+      searchStatus.textContent = matches.length + ' matches, first ' + options.length + ' listed';
+    } else searchStatus.textContent = matches.length + (matches.length === 1 ? ' match' : ' matches');
+  };
+
+  search?.addEventListener('input', renderResults);
+  search?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
+    } else if (event.key === 'Enter') {
+      if (!options.length) return;
+      event.preventDefault();
+      activate(activeIndex < 0 ? 0 : activeIndex);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeList(true);
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault(); search?.focus(); search?.select();
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // In-page filters (spec §8.1.2). Native controls in a labelled fieldset,
+  // built from the facets the projection stamped on the page; filtering is
+  // toggling `hidden` on the rows and on the containers and headings a fully
+  // hidden run leaves behind. Nothing is persisted: the state lives in the DOM
+  // for the life of the page.
+  // ---------------------------------------------------------------------
+  const filterScope = document.querySelector('[data-filter-scope]');
+  const filterRows = filterScope ? Array.from(filterScope.querySelectorAll('[data-filter-row]')) : [];
+  const splitFacet = (value) => (value || '').split('|').map((part) => part.trim()).filter(Boolean);
+  if (filterScope && filterRows.length) {
+    const scopeName = filterScope.dataset.filterScope || 'page';
+    const facets = [
+      { key: 'subsystem', prop: 'filterSubsystem', label: 'Subsystem', control: 'select', values: splitFacet(filterScope.dataset.facetSubsystem) },
+      { key: 'severity', prop: 'filterSeverity', label: 'Severity', control: 'checkbox', values: splitFacet(filterScope.dataset.facetSeverity) }
+    ].filter((facet) => facet.values.length > 1);
+    if (facets.length) {
+      const fieldset = document.createElement('fieldset');
+      fieldset.className = 'filter-controls';
+      fieldset.setAttribute('data-filter-controls', '');
+      const legend = document.createElement('legend');
+      legend.textContent = 'Narrow this page';
+      fieldset.append(legend);
+      const status = document.createElement('p');
+      status.className = 'filter-status';
+      status.setAttribute('data-filter-status', '');
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      const controls = [];
+
+      const rowValues = (row, prop) => splitFacet(row.dataset[prop]);
+      const keeps = (row) => controls.every((control) => {
+        const values = rowValues(row, control.prop);
+        if (control.select) {
+          const wanted = control.select.value;
+          return !wanted || values.indexOf(wanted) !== -1;
+        }
+        // A row that records no value on this facet cannot be excluded by it.
+        if (!values.length) return true;
+        const wanted = control.boxes.filter((box) => box.checked).map((box) => box.value);
+        return values.some((value) => wanted.indexOf(value) !== -1);
+      });
+      const prune = () => {
+        filterScope.querySelectorAll('.record-list, .table-wrap').forEach((group) => {
+          if (!group.querySelector('[data-filter-row]')) return;
+          group.hidden = !group.querySelector('[data-filter-row]:not([hidden])');
+        });
+        filterScope.querySelectorAll('h2, h3, h4, h5, h6').forEach((heading) => {
+          const level = Number(heading.tagName.slice(1));
+          let node = heading.nextElementSibling;
+          let total = 0;
+          let visible = 0;
+          while (node) {
+            const tag = node.tagName;
+            if (/^H[1-6]$/.test(tag) && Number(tag.slice(1)) <= level) break;
+            const rows = node.matches('[data-filter-row]')
+              ? [node]
+              : Array.from(node.querySelectorAll('[data-filter-row]'));
+            total += rows.length;
+            visible += rows.filter((row) => !row.hidden).length;
+            node = node.nextElementSibling;
+          }
+          if (total) heading.hidden = visible === 0;
+        });
+      };
+      const apply = () => {
+        let shown = 0;
+        filterRows.forEach((row) => {
+          const keep = keeps(row);
+          row.hidden = !keep;
+          if (keep) shown += 1;
+        });
+        prune();
+        status.textContent = shown + ' of ' + filterRows.length + ' rows shown';
+      };
+
+      facets.forEach((facet) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'filter-facet';
+        if (facet.control === 'select') {
+          const id = 'filter-' + scopeName + '-' + facet.key;
+          const label = document.createElement('label');
+          label.className = 'filter-label';
+          label.setAttribute('for', id);
+          label.textContent = facet.label;
+          const select = document.createElement('select');
+          select.id = id;
+          select.className = 'filter-select';
+          const every = document.createElement('option');
+          every.value = '';
+          every.textContent = 'Every ' + facet.label.toLocaleLowerCase();
+          select.append(every);
+          facet.values.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.append(option);
+          });
+          select.addEventListener('change', apply);
+          wrap.append(label, select);
+          controls.push({ prop: facet.prop, select: select });
+        } else {
+          const captionId = 'filter-' + scopeName + '-' + facet.key + '-label';
+          const caption = document.createElement('span');
+          caption.className = 'filter-label';
+          caption.id = captionId;
+          caption.textContent = facet.label;
+          const group = document.createElement('div');
+          group.className = 'filter-options';
+          group.setAttribute('role', 'group');
+          group.setAttribute('aria-labelledby', captionId);
+          const boxes = [];
+          facet.values.forEach((value, position) => {
+            const id = 'filter-' + scopeName + '-' + facet.key + '-' + position;
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.id = id;
+            box.value = value;
+            box.checked = true;
+            box.addEventListener('change', apply);
+            const label = document.createElement('label');
+            label.setAttribute('for', id);
+            label.textContent = value;
+            const pair = document.createElement('span');
+            pair.className = 'filter-option';
+            pair.append(box, label);
+            group.append(pair);
+            boxes.push(box);
+          });
+          wrap.append(caption, group);
+          controls.push({ prop: facet.prop, boxes: boxes });
+        }
+        fieldset.append(wrap);
+      });
+      fieldset.append(status);
+      filterScope.prepend(fieldset);
+      apply();
+    }
+  }
+})();

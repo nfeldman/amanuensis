@@ -96,9 +96,9 @@ try {
        (SELECT COUNT(*) FROM entries WHERE stale=1) AS stale`,
     )
     .get();
-  const findingsPath = join(storage, "docs", "findings.md");
+  const findingsPath = join(storage, "docs", "findings.html");
   const body = readFileSync(findingsPath, "utf8");
-  const corrupt = body.replace(/<!-- amanuensis:finding:[a-f0-9]+ -->\n/, "");
+  const corrupt = body.replace(/<!-- amanuensis:finding:[a-f0-9]+ -->/, "");
   assert(corrupt !== body, "fixture did not contain a finding marker");
   writeFileSync(findingsPath, corrupt);
 
@@ -106,7 +106,7 @@ try {
   assert(rejected.ok === false && rejected.exit_status === 1, JSON.stringify(rejected));
   assert(rejected.published === false, JSON.stringify(rejected));
   assert(
-    rejected.mismatches.some((m) => m.axis === "state" && m.object_type === "finding"),
+    rejected.mismatches.some((m) => m.axis === "state" && m.object_type === "finding-html"),
     JSON.stringify(rejected),
   );
   const afterTruth = db

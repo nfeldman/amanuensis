@@ -9,8 +9,9 @@ Turns red when:
   - any member of the negative corpus — *memory-mapped page cache*, *a stale
     cache*, *the mapped region*, *re-anchored the B-tree* — is flagged.  The
     false-alarm arm is part of the gate, not a separate concern (VP7);
-  - the published thesis is taken from anywhere but the `entry-point.md`
-    section headed *What is this codebase?*, or an absent section falls back to
+  - the published thesis is taken from anywhere but the project's purpose,
+    which the import copies from the `entry-point.md` section headed *What is
+    this codebase?* (store-only PLAN §3.3), or an absent section falls back to
     the first paragraph instead of publishing the named instruction;
   - a thesis carrying status vocabulary reaches the published overview, or the
     publish stays green when it does;
@@ -48,8 +49,11 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
+
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -114,8 +118,9 @@ PROJECT_NAME = "LedgerFixture"
 IDENTITY_SENTENCE = (
     f"An architecture survey of {PROJECT_NAME}. An AI agent running Amanuensis read the"
     " repository, without changing it, and recorded what it found here. New to this"
-    " site? Start with [How to read this survey](how-to-read.md)."
+    " site? Start with How to read this survey."
 )
+IDENTITY_LINK = '<a href="how-to-read.html">How to read this survey</a>'
 THESIS_HEADING = "What is this codebase?"
 THESIS_SENTENCE = (
     "LedgerFixture appends ledger rows durably and serves them through a "
@@ -126,12 +131,12 @@ DECOY_SENTENCE = (
     "path and must never become the thesis."
 )
 MISSING_THESIS = (
-    "No thesis section is recorded; add a 'What is this codebase?' section to "
-    "`entry-point.md`."
+    "No thesis section is recorded; record the project's purpose with "
+    "`record_explanation`."
 )
 REFUSED_THESIS = (
     "The recorded thesis carries status vocabulary and was not published; "
-    "correct `entry-point.md`."
+    "record a corrected purpose."
 )
 OFFENDING_THESIS = (
     "The conspectus is 34/34 mapped and every subsystem is fully surveyed."
@@ -191,11 +196,11 @@ def _set_digest(parts: list[str]) -> str:
 # coincide with the right answer.
 EXPECTED_STATES: dict[str, tuple[str, str, int]] = {
     # value: (human label, page, fixture count)
-    "open": ("Open", "findings.md", 2),
-    "fixed-pending-verification": ("Unverified fix", "findings.md", 1),
-    "verified-fixed": ("Verified fixed", "resolved-findings.md", 3),
-    "ruled-out": ("Ruled out", "resolved-findings.md", 1),
-    "accepted": ("Accepted", "resolved-findings.md", 0),
+    "open": ("Open", "findings.html", 2),
+    "fixed-pending-verification": ("Unverified fix", "findings.html", 1),
+    "verified-fixed": ("Verified fixed", "resolved-findings.html", 3),
+    "ruled-out": ("Ruled out", "resolved-findings.html", 1),
+    "accepted": ("Accepted", "resolved-findings.html", 0),
 }
 
 # §11.1 arm 1: survey-status assertions the lint must catch.
@@ -432,10 +437,19 @@ def seed(storage: Path, entry_point: str) -> None:
             ("run-latest", 1, 0, 1, 0, "2026-09-11T18:30:00Z"),
         ],
     )
+    # The thesis and the name reach the store the way the import puts them
+    # there; the overview reads the records, never the files. A thesis the lint
+    # refuses is stored anyway: it is the state of a purpose written before the
+    # writers linted, which the page must still withhold.
+    import_onboarding(
+        db,
+        session_id="p3",
+        entry_point=entry_point,
+        onboarding_report=ONBOARDING_REPORT,
+        keep_refused_thesis=True,
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text(entry_point)
-    (storage / "onboarding-report.md").write_text(ONBOARDING_REPORT)
 
 
 def git(workspace: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -590,34 +604,120 @@ def read(path: Path) -> str | None:
         return None
 
 
+_BLOCK_TAGS = frozenset(
+    {
+        *("p", "li", "div", "section", "article", "ul", "ol", "dl", "tr", "table", "br"),
+        *("h1", "h2", "h3", "h4", "h5", "h6", "header", "footer", "main", "aside", "nav"),
+        *("blockquote", "pre"),
+    }
+)
+_CELL_TAGS = frozenset({"dt", "dd", "td", "th"})
+_HEADING_RE = re.compile(r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.S)
+_PAIR_RE = re.compile(r"<dt\b[^>]*>(?P<label>.*?)</dt>\s*<dd\b[^>]*>(?P<value>.*?)</dd>", re.S)
+
+
+class _Visible(HTMLParser):
+    """The text a reader sees: one line per block, a code span between backticks."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.hidden = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("script", "style"):
+            self.hidden += 1
+        elif tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+        elif tag in _CELL_TAGS:
+            self.parts.append(" ")
+        elif tag == "code":
+            self.parts.append("`")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("script", "style"):
+            self.hidden -= 1
+        elif tag in _BLOCK_TAGS:
+            self.parts.append("\n")
+        elif tag in _CELL_TAGS:
+            self.parts.append(" ")
+        elif tag == "code":
+            self.parts.append("`")
+
+    def handle_data(self, data: str) -> None:
+        if not self.hidden:
+            self.parts.append(data)
+
+
+def visible(fragment: str) -> str:
+    """The visible text of an HTML fragment, one line per block element."""
+
+    parser = _Visible()
+    parser.feed(fragment)
+    parser.close()
+    lines = (" ".join(line.split()) for line in "".join(parser.parts).splitlines())
+    return "\n".join(line for line in lines if line)
+
+
+def plain(fragment: str) -> str:
+    """The visible text of an HTML fragment on one line."""
+
+    return " ".join(visible(fragment).split())
+
+
+def article(text: str) -> str:
+    """A page's article, without the navigation, footer and scripts around it."""
+
+    # Record blocks inside a page are `article` elements too, so the page's own
+    # article is the one classed `content`, closed by the last `</article>`.
+    start, end = text.find('<article class="content'), text.rfind("</article>")
+    return text[start:end] if start != -1 and end != -1 else text
+
+
+def headings(text: str, level: int) -> list[str]:
+    """The visible text of every heading of one level, without its anchor mark."""
+
+    return [
+        plain(match.group(2)).lstrip("\u00a7").strip()
+        for match in _HEADING_RE.finditer(text)
+        if int(match.group(1)) == level
+    ]
+
+
 def level2(text: str) -> list[str]:
-    return [line[3:].strip() for line in text.splitlines() if line.startswith("## ")]
+    return headings(article(text), 2)
 
 
 def level3(text: str) -> list[str]:
-    return [line[4:].strip() for line in text.splitlines() if line.startswith("### ")]
+    return headings(text, 3)
 
 
 def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level."""
+    """The HTML of one section, up to the next heading of its level or above."""
 
-    lines = text.splitlines()
-    marker = "#" * level + " "
-    start = None
-    for index, line in enumerate(lines):
-        if line.startswith(marker) and line[len(marker):].strip() == heading:
-            start = index + 1
-            break
-    if start is None:
-        return ""
-    body: list[str] = []
-    for line in lines[start:]:
-        stripped = line.lstrip("#")
-        depth = len(line) - len(stripped)
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body)
+    text = article(text)
+    found = list(_HEADING_RE.finditer(text))
+    for index, match in enumerate(found):
+        if int(match.group(1)) != level:
+            continue
+        if plain(match.group(2)).lstrip("\u00a7").strip() != heading:
+            continue
+        stop = len(text)
+        for later in found[index + 1 :]:
+            if int(later.group(1)) <= level:
+                stop = later.start()
+                break
+        return text[match.end() : stop]
+    return ""
+
+
+def metric_rows(block: str) -> list[tuple[str, str, str]]:
+    """Every `dt`/`dd` row of a block as (raw label, label, value), values visible."""
+
+    return [
+        (pair.group("label"), plain(pair.group("label")), plain(pair.group("value")))
+        for pair in _PAIR_RE.finditer(block)
+    ]
 
 
 def corpus(docs: Path, suffix: str) -> str:
@@ -841,7 +941,8 @@ def main() -> int:
             (main_storage / "workspace_path").write_text(f"{workspace}\n")
         clean = publish(main_storage, "--clean-publish") if seed_error is None else {}
         docs = main_storage / "docs"
-        index = read(docs / "index.md") or ""
+        index = read(docs / "index.html") or ""
+        index_text = plain(article(index))
 
         def publishes_green() -> str | None:
             if seed_error:
@@ -866,18 +967,18 @@ def main() -> int:
 
         def thesis_by_heading() -> str | None:
             if not index:
-                return "the published overview index.md is not readable"
-            if THESIS_SENTENCE not in index:
+                return "the published overview index.html is not readable"
+            if THESIS_SENTENCE not in index_text:
                 return (
                     "the overview does not carry the body of the"
                     f" '{THESIS_HEADING}' section as its thesis"
                 )
-            if DECOY_SENTENCE in index:
+            if DECOY_SENTENCE in index_text:
                 return (
                     "the overview still carries the first non-header paragraph of"
-                    " entry-point.md, so the thesis is not taken by heading"
+                    " the imported entry point, so the thesis is not taken by heading"
                 )
-            if "Quick orientation" in index:
+            if "Quick orientation" in index_text:
                 return "the overview still carries the 'Quick orientation' slot"
             return None
 
@@ -885,8 +986,8 @@ def main() -> int:
 
         def thesis_slot_position() -> str | None:
             if not index:
-                return "the published overview index.md is not readable"
-            body = section(index, THESIS_HEADING)
+                return "the published overview index.html is not readable"
+            body = plain(section(index, THESIS_HEADING))
             if THESIS_SENTENCE not in body:
                 return f"the thesis does not render under the overview's '{THESIS_HEADING}' heading"
             return None
@@ -895,23 +996,41 @@ def main() -> int:
 
         def identity_first() -> str | None:
             if not index:
-                return "the published overview index.md is not readable"
-            lines = [line for line in index.splitlines() if line.strip()]
-            if not lines or not lines[0].startswith("# "):
-                return "the overview does not open with a level-one identity heading"
-            title = lines[0][2:].strip()
-            if title != PROJECT_NAME:
+                return "the published overview index.html is not readable"
+            # The HTML page carries the project's identity in its navigation brand
+            # and its document title; its one `h1` names the page, not the project.
+            brand = re.search(r'<span class="brand-mark">(.*?)</span>', index, re.S)
+            if brand is None:
+                return "the overview carries no project identity mark"
+            primary = plain(brand.group(1))
+            if primary != PROJECT_NAME:
                 return (
                     "the overview's primary identity is"
-                    f" {title!r}, not the project name {PROJECT_NAME!r}"
+                    f" {primary!r}, not the project name {PROJECT_NAME!r}"
                 )
-            head_block = index.split(f"## {THESIS_HEADING}", 1)[0]
-            if IDENTITY_SENTENCE not in head_block:
+            title = re.search(r"<title>(.*?)</title>", index, re.S)
+            names = [part.strip() for part in plain(title.group(1)).split("\u00b7")] if title else []
+            if PROJECT_NAME not in names:
+                return f"the overview's document title {names!r} does not name the project"
+            if not re.search(r"<h1\b", index):
+                return "the overview does not open with a level-one heading"
+            body = article(index)
+            head_match = next(
+                (
+                    match
+                    for match in _HEADING_RE.finditer(body)
+                    if plain(match.group(2)).lstrip("\u00a7").strip() == THESIS_HEADING
+                ),
+                None,
+            )
+            head_block = body[: head_match.start()] if head_match else body
+            if IDENTITY_SENTENCE not in plain(head_block) or IDENTITY_LINK not in head_block:
                 return (
                     "the identity block does not carry the identity sentence naming"
                     " Amanuensis as the producing method (PLAN Appendix C)"
                 )
-            if re.search(r"^#\s+(Conspectus|Amanuensis)\s*$", index, re.M):
+            titles = [primary, *(plain(h) for h in re.findall(r"<h1\b[^>]*>(.*?)</h1>", index, re.S))]
+            if any(re.fullmatch(r"(Conspectus|Amanuensis)", t) for t in titles):
                 return "the overview titles itself with the method rather than the project"
             return None
 
@@ -919,7 +1038,7 @@ def main() -> int:
 
         def source_order() -> str | None:
             if not index:
-                return "the published overview index.md is not readable"
+                return "the published overview index.html is not readable"
             found = level2(index)
             if found[: len(OVERVIEW_SECTIONS)] != list(OVERVIEW_SECTIONS):
                 return (
@@ -933,7 +1052,7 @@ def main() -> int:
 
         def four_dimensions() -> str | None:
             if not index:
-                return "the published overview index.md is not readable"
+                return "the published overview index.html is not readable"
             stands = section(index, "Where the record stands")
             found = level3(stands)
             if found != list(STATUS_DIMENSIONS):
@@ -946,7 +1065,7 @@ def main() -> int:
         check("four separately named status dimensions", four_dimensions)
 
         def source_alignment_values() -> str | None:
-            body = section(section(index, "Where the record stands"), "Source alignment", level=3)
+            body = plain(section(section(index, "Where the record stands"), "Source alignment", level=3))
             if not body.strip():
                 return "the Source alignment dimension is empty"
             if RECORDED_SHA[:12] not in body:
@@ -976,7 +1095,7 @@ def main() -> int:
         check("Source alignment reports the revisions and the stale denominator", source_alignment_values)
 
         def survey_coverage_values() -> str | None:
-            body = section(section(index, "Where the record stands"), "Survey coverage", level=3)
+            body = plain(section(section(index, "Where the record stands"), "Survey coverage", level=3))
             if not body.strip():
                 return "the Survey coverage dimension is empty"
             if "2 mapped" not in body or "1 scoping" not in body:
@@ -994,19 +1113,24 @@ def main() -> int:
         check("Survey coverage reports the ladder, the ledger, and the gaps", survey_coverage_values)
 
         def open_work_values() -> str | None:
-            body = section(section(index, "Where the record stands"), "Open engineering work", level=3)
-            if not body.strip():
+            block = section(section(index, "Where the record stands"), "Open engineering work", level=3)
+            if not block.strip():
                 return "the Open engineering work dimension is empty"
+            rows = [(label, value) for _raw, label, value in metric_rows(block)]
             wanted = {
-                "open findings": r"(?i)\bfindings? open\b[^|]*\|\s*\**2\b|\bopen\b[^|]*\|\s*\**2\b",
-                "repairs awaiting verification": r"\|\s*\**1\b",
-                "unresolved contradictions": r"(?i)contradiction",
-                "open decisions": r"(?i)decision",
+                "open findings": lambda label, value: (
+                    re.search(r"(?i)\bopen\b", label) and re.match(r"\**2\b", value)
+                ),
+                "repairs awaiting verification": lambda label, value: re.match(r"\**1\b", value),
+                "unresolved contradictions": lambda label, value: re.search(
+                    r"(?i)contradiction", label
+                ),
+                "open decisions": lambda label, value: re.search(r"(?i)decision", label),
             }
-            for label, pattern in wanted.items():
-                if not re.search(pattern, body):
-                    return f"Open engineering work does not report {label}"
-            numbers = re.findall(r"\|\s*\**(\d+)\**\s*(?:\||$)", body)
+            for what, matches in wanted.items():
+                if not any(matches(label, value) for label, value in rows):
+                    return f"Open engineering work does not report {what}"
+            numbers = [value.strip("*") for _label, value in rows if re.fullmatch(r"\**\d+\**", value)]
             if sorted(numbers) != ["1", "1", "1", "2"]:
                 return (
                     "Open engineering work's counts are"
@@ -1017,7 +1141,7 @@ def main() -> int:
         check("Open engineering work reports four separate counts", open_work_values)
 
         def publication_integrity_values() -> str | None:
-            body = section(section(index, "Where the record stands"), "Publication integrity", level=3)
+            body = plain(section(section(index, "Where the record stands"), "Publication integrity", level=3))
             if not body.strip():
                 return "the Publication integrity dimension is empty"
             lowered = body.lower()
@@ -1042,14 +1166,20 @@ def main() -> int:
 
         def no_composite_score() -> str | None:
             if not index:
-                return "the published overview index.md is not readable"
-            for pattern, what in (
-                (r"(?i)\b(health|overall|composite|readiness)\s+(score|index|grade|rating)\b", "a composite score"),
-                (r"(?i)\bscore\b", "a score"),
-                (r"<progress|<meter", "a progress meter"),
-                (r"[█▓▒░]", "a progress bar"),
+                return "the published overview index.html is not readable"
+            # Words and bars are read from the visible text; the meter elements
+            # from the page's own markup.
+            for pattern, what, subject in (
+                (
+                    r"(?i)\b(health|overall|composite|readiness)\s+(score|index|grade|rating)\b",
+                    "a composite score",
+                    index_text,
+                ),
+                (r"(?i)\bscore\b", "a score", index_text),
+                (r"<progress|<meter", "a progress meter", article(index)),
+                (r"[█▓▒░]", "a progress bar", index_text),
             ):
-                if re.search(pattern, index):
+                if re.search(pattern, subject):
                     return f"the overview carries {what}"
             return None
 
@@ -1058,8 +1188,8 @@ def main() -> int:
         def no_composite_index() -> str | None:
             """The half the word-matching check above cannot see (F3/claude)."""
             if not index:
-                return "the published overview index.md is not readable"
-            offending = composite_index_violations(index)
+                return "the published overview index.html is not readable"
+            offending = composite_index_violations(visible(article(index)))
             return "; ".join(offending[:3]) if offending else None
 
         check(
@@ -1147,7 +1277,7 @@ def main() -> int:
 
             This is the case the slice-S7 review actually seeded: a thesis
             carrying `Health: 72%`, published with code 0, ok true, no warnings,
-            and the figure still in index.md. Three things have to hold now —
+            and the figure still in index.html. Three things have to hold now —
             the publish is red, a warning names the file to correct, and the
             figure is not in the bytes.
             """
@@ -1168,14 +1298,14 @@ def main() -> int:
                     "a thesis carrying a composite index published green"
                     f" — ok={result.get('ok')!r}, warnings={warnings[:2]}"
                 )
-            if not any("entry-point.md" in w for w in warnings):
+            if not any("project purpose" in w for w in warnings):
                 return (
-                    "the publish was refused but no warning names entry-point.md,"
+                    "the publish was refused but no warning names the project purpose,"
                     f" so it does not say what to correct — {warnings[:2]}"
                 )
-            published = read(storage_dir / "docs" / "index.md")
+            published = read(storage_dir / "docs" / "index.html")
             if published and "72%" in published:
-                return "the refused thesis still published its percentage into index.md"
+                return "the refused thesis still published its percentage into index.html"
             return None
 
         check(
@@ -1185,7 +1315,7 @@ def main() -> int:
 
         def state_counts() -> str | None:
             if not index:
-                return "the published overview index.md is not readable"
+                return "the published overview index.html is not readable"
             body = section(index, "Findings by resolution state")
             if not body.strip():
                 return "the overview carries no per-state findings counts"
@@ -1199,26 +1329,27 @@ def main() -> int:
                     "this gate and the enum source disagree on the resolution states:"
                     f" source {sorted(enum_values)} vs gate {sorted(EXPECTED_STATES)}"
                 )
-            rows = [line for line in body.splitlines() if line.strip().startswith("|")]
+            rows = metric_rows(body)
             for state, (label, page, count) in EXPECTED_STATES.items():
-                matching = [
-                    line
-                    for line in rows
-                    if re.search(rf"\[{re.escape(label)}\]\({re.escape(page)}\)", line)
-                ]
+                link = rf'<a href="{re.escape(page)}">{re.escape(label)}</a>'
+                matching = [row for row in rows if re.search(link, row[0])]
                 if not matching:
                     return (
                         f"the {state!r} count is not a link labelled {label!r} into {page}"
                     )
                 if len(matching) > 1:
                     return f"the {state!r} count renders {len(matching)} times"
-                numbers = re.findall(r"\|\s*\**(\d+)\**\s*\|", matching[0])
-                if not numbers or int(numbers[-1]) != count:
+                shown = matching[0][2].strip("*")
+                if not shown.isdigit() or int(shown) != count:
                     return (
-                        f"the {state!r} count is {numbers[-1] if numbers else 'absent'},"
+                        f"the {state!r} count is {shown or 'absent'},"
                         f" not the {count} the store holds"
                     )
-            linked = [line for line in rows if re.search(r"\]\((findings|resolved-findings)\.md\)", line)]
+            linked = [
+                row
+                for row in rows
+                if re.search(r'<a href="(findings|resolved-findings)\.html">', row[0])
+            ]
             if len(linked) != len(EXPECTED_STATES):
                 return (
                     f"the overview carries {len(linked)} linked state counts, not one per"
@@ -1230,15 +1361,15 @@ def main() -> int:
 
         def lens_routes() -> str | None:
             if not index:
-                return "the published overview index.md is not readable"
+                return "the published overview index.html is not readable"
             body = section(index, "The four lenses")
             if not body.strip():
                 return "the overview carries no routes into the lenses"
             for lens in LENSES:
-                hits = re.findall(rf"(?m)^\s*[-*]\s+\*\*{lens}\*\*", body)
+                hits = re.findall(rf"<li>\s*<strong>{lens}</strong>", body)
                 if len(hits) != 1:
                     return f"the {lens!r} lens has {len(hits)} routes, not exactly one"
-            targets = re.findall(r"\]\(([^)]+)\)", body)
+            targets = re.findall(r'<a href="([^"]+)"', body)
             if len(targets) < len(LENSES):
                 return f"the lens routes carry {len(targets)} links, fewer than one per lens"
             for target in targets:
@@ -1250,7 +1381,7 @@ def main() -> int:
         check("one route into each of the four lenses", lens_routes)
 
         def no_entries_marker() -> str | None:
-            for suffix, label in ((".md", "Markdown"), (".html", "HTML")):
+            for suffix, label in ((".html", "HTML"),):
                 if "amanuensis:stale-entry:" in corpus(docs, suffix):
                     return f"the {label} corpus carries a retired `entries` stale marker (B04-3)"
             return None
@@ -1260,14 +1391,14 @@ def main() -> int:
         # -- an absent thesis section --------------------------------------
         missing_storage, missing_error = seeded(root, "missing", ENTRY_POINT_NO_THESIS)
         missing = publish(missing_storage, "--clean-publish") if missing_error is None else {}
-        missing_index = read(missing_storage / "docs" / "index.md") or ""
+        missing_index = plain(article(read(missing_storage / "docs" / "index.html") or ""))
 
         def absent_section_instructs() -> str | None:
             if missing_error:
                 return missing_error
             if not missing.get("ok") or not missing.get("published"):
                 return (
-                    "an entry-point.md with no thesis section did not publish —"
+                    "an entry point with no thesis section did not publish —"
                     f" ok={missing.get('ok')} published={missing.get('published')}"
                 )
             if MISSING_THESIS not in missing_index:
@@ -1276,7 +1407,7 @@ def main() -> int:
                     f" {MISSING_THESIS!r} when no thesis section is recorded"
                 )
             if DECOY_SENTENCE in missing_index:
-                return "the overview fell back to the first paragraph of entry-point.md"
+                return "the overview fell back to the first paragraph of the entry point"
             return None
 
         check("an absent thesis section publishes a named instruction", absent_section_instructs)
@@ -1285,7 +1416,7 @@ def main() -> int:
         variant_storage, variant_error = seeded(root, "variant", ENTRY_POINT_PROJECT_HEADING)
         if variant_error is None:
             publish(variant_storage, "--clean-publish")
-        variant_index = read(variant_storage / "docs" / "index.md") or ""
+        variant_index = plain(article(read(variant_storage / "docs" / "index.html") or ""))
 
         def heading_variants() -> str | None:
             if variant_error:
@@ -1318,9 +1449,9 @@ def main() -> int:
             if refused.get("_returncode") == 0:
                 return "the refused publish exited 0"
             warnings = " ".join(str(w) for w in refused.get("warnings") or [])
-            if "entry-point.md" not in warnings:
+            if "project purpose" not in warnings:
                 return (
-                    "no warning names the file to correct;"
+                    "no warning names the record to correct;"
                     f" warnings were {[scrub(w)[:80] for w in refused.get('warnings') or []][:2]}"
                 )
             if (refused_storage / "docs").exists():
@@ -1331,7 +1462,7 @@ def main() -> int:
 
         inplace_storage, inplace_error = seeded(root, "inplace", ENTRY_POINT_OFFENDING)
         inplace = publish(inplace_storage) if inplace_error is None else {}
-        inplace_index = read(inplace_storage / "docs" / "index.md") or ""
+        inplace_index = plain(article(read(inplace_storage / "docs" / "index.html") or ""))
 
         def refused_slot_text() -> str | None:
             if inplace_error:
@@ -1411,9 +1542,9 @@ def main() -> int:
         def upstream_alignment() -> str | None:
             if fixture_error:
                 return fixture_error
-            index = read(fixture["storage"] / "docs" / "index.md")
+            index = read(fixture["storage"] / "docs" / "index.html")
             if index is None:
-                return "the upstream fixture published no index.md"
+                return "the upstream fixture published no index.html"
             body = section(section(index, "Where the record stands"), "Source alignment", level=3)
             if not body.strip():
                 return "the Source alignment dimension is empty"
@@ -1423,9 +1554,9 @@ def main() -> int:
             # "Repository head" row alone.  The row under test is the upstream
             # one, and it is read on its own.
             rows = [
-                line
-                for line in body.splitlines()
-                if re.match(r"\s*\|", line) and re.search(r"upstream|origin", line, re.I)
+                f"{label} {value}"
+                for _raw, label, value in metric_rows(body)
+                if re.search(r"upstream|origin", f"{label} {value}", re.I)
             ]
             if not rows:
                 return "Source alignment carries no upstream row at all"

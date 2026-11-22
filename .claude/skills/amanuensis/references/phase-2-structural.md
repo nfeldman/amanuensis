@@ -44,6 +44,20 @@ At least one end-to-end trace of the primary data flow, with
 file + symbol references at each step. If there are multiple
 independent flows, trace each.
 
+Each flow ends in marks or a declination. Once its steps are recorded as
+claims (step 7), call `record_claim_mark(claim_id, kind, label, target,
+evidence_id, ref_sha)` for each commit point, crash point, exit, seam crossing
+and trigger you read, or say the flow has none with
+`decline_claim_marks(flow, reason, ref_sha)`. Step 7 lists the kinds and what
+the writers refuse. Neither refuses the advance. The subsystem page draws each
+flow of three to twenty steps as a flow strip once the subsystem is at
+`structural` or deeper: steps in number order, a commit line after its step,
+crash points, triggers and seam crossings above, exits below. A flow of fewer
+than three steps is a sentence, one of more than twenty a sentence and a table,
+and one of more than twelve wraps. A flow with neither marks nor a declination
+prints "Marks not recorded"; a declination prints its reason. `get_claims`
+returns the marks and the declination with each step.
+
 ### 4. Concurrency model
 
 Single-threaded? Pool? Async runtime? Actor? GIL? Is there shared
@@ -95,7 +109,7 @@ are found.
   actually read. An edge with no such token cannot be recorded.
 
 Record only edges you read. Never infer one from a shared name, a
-path prefix, or a nearby seam: `architecture.md` renders its topology
+path prefix, or a nearby seam: `architecture.html` renders its topology
 from these rows and nothing else, so an inferred edge becomes a
 published relation no one verified. A boundary you could not read
 from this side is an `record_open_question`, not a guessed edge.
@@ -166,6 +180,50 @@ padding rather than accuracy. Record what you found; the adversarial
 pass in Phase 4 pulls every one of these claims as a target and is
 where their truth is tested.
 
+**Flow marks.** A flow step can carry marks that say what the step does
+to the flow. `record_claim_mark(claim_id, kind, label?, target?, evidence_id,
+ref_sha)` records one on a current flow-step claim:
+
+- `commit-point` — the step after which the flow's effect is kept; no label or target.
+- `crash-point` — a step where the process can stop partway; `label` says what is left half done.
+- `exit` — a way the flow stops early; `label` says why, `target` is the number of the step it unwinds to (`03`) or `leaves-flow`.
+- `crosses-seam` — a step where work passes a system boundary; `target` is a seam the subsystem is party to (`SM-02`).
+- `trigger` — what starts the flow; step `00` only; no label or target.
+
+A label is one line of at most 120 characters. `evidence_id` is one row that is
+`code-verified` or `contract-stated` and cites the file the step's claim is about.
+A mark stands while its claim is current. When a claim is superseded its marks
+do not carry over, so the successor records its own. `withdraw_claim_mark(mark_id,
+reason)` retracts a mistaken mark without closing the claim, and a flow with no
+marks to record says so with `decline_claim_marks(flow, reason, ref_sha)`, where
+`flow` is `<sid>/flow/<slug>`. `get_claims` returns each claim's standing marks as
+`marks`, and a flow step's flow's newest declination as `mark_declination`. The
+writers need an active session. They refuse:
+
+- `record_claim_mark refuses: <kind> is not a mark kind` — use one of the five.
+- `record_claim_mark refuses: no claim <id>` — pass the `claim_id` of a flow step `get_claims` lists.
+- `record_claim_mark refuses: <key> is not a flow step. A mark goes on a claim keyed <sid>/flow/<slug>/<nn>` — mark a flow step.
+- `record_claim_mark refuses: claim <id> is closed, so its marks would not be current` — mark the claim that replaced it.
+- `record_claim_mark refuses: a trigger is the start of a flow, so it belongs to step 00` — put it on step `00`.
+- `record_claim_mark refuses: a <kind> mark needs a <label or target>` — pass the one the kind carries.
+- `record_claim_mark refuses: a <kind> mark takes no <label or target>` — leave it out.
+- `record_claim_mark refuses: a label is one line of at most 120 characters` — say it in fewer.
+- `record_claim_mark refuses: no seam <id>` — name a seam `upsert_seam` recorded.
+- `record_claim_mark refuses: seam <id> lies between <a> and <b>, and <sid> is not one of them` — name a seam the flow's subsystem is party to.
+- `record_claim_mark refuses: an exit unwinds to a step of its own flow or to 'leaves-flow'` — name a current step of the same flow by its number.
+- `record_claim_mark refuses: no evidence row <id>` — `add_evidence` records one.
+- `record_claim_mark refuses: evidence <id> does not show the step` — cite the step's file in a strong kind.
+- `record_claim_mark refuses: evidence <id> was taken at a revision that ref_sha <ref> does not descend from` — record the mark at a revision that includes it.
+- `record_claim_mark refuses: ref_sha <ref> does not resolve` — record the revision the mark was read at.
+- `record_claim_mark refuses: mark <id> already says this about the step` — withdraw it first if it is to change.
+- `withdraw_claim_mark refuses: no mark <id>` — pass the id `record_claim_mark` returned.
+- `withdraw_claim_mark refuses: mark <id> is already withdrawn` — record it again if it should stand.
+- `withdraw_claim_mark refuses: a reason is one paragraph of at most 400 bytes` — no blank line, and no line starting with `#`, `-`, `*` or `|`.
+- `decline_claim_marks refuses: <flow> is not a flow. Name it <sid>/flow/<slug>` — without the step number.
+- `decline_claim_marks refuses: flow <flow> has no current step claim` — record its steps first.
+- `decline_claim_marks refuses: a reason is one paragraph of at most 400 bytes` — say why the flow has no marks in fewer.
+- `decline_claim_marks refuses: ref_sha <ref> does not resolve` — record the revision the flow was read at.
+
 ### 8. Update file classifications
 
 Files actually read in this phase move from `candidate` to
@@ -198,24 +256,32 @@ real and common answer that has to be said out loud. A subsystem *"cannot
 both carry domain vocabulary and declare it has none"* — the declination
 is refused where an anchored term already stands.
 
-## Output artifact
+## Record the narrative
 
-Write a prose structural summary into the subsystem's survey
-artifact at the project storage root: `<id>-<slug>.md`. Sections:
+The prose around the inventory is recorded, not written to a file. For each
+part the structure needs, call
 
-- **Key types** — table with symbol, role, source `file:symbol@sha`.
-- **State containers** — table per the list above.
-- **Data flows** — at least one end-to-end, with numbered steps.
-- **Concurrency model** — prose paragraph with evidence citations.
-- **Domain vocabulary** — the terms recorded this phase with their
-  anchors, or the declination and its reason.
-- **Seam contracts** — one sub-section per seam, this side filled
-  in.
+```
+record_narrative(subject_type="subsystem", subject_id, section="structure",
+  topic, body, evidence_ids, ref_sha=<session sha>)
+```
 
-After writing, call
-`register_artifact(path="<id>-<slug>.md", kind="subsystem-survey",
-subsystem_id, ref_sha=<session sha>)` then
-`rehash_artifact(path, ref_sha=<session sha>)`.
+The parts to consider are the key types, the state containers, one flow per
+primary trace, the concurrency model, and each seam from this side. `topic` is
+a short title for the part, at most 120 characters; the page prints it as a
+subheading. The body is prose and lists of at most 8192 bytes, with no heading
+or table line. The typed parts already have their own records (claims, seams,
+vocabulary), so say what they do not: why the parts are shaped as they are, and
+how work moves between them. Cite each symbol as `file:symbol@sha`. At least
+one of `evidence_ids` must be an `add_evidence` row for a file in the
+subsystem's ledger.
+
+Where the code supports no prose beyond the claims, say so:
+`decline_narrative(subject_type="subsystem", subject_id, section="structure",
+reason, ref_sha)`, with the reason in one paragraph of at most 400 bytes.
+Recording or declining is what the advance to `concerns` asks for, and it
+refuses with *"no structure narrative has been recorded or declined"* until one
+has. A correction is a new row; the newest row for a topic is the one served.
 
 ## Hand back
 
@@ -224,6 +290,7 @@ Return to the coordinator with a one-line summary:
 - Counts of key types, state containers, flows documented, and
   the claims recorded for them.
 - Concurrency model verdict.
+- The structure topics recorded, or the reason none was.
 - Seam contracts written + any seams where contract detail is still
   unknown.
 - Vocabulary additions.
@@ -267,8 +334,8 @@ Phase 5 revises or confirms it.
 
 - **Types before implementation.** Read class bodies for method
   signatures and invariants, not for line-by-line logic.
-- **Cite everything.** Every structural claim in the summary needs a
-  `file:symbol@sha` reference, and every one recorded through
+- **Cite everything.** Every structural statement in a narrative needs a
+  `file:symbol@sha` reference, and every claim recorded through
   `add_claim` needs its evidence rows.
 - **Do not classify concerns yet.** Phase 3 does that. If you notice
   a concern while structural reading, record a

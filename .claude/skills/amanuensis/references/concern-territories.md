@@ -29,7 +29,10 @@ area. A malformed entry is generic ("does this codebase have caching
 bugs?") or requires runtime to falsify.
 
 Add each derived concern via the MCP tool
-`add_concern(code, category, origin="seeded", notes)`. Non-applicable
+`add_concern(code, category, origin="seeded", notes, territory, probe)`, with
+`territory` the id of the territory it came from (`T7`) and `probe` the
+codebase-specific check; `add_concern refuses: territory is the id of a
+territory in concern-territories.md` when it is named in words. Non-applicable
 territories do not get a concern row — record the disqualifying
 condition in the onboarding report's Concern Calibration section.
 
@@ -372,7 +375,7 @@ concern_codes=[...], evidence_ids=[...])`.
    attached as rationale — this is a legitimate terminal state.
 
 The materializer renders every matrix as a verdict-grid page under
-`docs/diagnosticity/dm-<id>.md`, with a diagnostic-value column
+`diagnosticity/dm-<id>.html`, with a diagnostic-value column
 summarizing each evidence row.
 
 ---

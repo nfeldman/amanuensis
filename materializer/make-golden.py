@@ -1,0 +1,425 @@
+#!/usr/bin/env python3
+"""Write the store-only golden corpus (store-only PLAN §3.2).
+
+The corpus pins the HTML the projection prints, page by page, so each step of
+the route from Markdown to the page model can be checked byte for byte against
+the step before it. For every fixture it records what the HTML stage is given
+and what it printed:
+
+  <fixture>/inputs.json   the page plan, the shell's context, the locus index
+                          and the render notice, as `render_html_projection`
+                          received them
+  <fixture>/md/…          (retired by SO19) each page's finished Markdown, as the
+                          run held it in memory before the renderers built models
+  <fixture>/html/…        each page's HTML, its inline stylesheet and script
+                          folded to `@@golden-asset <sha256>@@`
+  assets/<sha256>         each folded stylesheet or script, once
+  <fixture>/memory.sql    the store the pages were rendered from (store fixtures)
+
+`VERSION` names the packet that last wrote the corpus. Only the packets §3.2's
+update rule names may run this script, each in the commit the rule says.
+
+The fixtures are the stores the materializer tests seed (`test-materializer.py`,
+`test-lens-pages.py`), the two committed legacy stores built by
+`mcp-server/fixtures/build-legacy-stores.mjs` (shaped like AxiomDB and like this
+repository's store), migrated and imported by the server, and `hooks`, a set of
+written Markdown pages that reached the recognition hooks no store fixture prints
+(a Mermaid graph, nested lists, quotes, fences, misnested emphasis). SO19 deleted the
+parser that read them: the committed `hooks` fixture is kept as it is by every
+regeneration and cannot be rebuilt. The
+`materializer` fixture is printed a second time with a GitHub repository URL so
+the ledger's source links are pinned too.
+
+    python3 make-golden.py --packet SO11
+    python3 make-golden.py --packet SO20 --recorded
+
+`--recorded` reprints each fixture's HTML from the store it recorded, leaving its
+inputs, its store and every other file of the corpus as they are: for a packet
+that changes only what the HTML prints of the same store (SO20's attributes). The
+`lens` pages written against its git workspace, which the corpus does not carry,
+are kept as they are.
+
+Needs `node` and the server's `npm run build` output for the legacy fixtures.
+Never reads a real store.
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import hashlib
+import importlib.util
+import io
+import json
+import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+import tempfile
+from dataclasses import asdict
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parent
+REPO = ROOT.parent
+MCP = REPO / "mcp-server"
+LEGACY = MCP / "fixtures" / "legacy-stores"
+GOLDEN = ROOT / "fixtures" / "store-only-golden"
+
+sys.path.insert(0, str(ROOT))
+
+from amanuensis_materializer import core  # noqa: E402
+from amanuensis_materializer import html_projection as hp  # noqa: E402
+
+# ---------------------------------------------------------------------------
+# Capture: what `render_html_projection` is given, and what it prints.
+# ---------------------------------------------------------------------------
+
+
+def _json_ready(value: Any) -> Any:
+    return json.loads(json.dumps(value, default=list))
+
+
+def capture_publish(storage: Path, argv: list[str]) -> dict[str, Any]:
+    """Run the materializer in process and keep the HTML stage's first call."""
+
+    seen: dict[str, Any] = {}
+    real = core.render_html_projection
+
+    def recording(output, pages, context, previous_files=None, locus_index=None, notice="", models=None):
+        if "pages" not in seen:
+            seen["pages"] = [asdict(page) for page in pages]
+            seen["context"] = _json_ready(context)
+            seen["locus_index"] = _json_ready(locus_index)
+            seen["notice"] = notice
+            # The run's models, after the cross-reference pass: the HTML stage's only input
+            # (SO19). Kept in memory, so the fixture can be printed again.
+            seen["models"] = dict(models or {})
+        result = real(output, pages, context, previous_files, locus_index, notice, models)
+        if "html" not in seen:
+            seen["html"] = {
+                page.html_path: (Path(output) / page.html_path).read_text()
+                for page in pages
+                if (Path(output) / page.html_path).is_file()
+            }
+        return result
+
+    import materialize  # noqa: PLC0415 — the CLI module, run in this process
+
+    core.render_html_projection = recording
+    saved_argv = sys.argv
+    sys.argv = ["materialize.py", "--storage", str(storage), *argv]
+    stdout = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(stdout):
+            code = materialize.main()
+    finally:
+        sys.argv = saved_argv
+        core.render_html_projection = real
+    lines = [line for line in stdout.getvalue().splitlines() if line.strip()]
+    summary = json.loads(lines[-1]) if lines else {}
+    if code != 0 or "html" not in seen:
+        raise SystemExit(f"the materializer did not publish {storage}: {summary}")
+    return seen
+
+
+def render_inputs(inputs: dict[str, Any], models: dict[str, Any]) -> dict[str, str]:
+    """Render HTML from recorded inputs and the run's models, as the gate does."""
+
+    pages = [
+        hp.SitePage(**{**page, "terms": tuple(tuple(term) for term in page["terms"])})
+        for page in inputs["pages"]
+    ]
+    with tempfile.TemporaryDirectory() as tmp:
+        output = Path(tmp)
+        hp.render_html_projection(
+            output,
+            pages,
+            inputs["context"],
+            locus_index=inputs["locus_index"],
+            notice=inputs["notice"],
+            models=models,
+        )
+        return {
+            page.html_path: (output / page.html_path).read_text()
+            for page in pages
+            if (output / page.html_path).is_file()
+        }
+
+
+# Every page carries the same inline stylesheet and script, some 60 KB of each
+# page's bytes. They are stored once under `assets/` and a page holds their
+# digest; `unfold` puts them back before any comparison, so the corpus is still
+# compared byte for byte.
+_FOLDABLE = re.compile(r"(<style>|<script>)(.{1024,}?)(</style>|</script>)", re.DOTALL)
+
+
+def fold(text: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        body = match.group(2)
+        digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        asset = GOLDEN / "assets" / digest
+        if not asset.is_file():
+            asset.parent.mkdir(parents=True, exist_ok=True)
+            asset.write_text(body)
+        return f"{match.group(1)}@@golden-asset {digest}@@{match.group(3)}"
+
+    folded = _FOLDABLE.sub(replace, text)
+    if unfold(folded) != text:
+        raise SystemExit("a page does not unfold to its own bytes")
+    return folded
+
+
+def unfold(text: str) -> str:
+    return re.sub(
+        r"@@golden-asset ([0-9a-f]{64})@@",
+        lambda m: (GOLDEN / "assets" / m.group(1)).read_text(),
+        text,
+    )
+
+
+def write_fixture(name: str, seen: dict[str, Any], store: Path | None) -> None:
+    target = GOLDEN / name
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    inputs = {key: seen[key] for key in ("pages", "context", "locus_index", "notice")}
+    (target / "inputs.json").write_text(json.dumps(inputs, indent=1, sort_keys=True) + "\n")
+    for path, text in seen["html"].items():
+        out = target / "html" / path
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(fold(text))
+    if store is not None:
+        db = sqlite3.connect(store)
+        try:
+            (target / "memory.sql").write_text("\n".join(db.iterdump()) + "\n")
+        finally:
+            db.close()
+    # What is recorded must be what the recorded inputs print: a corpus whose
+    # HTML depends on anything else (a clock, the order files were found) would
+    # make every later comparison meaningless.
+    again = render_inputs(inputs, seen["models"])
+    if again != seen["html"]:
+        differing = sorted(path for path in seen["html"] if again.get(path) != seen["html"][path])
+        raise SystemExit(f"{name}: the recorded inputs do not reprint the HTML: {differing[:5]}")
+
+
+# ---------------------------------------------------------------------------
+# Fixtures.
+# ---------------------------------------------------------------------------
+
+
+def _load_script(name: str) -> Any:
+    spec = importlib.util.spec_from_file_location(name.replace("-", "_"), ROOT / f"{name}.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+# The prose `test-materializer.py` imports into its store, as it writes it.
+MATERIALIZER_ENTRY_POINT = (
+    "# Entry point\n\nThis is a fictional test codebase with three subsystems: "
+    "B-01 (scheduler), B-02 (auth), and F-01 (web UI). The seam SM-01 connects them.\n\n"
+    "## File ledger\n\n"
+    "| Path | Classification | Why in scope | Ref SHA |\n"
+    "|---|---|---|---|\n"
+    "| `scheduler/main.ts` | examined | Owns the job dispatch boundary and its auth call. | `deadbeef` |\n\n"
+    "## State containers\n\n"
+    "| Name | Location | Stores | Lifetime | Populated by | Invalidated by |\n"
+    "|---|---|---|---|---|---|\n"
+    "| `JobQueue` | `scheduler/main.ts` | Pending jobs | Process | Dispatcher | Restart |\n\n"
+    "## Non applicable territories\n\n"
+    "| Territory | Attenuating condition |\n"
+    "|---|---|\n"
+    "| Native memory | The runtime owns allocation for this service. |\n"
+)
+MATERIALIZER_ONBOARDING = (
+    "# Onboarding report\n\n**Codebase**: FictionalProject — materializer fixture\n\n"
+    "## Directory clusters\n\n- scheduler/ — B-01\n- auth/ — B-02\n- web/ — F-01\n\n"
+    "## Runtime boundary map\n\n"
+    "| Runtime / Process | Language | Communicates with | Mechanism | Notes |\n"
+    "|---|---|---|---|---|\n"
+    "| Host agent | external | scheduler service | stdio RPC | Starts the scheduler process. |\n"
+    "| Scheduler service | Python | auth service | HTTPS request | Dispatches authenticated jobs. |\n"
+    "| Auth service | TypeScript | policy database | SQL transaction | Owns authorization decisions. |\n"
+)
+MATERIALIZER_CHECKLIST = (
+    "# Concern checklist (calibrated)\n\n"
+    "## Active concerns (3)\n\n"
+    "| Code | Category | Territory | Codebase-specific probe (abbreviated) | Primary subsystems |\n"
+    "|---|---|---|---|---|\n"
+    "| CC-1 | cache-coherence | T2 | Does the scheduler retain stale authorization state after a policy change? | B-01, B-02 |\n"
+    "| CC-2 | cache-coherence | T2 | Trace every holder of the shared policy snapshot. | B-02 |\n"
+    "| TC-1 | trust-boundary | T10 | Verify that every public request path validates its caller. | B-02, F-01 |\n"
+)
+
+
+def materializer_fixture(root: Path) -> tuple[dict[str, Any], Path]:
+    from store_only_seed import import_onboarding  # noqa: PLC0415
+
+    module = _load_script("test-materializer")
+    storage = root / "materializer"
+    storage.mkdir()
+    (storage / "workspace_path").write_text("/example/FictionalProject\n")
+    db = sqlite3.connect(storage / "memory.db")
+    module.seed(db)
+    import_onboarding(
+        db,
+        session_id="s1",
+        entry_point=MATERIALIZER_ENTRY_POINT,
+        onboarding_report=MATERIALIZER_ONBOARDING,
+        concern_checklist=MATERIALIZER_CHECKLIST,
+        ref_sha="deadbeef",
+    )
+    db.commit()
+    db.close()
+    return capture_publish(storage, []), storage / "memory.db"
+
+
+def lens_fixture(root: Path) -> tuple[dict[str, Any], Path]:
+    module = _load_script("test-lens-pages")
+    workspace, checked = module.make_workspace(root / "lens")
+    if not checked:
+        raise SystemExit("the lens fixture's workspace could not be committed")
+    module.CHECKED_SHA = checked
+    storage = root / "lens" / "store"
+    storage.mkdir(parents=True)
+    module.seed(storage)
+    (storage / "workspace_path").write_text(f"{workspace}\n")
+    return capture_publish(storage, []), storage / "memory.db"
+
+
+# Loads one committed legacy dump, opens it with the server (which migrates it),
+# and imports its files the way an owner's first session would.
+_LEGACY_IMPORT = r"""
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+const [dist, dump, storage] = process.argv.slice(1);
+const Database = (await import("better-sqlite3")).default;
+const dbPath = join(storage, "memory.db");
+const raw = new Database(dbPath);
+raw.exec(readFileSync(dump, "utf8"));
+raw.close();
+const { openDatabase } = await import(join(dist, "db.js"));
+const tools = new Map();
+for (const [file, key] of [["tools/project.js", "projectTools"], ["tools/import.js", "importTools"]]) {
+  for (const tool of (await import(join(dist, file)))[key]) tools.set(tool.name, tool);
+}
+const db = openDatabase(dbPath);
+const project = { workspacePath: join(storage, "..", "workspace"), projectKey: "golden", storagePath: storage, dbPath, storageGitReady: false };
+const ctx = { project, db, sessionId: null };
+const session = tools.get("start_session").handler({ intent: "golden corpus import" }, ctx);
+ctx.sessionId = session.session_id;
+tools.get("import_artifact_bodies").handler({}, ctx);
+db.close();
+"""
+
+
+def legacy_fixture(root: Path, name: str) -> tuple[dict[str, Any], Path]:
+    storage = root / name / "storage"
+    shutil.copytree(LEGACY / name / "storage", storage)
+    built = subprocess.run(["npm", "run", "build"], cwd=MCP, capture_output=True, text=True)
+    if built.returncode != 0:
+        raise SystemExit(f"the server could not be built: {built.stderr[-400:]}")
+    proc = subprocess.run(
+        ["node", "--input-type=module", "-e", _LEGACY_IMPORT, str(MCP / "dist"),
+         str(LEGACY / name / "memory.sql"), str(storage)],
+        cwd=MCP,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise SystemExit(f"{name}: the import did not run: {proc.stderr[-800:]}")
+    return capture_publish(storage, []), storage / "memory.db"
+
+
+def with_repository(seen: dict[str, Any], url: str) -> dict[str, Any]:
+    inputs = {key: seen[key] for key in ("pages", "context", "locus_index", "notice")}
+    inputs = json.loads(json.dumps(inputs))
+    inputs["context"]["repository_url"] = url
+    return {**inputs, "models": seen["models"], "html": render_inputs(inputs, seen["models"])}
+
+
+#: Pages whose golden HTML was written against a git workspace the corpus does not carry.
+WORKSPACE_DEPENDENT = {("lens", "index.html"), ("lens", "not-yet-surveyed.html")}
+
+
+def reprint_recorded() -> None:
+    """Each store fixture's HTML, printed again from its recorded `memory.sql`."""
+
+    def write_pages(name: str, pages: dict[str, str]) -> None:
+        for path, text in pages.items():
+            if (name, path) in WORKSPACE_DEPENDENT:
+                continue
+            target = GOLDEN / name / "html" / path
+            if not target.is_file():
+                raise SystemExit(f"{name}: {path} is not in the corpus; regenerate it in full")
+            target.write_text(fold(text))
+
+    with tempfile.TemporaryDirectory(prefix="amanuensis-golden-") as tmp:
+        for name in ("materializer", "lens", "axiomdb-shaped", "self-shaped"):
+            storage = Path(tmp) / name / "storage"
+            storage.mkdir(parents=True)
+            db = sqlite3.connect(storage / "memory.db")
+            try:
+                db.executescript((GOLDEN / name / "memory.sql").read_text())
+                db.commit()
+            finally:
+                db.close()
+            if name == "materializer":
+                (storage / "workspace_path").write_text("/example/FictionalProject\n")
+            seen = capture_publish(storage, [])
+            write_pages(name, seen["html"])
+            if name == "materializer":
+                write_pages(
+                    "materializer-github",
+                    with_repository(seen, "https://github.com/acme/fictional")["html"],
+                )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("--packet", required=True, help="The packet writing the corpus (PLAN §3.2).")
+    parser.add_argument(
+        "--recorded",
+        action="store_true",
+        help="Reprint only the HTML, from each fixture's recorded store.",
+    )
+    args = parser.parse_args()
+    if args.recorded:
+        reprint_recorded()
+        (GOLDEN / "VERSION").write_text(f"{args.packet}\n")
+        print(f"golden HTML reprinted by {args.packet} under {GOLDEN.relative_to(REPO)}")
+        return 0
+    with tempfile.TemporaryDirectory(prefix="amanuensis-golden-") as tmp:
+        root = Path(tmp)
+        # The `hooks` fixture was written Markdown; its parser is gone, so it is kept, not rebuilt.
+        kept = root / "hooks-kept"
+        if (GOLDEN / "hooks").is_dir():
+            shutil.copytree(GOLDEN / "hooks", kept)
+        if GOLDEN.exists():
+            shutil.rmtree(GOLDEN)
+        GOLDEN.mkdir(parents=True)
+        if kept.is_dir():
+            shutil.copytree(kept, GOLDEN / "hooks")
+        seen, store = materializer_fixture(root)
+        write_fixture("materializer", seen, store)
+        write_fixture(
+            "materializer-github",
+            with_repository(seen, "https://github.com/acme/fictional"),
+            None,
+        )
+        seen, store = lens_fixture(root)
+        write_fixture("lens", seen, store)
+        for name in ("axiomdb-shaped", "self-shaped"):
+            seen, store = legacy_fixture(root, name)
+            write_fixture(name, seen, store)
+    (GOLDEN / "VERSION").write_text(f"{args.packet}\n")
+    print(f"golden corpus written by {args.packet} under {GOLDEN.relative_to(REPO)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

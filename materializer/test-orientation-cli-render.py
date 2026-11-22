@@ -9,9 +9,8 @@ Turns red when:
     file there, or does not name the flag in its JSON refusal;
   - the same render with --allow-external-output fails;
   - --readback-only against an outside directory is refused;
-  - a default CLI render leaves any .md or .html page without the notice (in the
-    Markdown, as its last paragraph; in the HTML, once, in the page head), or its
-    summary lacks "recorded": false;
+  - a default CLI render leaves any HTML page without the notice (once, in the
+    page head), or its summary lacks "recorded": false;
   - a render with --recorded-publication carries the notice on any page, or its
     summary lacks "recorded": true; a recorded render over a stamped one leaves a
     notice behind, or a CLI render over a recorded one misses a page;
@@ -23,7 +22,7 @@ Turns red when:
   - the read-back of a stamped CLI render is not green on all three axes, or the
     read-back stays green when a page loses the notice it should carry, or gains one
     under a recorded publication (with the receipt rewritten to match the bytes): in
-    the Markdown italic or plain, or in the HTML;
+    the page head emphasised or plain;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -53,6 +52,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -132,9 +132,13 @@ def seed(storage: Path) -> None:
         "INSERT INTO subsystems (id, name, status, layer, scope)"
         " VALUES ('B-01', 'Parser', 'structural', 'backend', 'src/parser')"
     )
+    db.execute("INSERT INTO sessions (session_id, intent) VALUES ('o14', 'fixture')")
+    # The page the tests below tamper with is the import's, not a file's.
+    import_onboarding(
+        db, session_id="o14", entry_point="# Where to begin\n\nStart at the reader.\n"
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text("# Where to begin\n\nStart at the reader.\n")
 
 
 def run(storage: Path, *args: str) -> tuple[int, dict]:
@@ -168,18 +172,11 @@ def files_under(path: Path) -> list[str]:
 
 
 def pages(docs: Path) -> list[Path]:
-    return sorted(p for p in docs.rglob("*") if p.is_file() and p.suffix in (".md", ".html"))
+    return sorted(p for p in docs.rglob("*") if p.is_file() and p.suffix == ".html")
 
 
 def squash(text: str) -> str:
     return " ".join(text.split())
-
-
-def md_last_paragraph(text: str) -> str:
-    blocks = [b for b in re.split(r"\n\s*\n", text.strip()) if b.strip()]
-    if not blocks:
-        return ""
-    return squash(re.sub(r"[*_]", "", blocks[-1]))
 
 
 def html_text(fragment: str) -> str:
@@ -195,23 +192,16 @@ def stamped_problem(docs: Path, notice: str, other: str) -> str | None:
     """Every page carries `notice` once, in its place, and never `other`."""
 
     found = pages(docs)
-    if not any(p.suffix == ".md" for p in found) or not any(p.suffix == ".html" for p in found):
-        return "the render wrote no Markdown or no HTML pages"
+    if not found:
+        return "the render wrote no HTML pages"
     for page in found:
         rel = page.relative_to(docs)
         text = page.read_text()
-        if page.suffix == ".md":
-            flat = squash(re.sub(r"[*_]", "", text))
-            if flat.count(notice) != 1:
-                return f"{rel} carries the notice {flat.count(notice)} times, not once"
-            if md_last_paragraph(text) != notice:
-                return f"{rel}: the notice is not the page's last paragraph"
-        else:
-            flat = html_text(text)
-            if flat.count(notice) != 1:
-                return f"{rel} carries the notice {flat.count(notice)} times, not once"
-            if notice not in html_text(html_head(text)):
-                return f"{rel}: the notice is not in the page head"
+        flat = html_text(text)
+        if flat.count(notice) != 1:
+            return f"{rel} carries the notice {flat.count(notice)} times, not once"
+        if notice not in html_text(html_head(text)):
+            return f"{rel}: the notice is not in the page head"
         if other in flat:
             return f"{rel} carries the other variant of the notice"
     return None
@@ -223,8 +213,7 @@ def unstamped_problem(docs: Path) -> str | None:
         return "the render wrote no pages"
     for page in found:
         text = page.read_text()
-        flat = html_text(text) if page.suffix == ".html" else squash(re.sub(r"[*_]", "", text))
-        if NOTICE_STEM in flat:
+        if NOTICE_STEM in html_text(text):
             return f"{page.relative_to(docs)} carries the command-line notice"
     return None
 
@@ -336,7 +325,7 @@ def main() -> int:
         check("a default CLI render publishes and its summary says recorded: false", cli_render_publishes)
         check("no published page hides its report from assistive technology", lambda: hidden_pages(cli_docs))
         check(
-            "every page of a CLI render carries the notice (Markdown last paragraph, HTML page head)",
+            "every page of a CLI render carries the notice, once, in the page head",
             lambda: stamped_problem(cli_docs, NOTICE, NOTICE_UNVERIFIED),
         )
         check("the stamped render's own read-back is green on all three axes", lambda: axes_problem(cli_summary, "render"))
@@ -352,12 +341,12 @@ def main() -> int:
 
         # 4. The read-back requires the notice: a page that lost it turns red.
         def lost_notice_is_red() -> str | None:
-            rel = "entry-point.md"
+            rel = "entry-point.html"
             page = cli_docs / rel
             original = page.read_text()
             receipt = (cli_docs / ".projection-contract.json").read_text()
             try:
-                page.write_text(original.replace(NOTICE, "Rendered somewhere."))
+                page.write_text(original.replace(htmllib.escape(NOTICE), "Rendered somewhere."))
                 rewrite_receipt(cli_docs, rel)
                 status, verified = run(cli, "--readback-only")
                 if status == 0 or verified.get("ok") is not False:
@@ -424,12 +413,26 @@ def main() -> int:
 
         check(
             "the read-back turns red when a recorded publication carries the notice",
-            gained_notice_is_red("entry-point.md", lambda text: text.rstrip("\n") + f"\n\n*{NOTICE}*\n"),
+            gained_notice_is_red(
+                "entry-point.html",
+                lambda text: text.replace(
+                    '<header class="page-head">',
+                    f'<header class="page-head"><p><em>{htmllib.escape(NOTICE)}</em></p>',
+                    1,
+                ),
+            ),
         )
         # The emphasis is presentation: the plain sentence is the same notice.
         check(
             "the read-back turns red when a recorded publication carries the notice without emphasis",
-            gained_notice_is_red("entry-point.md", lambda text: text.rstrip("\n") + f"\n\n{NOTICE}\n"),
+            gained_notice_is_red(
+                "entry-point.html",
+                lambda text: text.replace(
+                    '<header class="page-head">',
+                    f'<header class="page-head"><p>{htmllib.escape(NOTICE)}</p>',
+                    1,
+                ),
+            ),
         )
         check(
             "the read-back turns red when a recorded HTML page carries the notice",

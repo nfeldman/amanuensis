@@ -1,0 +1,1878 @@
+{
+  "version": 1,
+  "branch": "store-only",
+  "slices": [
+    {
+      "id": "S1",
+      "title": "Records",
+      "packets": [
+        "SO0",
+        "SO1",
+        "SO2",
+        "SO3",
+        "SO4",
+        "SO5",
+        "SO6",
+        "SO7"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "fcef5573e990ca68602c42ff064f0ac9fca2c39b",
+        "reviewed_sha": "c9dd55578172542985a2caf07c58c42af59f80a7",
+        "findings": 15
+      }
+    },
+    {
+      "id": "S2",
+      "title": "Pages from the store, and the skill",
+      "packets": [
+        "SO8",
+        "SO9",
+        "SO10"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "53fb1f063329e4b48546a15eb4834209ddfaf781",
+        "reviewed_sha": "fbb2eca0ea1cc3d7cf5e2bf96df818e3b1d06c38",
+        "findings": 12
+      }
+    },
+    {
+      "id": "S3",
+      "title": "HTML without Markdown",
+      "packets": [
+        "SO11",
+        "SO12",
+        "SO13",
+        "SO14",
+        "SO15",
+        "SO16",
+        "SO17",
+        "SO18",
+        "SO19"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "528199fdde46ebc1947f0f04716e75c9e7fc32c5",
+        "reviewed_sha": "7d629b878d43c328d235d6f84dda371140027f39",
+        "findings": 6
+      }
+    },
+    {
+      "id": "S4",
+      "title": "Read-back and publication",
+      "packets": [
+        "SO20",
+        "SO21"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "29eb0798b4b90d9e9081da226c93536e8e92d47f",
+        "reviewed_sha": "1947e8dc1189a8590ae9385f47981a9e3297d6a5",
+        "findings": 9
+      }
+    },
+    {
+      "id": "S5",
+      "title": "Diagrams",
+      "packets": [
+        "SO22",
+        "SO23",
+        "SO24",
+        "SO25"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "337a68eb20d389493c8e02d335382abba67b71af",
+        "reviewed_sha": "c03f8daa9832d688c8705769f4ce1321d9632938",
+        "findings": 14
+      }
+    }
+  ],
+  "packets": [
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "fcef5573e990ca68602c42ff064f0ac9fca2c39b",
+      "red_sha": "e4cb1665aea45eac4ef94e132c88c292e9a5d4fa",
+      "green_sha": "99888cf98c12c433e101c3304789ee267dfcec9e",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "The store-only item now links PLAN.md, replaces the false 'read-back compares the two' with the §0 correction, and lists D1-D16 as nested one-line items (D16 as amended). Gate checks each entry's date and an outcome keyword from §9; step added to test.yml. No regression commands; the O0 gate stays green.",
+      "id": "SO0",
+      "slice": "S1",
+      "title": "Record the plan in BACKLOG.md",
+      "claims": [
+        "§8 SO0",
+        "§0",
+        "§9"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "BACKLOG.md",
+        "dev/test-store-only-backlog.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-store-only-backlog.mjs",
+        "command": "node dev/test-store-only-backlog.mjs",
+        "marker": "GATE SO0",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [],
+      "acceptance": [
+        "PLAN §8 SO0: the store-only item links design/store-only/PLAN.md, carries the §0 read-back correction, and lists D1–D16 one line each, each marked decided on 2026-11-20 (D16 as amended in PLAN §9)."
+      ],
+      "budget_minutes": 30
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "b52b0fbcac134a6d61498509319bdfb8af472e22",
+      "red_sha": "effb1a3f05118b26f2f88c38904cf83f899e20f7",
+      "green_sha": "23a25332d888b469e7aea085e05e5b9fb579bce1",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Five enums added with reader_facing false (true would break test-orientation-contract's exact fourteen and change the guide) and no sql binding; added top-level claim_key_families (key-type, state-container, flow) as the set applies_to is validated against, an optional only_step (trigger: 00) and CLAIM_KEY_FAMILIES in both generated files. Generator now also rejects a duplicate label within any enum. contract_version 1.1.0 to 1.2.0 required moving test-orientation-contract.py's exact version pin to 1.2.0 (the plan demands the bump and lists that test as a regression).",
+      "id": "SO1",
+      "slice": "S1",
+      "title": "Contract enums: narrative sections, claim mark kinds, territory dispositions (no SQL bindings)",
+      "claims": [
+        "§8 SO1",
+        "§2.1",
+        "§2.2",
+        "§7.2"
+      ],
+      "depends_on": [
+        "SO0"
+      ],
+      "deliverables": [
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/scripts/gen-vocabulary.mjs",
+        "materializer/amanuensis_materializer/vocabulary.py",
+        "mcp-server/src/vocabulary.ts",
+        "materializer/test-store-only-contract.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-contract.py",
+        "command": "cd materializer && python3 test-store-only-contract.py",
+        "marker": "GATE SO1",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-vocabulary-source.mjs",
+        "cd materializer && python3 test-orientation-contract.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO1 enums and generator validation errors; no sql bindings (SO2 adds them with the DDL); contract_version minor bump."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "adc060c663e0b93ce395d146c9830f721ba6f59a",
+      "red_sha": "cf9a819",
+      "green_sha": "20d78334b0fff0d381dcc012e028b6e366d6704e",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Gaps filled: claim_mark_declinations keyed by flow_key (decline_claim_marks takes a flow), imported allowed only for the project purpose by a CHECK, extra CHECKs (disqualified needs a condition, withdrawn 0/1, imported kinds = the nine hand-written ones); contract_version not bumped. Moved, per §2.2/SO2: test-explanations A5/C1/C4 (project purpose now stored) and GATE SO1's no-binding assertions (now require the exact SO2 binding); CI mcp-server job uses fetch-depth 0 for the base-tree build. migrateExplanationsProjectPurpose runs before migrateVocabularyChecks, which would also rebuild explanations for the widened disposition, so removing it alone stays green by design.",
+      "id": "SO2",
+      "slice": "S1",
+      "title": "Schema, migrations, SQL bindings and legacy fixtures",
+      "model": "opus",
+      "claims": [
+        "§8 SO2",
+        "§2",
+        "§5.1",
+        "§7.2"
+      ],
+      "depends_on": [
+        "SO1"
+      ],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/db.ts",
+        "mcp-server/contracts/append-only-tables.txt",
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/fixtures/build-legacy-stores.mjs",
+        "mcp-server/fixtures/legacy-stores/",
+        "mcp-server/test-store-only-schema.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-schema.mjs",
+        "command": "cd mcp-server && node test-store-only-schema.mjs",
+        "marker": "GATE SO2",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-explanations.mjs",
+        "cd mcp-server && node test-record-integrity.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO2 red conditions on a fresh store and both committed legacy fixtures; hermetic (no real store).",
+        "The base tree's server still opens and smoke-reads a store the new server migrated."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "0156309de0a18992654c009d3efc8a1f09b7f8a2",
+      "red_sha": "99245d50bd34b4e1e25b729d6530f3112562acb9",
+      "green_sha": "600cd78e6f649081a1eb16c21a46e33389609481",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Effective narrative = newest id per (subject, section, topic), no ref_sha resolvability filter (readNarratives); a withdrawn newest row is owed again. Gaps filled: deferred subsystems hold no narrative; names-and-patterns evidence rule not applied (plan lists none); get_narratives history omits bodies. Refusals registered in refusal-parity.json against a new Narratives section of explanations.md (SO10 moves it); isProseAndLists/isOneParagraph/LINE_BREAK exported from explanations.ts; tool inventory regenerated; CI step added.",
+      "id": "SO3",
+      "slice": "S1",
+      "title": "Narrative tools: record, decline, get, reset withdrawal",
+      "claims": [
+        "§8 SO3",
+        "§2.1"
+      ],
+      "depends_on": [
+        "SO2"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/narratives.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/test-store-only-narratives.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-narratives.mjs",
+        "command": "cd mcp-server && node test-store-only-narratives.mjs",
+        "marker": "GATE SO3",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-explanations.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node scripts/check-refusal-parity.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO3 red conditions, including acceptance of a valid narrative of each section."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "1de8b246db02e41cb136d447eebbabda7bc76ae7",
+      "red_sha": "0dc9ee052c54f8372a99bbf29983b08a952334b4",
+      "green_sha": "d1f4f82633101d1bf950bc35a1d835af4127384a",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "A decline of the project purpose is refused (record only); the entry-point.md sentences are gone from the writer, register, contract text and tool descriptions. imported reads as recorded for the project purpose only (shared selector, TS and Python). _explanation_census now owes a project purpose on architecture.md, which renders only after SO8/SO9. Moved test-explanations R4 and test-explanation-read C1 (project now has purpose and account slots). Also touched conspectus-vocabulary.json (text), explanations/onboarding/concern-territories skill references, DEVELOPMENT.md inventory, test.yml. test-residual-hardening P21 is red on SO1's five enums, from before this packet.",
+      "id": "SO4",
+      "slice": "S1",
+      "title": "Project records: purpose (write and read), profile, runtime boundaries, concern territory and probe",
+      "claims": [
+        "§8 SO4",
+        "§2.2"
+      ],
+      "depends_on": [
+        "SO2"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/explanations.ts",
+        "mcp-server/src/invariants.ts",
+        "materializer/amanuensis_materializer/readback.py",
+        "mcp-server/src/tools/concerns.ts",
+        "mcp-server/src/tools/project-records.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/test-store-only-project-records.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-project-records.mjs",
+        "command": "cd mcp-server && node test-store-only-project-records.mjs",
+        "marker": "GATE SO4",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-explanations.mjs",
+        "cd mcp-server && node test-explanation-gate.mjs",
+        "cd mcp-server && node test-explanation-read.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node scripts/check-concern-checklist.mjs",
+        "cd materializer && python3 test-explanation-pages.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO4 red conditions; a purpose recorded before any structural subsystem is readable in TS and Python; no refusal names entry-point.md."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "7a2a4c6464f92fae9466ef148c91a516d5aeae93",
+      "red_sha": "9145520aec1388030fc820789bc0471f33232d44",
+      "green_sha": "e12ef5bce209f1c36523429adb8c6810e5745ceb",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Marks stand only on current flow-step claims and are never inherited; get_claims adds marks to every claim and mark_declination (flow's newest) to flow steps. Gap-fills: a kind refuses a label or target it does not use, an identical standing mark is refused, an exit target is a bare step number or leaves-flow, a declination needs a current step of the flow, and the refusals are taught in phase-2-structural.md so refusal parity holds.",
+      "id": "SO5",
+      "slice": "S1",
+      "title": "Flow marks: record, withdraw, decline, returned by get_claims",
+      "claims": [
+        "§8 SO5",
+        "§7.2"
+      ],
+      "depends_on": [
+        "SO2"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/claim-marks.ts",
+        "mcp-server/src/tools/claims.ts",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/test-store-only-claim-marks.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-claim-marks.mjs",
+        "command": "cd mcp-server && node test-store-only-claim-marks.mjs",
+        "marker": "GATE SO5",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-phase2-claims-gate.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO5 and §7.2: each valid kind persists and returns; invalid ones refused; withdrawn and closed-claim marks not current."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "116dad7d3ccb07262600f69ef5e8e3afac969e0c",
+      "red_sha": "0e09dc5",
+      "green_sha": "afdc7358a53bb5b35faa671efdfc79fccbee9437",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Pointer shape is {source, record_ids, ref_sha, revision_bound, label} (locus-account schema updated, version left 1.0.0); a record item's ref is narrative:<id> or explanation:<id> and the worker reports record_ref; only 'recorded' rows score. Also touched outside the file list: schema.sql/db.ts (composition_items CHECK widened by rebuild on open), refusal-parity.json and onboarding.md (the concerns refusal moved), ~10 suites and fixtures/structure-narrative.mjs (they now decline the structure narrative). subsystem-survey.md:65 still names the survey artifact because dev O10 requires it; SO10 must change both. test-residual-hardening fails on SO1's new enums (not this packet).",
+      "id": "SO6",
+      "slice": "S1",
+      "title": "The server stops depending on hand-written files (prerequisite, locus, artifacts, composition)",
+      "claims": [
+        "§8 SO6",
+        "§2.5"
+      ],
+      "depends_on": [
+        "SO3"
+      ],
+      "deliverables": [
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/src/tools/artifacts.ts",
+        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/src/tools/composition.ts",
+        "mcp-server/test-store-only-no-files.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-no-files.mjs",
+        "command": "cd mcp-server && node test-store-only-no-files.mjs",
+        "marker": "GATE SO6",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-locus-standing.mjs",
+        "cd mcp-server && node test-locus-compactness.mjs",
+        "cd mcp-server && node test-composition.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO6: a fixture reaches mapped with no file written under storage; register_artifact refuses hand-written kinds and accepts other; composition 'record' items score correctly."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "9cc0bc92874fc71eb0b3f1ed87fb4c880ff47b60",
+      "red_sha": "29f80da",
+      "green_sha": "0f1e87e17089bb7927c1f081f11a007f402a4d7c",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Choices the plan leaves open: the thesis is imported only when read_thesis's state is filled and no project purpose exists, the name only when no project_profile row exists, each runtime edge only when the edge has no row; each is bound to its source file's registered ref_sha, else git_state.onboarding_sha. If Python or the materializer cannot run, bodies still import, the response says so, and a rerun extracts. Added get_imported_artifacts (named in §5.4, owned by no packet); exported resolveArtifactPath from artifacts.ts (SO6) and split recorded_project_name out of project_name in renderers.py (SO8's file) so there is one copy of each rule. The lane guard refuses any command naming the acceptance script, so it was only syntax-checked from a copy, never run.",
+      "id": "SO7",
+      "slice": "S1",
+      "title": "Import every artifact's bytes into the store",
+      "model": "opus",
+      "claims": [
+        "§8 SO7",
+        "§5.2",
+        "§5.3"
+      ],
+      "depends_on": [
+        "SO3",
+        "SO4"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/import.ts",
+        "materializer/amanuensis_materializer/legacy_extract.py",
+        "mcp-server/src/index.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/accept-store-only-real-stores.mjs",
+        "mcp-server/test-store-only-import.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-import.mjs",
+        "command": "cd mcp-server && node test-store-only-import.mjs",
+        "marker": "GATE SO7",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-store-only-schema.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO7 red conditions on the committed legacy fixtures; artifact files unchanged, database files expected to change.",
+        "accept-store-only-real-stores.mjs written (VACUUM INTO snapshots) but not run by the packet."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "53fb1f063329e4b48546a15eb4834209ddfaf781",
+      "red_sha": "6e0df3d62c668c892202b1a030ff1f68f73a0aa3",
+      "green_sha": "b946b9eb4edc60750e8726e41ce2a6d9203676ff",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Pages read the store: thesis = effective project purpose (a refused stored one prints the thesis refusal sentences, now in lint.py); name = project_profile, else imported onboarding report's Codebase line, else binding; runtime map = effective runtime_boundaries; subsystem survey = unwithdrawn imported bodies with the four placements kept plus an 'As written at <date>, revision <sha8>; kept as written, not tied to evidence' label (and 'edited after it was registered' when hash_matches=0); Onboarding record, Where to begin and Review checklist exist only when an unwithdrawn import of their kind does, body at its own heading levels with the label under its H1 (the plan's 'As written at onboarding' section heading is left to SO9, which puts records above it). Manifest sources are db:imports:*; MATERIALIZER_VERSION 0.6.0. Recorded narratives are SO9. Census discharge and THESIS_ABSENT now name record_explanation/record_runtime_boundary. read_thesis stays only as SO7's reference. ~30 existing tests moved from writing storage files to seeding imports via materializer/store_only_seed.py; deliberate changes: test-materializer's third run replaces an import and expects >=1 re-render (the overview no longer sources the entry point file), test-orientation-survey-notes' file-untouched arm checks stored bodies and no stray storage files, test-placeholder-census and test-overview-truthfulness name the record/tool instead of entry-point.md, test-structural-claims.mjs also seeds imported_artifacts.",
+      "id": "SO8",
+      "slice": "S2",
+      "title": "The materializer reads the store, not files",
+      "claims": [
+        "§8 SO8",
+        "§3.3",
+        "§3.4",
+        "§5.4"
+      ],
+      "depends_on": [
+        "SO4",
+        "SO7"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/manifest.py",
+        "materializer/amanuensis_materializer/legacy_prose.py",
+        "materializer/test-store-only-sources.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-sources.py",
+        "command": "cd materializer && python3 test-store-only-sources.py",
+        "marker": "GATE SO8",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-edge-contract.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO8 red conditions; only database and binding files opened under storage; O13 placement kept for imported bodies."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "a4891b1d122fec3954b7600f7d11acf52be2eb76",
+      "red_sha": "4795e76",
+      "green_sha": "f45dc50f239f56dc5d801633510fc9805103f1e4",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Read 'Review coverage' as the subsystem page's Concern review (concern-reasoning narratives under it as H4 topics) and added a Challenge H3 in the Survey record; project narratives print on Onboarding record (all but start-here) and Where to begin; imported runtime rows are labelled by one sentence under the table, not a notes-cell change, because SO8's gate pins the exact table row. New census _record_page_census covers narratives, territories and runtime boundaries; html_projection gained one checklist signature (probe column not 'abbreviated').",
+      "id": "SO9",
+      "slice": "S2",
+      "title": "New records on pages, censused by the read-back",
+      "claims": [
+        "§8 SO9",
+        "§2.1",
+        "§2.2"
+      ],
+      "depends_on": [
+        "SO3",
+        "SO8"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/test-store-only-record-pages.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-record-pages.py",
+        "command": "cd materializer && python3 test-store-only-record-pages.py",
+        "marker": "GATE SO9",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-sources.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO9 placements and red conditions; runtime SVG drawn from runtime_boundaries."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "48b2a5a0501e9d55ba1abfc738664d8565311135",
+      "red_sha": "4fa88da50bb02afcf153a86e47f3d91d1b91a94a",
+      "green_sha": "4ae01c7c6d759f9842448bf3397dfc5971b419d4",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Skill now records (record_project_profile/explanation/runtime_boundary/narrative, add_concern, record_territory_disposition, record_claim_mark or decline_claim_marks) and writes no file; records.md replaces artifact-templates.md (D8 dispatch template dropped). Phase 5 keeps step numbers 5-9 so EX6's '### 5.' regex holds. Moved with the text they read, since SO10 made them red: O10 (concerns prerequisite is a structure narrative), EX6 test-placeholder-census (file-heading checks became purpose and runtime-column checks), EX10 S9, test-refusal-parity G5 and refusal-parity.json (artifact-templates reference replaced by SKILL.md). SO12 should treat those EX6 edits as already moved.",
+      "id": "SO10",
+      "slice": "S2",
+      "title": "The skill records instead of writing files",
+      "claims": [
+        "§8 SO10",
+        "§4",
+        "§7.2"
+      ],
+      "depends_on": [
+        "SO3",
+        "SO4",
+        "SO5",
+        "SO6",
+        "SO9"
+      ],
+      "deliverables": [
+        ".claude/skills/amanuensis/SKILL.md",
+        ".claude/skills/amanuensis/references/onboarding.md",
+        ".claude/skills/amanuensis/references/phase-2-structural.md",
+        ".claude/skills/amanuensis/references/phase-3-concerns.md",
+        ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+        ".claude/skills/amanuensis/references/phase-5-packaging.md",
+        ".claude/skills/amanuensis/references/subsystem-survey.md",
+        ".claude/skills/amanuensis/references/records.md",
+        ".claude/skills/amanuensis/references/memory-audit.md",
+        ".claude/skills/amanuensis/references/explanations.md",
+        "dev/test-skill-no-file-writes.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-skill-no-file-writes.mjs",
+        "command": "node dev/test-skill-no-file-writes.mjs",
+        "marker": "GATE SO10",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/check-reference-calls.mjs",
+        "cd mcp-server && node test-reference-calls.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "node dev/test-skill-workflow-text.mjs",
+        "cd mcp-server && node scripts/check-concern-checklist.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4 and §8 SO10: gate red on the unedited skill (FAIL lines in the red commit); artifact-templates.md replaced by records.md; Phase 2 records flow marks or a declination.",
+        "Edit only .claude/skills/amanuensis, then run prepack-bundle-assets.mjs."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "528199fdde46ebc1947f0f04716e75c9e7fc32c5",
+      "red_sha": "1d7875b4447439788297dac01d90b4d6e190f5c8",
+      "green_sha": "917e3408f12e7b68e89ee39cab9918af0cd9ceac",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Golden corpus (6 fixtures, 144 pages incl. a written 'hooks' fixture and the two legacy stores migrated+imported by the server) records the HTML stage's inputs and output; inline CSS/JS are stored once under assets/ and unfolded before the byte compare. Inline code is page.CodeSpan (Code is the fenced block); misnested emphasis prints via page.Tag to stay byte-identical; RecordRef, Figure and Notice are not added yet (no hook produces them before SO13/S5); 'write_html's module imports or calls the parser' is checked as: nothing write_html reaches in html_projection.py calls, imports or names parser code (AST), plus a literal-Markdown behaviour check. MarkdownRenderer is kept as parse_markdown+write_html for test-materializer.py.",
+      "id": "SO11",
+      "slice": "S3",
+      "title": "Split the parser: Markdown → page model → HTML",
+      "model": "opus",
+      "claims": [
+        "§8 SO11",
+        "§3.1",
+        "§3.2"
+      ],
+      "depends_on": [
+        "SO9"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/page.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/make-golden.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-model.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-model.py",
+        "command": "cd materializer && python3 test-store-only-model.py",
+        "marker": "GATE SO11",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check ."
+      ],
+      "acceptance": [
+        "PLAN §8 SO11: golden HTML generated in the red commit from the unchanged tree; byte-identical after; one block kind per hook in HOOKS (EnumTable included); write_html has no Markdown handling."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "91f26888604f91ec52fa285f31e733fa0b73121f",
+      "red_sha": "008da81b36daf72f4189542b00edfe2983375e15",
+      "green_sha": "b8dec7266ed6506f5ccf2abc7ebe28b01653ff10",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Every generated-page assertion in the 29 materializer tests and finding-partition/projection-custody now reads the .html twin; remaining .md literals are inputs, plan page ids, source documents and the Markdown xref resolver's unit tests, each listed in the gate. structural-claims, residual-hardening, invariants and edge-contract assert on the renderers' in-memory Markdown (no .md page), left for SO14; residual-hardening was red since SO1 and now probes or declares the five new vocabularies. HTML pages still link an Inspect Markdown file, for SO13.",
+      "id": "SO12",
+      "slice": "S3",
+      "title": "Move the tests to HTML while Markdown is still written",
+      "claims": [
+        "§8 SO12",
+        "§3.2",
+        "§11"
+      ],
+      "depends_on": [
+        "SO11"
+      ],
+      "deliverables": [
+        "materializer/",
+        "mcp-server/test-finding-partition.mjs",
+        "mcp-server/test-projection-custody.mjs",
+        "mcp-server/test-edge-contract.mjs",
+        "mcp-server/test-structural-claims.mjs",
+        "mcp-server/test-residual-hardening.mjs",
+        "mcp-server/test-invariants.mjs",
+        "dev/test-store-only-test-views.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-store-only-test-views.mjs",
+        "command": "node dev/test-store-only-test-views.mjs",
+        "marker": "GATE SO12",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-edge-contract.mjs",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-residual-hardening.mjs",
+        "cd mcp-server && node test-invariants.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO12: no listed test reads a generated .md page; suites green; any assertion without an HTML equivalent named in the commit message."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "67db121aea4482be8fbfaa3990d47f67c3557fa9",
+      "red_sha": "009a7d1",
+      "green_sha": "12963e9618b5b5ca75d21a5ad4d853e5176bba0e",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "No .md is written: Markdown is resolved in memory and passed to render_html_projection(markdown=...) (html_projection.py and manifest.py touched for that, and for a 'views' key marking post-SO13 manifests so a pre-SO13 manifest's claimed .md pages are deleted in place and owned by a clean publish, while any .md beside an HTML-only output is refused). Golden regenerated; the gate proves SO11's recorded inputs print identically today except the two removed Markdown links, and masks only clocks, commit ids and session ids when comparing corpora. Moved to HTML because they read the removed .md view: test-orientation-views.py (new O14 paragraph), SO8's and SO9's gates (same assertion counts); skill SKILL.md and phase-5-packaging.md no longer promise a Markdown view. CI's materializer job now checks out full history (the gate reads SO11's corpus at 67db121).",
+      "id": "SO13",
+      "slice": "S3",
+      "title": "HTML-only output",
+      "model": "opus",
+      "claims": [
+        "§8 SO13",
+        "§3.2",
+        "§3.5",
+        "§6"
+      ],
+      "depends_on": [
+        "SO12"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/xref.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/materialize.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-html-only.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-html-only.py",
+        "command": "cd materializer && python3 test-store-only-html-only.py",
+        "marker": "GATE SO13",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-model.py",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-edge-contract.mjs",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-residual-hardening.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO13 red conditions; golden regenerated at the green commit under the §3.2 rule."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "65d2a403bc09b853e47d2e18ad9bff5dba157b4a",
+      "red_sha": "6f32aeed6f63bf171dc4e5883f93ddba521395db",
+      "green_sha": "95022e0f4584a2524a5044197dda148e7a49024f",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Overview, architecture, subsystem map and guide return a Page (prose.py holds the §3.4 grammar and the inline reader moved out of html_projection; xref.resolve_model links a model; core hashes and resolves models; render_html_projection takes models). Family HTML equals the golden on materializer, axiomdb-shaped, self-shaped and lens (lens index against the start tree, since its golden carries a git workspace head). Choices: a paragraph is one xref line (soft line breaks are not kept); record-authored text still goes through the inline grammar; page_text (renderers.py) feeds the composite lint and test-edge-contract/test-residual-hardening, which read renderer output and were edited for it; diagrams.py gained block builders beside the Markdown functions; imported-body theses with headings would print as text until SO15.",
+      "id": "SO14",
+      "slice": "S3",
+      "title": "Renderers build the model: overview, architecture, subsystem map, guide",
+      "claims": [
+        "§8 SO14–SO18",
+        "§3.4"
+      ],
+      "depends_on": [
+        "SO13"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/prose.py",
+        "materializer/amanuensis_materializer/xref.py",
+        "materializer/test-store-only-convert-overview.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-overview.py",
+        "command": "cd materializer && python3 test-store-only-convert-overview.py",
+        "marker": "GATE SO14",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-model.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO14–SO18: family pages equal the current golden HTML and never call parse_markdown."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "9e55fe1f2777d2b27ff2afc3be31aa0ed6260519",
+      "red_sha": "56ce407aebaa5be971272903825806fa9bc74dd0",
+      "green_sha": "6ae64966f12500f15cffda79e191c6ddf97bbb59",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "render_subsystem returns a Page; imported bodies go through legacy_prose.render_body (wraps the parser's block grammar; SO19 moves the parser). _nest_prose alias removed: record_page/_narrative_lines (SO18) call legacy_prose.nest_headings by name; test-materializer's nest-headings case retargeted to it, assertions unchanged. Outside the listed files: xref.resolve_model now counts the title as the heading line, keeps a page's own ID in a strong run and a record's linked key as the text pass did; prose.render_prose gained under= so legacy headings in stored bodies nest (test-explanation-pages needs it); page_text keeps nested items; test-structural-claims.mjs reads page_text. Gate also diffs a rich seeded store against the start tree.",
+      "id": "SO15",
+      "slice": "S3",
+      "title": "Renderers build the model: subsystem pages",
+      "claims": [
+        "§8 SO14–SO18",
+        "§3.4",
+        "§5.4"
+      ],
+      "depends_on": [
+        "SO14"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/legacy_prose.py",
+        "materializer/test-store-only-convert-subsystem.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-subsystem.py",
+        "command": "cd materializer && python3 test-store-only-convert-subsystem.py",
+        "marker": "GATE SO15",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-convert-overview.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO14–SO18 for subsystem pages; _nest_prose removed; imported bodies through legacy_prose.py."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "63db3a2dea3206f4feca3f4aa478f50c35c41d4c",
+      "red_sha": "f0da0b7",
+      "green_sha": "4d4728eca5e7584d69a4a3aaca27535d5621faa7",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Six Unresolved pages now return Pages; finding records carry the filter values, hot-spot rows theirs; Facets built in the renderers. Free text in carried symptoms, questions and leads is read as one line or as blank-line paragraphs, so a multi-line value no longer leaks a stray paragraph after its quote or list (fixtures unchanged). Old _empty_lens/_finding_table/_carried_section stay for SO17.",
+      "id": "SO16",
+      "slice": "S3",
+      "title": "Renderers build the model: Unresolved pages",
+      "claims": [
+        "§8 SO14–SO18"
+      ],
+      "depends_on": [
+        "SO15"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-store-only-convert-unresolved.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-unresolved.py",
+        "command": "cd materializer && python3 test-store-only-convert-unresolved.py",
+        "marker": "GATE SO16",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-convert-subsystem.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO16: open findings, disagreements, decisions needed, leads, stale knowledge, hot spots."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "eb537daee3a6f24295a3755e6b41350f6f8355f7",
+      "red_sha": "c8bf3c9",
+      "green_sha": "6675257fdf823abf457e59ac3d838989ebf73580",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "The five History pages (resolved findings, resolution history, resolved leads, sessions, conflicting evidence) now return Pages; HTML equals the golden pages on four stores and the start tree's on a rich, a bare and two partial seeded stores. _table strips string cells as the parser did; carried headings on resolved-findings keep finding_group (the old parser grouped every level-3 heading there). Free text in list/quote values (answer, question, blocked) is read as one line, so a multi-line answer no longer leaks a stray paragraph (seeds avoid it, as in SO16). Removed now-dead _empty_lens, _finding_table, _carried_section.",
+      "id": "SO17",
+      "slice": "S3",
+      "title": "Renderers build the model: History pages",
+      "claims": [
+        "§8 SO14–SO18"
+      ],
+      "depends_on": [
+        "SO16"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-store-only-convert-history.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-history.py",
+        "command": "cd materializer && python3 test-store-only-convert-history.py",
+        "marker": "GATE SO17",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-convert-unresolved.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO17: resolved findings, resolution history, resolved leads, sessions, conflicting evidence."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "8ad57bd6e096676de57aaf3ac8f1062a98dd7dd6",
+      "red_sha": "03979d1ebd6985cd8cef430583af6ab6a90afdc3",
+      "green_sha": "121669f9f579cabedc960d60999df5d7a55e2853",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Review coverage, review checklist, competing explanations and matrices, onboarding record, where to begin, files, not yet surveyed, system boundaries and glossary return Pages; HTML equals the golden pages on four stores and the start tree's on the lens and on five seeded stores (rich in a real git workspace with a standing reconciliation, bare, records-only, imports-only, no concerns). Imported bodies stay on legacy_prose (record pages with records: once per body; import-only page: one parse of the whole document via imported_page, whose signature now takes the page path and returns a Page). Outside the listed files: xref.resolve_model now links CoverageIndex and ConcernChecklist blocks; diagrams.py gained coverage_blocks and lost seam_graph and concern_coverage_heatmap; renderers.py lost _narrative_lines and _checklist_lines; test-store-only-convert-overview.py (SO14) now counts the parser at _MarkdownParser.parse and sums the blindness check over stores, because no page but the imported bodies parses any more and it went red. Choices: free text in retired-concern notes, evidence notes and not-yet-surveyed reasons is read as one line (multi-line values no longer leak a stray paragraph); glossary expansions read through render_prose. The lens golden not-yet-surveyed page depends on a git workspace the gate cannot recreate, so it is compared with the start tree only.",
+      "id": "SO18",
+      "slice": "S3",
+      "title": "Renderers build the model: Method and remaining pages",
+      "claims": [
+        "§8 SO14–SO18"
+      ],
+      "depends_on": [
+        "SO17"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-store-only-convert-method.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-method.py",
+        "command": "cd materializer && python3 test-store-only-convert-method.py",
+        "marker": "GATE SO18",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-convert-history.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO18: review coverage, review checklist, competing explanations, matrices, onboarding record, where to begin, files, not yet surveyed, system boundaries, glossary."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "d4fd052932cc64fb083228ba81ce1ed206fdab51",
+      "red_sha": "ad41ce3",
+      "green_sha": "29a5290ac303bf1355b2254d049f76689678f36a",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "parse_markdown, MarkdownRenderer, the Markdown xref text pass, the page-head text helpers, page.py HOOKS and every page-level _*_PROJECTION are gone; legacy_prose._LegacyParser (the old block grammar, keeping only the record, summary, lifecycle, runtime-table and abbreviated-checklist tables imported bodies carry) is the one Markdown reader. PagePlan/SitePage/slug/xref/readback page ids end .html (SitePage.markdown_path is now path); render_html_projection takes models only. The contract's reader_terms keep .md page names (shared with the TS server); page_terms maps them. Retired with reasons in the gates: the SO11 gate now rebuilds the four stores instead of printing recorded Markdown, the SO13 gate drops 'recorded inputs print through today's HTML stage' and the md-count check, the SO14 gate compares resolve_model with the tree at d4fd052 via git, the SO12 gate drops its page-id exceptions; make-golden.py records models, keeps the hooks fixture, and was not run for the corpus. Golden HTML is unchanged; the md/ folders of the corpus are left as history. diagrams.py still holds dead Markdown-returning helpers (boundary_view, runtime_boundary_map, staleness_map text) nothing parses.",
+      "id": "SO19",
+      "slice": "S3",
+      "title": "Delete the Markdown intermediate",
+      "claims": [
+        "§8 SO19",
+        "§3.2",
+        "§3.4"
+      ],
+      "depends_on": [
+        "SO18"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/xref.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-store-only-no-markdown.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-no-markdown.py",
+        "command": "cd materializer && python3 test-store-only-no-markdown.py",
+        "marker": "GATE SO19",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-model.py",
+        "cd materializer && python3 test-store-only-html-only.py",
+        "cd materializer && python3 test-store-only-convert-overview.py",
+        "cd materializer && python3 test-store-only-convert-subsystem.py",
+        "cd materializer && python3 test-store-only-convert-unresolved.py",
+        "cd materializer && python3 test-store-only-convert-history.py",
+        "cd materializer && python3 test-store-only-convert-method.py",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO19: no parse_markdown, no page-level _*_PROJECTION, legacy_prose only on the imported-body path, no .md page id; composite-index lint runs on the overview model."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "29eb0798b4b90d9e9081da226c93536e8e92d47f",
+      "red_sha": "b2e02e6",
+      "green_sha": "317dea62fa4442218e34d97cfdc3ffa1dc31b649",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Ten record types carry data-record/data-state (finding, subsystem, claim, disposition, seam, narrative, explanation, imported body, runtime boundary, territory); the architecture runtime and boundary SVGs carry data-node/data-edge; readback.py adds _record_mark_census and _drawn_element_census. Gaps chosen: imported bodies on import-only pages (imported_page reads them as one document) and the project purpose (the thesis) are not marked; the read-back reuses the run's reading of each imported body through a run-scoped memo (legacy_prose.RENDERED_BODIES) so parser counters stay at one per body. Earlier gates touched: SO14-SO18 strip only SO20's four attributes when comparing with their start trees, SO13 accepts VERSION SO20 with those attributes removed, test-orientation-ids/map match an atlas item whatever attributes it carries; golden reprinted from recorded stores by make-golden.py --recorded (HTML only, attributes only; retired md/ dirs left in place). SO8 is red at start and HEAD with the same line.",
+      "id": "SO20",
+      "slice": "S4",
+      "title": "Read-back against the store: record marks and drawn-element census",
+      "model": "opus",
+      "claims": [
+        "§8 SO20",
+        "§3.5"
+      ],
+      "depends_on": [
+        "SO19"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/page.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-readback.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-readback.py",
+        "command": "cd materializer && python3 test-store-only-readback.py",
+        "marker": "GATE SO20",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-no-markdown.py",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-refresh-recovery.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO20 sabotage table with the contract resealed after each edit; an unsabotaged publication is green; golden changes only in attributes."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 2,
+      "start_sha": "7ef7a30671b0f3ec09f6f38f00df1fd8b1ad5c12",
+      "red_sha": "12d361a",
+      "green_sha": "4e81009022c8918f0d766f8408d44a51be4bc06f",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Attempt 3 re-checked at HEAD bb83588: gate GREEN and the four regressions exit 0; red commit 12d361a still prints GATE SO21 RED without crash signatures. EX14 and EX8 stay converted to read HTML (the gate checks it) but are not regressions, since both run P11, red at baseline (D17, owner 2026-11-21).",
+      "id": "SO21",
+      "slice": "S4",
+      "title": "Publication chain and copies are HTML-only",
+      "claims": [
+        "§8 SO21",
+        "§6"
+      ],
+      "depends_on": [
+        "SO13",
+        "SO20"
+      ],
+      "deliverables": [
+        "dev/promote-docs.mjs",
+        "dev/republish-docs.mjs",
+        "dev/test-reader-lenses-dogfood.mjs",
+        "dev/test-rebuild-readback.mjs",
+        "dev/test-explanations-published.mjs",
+        "dev/test-republish-chain.mjs",
+        "dev/test-receipt-gates-restored.mjs",
+        "dev/measure-reader-prose.mjs",
+        "dev/test-store-only-publish-chain.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-store-only-publish-chain.mjs",
+        "command": "node dev/test-store-only-publish-chain.mjs",
+        "marker": "GATE SO21",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-store-only-readback.py",
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-republish-chain.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO21: no republish; the six dev readers read HTML; four run as regressions and exit 0, EX14 and EX8 are not regressions (D17, owner 2026-11-21); the content-free README is written (D10 decided)."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "337a68eb20d389493c8e02d335382abba67b71af",
+      "red_sha": "985d2b9230c4546cd6d94477eef236475f34a9d3",
+      "green_sha": "4c8843a37228203d0abe2dc9106db199be3b2bb8",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "B1 (survey-workflow) and B2 (status-ladder) are Diagram blocks: pure models in diagrams.py, SVG by draw_svg, writer in html_projection, census in readback._figure_census. Contract: survey_passes gain actor and checkpoint; new status_prerequisites (checked_by names what enforcePhasePrerequisites calls or reads; the gate parses invariants.ts). Edited beyond the deliverables: page.py (Diagram, DiagramNode, DiagramEdge), readback.py, the SO13-SO18 and SO20 gates and test-orientation-workflow.py (each now ignores or accepts figures, as for SO20's marks), test.yml. Styling is by presentation attributes with CSS tokens so the stylesheet asset and golden pages change only inside figures; guide figures follow the passes table with no heading of their own. test-store-only-sources.py (SO8) is red at the start too (architecture.md).",
+      "id": "SO22",
+      "slice": "S5",
+      "title": "Diagram primitives, survey workflow (B1) and status ladder (B2)",
+      "claims": [
+        "§8 SO22",
+        "§7.3",
+        "Appendix B"
+      ],
+      "depends_on": [
+        "SO20"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/scripts/gen-vocabulary.mjs",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-method-diagrams.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-method-diagrams.py",
+        "command": "cd materializer && python3 test-store-only-method-diagrams.py",
+        "marker": "GATE SO22",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-readback.py",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+        "cd materializer && python3 test-orientation-contract.py"
+      ],
+      "acceptance": [
+        "PLAN §8 S5 common red conditions plus SO22: survey_passes gains actor and checkpoint; contract rung prerequisites agree with enforcePhasePrerequisites."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "636d91df62d972759f67e0ab9306cf7a126da26a",
+      "red_sha": "df75c1d7291eb3fdbbb46bd678abf091813387d7",
+      "green_sha": "c148fd8d790fbc2858fed23e49b69094a445db71",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "A5 is a coverage-bars Diagram (file_standing per subsystem, latest scope_reconciliations for the repository bar; no reconciliation, no ledger row, or depth below scoping gives a 'Coverage not measured' sentence). A4 badges (crit-high, med-low, awaiting, undiscriminated) come from hot_spot_measures, moved from render_hot_spots into diagrams.py; they sit on the master-plan Subsystem map (O7), the architecture atlas and the boundary diagram, only at concerns or above, none at zero. Gaps filled: badges are elements and a BadgeNote paragraph rather than a figure, so the SO13/14-18/20/22 golden-comparing gates now also strip SO23's additions (reason in their comments); SO22's gate accepts a later corpus VERSION. test-store-only-sources (SO8) was already red at the start.",
+      "id": "SO23",
+      "slice": "S5",
+      "title": "Coverage bars (A5) and finding badges (A4)",
+      "claims": [
+        "§8 SO23",
+        "Appendix B"
+      ],
+      "depends_on": [
+        "SO22"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-coverage-badges.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-coverage-badges.py",
+        "command": "cd materializer && python3 test-store-only-coverage-badges.py",
+        "marker": "GATE SO23",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-method-diagrams.py",
+        "cd materializer && python3 test-store-only-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO23; A4 counts equal hot-spots.html's."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "d8b1c74b8c16c5cc50ebbdc93397f176ac89bc8f",
+      "red_sha": "d1ef6cb",
+      "green_sha": "d923e0944e440e9937532c9cc65b7e89dc1f83c5",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "A2 is seam_contract_model plus _draw_seam in diagrams.py (node records subsystem:<id> and seam:<id>; edge records seam-field:<seam>:<a|b>_<writes|reads>); one figure per seam with a recorded field, a diagram-below sentence for a seam with none (it keeps the assumptions it records), halves drawn only from Structural up (Appendix B rule 2, says so in the account), assumptions as an in-SVG caption, a seam records no revision so its updated date is printed. Gap filled: 'unrecorded half' is read as each unrecorded field's arrow dashed and labelled 'not recorded'. Moved deliberately: test-prose-retention.py's seam allowlist emptied (the eight columns now render); the earlier golden-comparing gates (SO13/14-18/20/22/23) also let go of empty prose-flow wrappers and SO23's gate of seam figures. Diagram gained a notes field in page.py.",
+      "id": "SO24",
+      "slice": "S5",
+      "title": "Seam contract diagram (A2)",
+      "claims": [
+        "§8 SO24",
+        "Appendix B"
+      ],
+      "depends_on": [
+        "SO22"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-seam-diagram.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-seam-diagram.py",
+        "command": "cd materializer && python3 test-store-only-seam-diagram.py",
+        "marker": "GATE SO24",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-method-diagrams.py",
+        "cd materializer && python3 test-store-only-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO24."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "f5222b41382b11c5b4599f30f226461c80283d61",
+      "red_sha": "ab7d10e",
+      "green_sha": "2dd8305059692e82c5afb90f2a7b5d975dbbf3a4",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Flow strip (A3): flow_strip_model/flow_step_table/flow_strip_blocks in diagrams.py (strip for 3-20 steps, wraps after 12, sentence under 3 or below Structural, sentence plus table over 20, 'Marks not recorded' unless marks or a declination); rendered under Flow steps on subsystem pages; read-back counts each figure. Commit line and stubs are thin rects because the read-back counts every svg line as an arrow; steps with more than two exits list them in the account and draw none; rule-3 hatching and the linchpin mark are not drawn. Golden gained one sentence (self-shaped, 2 steps); the SO23 and SO24 gates now let go of flow-strip additions. test-store-only-sources (SO8) is red at the start commit too.",
+      "id": "SO25",
+      "slice": "S5",
+      "title": "Flow strip (A3)",
+      "claims": [
+        "§8 SO25",
+        "§7.2",
+        "Appendix B"
+      ],
+      "depends_on": [
+        "SO5",
+        "SO22"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-flow-strip.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-flow-strip.py",
+        "command": "cd materializer && python3 test-store-only-flow-strip.py",
+        "marker": "GATE SO25",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-method-diagrams.py",
+        "cd materializer && python3 test-store-only-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO25 thresholds and the 'marks not recorded' sentence."
+      ],
+      "budget_minutes": 150
+    }
+  ],
+  "completion": {
+    "commands": [
+      "node dev/test-store-only-backlog.mjs",
+      "cd materializer && python3 test-store-only-contract.py",
+      "cd mcp-server && node test-store-only-schema.mjs",
+      "cd mcp-server && node test-store-only-narratives.mjs",
+      "cd mcp-server && node test-store-only-project-records.mjs",
+      "cd mcp-server && node test-store-only-claim-marks.mjs",
+      "cd mcp-server && node test-store-only-no-files.mjs",
+      "cd mcp-server && node test-store-only-import.mjs",
+      "cd materializer && python3 test-store-only-sources.py",
+      "cd materializer && python3 test-store-only-record-pages.py",
+      "node dev/test-skill-no-file-writes.mjs",
+      "cd materializer && python3 test-store-only-model.py",
+      "node dev/test-store-only-test-views.mjs",
+      "cd materializer && python3 test-store-only-html-only.py",
+      "cd materializer && python3 test-store-only-convert-overview.py",
+      "cd materializer && python3 test-store-only-convert-subsystem.py",
+      "cd materializer && python3 test-store-only-convert-unresolved.py",
+      "cd materializer && python3 test-store-only-convert-history.py",
+      "cd materializer && python3 test-store-only-convert-method.py",
+      "cd materializer && python3 test-store-only-no-markdown.py",
+      "cd materializer && python3 test-store-only-readback.py",
+      "node dev/test-store-only-publish-chain.mjs",
+      "cd materializer && python3 test-store-only-method-diagrams.py",
+      "cd materializer && python3 test-store-only-coverage-badges.py",
+      "cd materializer && python3 test-store-only-seam-diagram.py",
+      "cd materializer && python3 test-store-only-flow-strip.py",
+      "cd mcp-server && npm run build && npx biome check src/",
+      "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+      "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+      "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+      "cd mcp-server && node scripts/check-reference-calls.mjs",
+      "cd mcp-server && node test-reference-calls.mjs",
+      "cd mcp-server && node scripts/check-refusal-parity.mjs",
+      "cd mcp-server && node test-projection-custody.mjs",
+      "cd mcp-server && node test-existing-store-migration.mjs",
+      "cd mcp-server && node test-smoke.mjs",
+      "cd materializer && python3 test-materializer.py",
+      "cd materializer && python3 test-lens-pages.py",
+      "cd materializer && python3 test-readback.py",
+      "cd materializer && python3 test-overview-truthfulness.py",
+      "cd materializer && python3 test-prose-retention.py",
+      "cd materializer && python3 test-narrative-placement.py",
+      "cd materializer && python3 test-explanation-pages.py",
+      "cd materializer && python3 test-explanation-orientation.py",
+      "cd materializer && python3 test-ledger-freshness.py",
+      "cd materializer && python3 test-ledger-grouping.py",
+      "cd materializer && python3 test-placeholder-census.py",
+      "cd materializer && python3 test-claim-register.py",
+      "cd materializer && python3 test-history-and-disagreements.py",
+      "cd materializer && python3 test-severity-history.py",
+      "cd materializer && python3 test-search-index.py",
+      "cd materializer && python3 test-unmeasured-coverage.py",
+      "cd materializer && python3 test-xref-moved-target.py",
+      "cd materializer && python3 test-orientation-index.py",
+      "cd materializer && python3 test-orientation-guide.py",
+      "cd materializer && python3 test-orientation-workflow.py",
+      "cd materializer && python3 test-orientation-terms.py",
+      "cd materializer && python3 test-orientation-overview.py",
+      "cd materializer && python3 test-orientation-views.py",
+      "cd materializer && python3 test-orientation-ids.py",
+      "cd materializer && python3 test-orientation-map.py",
+      "cd materializer && python3 test-orientation-diagram.py",
+      "cd materializer && python3 test-orientation-readback-label.py",
+      "cd materializer && python3 test-orientation-survey-notes.py",
+      "cd materializer && python3 test-orientation-cli-render.py",
+      "cd materializer && ruff check ."
+    ]
+  },
+  "final_review": {
+    "status": "reviewed",
+    "reviewed_sha": "d2e929ecdae4e547ab647f5f071b33c4a76ef1fd",
+    "findings": 0
+  }
+}

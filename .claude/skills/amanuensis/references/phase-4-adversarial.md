@@ -75,8 +75,19 @@ live outside — add files via `add_files_to_scope` with
 
 ### 4. Record explicit contradiction pairs
 
-For each target, write in the subsystem survey artifact
-(`<id>-<slug>.md`) under an "Adversarial review" section:
+For each target, record the review as a narrative:
+
+```
+record_narrative(subject_type="subsystem", subject_id, section="challenge",
+  topic=<finding id>, body, evidence_ids, ref_sha=<session sha>)
+```
+
+`topic` is the finding id, so each review is its own subheading on the
+subsystem page. `evidence_ids` are the rows the review rests on, at least one
+for a file in the subsystem's ledger. The body is prose and lists with no
+heading or table line, at most 8192 bytes. Below `adversarial` it is refused:
+*"a challenge narrative is written once a subsystem has reached
+'adversarial'"*. It says:
 
 - **Claim A** — what Phase 3 concluded.
 - **Claim B** — what you found (or failed to find).
@@ -95,8 +106,8 @@ For each target, write in the subsystem survey artifact
     stays but its linchpin dependency is now documented
     explicitly.
 
-For each **claim** target, write one entry under the same section,
-keyed by `claim_key`:
+For each **claim** target, record one narrative the same way, with
+`topic=<claim_key>`, saying:
 
 - **Claim** — the `claim_key` and the statement as recorded.
 - **Challenge** — what would have to be true for the claim to be

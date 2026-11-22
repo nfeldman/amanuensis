@@ -76,7 +76,10 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
+
+from store_only_seed import import_body
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -328,11 +331,16 @@ def seed(storage: Path, shas: dict[str, str], head: str) -> None:
                     ),
                 )
         if has_artifact:
-            (storage / artifact_path(sid)).write_text(artifact_text(sid))
-            cur.execute(
-                "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha,"
-                " session_id) VALUES (?, 'subsystem-survey', ?, ?, ?, 'ex11')",
-                (artifact_path(sid), sid, HASH, shas["c1"]),
+            # The page reads the body the import stored, never a file in storage.
+            import_body(
+                db,
+                artifact_path(sid),
+                "subsystem-survey",
+                artifact_text(sid),
+                session_id="ex11",
+                subsystem_id=sid,
+                ref_sha=shas["c1"],
+                registered_hash=HASH,
             )
     evidence: dict[str, int] = {}
     for rel in (READER, REGISTRY, WRITER):
@@ -488,8 +496,75 @@ def read(path: Path) -> str:
         return ""
 
 
+class _Outline(HTMLParser):
+    """The visible words of a page's `<article>`, one block per line, with each
+    heading on a line of its own led by one `#` per level."""
+
+    _BREAKS = frozenset(
+        (
+            "p", "li", "tr", "div", "section", "pre", "ul", "ol", "table", "br",
+            "blockquote", "caption", "dt", "dd", "article", "details", "summary",
+        )
+    )
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.lines: list[str] = []
+        self._buf: list[str] = []
+        self._in_article = False
+        self._skip = 0
+        self._heading = 0
+
+    def _flush(self) -> None:
+        words = " ".join("".join(self._buf).split())
+        self._buf = []
+        if words:
+            self.lines.append(("#" * self._heading + " " if self._heading else "") + words)
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        classes = (dict(attrs).get("class") or "").split()
+        if tag == "article":
+            self._in_article = True
+        elif tag in ("script", "style") or (tag == "a" and "heading-anchor" in classes):
+            self._skip += 1
+        elif self._in_article and tag in self._BREAKS:
+            self._flush()
+        elif self._in_article and re.fullmatch(r"h[1-6]", tag):
+            self._flush()
+            self._heading = int(tag[1])
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "article":
+            self._flush()
+            self._in_article = False
+        elif tag in ("script", "style", "a") and self._skip:
+            self._skip -= 1
+        elif self._in_article and re.fullmatch(r"h[1-6]", tag):
+            self._flush()
+            self._heading = 0
+        elif self._in_article and (tag in self._BREAKS or tag in ("td", "th")):
+            self._flush() if tag in self._BREAKS else self._buf.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        if self._in_article and not self._skip:
+            self._buf.append(data)
+
+
+def outline(page: str) -> str:
+    parser = _Outline()
+    parser.feed(page)
+    parser.close()
+    return "\n".join(parser.lines)
+
+
+def plain(text: str) -> str:
+    """Expected text as a reader sees it: code spans and emphasis are elements, not marks."""
+
+    return text.replace("`", "").replace("*", "")
+
+
 def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level or higher."""
+    """The lines of one section of an outline, up to the next heading of its level or higher."""
 
     marker = "#" * level + " "
     body: list[str] = []
@@ -524,8 +599,8 @@ def h3s(text: str) -> list[str]:
 
 
 def subsystem_page(docs: Path, sid: str) -> str:
-    pages = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.md"))
-    return read(pages[0]) if pages else ""
+    pages = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))
+    return outline(read(pages[0])) if pages else ""
 
 
 def squash(text: str) -> str:
@@ -541,7 +616,7 @@ def tree_digest(directory: Path) -> dict[str, str]:
 
 
 def provenance(sha: str, n: int, ageing: str) -> str:
-    return f"*Written by a survey session at `{sha[:8]}` from {n} evidence row(s). {ageing}*"
+    return squash(plain(f"*Written by a survey session at `{sha[:8]}` from {n} evidence row(s). {ageing}*"))
 
 
 def none_changed(n: int) -> str:
@@ -549,13 +624,13 @@ def none_changed(n: int) -> str:
 
 
 def declined_purpose(sha: str, reason: str) -> str:
-    return (
+    return plain(
         f"{NO_PURPOSE_STEM}: a survey session declined to write one at `{sha[:8]}`. {reason}"
     )
 
 
 def declined_account(sha: str, reason: str) -> str:
-    return (
+    return plain(
         "A survey session declined to write an account of how this subsystem works at"
         f" `{sha[:8]}`. {reason}"
     )
@@ -650,7 +725,7 @@ def main() -> int:
             if text.count(PURPOSE_B01) != 1:
                 return "the recorded purpose is printed more than once"
             want = provenance(shas["c1"], 2, none_changed(2))
-            if want not in body:
+            if want not in squash(body):
                 return f"the provenance line is not `{want}`; the section reads {body.strip()!r}"
             scope = section(text, "Scope")
             if "SCOPE-B-01" not in scope:
@@ -702,9 +777,10 @@ def main() -> int:
             text = page("good", "B-01")
             body = section(text, "How it works")
             for line in ACCOUNT_B01.splitlines():
-                if line.strip() and line not in body:
+                words = line.removeprefix("- ")
+                if words.strip() and words not in body:
                     return f"the account line {line!r} is not under `## How it works`"
-            if provenance(shas["c1"], 2, none_changed(2)) not in body:
+            if provenance(shas["c1"], 2, none_changed(2)) not in squash(body):
                 return "the account carries no provenance line"
             if text.count("ACCOUNT-B-01") != 1:
                 return "the account is printed more than once"
@@ -716,7 +792,7 @@ def main() -> int:
             if NO_PURPOSE_WITH_SCOPE not in section(b02, "Scope"):
                 return "B-02's Scope lost the no-purpose sentence though no purpose is recorded"
             want = provenance(shas["c1"], 1, none_changed(1))
-            if want not in section(b02, "How it works"):
+            if want not in squash(section(b02, "How it works")):
                 return "an account without a purpose does not render under `## How it works`"
             order = [h for h in h2s(b02) if h in SECTION_ORDER]
             if order != ["Scope", "How it works", "Structure"]:
@@ -798,7 +874,7 @@ def main() -> int:
             for name, sentence in cases:
                 body = section(page(name, "B-01"), "Purpose")
                 want = provenance(shas["c1"], 2, sentence)
-                if want not in body:
+                if want not in squash(body):
                     return f"store {name!r}: the provenance line is not `{want}`; got {body.strip()!r}"
             # The unbound reading is still rendered, never silently dropped.
             if PURPOSE_B01 not in page("unbound", "B-01"):
@@ -818,7 +894,7 @@ def main() -> int:
             paths = ", ".join(f"`{rel}`" for rel in sorted(AWKWARD))
             sentence = f"{len(AWKWARD)} of the {len(AWKWARD)} file(s) it cites changed since: {paths}."
             body = section(page("awkward", "B-07"), "Purpose")
-            if provenance(shas["c4"], len(AWKWARD), sentence) not in body:
+            if provenance(shas["c4"], len(AWKWARD), sentence) not in squash(body):
                 return f"a change to a path git quotes, trims or reads as magic is misreported: {body.strip()!r}"
             return None
 
@@ -849,7 +925,7 @@ def main() -> int:
             sentence = f"6 of the 6 file(s) it cites changed since: {named}, and others."
             want = provenance(shas["c6"], 7, sentence)
             body = section(subsystem_page(storage / "docs", "B-07"), "Purpose")
-            if want not in body:
+            if want not in squash(body):
                 return f"the provenance line is not `{want}`; got {body.strip()!r}"
             return None
 
@@ -1041,7 +1117,7 @@ def main() -> int:
                 if named(control, kind):
                     return f"the read-back wants the refused body on a page that rightly prints the refusal ({kind})"
             sentence = REFUSAL.format(slot="purpose")
-            for suffix, kind in (("md", "explanation"), ("html", "explanation-html")):
+            for suffix, kind in (("html", "explanation-html"),):
                 target = next(iter(sorted((docs / "subsystems").glob(f"b01-*.{suffix}"))), None)
                 if target is None:
                     return f"the B-01 {suffix} page is absent"
@@ -1094,10 +1170,10 @@ def main() -> int:
             db.commit()
             db.close()
             page_after, hash_after = reading()
-            if provenance(shas["c1"], 2, none_changed(2)) not in page_before:
+            if provenance(shas["c1"], 2, none_changed(2)) not in squash(page_before):
                 return "the fixture's ageing line is not the unchanged one"
             moved = f"1 of the 2 file(s) it cites changed since: `{READER}`."
-            if provenance(shas["c1"], 2, moved) not in page_after:
+            if provenance(shas["c1"], 2, moved) not in squash(page_after):
                 return f"the ageing line did not follow the head: {page_after.strip()!r}"
             if hash_after == hash_before:
                 return "the page's explanation source hash did not move with the head"
@@ -1123,7 +1199,7 @@ def main() -> int:
             outline = html_sections(read(found)) if found else {}
             for heading in NESTED_HEADINGS:
                 if heading in h2s(text):
-                    return f"the account opened a new section on the Markdown page: {heading!r}"
+                    return f"the account opened a new section on the page: {heading!r}"
                 body = section(text, "How it works")
                 if not re.search(rf"(?m)^#{{3,6}} {re.escape(heading)}$", body):
                     return f"{heading!r} is not a heading below H2 under How it works: {body[:200]!r}"
@@ -1210,7 +1286,7 @@ def main() -> int:
             body = section(text, "Purpose")
             if PURPOSE_B01 not in body:
                 return "the newest row is not printed for a path git cannot answer in"
-            if provenance(shas["c1"], 2, NOT_MEASURED) not in body:
+            if provenance(shas["c1"], 2, NOT_MEASURED) not in squash(body):
                 return f"the age is not 'not measured' for such a path: {body.strip()!r}"
             return None
 
@@ -1278,7 +1354,7 @@ def main() -> int:
             )
             if not control.get("ok"):
                 return f"the read-back is red on the unmodified publication — {control.get('mismatches')}"
-            target = next(iter(sorted((docs / "subsystems").glob("b01-*.md"))), None)
+            target = next(iter(sorted((docs / "subsystems").glob("b01-*.html"))), None)
             if target is None:
                 return "the B-01 page is absent"
             original = target.read_text()

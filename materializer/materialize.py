@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Amanuensis materializer.
 
-Reads `memory.db` + prose artifacts from a project storage directory
-and renders a navigable documentation site under `<storage>/docs/`.
+Reads `memory.db` from a project storage directory (and its binding files,
+to find the checkout) and renders a navigable HTML site under `<storage>/docs/`:
+one `.html` per page, `search-index.js`, `.manifest.json`,
+`.projection-contract.json` and a content-free `README.md` that points at
+`index.html`, and nothing else (store-only PLAN §3.2 step 3, §6).
 
-Diff-aware: per-page source hashes are tracked in `docs/.manifest.json`;
-on subsequent runs only pages whose DB or prose sources changed are
-re-rendered. Cross-references (B-01, CC-1, SM-3, B01-1, etc.) are
-resolved to working relative links in a global post-processing pass.
+Diff-aware: per-page source hashes are tracked in `docs/.manifest.json`, and a
+page whose bytes are unchanged is not rewritten. Cross-references (B-01, CC-1,
+SM-3, B01-1, etc.) are resolved to working relative links in a global pass over
+each page's in-memory text.
 
 Exit status is 0 on success, non-zero on error. The last line of stdout
 is a JSON summary the MCP server parses.
@@ -33,8 +36,12 @@ def unmanaged_output_files(output: Path) -> list[str]:
     """Return files a prior Amanuensis manifest does not claim.
 
     Clean publication replaces the directory as one unit.  A manifest proves
-    Amanuensis has custody of its listed pages, not of arbitrary files a human
-    may have placed beside them.
+    Amanuensis has custody of its listed files, not of arbitrary files a human
+    may have placed beside them. The files are its projection files (the HTML
+    and the search index). A manifest written before HTML became the only view
+    has no `views` key, and its `pages` were `.md` files that run wrote, so
+    they are claimed too and vanish with the swap; a later manifest's `pages`
+    are page ids, which claim no file, so a `.md` beside its output is refused.
     """
     if not output.exists() or not any(output.iterdir()):
         return []
@@ -45,10 +52,11 @@ def unmanaged_output_files(output: Path) -> list[str]:
         manifest = json.loads(manifest_path.read_text())
     except (json.JSONDecodeError, OSError):
         return [str(manifest_path.relative_to(output))]
+    markdown_pages = manifest.get("pages", []) if "views" not in manifest else []
     owned = {
         ".manifest.json",
         ".projection-contract.json",
-        *(str(page["path"]) for page in manifest.get("pages", []) if "path" in page),
+        *(str(page["path"]) for page in markdown_pages if "path" in page),
         *(str(item["path"]) for item in manifest.get("projection_files", []) if "path" in item),
     }
     return sorted(
@@ -72,11 +80,11 @@ def main() -> int:
     # old output away and the new one in would leave no published directory.
     # As an exception it reaches the handler below, which puts the old one back.
     signal.signal(signal.SIGTERM, _raise_terminated)
-    parser = argparse.ArgumentParser(description="Render Amanuensis docs from memory.db + prose.")
+    parser = argparse.ArgumentParser(description="Render Amanuensis docs from memory.db.")
     parser.add_argument(
         "--storage",
         required=True,
-        help="Project storage directory (contains memory.db and prose artifacts).",
+        help="Project storage directory (contains memory.db).",
     )
     parser.add_argument(
         "--workspace",

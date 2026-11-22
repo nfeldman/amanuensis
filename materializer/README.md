@@ -1,7 +1,7 @@
 # amanuensis-materializer
 
 Renders a navigable human-facing architectural conspectus from the
-Amanuensis `memory.db` and the project's prose artifacts. Every materialized
+Amanuensis `memory.db`; no prose file in the storage directory is read. Every materialized
 Markdown page has a first-class HTML companion; `index.html` is the primary
 reading surface and Markdown remains the portable, inspectable projection.
 
@@ -25,8 +25,9 @@ contradictions.md       epistemic conflicts, resolved and open
 diagnosticity.md        ACH matrices (when concerns compete)
 vocabulary.md           codebase-native glossary
 field-notes.md          peripheral observations by category
-onboarding-report.md    passthrough of the onboarding report
-entry-point.md          passthrough of the entry-point doc
+onboarding-report.md    the imported onboarding report, as written (imported stores)
+entry-point.md          the imported entry-point doc, as written (imported stores)
+concern-checklist.md    the imported concern checklist, as written (imported stores)
 subsystems/
   b01-<slug>.md         per-subsystem survey pages
   ...
@@ -56,7 +57,8 @@ Mermaid runtime.
 rendered from and their content hashes. Sources are one of:
 
 - `db:<logical-name>` — canonical-JSON hash of a DB query result
-- `prose:<relative-path>` — sha256 of a markdown file
+- `db:imports:<kind>` — canonical-JSON hash of the imported bodies a page
+  printed; no source names a file in the storage directory
 - `synthetic:<name>` — no stable source; always re-rendered
 
 On each run we:

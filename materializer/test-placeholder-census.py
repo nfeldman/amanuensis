@@ -21,13 +21,13 @@ Turns red when:
   - a rendered placeholder has no census row, or a row's sentence is not on its
     page, or the rows are not exactly the slots whose sentence is printed;
   - a row lacks one of the five fields, names a slot other than the three
-    in scope, or carries a discharge that names neither the file nor the tool;
+    in scope, or carries a discharge that names neither the tool nor the record it writes;
   - the census holds a row for an empty-state sentence that is not a slot;
   - `PLACEHOLDER_SENTENCES` is not exported, or one of the six strings in
     `dev/measure-reader-prose.mjs` occurs in none of its sentences;
-  - the heading `onboarding.md` or `artifact-templates.md` names for the thesis,
-    or the runtime table either names, is not read back by the materializer from
-    a record built out of that text;
+  - `onboarding.md` asks for the thesis under a heading, or does not record it as the
+    project purpose, or its `record_runtime_boundary` call leaves out one of the runtime
+    table's five columns (SO10 moved this from the heading and table the skill used to name);
   - an unfilled slot makes the publication fail, or the clean-publish summary
     carries different rows;
   - `phase-5-packaging.md` or `onboarding.md` lists fewer than the six slots
@@ -62,6 +62,7 @@ deliverable reports as an assertion failure and not as a crash.
 
 from __future__ import annotations
 
+import html
 import json
 import re
 import shutil
@@ -72,6 +73,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
+from store_only_seed import import_onboarding
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 SCHEMA = REPO / "mcp-server" / "src" / "schema.sql"
@@ -79,7 +82,6 @@ CI_FILE = REPO / ".github" / "workflows" / "test.yml"
 MEASURE_FILE = REPO / "dev" / "measure-reader-prose.mjs"
 SKILL = REPO / ".claude" / "skills" / "amanuensis" / "references"
 ONBOARDING = SKILL / "onboarding.md"
-TEMPLATES = SKILL / "artifact-templates.md"
 PACKAGING = SKILL / "phase-5-packaging.md"
 CENSUS_TEXT = (
     ROOT / "amanuensis_materializer" / "core.py",
@@ -146,6 +148,41 @@ def read(path: Path) -> str:
         return ""
 
 
+BLOCK_TAGS = r"p|li|ul|ol|div|h[1-6]|section|article|header|footer|tr|td|th|br|dl|dt|dd|blockquote|table|caption"
+HEADING = re.compile(r"(?is)<h([1-6])\b[^>]*>(.*?)</h\1>")
+
+
+def visible(markup: str) -> str:
+    """The reader's text of an HTML fragment: scripts, styles and heading anchors dropped, block
+    boundaries read as spaces, inline tags as nothing, entities decoded, whitespace collapsed."""
+
+    body = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", markup)
+    body = re.sub(r'(?is)<a class="heading-anchor"[^>]*>.*?</a>', "", body)
+    body = re.sub(rf"(?i)</?(?:{BLOCK_TAGS})\b[^>]*>", " ", body)
+    body = re.sub(r"<[^>]+>", "", body)
+    return " ".join(html.unescape(body).split())
+
+
+def article_of(markup: str) -> str:
+    """The report an HTML page carries: its content article, without the navigation around it."""
+
+    start = markup.find('<article class="content')
+    end = markup.rfind("</article>")
+    return markup[start:end] if 0 <= start < end else ""
+
+
+def h2s(markup: str) -> list[str]:
+    """The text of the H2 headings of a page's report."""
+
+    return [visible(m.group(2)) for m in HEADING.finditer(article_of(markup)) if m.group(1) == "2"]
+
+
+def reader_text(sentence: str) -> str:
+    """A sentence the materializer writes in Markdown, as the reader sees it on an HTML page."""
+
+    return sentence.replace("**", "").replace("`", "")
+
+
 # ---------------------------------------------------------------------------
 # What the three slots print, as the spec's table and the measure script name it
 # ---------------------------------------------------------------------------
@@ -155,7 +192,8 @@ THESIS_SENTENCES = {
     "refused-composite": "The recorded thesis presents a composite index of the record and was not published",
 }
 RUNTIME_SENTENCE = "No structured runtime boundary map is recorded yet"
-VOCABULARY_SENTENCE = "**Domain vocabulary** — not recorded"
+RUNTIME_COLUMNS = ("Runtime / Process", "Language", "Communicates with", "Mechanism", "Notes")
+VOCABULARY_SENTENCE = "Domain vocabulary — not recorded"
 ALL_THESIS = tuple(THESIS_SENTENCES.values())
 SLOTS_IN_SCOPE = {"thesis", "runtime-boundary-map", "subsystem-vocabulary"}
 EXPLANATION_SLOTS = {"subsystem-purpose", "subsystem-account", "project-account"}
@@ -167,6 +205,9 @@ ACCOUNT_DECLINED_STEM = "declined to write an account of how this subsystem work
 NO_PURPOSE_PATTERN = re.compile(re.escape(NO_PURPOSE_STEM) + r"[.;]")
 NOT_SLOTS = ("No seams recorded yet", "No dependency edges are recorded")
 ROW_FIELDS = {"slot", "page", "subject", "state", "discharge"}
+# The page ids a census row names. The materializer still keys its pages by these ids.
+INDEX_PAGE = "index.html"
+ARCHITECTURE_PAGE = "architecture.html"
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -279,12 +320,18 @@ def seed(
             " ref_sha, session_id) VALUES (?, ?, ?, ?, ?, ?, 'ex6')",
             (subject_type, sid, slot, disposition, body, head),
         )
+    # The thesis, the name and the runtime table reach the store the way the
+    # import puts them there; the pages read the records, never the files.
+    import_onboarding(
+        db,
+        session_id="ex6",
+        entry_point=entry,
+        onboarding_report=onboarding,
+        ref_sha=head,
+        keep_refused_thesis=True,
+    )
     db.commit()
     db.close()
-    if entry is not None:
-        (storage / "entry-point.md").write_text(entry)
-    if onboarding is not None:
-        (storage / "onboarding-report.md").write_text(onboarding)
     (storage / "workspace_path").write_text(f"{workspace}\n")
 
 
@@ -334,13 +381,21 @@ class Fixture:
         self.summary: dict[str, object] = summary if isinstance(summary, dict) else {}
 
     def page(self, rel: str) -> str:
-        return read(self.docs / rel)
+        """The reader's text of an HTML page's report."""
+
+        return visible(article_of(read(self.docs / rel)))
 
     def subsystem_page(self, sid: str) -> tuple[str, str]:
-        found = sorted((self.docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.md"))
+        """The page id the census names for a subsystem, and the reader's text of its page."""
+
+        found = sorted((self.docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))
         if not found:
             return "", ""
-        return f"subsystems/{found[0].name}", read(found[0])
+        return f"subsystems/{found[0].stem}.html", visible(article_of(read(found[0])))
+
+    def subsystem_h2s(self, sid: str) -> list[str]:
+        found = sorted((self.docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))
+        return h2s(read(found[0])) if found else []
 
     def rows(self) -> list[dict[str, object]] | str:
         """The census rows, or why they cannot be read."""
@@ -391,8 +446,8 @@ def sentence_correspondence(fx: Fixture) -> str | None:
     rows = fx.rows()
     if isinstance(rows, str):
         return rows
-    index = fx.page("index.md")
-    architecture = fx.page("architecture.md")
+    index = fx.page("index.html")
+    architecture = fx.page("architecture.html")
     by_key = {(str(r.get("slot")), str(r.get("subject"))): r for r in rows}
     if len(by_key) != len(rows):
         return f"the {fx.name} census names one slot and subject twice"
@@ -438,15 +493,15 @@ def row_shape(fx: Fixture, want: list[tuple[str, str, str]]) -> str | None:
         discharge = str(r["discharge"])
         slot = r["slot"]
         if slot == "thesis":
-            if r["page"] != "index.md" or "entry-point.md" not in discharge:
+            if r["page"] != INDEX_PAGE or "record_explanation" not in discharge:
                 return f"the thesis row's page or discharge is wrong: {r}"
-            if r["state"] == "absent" and "## What is this codebase?" not in discharge:
-                return f"the absent thesis discharge does not name the heading: {discharge}"
+            if "purpose" not in discharge:
+                return f"the thesis discharge does not name the purpose slot: {discharge}"
         elif slot == "runtime-boundary-map":
             if (
-                r["page"] != "architecture.md"
-                or "## Runtime boundary map" not in discharge
-                or "onboarding-report.md" not in discharge
+                r["page"] != ARCHITECTURE_PAGE
+                or "record_runtime_boundary" not in discharge
+                or any(column not in discharge for column in RUNTIME_COLUMNS)
             ):
                 return f"the runtime row's page or discharge is wrong: {r}"
         elif slot in EXPLANATION_SLOTS:
@@ -485,7 +540,7 @@ def explanation_correspondence(fx: Fixture, eligible: dict[str, bool]) -> str | 
                 f"the {fx.name} page for {sid} {'prints' if prints_purpose_sentence else 'omits'}"
                 " the no-purpose sentence and the census disagrees"
             )
-        owed = "## How it works" not in text and ACCOUNT_DECLINED_STEM not in text
+        owed = "How it works" not in fx.subsystem_h2s(sid) and ACCOUNT_DECLINED_STEM not in text
         if is_eligible and owed != (("subsystem-account", sid) in keys):
             return (
                 f"the {fx.name} page for {sid} {'owes' if owed else 'has'} an account"
@@ -497,7 +552,7 @@ def explanation_correspondence(fx: Fixture, eligible: dict[str, bool]) -> str | 
             for slot in ("subsystem-purpose", "subsystem-account"):
                 if (slot, sid) in keys:
                     return f"the {fx.name} census holds a `{slot}` row for {sid}, which is not explanation-eligible"
-    sentence = NO_ACCOUNT_SENTENCE in fx.page("architecture.md")
+    sentence = NO_ACCOUNT_SENTENCE in fx.page("architecture.html")
     if any(eligible.values()):
         if sentence != (("project-account", "project") in keys):
             return (
@@ -530,7 +585,7 @@ def explanation_shape(fx: Fixture, want: set[tuple[str, str]]) -> str | None:
         if "record_explanation" not in discharge or "decline_explanation" not in discharge:
             return f"the {fx.name} explanation discharge names neither tool: {discharge}"
         if r["slot"] == "project-account":
-            if r.get("page") != "architecture.md":
+            if r.get("page") != ARCHITECTURE_PAGE:
                 return f"the project-account row names page `{r.get('page')}`"
         else:
             rel, _text = fx.subsystem_page(str(r["subject"]))
@@ -587,12 +642,12 @@ def main() -> int:
             printed = [
                 s
                 for s in (*ALL_THESIS, RUNTIME_SENTENCE, VOCABULARY_SENTENCE)
-                if s in filled.page("index.md") + filled.page("architecture.md")
+                if s in filled.page("index.html") + filled.page("architecture.html")
                 + filled.subsystem_page("B-01")[1] + filled.subsystem_page("B-02")[1]
             ]
             if printed:
                 return f"the filled store still prints {printed}"
-            if THESIS_BODY.strip() not in filled.page("index.md"):
+            if THESIS_BODY.strip() not in filled.page("index.html"):
                 return "the filled store does not publish its thesis"
             return None
 
@@ -608,7 +663,7 @@ def main() -> int:
                 for r in rows:
                     if r.get("slot") not in allowed:
                         return f"{fx.name} carries a row for `{r.get('slot')}`"
-            seams = empty.page("seams.md") + empty.page("architecture.md")
+            seams = empty.page("seams.html") + empty.page("architecture.html")
             if not any(s in seams for s in NOT_SLOTS):
                 return "the empty fixture prints none of the empty-state sentences the control needs"
             return None
@@ -658,100 +713,53 @@ def main() -> int:
                 if any(n in s for n in NOT_SLOTS):
                     return f"PLACEHOLDER_SENTENCES holds `{s}`, which is not a slot"
             pages = "\n".join(
-                [empty.page("index.md"), refused.page("index.md"), composite.page("index.md"), empty.page("architecture.md")]
+                [empty.page("index.html"), refused.page("index.html"), composite.page("index.html"), empty.page("architecture.html")]
                 + [empty.subsystem_page(sid)[1] for sid in ("B-01", "B-02")]
             )
             for s in sentences:
-                if s.rstrip(".") not in pages and s.split(";")[0].rstrip(".") not in pages:
+                shown = reader_text(s)
+                if shown.rstrip(".") not in pages and shown.split(";")[0].rstrip(".") not in pages:
                     return f"PLACEHOLDER_SENTENCES holds a sentence no fixture page prints: `{s[:48]}…`"
             return None
 
         check("PLACEHOLDER_SENTENCES covers the six measured strings and prints", placeholder_sentences)
 
-        # -- 6. the skill text and the renderer name the same headings ----------
-        def pattern_parity() -> str | None:
-            sys.path.insert(0, str(ROOT))
-            from amanuensis_materializer.renderers import THESIS_SECTION_PATTERN  # noqa: PLC0415
-
-            for path in (ONBOARDING, TEMPLATES):
-                text = read(path)
-                if not text:
-                    return f"{path.name} is not readable"
-                named = re.findall(r"^#{1,6}\s*What is this[^\n`]*$|`(#{1,6}\s*What is this[^`\n]*)`", text, re.M | re.I)
-                headings = [h for h in named if h] + re.findall(r"^(#{1,6}\s*What is this[^\n`]*)$", text, re.M | re.I)
-                if "## What is this codebase?" not in headings:
-                    return f"{path.name} does not name the heading `## What is this codebase?` literally"
-                for heading in headings:
-                    if not THESIS_SECTION_PATTERN.match(heading):
-                        return f"THESIS_SECTION_PATTERN does not match `{heading}` from {path.name}"
+        # -- 6. the skill text asks for the records the renderer reads ------------
+        def purpose_is_recorded() -> str | None:
+            # The skill no longer writes a file, so there is no heading to match. The thesis is
+            # the project purpose, recorded with record_explanation (SO10).
+            text = read(ONBOARDING)
+            if not text:
+                return "onboarding.md is not readable"
+            if re.search(r"What is this codebase\?", text):
+                return "onboarding.md still asks for a thesis under a heading"
+            if not re.search(r'record_explanation\(\s*subject_type="project",\s*slot="purpose"', text):
+                return "onboarding.md does not record the thesis as the project's purpose"
             return None
 
-        check("THESIS_SECTION_PATTERN matches the heading both skill files name", pattern_parity)
-
-        def read_back(path: Path) -> str | None:
-            """Build the records out of the skill text and let the materializer read them."""
-
-            text = read(path)
-            heading = next(
-                iter(
-                    re.findall(r"^(#{1,6}\s*What is this[^\n`]*)$", text, re.M | re.I)
-                    + re.findall(r"`(#{1,6}\s*What is this[^`\n]*)`", text, re.I)
-                ),
-                "",
-            )
-            runtime = re.search(
-                r"^(#{1,6}\s+Runtime boundary map\s*\n\n(?:\|[^\n]*\n){2})", text, re.M | re.I
-            )
-            if not heading:
-                return f"{path.name} has no thesis heading line to build a record from"
-            if runtime is None:
-                return f"{path.name} has no `## Runtime boundary map` heading followed by a table header"
-            store = Fixture(
-                root,
-                f"parity-{path.stem}",
-                entry=f"# Entry point\n\n{heading}\n\n{THESIS_BODY}",
-                onboarding=f"# Onboarding report\n\n{runtime.group(1)}| worker | TypeScript | store | SQL | drains jobs |\n",
-                vocab={"B-01": "term", "B-02": "declined"},
-            )
-            rows = store.rows()
-            if isinstance(rows, str):
-                return rows
-            if rows != []:
-                return (
-                    f"a record built from {path.name}'s headings is not read back: "
-                    f"{[(r.get('slot'), r.get('subject')) for r in rows]}"
-                )
-            if "| worker |" not in store.page("architecture.md"):
-                return f"the runtime table built from {path.name} is not on the architecture page"
-            return None
-
-        check("the onboarding text builds a thesis and a runtime table the renderer reads", lambda: read_back(ONBOARDING))
-        check("the artifact templates build a thesis and a runtime table the renderer reads", lambda: read_back(TEMPLATES))
+        check("onboarding.md records the thesis as the project purpose, under no heading", purpose_is_recorded)
 
         def onboarding_asks() -> str | None:
             text = read(ONBOARDING)
-            if "## Runtime boundary map" not in text:
-                return "onboarding.md does not name `## Runtime boundary map`"
             sys.path.insert(0, str(ROOT))
             try:
                 from amanuensis_materializer import diagrams  # noqa: PLC0415
             except Exception as exc:
                 return f"diagrams could not be imported — {scrub(exc)}"
-            headers = getattr(diagrams, "_RUNTIME_BOUNDARY_HEADERS", ())
-            header_line = next(
-                (
-                    ln
-                    for ln in text.splitlines()
-                    if ln.lstrip().startswith("|")
-                    and tuple(c.strip().lower() for c in ln.strip().strip("|").split("|")) == tuple(headers)
-                ),
-                None,
-            )
-            if not headers or header_line is None:
-                return "onboarding.md does not carry the five column names diagrams.py requires, as one table header"
+            headers = tuple(getattr(diagrams, "_RUNTIME_BOUNDARY_HEADERS", ()))
+            # The table's five columns, each as the argument of record_runtime_boundary that holds it.
+            arguments = ("from_runtime", "from_language", "to_runtime", "mechanism", "notes")
+            if len(headers) != len(arguments):
+                return f"diagrams.py names {len(headers)} runtime columns, not {len(arguments)}"
+            call = re.search(r"record_runtime_boundary\(([^)]*)\)", text, re.S)
+            if call is None:
+                return "onboarding.md has no record_runtime_boundary call"
+            absent = [name for name in arguments if not re.search(rf"\b{name}\b", call.group(1))]
+            if absent:
+                return f"onboarding.md's record_runtime_boundary call does not name {', '.join(absent)}"
             return None
 
-        check("onboarding.md names the runtime heading and its five columns", onboarding_asks)
+        check("onboarding.md records every column of the runtime table", onboarding_asks)
 
         def no_numeric_floor() -> str | None:
             # decisions.md §7: no numeric floor on any authored field.
@@ -894,7 +902,7 @@ def main() -> int:
                     return rows
                 if rows != []:
                     return f"the {fx.name} store, with every slot filled, returns {rows}"
-                text = fx.page("architecture.md") + fx.subsystem_page("B-01")[1] + fx.subsystem_page("B-02")[1]
+                text = fx.page("architecture.html") + fx.subsystem_page("B-01")[1] + fx.subsystem_page("B-02")[1]
                 if NO_ACCOUNT_SENTENCE in text or NO_PURPOSE_PATTERN.search(text):
                     return f"the {fx.name} store still prints a not-recorded sentence"
             return None

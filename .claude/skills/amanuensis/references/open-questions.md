@@ -99,7 +99,7 @@ record_open_question(
 
 ## Reviewing the queue
 
-The materializer renders open questions on `open-questions.md`, the
+The materializer renders open questions on `open-questions.html`, the
 "Decisions needed" page. After a checkpoint the person reads it and
 answers by telling the agent, in the conversation; they do not call tools
 themselves. They can:

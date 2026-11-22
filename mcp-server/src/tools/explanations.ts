@@ -20,9 +20,9 @@ import { EXPLANATION_SLOTS, EXPLANATION_SUBJECTS } from "../vocabulary.js";
 
 /** Caps in UTF-8 bytes (design/explanation/spec.md §3.3). 4096 is the optional-section budget of the reader-lenses wire. */
 const BODY_CAPS = { purpose: 400, account: 4096 } as const;
-const REASON_CAP = 400;
+export const REASON_CAP = 400;
 /** A read serves every cited id, so the response is bounded only if the count is. */
-const EVIDENCE_CAP = 64;
+export const EVIDENCE_CAP = 64;
 /** The read echoes the subject id and `upsert_subsystem` takes one of any size, so the envelope is bounded only if the read refuses a longer one. */
 const READ_SUBJECT_ID_CAP = 256;
 
@@ -41,8 +41,6 @@ const RECORD_REFUSALS = {
     `record_explanation refuses: ${id} is '${status}'. An explanation is written by a pass that has read the subsystem; advance it to 'structural' first.`,
   noStructural: () =>
     "record_explanation refuses: no subsystem has been read to 'structural'. The project account is recorded once the first subsystem reaches that status.",
-  projectPurpose: () =>
-    "record_explanation refuses: the project's purpose is the thesis in entry-point.md. Record the project's account, or write the thesis under '## What is this codebase?'.",
   citesEvidence: () =>
     "record_explanation refuses: an explanation cites the evidence it was written from. Pass evidence_ids naming evidence rows that exist; add_evidence records one.",
   tooManyEvidence: () =>
@@ -56,7 +54,7 @@ const RECORD_REFUSALS = {
   onePurposeParagraph: () =>
     "record_explanation refuses: a purpose is one paragraph, with no blank line and no line starting with '#', '-', '*' or '|'.",
   accountShape: () =>
-    "record_explanation refuses: an account is prose and lists, with no line starting with '#' or '|'. A heading or a table would sit above the page's own structure.",
+    "record_explanation refuses: an account is prose and lists, with no line outside fenced code starting with '#' or '|', and no raw HTML or image outside code. A heading or a table would sit above the page's own structure.",
   orientation: (slot: string, violations: string[]) =>
     `record_explanation refuses: the ${slot} carries survey-status language or a count fraction, which the pages withhold: ${violations.join("; ")}. Say what the code does instead; the same lint runs again when the pages are rendered.`,
 } as const;
@@ -69,7 +67,7 @@ const DECLINE_REFUSALS = {
   noStructural: () =>
     "decline_explanation refuses: no subsystem has been read to 'structural'. The project account is answered once the first subsystem reaches that status.",
   projectPurpose: () =>
-    "decline_explanation refuses: the project's purpose is the thesis in entry-point.md. Only the project's account is recorded or declined here.",
+    "decline_explanation refuses: the project's purpose is recorded, not declined. Record it with record_explanation from the evidence the project's entry points and manifests give.",
   reasonTooLong: () =>
     `decline_explanation refuses: a reason is limited to ${REASON_CAP} bytes. Say the reason in fewer; the cap counts UTF-8 bytes.`,
   reasonOneParagraph: () =>
@@ -80,7 +78,7 @@ const DECLINE_REFUSALS = {
 
 type Tool = "record_explanation" | "decline_explanation";
 
-const byteLength = (text: string) => Buffer.byteLength(text, "utf8");
+export const byteLength = (text: string) => Buffer.byteLength(text, "utf8");
 
 /**
  * Every line break a page recognizes. The HTML projection splits on Python's
@@ -88,19 +86,55 @@ const byteLength = (text: string) => Buffer.byteLength(text, "utf8");
  * and the shape checks have to see the same lines.
  */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: these separators are what the check is for
-const LINE_BREAK = /\r\n|[\n\r\v\f\u001c\u001d\u001e\u0085\u2028\u2029]/;
+export const LINE_BREAK = /\r\n|[\n\r\v\f\u001c\u001d\u001e\u0085\u2028\u2029]/;
 
 /** A paragraph carries no blank line and no heading, list or table line. */
-function isOneParagraph(text: string): boolean {
+export function isOneParagraph(text: string): boolean {
   return text.split(LINE_BREAK).every((line) => {
     const trimmed = line.trimStart();
     return trimmed !== "" && !/^[#\-*|]/.test(trimmed);
   });
 }
 
-/** An account is prose and lists: blank lines and list lines pass, headings and tables do not. */
-function isProseAndLists(text: string): boolean {
-  return text.split(LINE_BREAK).every((line) => !/^[#|]/.test(line.trimStart()));
+/** A fence opens on three or more backticks or tildes, as the page's `_FENCE` reads it. */
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+/** A raw HTML tag or comment, which the stored-prose grammar does not admit (§3.4). */
+const RAW_HTML = /<!--|<\/?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?\/?>/;
+/** A Markdown image. */
+const IMAGE = /!\[[^\]]*\]\(/;
+
+/**
+ * The lines of `text` outside fenced code. A fence closes only on the same
+ * character, at least as long (CommonMark), which is how `_nest_prose` decides
+ * which lines the page treats as headings.
+ */
+function linesOutsideFences(text: string): string[] {
+  const out: string[] = [];
+  let fence: { char: string; length: number } | null = null;
+  for (const line of text.split(LINE_BREAK)) {
+    const run = FENCE.exec(line)?.[1] ?? "";
+    if (fence === null) {
+      if (run) fence = { char: run.charAt(0), length: run.length };
+      else out.push(line);
+    } else if (run.charAt(0) === fence.char && run.length >= fence.length) {
+      fence = null;
+    }
+  }
+  return out;
+}
+
+/**
+ * Stored prose (store-only PLAN §3.4): paragraphs, lists, code spans and fenced
+ * code, emphasis, links. Outside a fence no line is a heading or a table line,
+ * and outside a code span there is no raw HTML and no image. Fenced code is
+ * whatever it is: a `# comment` in a fence is not a heading (F5/codex, slice-S1).
+ */
+export function isStoredProse(text: string): boolean {
+  return linesOutsideFences(text).every((line) => {
+    if (/^[#|]/.test(line.trimStart())) return false;
+    const prose = line.replace(/(`+)[^`]*?\1/g, "");
+    return !RAW_HTML.test(prose) && !IMAGE.test(prose);
+  });
 }
 
 interface Subject {
@@ -123,8 +157,12 @@ function resolveSubject(ctx: ServerContext, tool: Tool, args: Record<string, unk
     if (suppliedId !== null && suppliedId !== "project") {
       throw new ToolError("subject_id must be 'project' for a project explanation, or omitted");
     }
-    if (slot === "purpose") throw new ToolError(refusals.projectPurpose());
-    if (!isProjectExplanationEligible(ctx.db)) throw new ToolError(refusals.noStructural());
+    // The purpose is the project's thesis, written at onboarding before any
+    // subsystem is read, so only the account waits for a structural one (PLAN §2.2).
+    if (slot === "purpose" && tool === "decline_explanation") {
+      throw new ToolError(DECLINE_REFUSALS.projectPurpose());
+    }
+    if (!isProjectExplanationEligible(ctx.db, slot)) throw new ToolError(refusals.noStructural());
     return { type, id: "project", slot };
   }
   if (suppliedId === null || suppliedId === "") {
@@ -164,10 +202,10 @@ const SUBJECT_PROPERTIES = {
   slot: { type: "string", enum: [...EXPLANATION_SLOTS] },
 } as const;
 
-/** The slots a subject holds: a subsystem has both, the project only its account. */
+/** The slots a subject holds: a subsystem and the project both hold a purpose and an account. */
 const SLOTS_OF = {
   subsystem: EXPLANATION_SLOTS,
-  project: ["account"],
+  project: EXPLANATION_SLOTS,
 } as const;
 
 /**
@@ -203,7 +241,7 @@ export const explanationTools: ToolDefinition[] = [
   {
     name: "record_explanation",
     description:
-      "Record an explanation of a subsystem (its purpose or its account) or of the project (its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough; at most 64 may be cited, since a read serves them all. Refused for text the pages' orientation lint would withhold (survey-status language, or a count fraction such as 12/35), for a subsystem that has not been read to 'structural', for a project purpose (the thesis in entry-point.md is the project's purpose), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body.",
+      "Record an explanation of a subsystem or of the project (its purpose or its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough; at most 64 may be cited, since a read serves them all. Refused for text the pages' orientation lint would withhold (survey-status language, or a count fraction such as 12/35), for a subsystem that has not been read to 'structural' and for a project account while no subsystem has been (the project's purpose is its thesis and is accepted at any status), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body.",
     inputSchema: {
       type: "object",
       properties: {
@@ -225,7 +263,7 @@ export const explanationTools: ToolDefinition[] = [
       if (subject.slot === "purpose" && !isOneParagraph(body)) {
         throw new ToolError(RECORD_REFUSALS.onePurposeParagraph());
       }
-      if (subject.slot === "account" && !isProseAndLists(body)) {
+      if (subject.slot === "account" && !isStoredProse(body)) {
         throw new ToolError(RECORD_REFUSALS.accountShape());
       }
       const violations = orientationViolations(body);
@@ -313,7 +351,7 @@ export const explanationTools: ToolDefinition[] = [
   {
     name: "get_explanations",
     description:
-      "Read the explanations recorded for a subsystem (its purpose and its account) or for the project (its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, the project's account reads the same while no subsystem has been, and so does a slot whose newest row was withdrawn by a reset. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing.",
+      "Read the explanations recorded for a subsystem or for the project (its purpose and its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, the project's account reads the same while no subsystem has been (its purpose reads at any status), and so does a slot whose newest row was withdrawn by a reset. A project purpose copied in by the import reads as recorded, with the disposition 'imported' on its row. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing.",
     inputSchema: {
       type: "object",
       properties: {

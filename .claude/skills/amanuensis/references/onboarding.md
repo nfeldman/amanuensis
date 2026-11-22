@@ -26,7 +26,7 @@ categories.
 - Exclude `.amanuensis/` from every repository scan and file ledger. It is
   Amanuensis's project-local state, not evidence about the target system.
 - Read `references/concern-territories.md` (the territory catalog used
-  in Phase 4) and `references/artifact-templates.md` (output formats).
+  in Phase 4) and `references/records.md` (which record holds what).
 - Enumerate available language-intelligence tools (call hierarchy, find
   references, go-to-definition). Note results — they shape all later
   navigation. If only grep is available, say so: it changes how Phase 2
@@ -43,20 +43,12 @@ confidence, notes). Continue to Phase 2.
 
 Processes, services, IPC mechanisms, external dependencies. Produce the
 **runtime boundary table** (one row per process / service: language,
-peers, mechanism). Record it in `onboarding-report.md` under the heading
-`## Runtime boundary map`, as this five-column table, with these column
-names and no others:
-
-```markdown
-## Runtime boundary map
-
-| Runtime / Process | Language | Communicates with | Mechanism | Notes |
-|---|---|---|---|---|
-| [process or service] | [language] | [peers] | [IPC or protocol] | [anything a reader needs] |
-```
-
-The architecture page is built from that table and from nothing else. Under
-any other heading, or with other column names, the page says no map is
+peers, mechanism). Each crossing between two runtimes is one row: the
+runtime it leaves and that runtime's language, the runtime it enters, the
+mechanism, and a note where a reader needs one. Add an `add_evidence` row for
+each crossing as you read it, and carry the ids to Phase 7, which records the
+rows with `record_runtime_boundary`. The architecture page is built from
+those records and from nothing else; with none recorded it says no map is
 recorded and `materialize_docs` lists the slot in `unfilled_slots`. Continue
 to Phase 3.
 
@@ -74,11 +66,13 @@ This is the territory pass. For each territory in
 - **Applicability check.** Does it apply to this codebase's languages,
   runtimes, and concurrency model?
 - **If yes**: derive 1–4 codebase-specific concern entries via
-  `add_concern(code, category, origin="seeded", notes)`. Codes should
-  be short ids (e.g. `CC-1`, `RC-2`) so they survive in dispositions
-  later.
-- **If no**: record the disqualifying condition in the onboarding
-  report's Concern Calibration section. Do **not** silently skip.
+  `add_concern(code, category, origin="seeded", notes, territory, probe)`.
+  Codes should be short ids (e.g. `CC-1`, `RC-2`) so they survive in
+  dispositions later. `territory` is the territory's id (`T7`) and `probe`
+  the check that tests the concern here; `add_concern refuses: territory is
+  the id of a territory in concern-territories.md` when it is named in words.
+- **If no**: keep the condition that rules the territory out, for
+  `record_territory_disposition` in Phase 7. Do **not** silently skip.
 
 A well-formed concern is codebase-specific, falsifiable by static
 analysis, non-redundant, and scaled to defect surface area. A malformed
@@ -113,8 +107,10 @@ comes back in.
   anchor that resolves is enough, and so is `decline_domain_vocabulary`
   with the reason none applies; there is no quota, and "none" is a real and
   common answer that has to be said out loud.
-- To `concerns`, the structural artifact must exist: *"no subsystem-survey
-  artifact has been registered"*.
+- To `concerns`, the structural phase must have answered for its prose:
+  *"no structure narrative has been recorded or declined"* is refused.
+  `record_narrative(section="structure")` records it, and
+  `decline_narrative` says there is none to write.
 - To `adversarial`, the concern pass must have written dispositions:
   *"no concern dispositions have been recorded"*.
 - To `concerns`, `adversarial` or `mapped`, every disposition must rest on
@@ -158,8 +154,8 @@ Ties are fine. Use dense ranks (1, 2, 2, 3) rather than sparse
 (1, 3, 3, 5) unless spacing carries information. Two subsystems at
 priority 2 means "both equally important next after #1."
 
-Group by layer in the master-plan artifact, then order within each
-layer by priority. If two subsystems are genuinely tied and the
+Order the subsystems by layer, then by priority within each layer; the
+`survey-plan` narrative in Phase 7 records that order. If two subsystems are genuinely tied and the
 tiebreaker matters,
 `record_open_question(category="priority-ranking")` and proceed with
 the tiebreaker you picked. Continue to Phase 6.
@@ -187,38 +183,77 @@ will see the queue at the Phase 7 checkpoint.
 
 - Call `set_git_state(canonical_branch, onboarding_sha=HEAD,
   last_checked_sha=HEAD, branch_convention, detected_branches)`.
-- Write the prose artifacts to the project storage directory using the
-  templates in `references/artifact-templates.md`:
-  - `onboarding-report.md`
-  - `concern-checklist.md` — the calibrated checklist; this supersedes
-    the territory catalog for future sessions.
-  - `master-plan.md`
-  - `findings-index.md` — empty to start.
-  - `entry-point.md` — must pass the acceptance gate: a new LLM
-    reading only this file must answer "what does this system do? what
-    do I map first? given a bug report, what do I read first? given a
-    feature request, what mode applies?" Put the answer to the first
-    question under the heading `## What is this codebase?`, with no
-    status vocabulary and no count. The overview page
-    takes its thesis from that section and from nowhere else; under any
-    other heading it says no thesis is recorded.
-  - `field-notes.md` — seeded with onboarding observations.
-- For each artifact, call `register_artifact(path, kind, ...)` then
-  `rehash_artifact(path, ref_sha=onboarding_sha)` so the materializer
-  sees the content.
+- Record what Phases 1–6 found. Nothing is written to the storage directory:
+  the subsystem, finding, field-note and concern tables already hold the master
+  plan, the findings index and the field notes, and the records below hold the
+  rest. Every record that cites a reading takes `evidence_ids`, the
+  `add_evidence` rows the text was written from, and the onboarding SHA as
+  `ref_sha`. A body is prose and lists with no heading or table line; the page
+  owns its structure. `references/records.md` says what each record holds.
+  - The project's name:
+    `record_project_profile(name, ref_sha=onboarding_sha)`.
+  - The purpose, in one paragraph that says what the system does:
+    `record_explanation(subject_type="project", slot="purpose", body,
+    evidence_ids, ref_sha=onboarding_sha)`. No status vocabulary and no count.
+    The overview takes its thesis from this record and from nothing else.
+  - Each row of the runtime boundary table from Phase 2:
+    `record_runtime_boundary(from_runtime, from_language, to_runtime,
+    mechanism, notes, evidence_ids, ref_sha=onboarding_sha)`.
+  - The project narratives, one call each. `repository-shape` holds the
+    directory clusters from Phase 1; `runtime` what runs and how the parts call
+    each other, from the Phase 2 evidence the runtime boundaries cite;
+    `stateful-entities` the Phase 3 entities;
+    `concern-calibration` how the checklist was calibrated; `start-here` what to
+    read first, for a bug report and for a feature request; and `survey-plan`
+    the order of the survey, which needs no evidence. Put a part of a section
+    under its own `topic`:
+
+    ```
+    record_narrative(subject_type="project", section="repository-shape",
+      body, evidence_ids, ref_sha=onboarding_sha)
+    record_narrative(subject_type="project", section="runtime",
+      body, evidence_ids, ref_sha=onboarding_sha)
+    record_narrative(subject_type="project", section="stateful-entities",
+      body, evidence_ids, ref_sha=onboarding_sha)
+    record_narrative(subject_type="project", section="concern-calibration",
+      body, evidence_ids, ref_sha=onboarding_sha)
+    record_narrative(subject_type="project", section="start-here",
+      body, evidence_ids, ref_sha=onboarding_sha)
+    record_narrative(subject_type="project", section="survey-plan",
+      body, ref_sha=onboarding_sha)
+    ```
+  - The calibrated checklist, from Phase 4: `add_concern(code,
+    origin="seeded", category, territory, probe)` for any concern not yet
+    added, and for each territory of `references/concern-territories.md`,
+    applying or not, `record_territory_disposition(territory,
+    disposition, condition, ref_sha=onboarding_sha)`. A disqualified territory
+    names the condition that rules it out.
+  - Observations that are not yet findings: `add_field_note`.
+- A writer refuses in its own words and names the repair, for example
+  *"record_runtime_boundary refuses: a crossing cites the evidence it was
+  written from"*, *"record_project_profile refuses: a name is one line of at
+  most 120 characters"* and *"record_territory_disposition refuses: a
+  disqualified territory names the condition that rules it out"*.
+- Check the purpose and the narratives against what a new reader needs. Read
+  them back with `get_explanations(subject_type="project")` and
+  `get_narratives(subject_type="project")`: a new LLM reading only those must
+  answer "what does this system do? what do I map first? given a bug report,
+  what do I read first? given a feature request, what mode applies?" If one
+  cannot be answered, record a new row; the newest row for a section and topic
+  is the one served.
 - Call `materialize_docs()` to render the navigable human docs. It returns an
-  `html_entrypoint`; this self-contained HTML index is the primary human
-  surface, with synchronized Markdown companions alongside it. It also
+  `html_entrypoint`; this self-contained HTML index is the human surface,
+  and no Markdown page is written beside it. It also
   returns `unfilled_slots`: one row for each slot that nobody has recorded,
-  with the file edit or tool call that fills it. The slots are `thesis`,
+  with the tool call that fills it. The slots are `thesis`,
   `runtime-boundary-map` and `subsystem-vocabulary` and, once a subsystem
   reaches `structural`, `subsystem-purpose`, `subsystem-account` and
   `project-account`. Fill the rows you can and report the others in the
   Phase 7 checkpoint summary; the render is published either way.
 - Call `end_session(outcome="completed")`.
 
-The thesis under `## What is this codebase?` answers what the system does in a
-paragraph. The longer explanation is the **project account**, which
+The purpose answers what the system does in a paragraph. The longer explanation
+is the **project account**, which
 `references/explanations.md` describes. No subsystem has been read yet, so it
 is not written here: `record_explanation` refuses until one has, saying *"no
 subsystem has been read to 'structural'"*. The project account is recorded once
@@ -245,8 +280,8 @@ Once `materialize_docs()` returns, emit a one-screen summary:
 - Open-question queue (count by category, with a one-line preview of
   the highest-impact entries).
 - Each `unfilled_slots` row that is still open, with its `discharge`.
-- Exact `html_entrypoint`, plus the path to the prose artifacts. Do not make a
-  person infer the HTML entry page from the output directory.
+- Exact `html_entrypoint`. Do not make a person infer the HTML entry page from
+  the output directory.
 
 Then continue to the next work implied by the request. For an unscoped cold
 start, survey the highest-priority `unmapped` subsystem and proceed through the

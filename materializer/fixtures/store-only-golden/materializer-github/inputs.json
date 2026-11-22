@@ -1,0 +1,969 @@
+{
+ "context": {
+  "branch_convention": "trunk-based",
+  "canonical_branch": "main",
+  "detected_branches": null,
+  "identifier_definitions": {
+   "B-01": "Job Scheduler",
+   "B-02": "Auth Service",
+   "B01-1": "Finding in Job Scheduler: Race on job start",
+   "B02-1": "Finding in Auth Service: Unvalidated query params reach SQL",
+   "CB-1": "Concurrency",
+   "CC-1": "Cache Coherence",
+   "DM-1": "Competing explanations in Auth Service: Intermittent auth bypass",
+   "F-01": "Web UI",
+   "SM-01": "Job Scheduler \u2194 Auth Service: Jobsqueue",
+   "TC-1": "Trust Boundary"
+  },
+  "last_checked_at": null,
+  "last_checked_sha": "deadbeefdeadbeef",
+  "notes": null,
+  "onboarding_sha": "deadbeefdeadbeef",
+  "project_name": "FictionalProject",
+  "repo_id": "default",
+  "repository_url": "https://github.com/acme/fictional",
+  "scoped_files": 0,
+  "stale_entries": 0,
+  "stale_exempt": 0,
+  "staleness_measured": false
+ },
+ "locus_index": {
+  "paths": [],
+  "symbols": [
+   {
+    "h": "files.html",
+    "p": "auth/gateway.ts",
+    "y": "parse"
+   }
+  ]
+ },
+ "notice": "Rendered from the command line. Its read-back was not recorded in the survey's record, so the Publication integrity figures on the overview describe an earlier publication.",
+ "pages": [
+  {
+   "group": "Overview",
+   "hint": "What the codebase is, and where the survey stands.",
+   "kind": "overview",
+   "label": "Overview",
+   "markdown_path": "index.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Amanuensis",
+     "amanuensis"
+    ],
+    [
+     "Conspectus",
+     "conspectus"
+    ],
+    [
+     "Survey",
+     "survey"
+    ],
+    [
+     "Session",
+     "session"
+    ],
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Survey depth",
+     "survey-depth"
+    ],
+    [
+     "Scope",
+     "scope"
+    ],
+    [
+     "Finding",
+     "finding"
+    ],
+    [
+     "Stale",
+     "stale"
+    ],
+    [
+     "Checked at",
+     "checked-at"
+    ],
+    [
+     "Lens",
+     "lens"
+    ],
+    [
+     "Thesis",
+     "thesis"
+    ],
+    [
+     "Publication check",
+     "publication-check"
+    ]
+   ],
+   "title": "Project overview",
+   "use_when": "you arrive, or want the current counts."
+  },
+  {
+   "group": "Codebase",
+   "hint": "Runtime shape, recorded edges, and boundaries, read as one connected system.",
+   "kind": "architecture",
+   "label": "Architecture",
+   "markdown_path": "architecture.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Layer",
+     "layer"
+    ],
+    [
+     "Survey depth",
+     "survey-depth"
+    ],
+    [
+     "System boundary",
+     "system-boundary"
+    ],
+    [
+     "Recorded edge",
+     "recorded-edge"
+    ],
+    [
+     "Purpose, account",
+     "purpose-account"
+    ]
+   ],
+   "title": "Architecture at a glance",
+   "use_when": "you want the overall shape before reading any one part."
+  },
+  {
+   "group": "Codebase",
+   "hint": "Every region, grouped by layer, with the scope recorded for it.",
+   "kind": "registry",
+   "label": "Subsystems",
+   "markdown_path": "master-plan.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Layer",
+     "layer"
+    ],
+    [
+     "Survey depth",
+     "survey-depth"
+    ],
+    [
+     "Mapped",
+     "mapped"
+    ],
+    [
+     "Scope",
+     "scope"
+    ],
+    [
+     "Finding",
+     "finding"
+    ]
+   ],
+   "title": "Subsystem map",
+   "use_when": "you are looking for the part of the code that does something."
+  },
+  {
+   "group": "Codebase",
+   "hint": "One row per ledger file with owners, standing, and open defects.",
+   "kind": "files",
+   "label": "Files",
+   "markdown_path": "files.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Scope",
+     "scope"
+    ],
+    [
+     "Finding",
+     "finding"
+    ],
+    [
+     "Stale",
+     "stale"
+    ],
+    [
+     "Standing",
+     "standing"
+    ]
+   ],
+   "title": "Files",
+   "use_when": "you want to know whether a particular file was read."
+  },
+  {
+   "group": "Codebase",
+   "hint": "The recorded edge of the map, each gap counted over the unit it occupies.",
+   "kind": "gaps",
+   "label": "Not yet surveyed",
+   "markdown_path": "not-yet-surveyed.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Survey",
+     "survey"
+    ],
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Survey depth",
+     "survey-depth"
+    ],
+    [
+     "Mapped",
+     "mapped"
+    ],
+    [
+     "Scope",
+     "scope"
+    ],
+    [
+     "Concern",
+     "concern"
+    ]
+   ],
+   "title": "Not yet surveyed",
+   "use_when": "you want to know what the survey has not covered."
+  },
+  {
+   "group": "Codebase",
+   "hint": "Shared objects and ordering assumptions where independently understandable subsystems meet.",
+   "kind": "seams",
+   "label": "System boundaries",
+   "markdown_path": "seams.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Concern",
+     "concern"
+    ],
+    [
+     "System boundary",
+     "system-boundary"
+    ]
+   ],
+   "title": "System boundaries",
+   "use_when": "you are changing something two subsystems share."
+  },
+  {
+   "group": "Codebase",
+   "hint": "The project's own names, with the meanings Amanuensis observed in context.",
+   "kind": "glossary",
+   "label": "Codebase glossary",
+   "markdown_path": "vocabulary.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [],
+   "title": "Codebase glossary",
+   "use_when": "a project-specific name is unfamiliar."
+  },
+  {
+   "group": "Unresolved",
+   "hint": "Defects open or awaiting verification at the checked revision.",
+   "kind": "findings",
+   "label": "Open findings",
+   "markdown_path": "findings.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Evidence",
+     "evidence"
+    ],
+    [
+     "Challenge",
+     "challenge"
+    ],
+    [
+     "Finding",
+     "finding"
+    ]
+   ],
+   "title": "Open findings",
+   "use_when": "you want the defects still open."
+  },
+  {
+   "group": "Unresolved",
+   "hint": "Where credible records disagree or the evidence does not discriminate between them.",
+   "kind": "undiscriminated",
+   "label": "Disagreements",
+   "markdown_path": "disagreements.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Evidence",
+     "evidence"
+    ],
+    [
+     "Claim",
+     "claim"
+    ],
+    [
+     "Concern review",
+     "concern-review"
+    ],
+    [
+     "Finding",
+     "finding"
+    ],
+    [
+     "Disagreement",
+     "disagreement"
+    ],
+    [
+     "Competing explanations",
+     "competing-explanations"
+    ]
+   ],
+   "title": "Records that disagree",
+   "use_when": "you want to know where the record contradicts itself."
+  },
+  {
+   "group": "Unresolved",
+   "hint": "Questions the survey could not settle, with the assumption used to keep moving.",
+   "kind": "questions",
+   "label": "Decisions needed",
+   "markdown_path": "open-questions.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Decision needed",
+     "decision-needed"
+    ]
+   ],
+   "title": "Decisions needed",
+   "use_when": "you want to know what the agent needs from you."
+  },
+  {
+   "group": "Unresolved",
+   "hint": "Open observations that are not yet findings.",
+   "kind": "notes",
+   "label": "Leads",
+   "markdown_path": "field-notes.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Lead",
+     "lead"
+    ]
+   ],
+   "title": "Leads",
+   "use_when": "you want things noticed but not yet confirmed."
+  },
+  {
+   "group": "Unresolved",
+   "hint": "Examined files the repository has changed under, and scoped files that changed before anyone read them.",
+   "kind": "stale",
+   "label": "Stale knowledge",
+   "markdown_path": "stale.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Stale",
+     "stale"
+    ],
+    [
+     "Checked at",
+     "checked-at"
+    ],
+    [
+     "Standing",
+     "standing"
+    ]
+   ],
+   "title": "Stale knowledge",
+   "use_when": "you want to know what may be out of date since the code changed."
+  },
+  {
+   "group": "Unresolved",
+   "hint": "Where unresolved work and unread territory concentrate, as separate measures.",
+   "kind": "hotspots",
+   "label": "Hot spots",
+   "markdown_path": "hot-spots.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Evidence",
+     "evidence"
+    ],
+    [
+     "Finding",
+     "finding"
+    ],
+    [
+     "Stale",
+     "stale"
+    ]
+   ],
+   "title": "Hot spots",
+   "use_when": "you want to know where open work concentrates."
+  },
+  {
+   "group": "History",
+   "hint": "Verified, ruled out, and accepted, each with the basis its resolution rests on.",
+   "kind": "findings",
+   "label": "Resolved findings",
+   "markdown_path": "resolved-findings.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Evidence",
+     "evidence"
+    ],
+    [
+     "Challenge",
+     "challenge"
+    ],
+    [
+     "Finding",
+     "finding"
+    ]
+   ],
+   "title": "Resolved findings",
+   "use_when": "you want to know what was fixed or ruled out, and on what basis."
+  },
+  {
+   "group": "History",
+   "hint": "The append-only account of how records reached their state.",
+   "kind": "timeline",
+   "label": "Resolution history",
+   "markdown_path": "resolution-history.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Session",
+     "session"
+    ]
+   ],
+   "title": "Resolution history",
+   "use_when": "you want to know how a record reached its state."
+  },
+  {
+   "group": "History",
+   "hint": "Questions that were answered or dismissed, and leads that were closed.",
+   "kind": "resolved-leads",
+   "label": "Resolved leads and questions",
+   "markdown_path": "resolved-leads.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Lead",
+     "lead"
+    ],
+    [
+     "Decision needed",
+     "decision-needed"
+    ]
+   ],
+   "title": "Resolved leads and questions",
+   "use_when": "you want to know how a question was answered."
+  },
+  {
+   "group": "History",
+   "hint": "What ran, when, and what it produced.",
+   "kind": "sessions",
+   "label": "Sessions and publications",
+   "markdown_path": "sessions.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Amanuensis",
+     "amanuensis"
+    ],
+    [
+     "Survey",
+     "survey"
+    ],
+    [
+     "Session",
+     "session"
+    ],
+    [
+     "Publication check",
+     "publication-check"
+    ]
+   ],
+   "title": "Sessions and publications",
+   "use_when": "you want to know when the survey ran."
+  },
+  {
+   "group": "History",
+   "hint": "Resolved disagreements and the evidence that settled them.",
+   "kind": "contradictions",
+   "label": "Conflicting evidence",
+   "markdown_path": "contradictions.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Evidence",
+     "evidence"
+    ],
+    [
+     "Disagreement",
+     "disagreement"
+    ]
+   ],
+   "title": "Conflicting evidence",
+   "use_when": "you want to see how a disagreement was settled."
+  },
+  {
+   "group": "Method",
+   "hint": "What each page is for, the terms the site uses, and how a survey works.",
+   "kind": "guide",
+   "label": "Reader's guide",
+   "markdown_path": "how-to-read.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [],
+   "title": "How to read this survey",
+   "use_when": "a word, an ID or a page is unfamiliar."
+  },
+  {
+   "group": "Method",
+   "hint": "Which failure modes were tested where, and the disposition each one reached.",
+   "kind": "coverage",
+   "label": "Review coverage",
+   "markdown_path": "concerns.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Evidence",
+     "evidence"
+    ],
+    [
+     "Concern",
+     "concern"
+    ],
+    [
+     "Concern review",
+     "concern-review"
+    ]
+   ],
+   "title": "Review coverage",
+   "use_when": "you want to know which defect kinds were checked where."
+  },
+  {
+   "group": "Method",
+   "hint": "The concern set and its provenance.",
+   "kind": "artifact",
+   "label": "Review checklist",
+   "markdown_path": "concern-checklist.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Concern",
+     "concern"
+    ]
+   ],
+   "title": "Calibrated review checklist",
+   "use_when": "you want the list of defect kinds and where it came from."
+  },
+  {
+   "group": "Method",
+   "hint": "Index of evidence matrices and their outcomes.",
+   "kind": "diagnosticity",
+   "label": "Competing explanations",
+   "markdown_path": "diagnosticity.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Concern",
+     "concern"
+    ],
+    [
+     "Competing explanations",
+     "competing-explanations"
+    ]
+   ],
+   "title": "Competing explanations",
+   "use_when": "you want to see how a symptom's cause was weighed."
+  },
+  {
+   "group": "Method",
+   "hint": "The repository boundary and initial decomposition that established this conspectus.",
+   "kind": "artifact",
+   "label": "Onboarding record",
+   "markdown_path": "onboarding-report.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Conspectus",
+     "conspectus"
+    ],
+    [
+     "Subsystem",
+     "subsystem"
+    ]
+   ],
+   "title": "Onboarding record",
+   "use_when": "you want the first pass's decisions about scope and split."
+  },
+  {
+   "group": "Method",
+   "hint": "A dated reading path recorded by an earlier session; it is survey history, not a current index.",
+   "kind": "artifact",
+   "label": "Where to begin",
+   "markdown_path": "entry-point.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [
+    [
+     "Session",
+     "session"
+    ]
+   ],
+   "title": "Where to begin",
+   "use_when": "you want the reading path an earlier session wrote."
+  },
+  {
+   "group": "Codebase",
+   "hint": "Scope, structure, boundaries, defects, and the survey record for Job Scheduler.",
+   "kind": "subsystem",
+   "label": "Job Scheduler",
+   "markdown_path": "subsystems/b01-job-scheduler.md",
+   "record_id": "B-01",
+   "status": "mapped",
+   "subgroup": "Subsystems",
+   "terms": [
+    [
+     "Survey",
+     "survey"
+    ],
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Layer",
+     "layer"
+    ],
+    [
+     "Survey depth",
+     "survey-depth"
+    ],
+    [
+     "Mapped",
+     "mapped"
+    ],
+    [
+     "Scope",
+     "scope"
+    ],
+    [
+     "Evidence",
+     "evidence"
+    ],
+    [
+     "Claim",
+     "claim"
+    ],
+    [
+     "Challenge",
+     "challenge"
+    ],
+    [
+     "Concern",
+     "concern"
+    ],
+    [
+     "Concern review",
+     "concern-review"
+    ],
+    [
+     "Finding",
+     "finding"
+    ],
+    [
+     "Lead",
+     "lead"
+    ],
+    [
+     "Decision needed",
+     "decision-needed"
+    ],
+    [
+     "System boundary",
+     "system-boundary"
+    ],
+    [
+     "Recorded edge",
+     "recorded-edge"
+    ],
+    [
+     "Standing",
+     "standing"
+    ],
+    [
+     "Purpose, account",
+     "purpose-account"
+    ]
+   ],
+   "title": "Job Scheduler",
+   "use_when": "you have picked a subsystem."
+  },
+  {
+   "group": "Codebase",
+   "hint": "Scope, structure, boundaries, defects, and the survey record for Auth Service.",
+   "kind": "subsystem",
+   "label": "Auth Service",
+   "markdown_path": "subsystems/b02-auth-service.md",
+   "record_id": "B-02",
+   "status": "mapped",
+   "subgroup": "Subsystems",
+   "terms": [
+    [
+     "Survey",
+     "survey"
+    ],
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Layer",
+     "layer"
+    ],
+    [
+     "Survey depth",
+     "survey-depth"
+    ],
+    [
+     "Mapped",
+     "mapped"
+    ],
+    [
+     "Scope",
+     "scope"
+    ],
+    [
+     "Evidence",
+     "evidence"
+    ],
+    [
+     "Claim",
+     "claim"
+    ],
+    [
+     "Challenge",
+     "challenge"
+    ],
+    [
+     "Concern",
+     "concern"
+    ],
+    [
+     "Concern review",
+     "concern-review"
+    ],
+    [
+     "Finding",
+     "finding"
+    ],
+    [
+     "Lead",
+     "lead"
+    ],
+    [
+     "Decision needed",
+     "decision-needed"
+    ],
+    [
+     "System boundary",
+     "system-boundary"
+    ],
+    [
+     "Recorded edge",
+     "recorded-edge"
+    ],
+    [
+     "Standing",
+     "standing"
+    ],
+    [
+     "Purpose, account",
+     "purpose-account"
+    ]
+   ],
+   "title": "Auth Service",
+   "use_when": "you have picked a subsystem."
+  },
+  {
+   "group": "Codebase",
+   "hint": "Scope, structure, boundaries, defects, and the survey record for Web UI.",
+   "kind": "subsystem",
+   "label": "Web UI",
+   "markdown_path": "subsystems/f01-web-ui.md",
+   "record_id": "F-01",
+   "status": "scoping",
+   "subgroup": "Subsystems",
+   "terms": [
+    [
+     "Survey",
+     "survey"
+    ],
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Layer",
+     "layer"
+    ],
+    [
+     "Survey depth",
+     "survey-depth"
+    ],
+    [
+     "Mapped",
+     "mapped"
+    ],
+    [
+     "Scope",
+     "scope"
+    ],
+    [
+     "Evidence",
+     "evidence"
+    ],
+    [
+     "Claim",
+     "claim"
+    ],
+    [
+     "Challenge",
+     "challenge"
+    ],
+    [
+     "Concern",
+     "concern"
+    ],
+    [
+     "Concern review",
+     "concern-review"
+    ],
+    [
+     "Finding",
+     "finding"
+    ],
+    [
+     "Lead",
+     "lead"
+    ],
+    [
+     "Decision needed",
+     "decision-needed"
+    ],
+    [
+     "System boundary",
+     "system-boundary"
+    ],
+    [
+     "Recorded edge",
+     "recorded-edge"
+    ],
+    [
+     "Standing",
+     "standing"
+    ],
+    [
+     "Purpose, account",
+     "purpose-account"
+    ]
+   ],
+   "title": "Web UI",
+   "use_when": "you have picked a subsystem."
+  },
+  {
+   "group": "Method",
+   "hint": "One matrix: the evidence against each viable explanation, and the outcome it drove.",
+   "kind": "matrix",
+   "label": "Intermittent auth bypass",
+   "markdown_path": "diagnosticity/dm-1.md",
+   "record_id": "DM-1",
+   "status": "resolved",
+   "subgroup": "Evidence matrices",
+   "terms": [
+    [
+     "Subsystem",
+     "subsystem"
+    ],
+    [
+     "Competing explanations",
+     "competing-explanations"
+    ]
+   ],
+   "title": "Intermittent auth bypass",
+   "use_when": "you followed a DM- link."
+  }
+ ]
+}

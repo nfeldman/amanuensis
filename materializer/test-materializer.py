@@ -7,14 +7,81 @@ re-render almost nothing.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import subprocess
 import sys
 import tempfile
+from html.parser import HTMLParser
 from pathlib import Path
+
+from store_only_seed import import_body, import_onboarding, withdraw_import
 
 ROOT = Path(__file__).resolve().parent
 SCHEMA = ROOT.parent / "mcp-server" / "src" / "schema.sql"
+
+
+class _Outline(HTMLParser):
+    """The visible words of a page's `<article>`, one block per line, with each
+    heading on a line of its own led by one `#` per level."""
+
+    _BREAKS = frozenset(
+        (
+            "p", "li", "tr", "div", "section", "pre", "ul", "ol", "table", "br",
+            "blockquote", "caption", "dt", "dd", "article", "details", "summary",
+        )
+    )
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.lines: list[str] = []
+        self._buf: list[str] = []
+        self._in_article = False
+        self._skip = 0
+        self._heading = 0
+
+    def _flush(self) -> None:
+        words = " ".join("".join(self._buf).split())
+        self._buf = []
+        if words:
+            self.lines.append(("#" * self._heading + " " if self._heading else "") + words)
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        classes = (dict(attrs).get("class") or "").split()
+        if tag == "article":
+            self._in_article = True
+        elif tag in ("script", "style") or (tag == "a" and "heading-anchor" in classes):
+            self._skip += 1
+        elif self._in_article and tag in self._BREAKS:
+            self._flush()
+        elif self._in_article and re.fullmatch(r"h[1-6]", tag):
+            self._flush()
+            self._heading = int(tag[1])
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "article":
+            self._flush()
+            self._in_article = False
+        elif tag in ("script", "style", "a") and self._skip:
+            self._skip -= 1
+        elif self._in_article and re.fullmatch(r"h[1-6]", tag):
+            self._flush()
+            self._heading = 0
+        elif self._in_article and tag in self._BREAKS:
+            self._flush()
+        elif self._in_article and tag in ("td", "th"):
+            self._buf.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        if self._in_article and not self._skip:
+            self._buf.append(data)
+
+
+def outline(page: str) -> str:
+    parser = _Outline()
+    parser.feed(page)
+    parser.close()
+    return "\n".join(parser.lines)
 
 
 def seed(db: sqlite3.Connection) -> None:
@@ -167,8 +234,9 @@ def run_materializer(storage: Path) -> dict:
 def main() -> None:
     with tempfile.TemporaryDirectory() as td:
         storage = Path(td)
-        # Write prose artifacts to prove passthrough and typed HTML projections work.
-        (storage / "entry-point.md").write_text(
+        # Prose the store holds as imports, to prove the imported pages and typed
+        # HTML projections work. The pages read the import, never a file.
+        entry_point = (
             "# Entry point\n\nThis is a fictional test codebase with three subsystems: "
             "B-01 (scheduler), B-02 (auth), and F-01 (web UI). The seam SM-01 connects them.\n\n"
             "## File ledger\n\n"
@@ -184,7 +252,7 @@ def main() -> None:
             "|---|---|\n"
             "| Native memory | The runtime owns allocation for this service. |\n"
         )
-        (storage / "onboarding-report.md").write_text(
+        onboarding_report = (
             "# Onboarding report\n\n**Codebase**: FictionalProject — materializer fixture\n\n"
             "## Directory clusters\n\n- scheduler/ — B-01\n- auth/ — B-02\n- web/ — F-01\n\n"
             "## Runtime boundary map\n\n"
@@ -194,7 +262,7 @@ def main() -> None:
             "| Scheduler service | Python | auth service | HTTPS request | Dispatches authenticated jobs. |\n"
             "| Auth service | TypeScript | policy database | SQL transaction | Owns authorization decisions. |\n"
         )
-        (storage / "concern-checklist.md").write_text(
+        concern_checklist = (
             "# Concern checklist (calibrated)\n\n"
             "## Active concerns (3)\n\n"
             "| Code | Category | Territory | Codebase-specific probe (abbreviated) | Primary subsystems |\n"
@@ -206,6 +274,15 @@ def main() -> None:
         (storage / "workspace_path").write_text("/example/FictionalProject\n")
         db = sqlite3.connect(storage / "memory.db")
         seed(db)
+        import_onboarding(
+            db,
+            session_id="s1",
+            entry_point=entry_point,
+            onboarding_report=onboarding_report,
+            concern_checklist=concern_checklist,
+            ref_sha="deadbeef",
+        )
+        db.commit()
         db.close()
 
         # First run — should render everything.
@@ -229,22 +306,21 @@ def main() -> None:
         head = subprocess.check_output(
             ["git", "-C", str(ROOT.parent), "rev-parse", "HEAD"], text=True,
         ).strip()
-        assert head[:12] in (relocated / "index.md").read_text()
+        assert head[:12] in (relocated / "index.html").read_text()
         assert (storage / "workspace_path").read_text() == "/example/FictionalProject\n"
         # Verify key pages exist.
         docs = storage / "docs"
         for p in [
-            "index.md", "architecture.md", "master-plan.md", "findings.md",
-            "concerns.md", "seams.md", "contradictions.md", "diagnosticity.md",
-            "vocabulary.md", "field-notes.md", "entry-point.md", "onboarding-report.md",
-            "concern-checklist.md",
-            "how-to-read.md",
-            "subsystems/b01-job-scheduler.md", "subsystems/b02-auth-service.md",
-            "subsystems/f01-web-ui.md",
+            "index.html", "architecture.html", "master-plan.html", "findings.html",
+            "concerns.html", "seams.html", "contradictions.html", "diagnosticity.html",
+            "vocabulary.html", "field-notes.html", "entry-point.html", "onboarding-report.html",
+            "concern-checklist.html",
+            "how-to-read.html",
+            "subsystems/b01-job-scheduler.html", "subsystems/b02-auth-service.html",
+            "subsystems/f01-web-ui.html",
         ]:
             assert (docs / p).is_file(), f"missing: {p}"
-            html_page = str(Path(p).with_suffix(".html"))
-            assert (docs / html_page).is_file(), f"missing HTML companion: {html_page}"
+            assert '<article class="content' in (docs / p).read_text(), f"no article in HTML page: {p}"
         html_index = (docs / "index.html").read_text()
         assert "Amanuensis HTML projection" in html_index
         assert "FictionalProject" in html_index
@@ -385,9 +461,12 @@ def main() -> None:
         assert 'class="status status-disposition status-confirmed-bug"' in html_b02
         assert 'class="evidence-label evidence-code-verified"' in html_b02
         html_architecture = (docs / "architecture.html").read_text()
-        markdown_architecture = (docs / "architecture.md").read_text()
-        assert "A generated mermaid version will replace this placeholder" not in markdown_architecture
-        assert "| Runtime / Process | Language | Communicates with | Mechanism | Notes |" in markdown_architecture
+        assert "A generated mermaid version will replace this placeholder" not in html_architecture
+        # The runtime boundary table's columns, as the HTML presents each boundary:
+        # its name and language in the heading, then one labelled line per column.
+        assert '<h3>Host agent</h3><span class="runtime-detail-language">external</span>' in html_architecture
+        for column in ("Communicates with", "Mechanism", "Recorded note"):
+            assert f'<span class="runtime-detail-label">{column}</span>' in html_architecture, column
         assert '<svg class="runtime-boundary-svg"' in html_architecture
         assert 'aria-labelledby="runtime-boundary-svg-title runtime-boundary-svg-description"' in html_architecture
         assert "3 recorded runtime boundaries" in html_architecture
@@ -402,21 +481,23 @@ def main() -> None:
         # A nodes-only dependency source must fail closed into a linked layer
         # atlas rather than exposing raw Mermaid or implying edges.
         from amanuensis_materializer.core import _compact_definition
-        from amanuensis_materializer.diagrams import subsystem_dependency_graph
-        from amanuensis_materializer.html_projection import MarkdownRenderer
+        from amanuensis_materializer.diagrams import dependency_blocks
+        from amanuensis_materializer.html_projection import write_html
+        from amanuensis_materializer.legacy_prose import render_body
+        from amanuensis_materializer.page import Page, Paragraph, Section
+        from amanuensis_materializer.prose import parse_inlines
 
         assert _compact_definition(
             "Atomicity", "T7, and an internal documentation contradiction."
         ) == "Atomicity: An internal documentation contradiction."
 
         atlas_db = sqlite3.connect(storage / "memory.db")
+        atlas_db.row_factory = sqlite3.Row
         atlas_db.execute("DELETE FROM xrefs")
-        atlas_markdown = subsystem_dependency_graph(atlas_db)
+        atlas_blocks = dependency_blocks(atlas_db, "subsystem atlas")
         atlas_db.rollback()
         atlas_db.close()
-        _, atlas_body = MarkdownRenderer({}, "architecture.html").render(
-            "# Architecture\n\n## Subsystem atlas\n\n" + atlas_markdown
-        )
+        atlas_body = write_html(Page("Architecture", "architecture.html", (Section("subsystem-atlas", atlas_blocks),)))
         assert 'class="subsystem-atlas"' in atlas_body
         assert "not an inferred dependency graph" in atlas_body
         assert "<table" not in atlas_body and "Diagram source" not in atlas_body
@@ -424,64 +505,89 @@ def main() -> None:
         assert ".atlas-regions { display: grid;" in html_architecture
         assert "align-items: start; border-left: 1px solid var(--rule);" in html_architecture
 
-        _, github_ledger = MarkdownRenderer(
-            {}, "entry-point.html", repository_url="https://github.com/acme/fictional"
-        ).render(
-            "# Files\n\n## File ledger\n\n"
+        # A file ledger table in an imported body prints as records, and its paths link to
+        # the repository at the revision the row names.
+        ledger = render_body(
             "| Path | Classification | Why in scope | Ref SHA |\n"
             "|---|---|---|---|\n"
-            "| `scheduler/main.ts` | examined | Owns dispatch. | `deadbeef` |\n"
+            "| `scheduler/main.ts` | examined | Owns dispatch. | `deadbeef` |\n",
+            under=2,
+            section="File ledger",
+            path="entry-point.html",
+        )
+        github_ledger = write_html(
+            Page("Files", "entry-point.html", (Section("file-ledger", ledger),)),
+            {},
+            repository_url="https://github.com/acme/fictional",
         )
         assert 'href="https://github.com/acme/fictional/blob/deadbeef/scheduler/main.ts"' in github_ledger
         long_paragraph = "A precise architectural account remains readable when its evidence and limits stay adjacent. " * 10
-        _, column_prose = MarkdownRenderer({}, "entry-point.html").render(
-            "# Reading field\n\n## Account\n\n"
-            + long_paragraph
-            + "\n\n"
-            + long_paragraph
+        column_prose = write_html(
+            Page(
+                "Reading field",
+                "entry-point.html",
+                (Section("account", (Paragraph(parse_inlines(long_paragraph.strip())), Paragraph(parse_inlines(long_paragraph.strip())))),),
+            )
         )
         assert '<div class="prose-flow">' in column_prose
         assert column_prose.index(long_paragraph.strip()) < column_prose.rindex(long_paragraph.strip())
-        _, humanized_prose = MarkdownRenderer({}, "entry-point.html").render(
-            "# Record\n\n## History\n\n"
-            "**Concern dispositions** were recorded after **Jump-in reading**."
+        humanized_prose = write_html(
+            Page(
+                "Record",
+                "entry-point.html",
+                (Section("history", (Paragraph(parse_inlines("**Concern dispositions** were recorded after **Jump-in reading**.")),)),),
+            )
         )
         assert "Concern review" in humanized_prose and "Start here" in humanized_prose
         assert "Concern dispositions" not in humanized_prose and "Jump-in reading" not in humanized_prose
         # The reader's guide is static — every conspectus ships with it.
         # Sanity-check that the content actually landed.
-        htr = (docs / "how-to-read.md").read_text()
-        assert "How to read this survey" in htr
+        htr_html = (docs / "how-to-read.html").read_text()
+        htr = outline(htr_html)
+        assert "How to read this survey" in htr_html
         assert "### Survey depth" in htr and "cannot justify" in htr.lower()  # the survey-depth ladder is generated from the enum source
         assert "evidence quality" in htr.lower()
-        assert "\x00" not in htr, "nested xref placeholders leaked into Markdown"
-        assert "\x00" not in (docs / "how-to-read.html").read_text(), "xref placeholders leaked into HTML"
+        assert "\x00" not in htr, "nested xref placeholders leaked into the page's text"
+        assert "\x00" not in htr_html, "xref placeholders leaked into HTML"
         # The index should link to it as the first navigation pointer.
-        index = (docs / "index.md").read_text()
-        assert "how-to-read.md" in index, "index missing link to how-to-read.md"
+        assert 'href="how-to-read.html"' in html_index, "index missing link to how-to-read.html"
         # Verify cross-references resolved: findings page should link B-02 somewhere.
-        findings = (docs / "findings.md").read_text()
-        assert "](subsystems/b02-auth-service.md)" in findings, "expected B-02 link in findings.md"
-        assert "### [Auth Service](subsystems/b02-auth-service.md)" in findings
-        assert "| ID | Status | Symptom | Why it matters | Root cause | Ref SHA |" in findings
-        assert "| ID | Subsystem |" not in findings
+        assert 'href="subsystems/b02-auth-service.html"' in html_findings, "expected B-02 link in findings.html"
+        assert (
+            '<h4 class="finding-subsystem-heading" id="auth-service" data-identifier-defined>'
+            '<a class="heading-anchor" href="#auth-service" aria-label="Link to Auth Service">§</a>'
+            '<a href="subsystems/b02-auth-service.html">Auth Service</a></h4>'
+        ) in html_findings
+        # The finding record presents the columns the finding table used to carry:
+        # status and revision as facts, the symptom as its lede, then the labelled fields.
+        finding_facts = re.findall(r"<dt>([^<]*)</dt>", html_findings.split('<article class="record record-finding"', 1)[1].split("</header>", 1)[0])
+        assert finding_facts == ["Status", "Revision"], finding_facts
+        assert '<p class="record-lede">Unvalidated query params reach SQL</p>' in html_findings
+        assert re.findall(r'<p class="record-label">([^<]*)</p>', html_findings) == ["Why it matters", "Root cause"]
+        assert "<dt>Subsystem</dt>" not in html_findings
         # Concerns page should link CC-1 as an anchor target.
-        concerns = (docs / "concerns.md").read_text()
-        assert "<a id=\"cc-1\"></a>" in concerns
-        checklist = (docs / "concern-checklist.md").read_text()
-        assert "## Active concerns (3)" in checklist
-        assert "| Code | Category | Territory | Codebase-specific probe (abbreviated) | Primary subsystems |" in checklist
+        assert '<span id="cc-1" class="record-anchor"></span>' in html_concerns
+        assert html_checklist.split('id="active-concerns"', 1)[1].count('class="record record-concern-checklist"') == 3
+        # The checklist's columns: code, category and territory in the family heading and the
+        # record title, the probe, and the subsystems to review it in.
+        for column in (
+            'href="concerns.html#cc-1">concern CC-1</a>',
+            '<span>Cache coherence</span><span class="concern-territory">T2</span>',
+            '<div class="record-probe">Does the scheduler retain stale authorization state after a policy change?</div>',
+            "<dt>Review in</dt>",
+        ):
+            assert column in html_checklist, column
         # The contradictions page should exist and say what it now carries.
         # §7.1 titles it Conflicting evidence and narrows it to the
         # disagreements the evidence settled; the unresolved ones are on
-        # disagreements.md.
-        contradictions = (docs / "contradictions.md").read_text()
-        assert "# Conflicting evidence" in contradictions
-        assert "disagreements.md" in contradictions
+        # the disagreements page.
+        contradictions = (docs / "contradictions.html").read_text()
+        assert "<h1>Conflicting evidence</h1>" in contradictions
+        assert 'href="disagreements.html"' in contradictions
         # Diagnosticity matrix page should exist and contain the cell legend.
-        matrix_files = list((docs / "diagnosticity").glob("dm-*.md")) if (docs / "diagnosticity").is_dir() else []
+        matrix_files = list((docs / "diagnosticity").glob("dm-*.html")) if (docs / "diagnosticity").is_dir() else []
         assert matrix_files, "expected at least one diagnosticity matrix page"
-        matrix_body = matrix_files[0].read_text()
+        matrix_body = outline(matrix_files[0].read_text())
         assert "Cell legend" in matrix_body
 
         # Second run — nothing should be rendered (all sources unchanged).
@@ -494,24 +600,34 @@ def main() -> None:
         assert summary2["html_pages_rendered"] == 0, summary2
         assert summary2["html_pages_unchanged"] == summary1["html_pages_total"], summary2
 
-        # Third run — touch the entry-point prose; only pages that source
-        # from it should re-render (index + entry-point passthrough, plus
-        # any page whose cross-reference resolution changed).
+        # Third run — replace the entry-point import (withdraw it, import the
+        # updated text); only the page that prints it should re-render, plus
+        # any page whose cross-reference resolution changed.
         #
-        # Ceiling (PAGES_RENDERED_FOR_SINGLE_PROSE_CHANGE): touching one
-        # prose file should re-render a small constant number of pages,
-        # not a fraction of the whole site. The actual affected set is
-        # index.md + entry-point.md; we allow a generous slop of 4 to
-        # cover legitimate cases (e.g. a page whose xref table changed
-        # because the entry-point added a new ID). A ceiling above 4
-        # would indicate the diff check is broken and everything is
+        # Ceiling (PAGES_RENDERED_FOR_SINGLE_PROSE_CHANGE): replacing one
+        # import should re-render a small constant number of pages, not a
+        # fraction of the whole site. The actual affected set is
+        # entry-point.md alone: the overview prints the project's purpose, a
+        # record of its own, and no longer sources the entry point's file. We
+        # allow a generous slop of 4 to cover legitimate cases (e.g. a page
+        # whose xref table changed because the text added a new ID). A ceiling
+        # above 4 would indicate the diff check is broken and everything is
         # being re-rendered on every run.
-        (storage / "entry-point.md").write_text(
-            "# Entry point\n\nUpdated text. This is a fictional test codebase.\n"
+        db = sqlite3.connect(storage / "memory.db")
+        withdraw_import(db, "entry-point.md", session_id="s1")
+        import_body(
+            db,
+            "entry-point-updated.md",
+            "entry-point",
+            "# Entry point\n\nUpdated text. This is a fictional test codebase.\n",
+            session_id="s1",
+            ref_sha="deadbeef",
         )
+        db.commit()
+        db.close()
         summary3 = run_materializer(storage)
         print("run 3:", json.dumps(summary3, indent=2))
-        assert summary3["pages_rendered"] >= 2, summary3  # index + entry-point
+        assert summary3["pages_rendered"] >= 1, summary3  # entry-point
         assert summary3["pages_rendered"] <= 4, (
             f"diff-aware regression: touching one prose file re-rendered "
             f"{summary3['pages_rendered']} pages; expected ≤4. Check the "
@@ -563,7 +679,7 @@ def main() -> None:
         summary4 = run_materializer(storage)
         print("run 4:", json.dumps(summary4, indent=2))
         assert summary4["pages_total"] == summary1["pages_total"] + 1  # new subsystem page
-        assert (docs / "subsystems/b03-rate-limiter.md").is_file()
+        assert "Rate limiter" in (docs / "subsystems/b03-rate-limiter.html").read_text()
         assert (docs / "subsystems/b03-rate-limiter.html").is_file()
 
         # Fifth run — remove B-03; the page and its manifest entry should be retired.
@@ -573,8 +689,8 @@ def main() -> None:
         db.close()
         summary5 = run_materializer(storage)
         print("run 5:", json.dumps(summary5, indent=2))
-        assert "subsystems/b03-rate-limiter.md" in summary5["pages_retired"]
-        assert not (docs / "subsystems/b03-rate-limiter.md").is_file()
+        assert summary5["pages_total"] == summary1["pages_total"], summary5
+        assert "Rate limiter" not in (docs / "master-plan.html").read_text()
         assert "subsystems/b03-rate-limiter.html" in summary5["html_pages_retired"]
         assert not (docs / "subsystems/b03-rate-limiter.html").is_file()
 
@@ -614,9 +730,20 @@ def main() -> None:
         # empty result means "nothing was measured", not "nothing is stale".
         from amanuensis_materializer import diagrams as dmod  # noqa: E402
 
+        def staleness(db: sqlite3.Connection) -> str:
+            """The staleness section's body as text: its sentence, or `id : count` per bar."""
+
+            from amanuensis_materializer.page import Paragraph, StalenessBars  # noqa: E402
+
+            (block,) = dmod.staleness_blocks(db)
+            if isinstance(block, StalenessBars):
+                return "\n".join(f"{label} : {value:g}" for label, value in block.values)
+            assert isinstance(block, Paragraph), block
+            return block.text.plain
+
         staleness_db = sqlite3.connect(storage / "memory.db")
         try:
-            unmeasured = dmod.staleness_map(staleness_db)
+            unmeasured = staleness(staleness_db)
             assert "is fresh" not in unmeasured, (
                 "staleness map claims freshness from an empty source: " + unmeasured
             )
@@ -628,7 +755,7 @@ def main() -> None:
                 "'git-drift')"
             )
             staleness_db.commit()
-            measured = dmod.staleness_map(staleness_db)
+            measured = staleness(staleness_db)
             assert "B-01" in measured, measured
 
             # An exempt row that has drifted must not appear as an obligation.
@@ -638,13 +765,13 @@ def main() -> None:
                 "'abc1234', 1, 'git-drift')"
             )
             staleness_db.commit()
-            mixed = dmod.staleness_map(staleness_db)
+            mixed = staleness(staleness_db)
             assert "B-04" not in mixed, mixed
             assert "B-01" in mixed, mixed
 
             staleness_db.execute("UPDATE file_ledger SET stale = 0 WHERE file_path = 'src/core.ts'")
             staleness_db.commit()
-            measured_clean = dmod.staleness_map(staleness_db)
+            measured_clean = staleness(staleness_db)
             # A clean result must still carry the denominator it was measured
             # against, so "nothing stale" cannot be read as "nothing checked".
             assert "no stale files across 1 scoped file" in measured_clean.lower(), measured_clean
@@ -653,14 +780,14 @@ def main() -> None:
             staleness_db.close()
         print("staleness map: unmeasured, stale, and measured-clean states distinguished")
 
-        # _nest_prose shifts a survey artifact's headings beneath the page
+        # nest_headings (legacy_prose) shifts a survey artifact's headings beneath the page
         # section it is rendered inside (§3.4, §9.1).  It must move headings and
         # nothing else: a `#` inside a fenced code block is content the survey
         # recorded, and rewriting it changes bytes the reader is told are
         # verbatim.  Tracking only the backtick fence let the tilde form
         # through (slice-S3, F10/codex).
-        rmod = __import__("amanuensis_materializer.renderers", fromlist=["renderers"])
-        nest = rmod._nest_prose
+        lmod = __import__("amanuensis_materializer.legacy_prose", fromlist=["legacy_prose"])
+        nest = lmod.nest_headings
         cases = [
             ("~~~text\n# literal code heading\n~~~", "~~~text\n# literal code heading\n~~~"),
             ("```text\n# literal code heading\n```", "```text\n# literal code heading\n```"),
@@ -671,7 +798,7 @@ def main() -> None:
         ]
         for source, expected in cases:
             got = nest(source, 3)
-            assert got == expected, f"_nest_prose({source!r}) -> {got!r}, wanted {expected!r}"
+            assert got == expected, f"nest_headings({source!r}) -> {got!r}, wanted {expected!r}"
         print("nested prose: headings move, fenced content of either fence character does not")
 
         print("\nOK — all diff-aware behaviors verified.")

@@ -3,12 +3,12 @@
 (design/orientation/PLAN.md §4 O12, "Publishing defects").
 
 Turns red when, on a seeded store with two recorded read-backs (older: state axis
-failed; newer: every axis passed), in either the Markdown or the HTML overview:
+failed; newer: every axis passed), in the HTML overview:
 
   - the Publication integrity block lacks the sentence "A publication's read-back
     is recorded after its pages are written, so these results describe the
-    publication before this one.", word for word, or prints it below the table
-    instead of above it, or prints it more than once;
+    publication before this one.", word for word, or prints it below the axis rows
+    instead of above them, or prints it more than once;
   - the block still labels the time row "Verified at", or lacks a "Read back at"
     row carrying the newer run's date;
   - the block reports the older run (its date, or a failed axis);
@@ -45,6 +45,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -138,9 +139,11 @@ def seed(storage: Path, runs: tuple[tuple[int, int, int], tuple[int, int, int]] 
                 ("run-newer", SHA, *newer, int(all(newer)), f"{NEWER_DATE}T18:30:00Z"),
             ],
         )
+    # The pages read the imports the store holds, never a file in storage.
+    db.execute("INSERT INTO sessions (session_id, intent) VALUES ('o14', 'fixture')")
+    import_onboarding(db, session_id="o14", entry_point="# Where to begin\n\nStart at the reader.\n")
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text("# Where to begin\n\nStart at the reader.\n")
 
 
 def publish(storage: Path) -> str | None:
@@ -171,13 +174,6 @@ def squash(text: str) -> str:
     return " ".join(text.split())
 
 
-def md_block(index: str) -> str:
-    """The Markdown text from '### Publication integrity' to the next heading."""
-
-    match = re.search(r"^### Publication integrity\s*$(.*?)(?=^#{1,3} |\Z)", index, re.S | re.M)
-    return match.group(1) if match else ""
-
-
 def html_block(index: str) -> str:
     """The HTML from the Publication integrity heading to the end of its section."""
 
@@ -187,10 +183,6 @@ def html_block(index: str) -> str:
     rest = index[start:]
     end = rest.find("</section>")
     return rest if end < 0 else rest[:end]
-
-
-def flat_md(block: str) -> str:
-    return squash(re.sub(r"\*(.+?)\*", r"\1", block))
 
 
 def flat_html(block: str) -> str:
@@ -256,32 +248,44 @@ def main() -> int:
         check("the store whose newer read-back has mixed axes publishes", fixture("mixed"))
 
         docs = stores["runs"][0] / "docs"
-        index_md = read(docs / "index.md")
         index_html = read(docs / "index.html")
 
-        check(
-            "Markdown: the sentence leads the block, the row is 'Read back at' with the newer run",
-            lambda: block_problem(flat_md(md_block(index_md)), "| Metric |"),
-        )
         check(
             "HTML: the sentence leads the block, the row is 'Read back at' with the newer run",
             lambda: block_problem(flat_html(html_block(index_html)), "State axis"),
         )
 
+        def sentence_leads_the_list() -> str | None:
+            block = html_block(index_html)
+            match = re.search(r'<p>(.*?)</p>\s*<dl class="summary-list"[^>]*>(.*?)</dl>', block, re.S)
+            if not match:
+                return "index.html: the block is not a paragraph followed by its list of axis rows"
+            if squash(htmllib.unescape(match.group(1))) != LAG_SENTENCE:
+                return "index.html: the paragraph before the axis rows is not the lag sentence"
+            rows = [
+                (squash(htmllib.unescape(re.sub(r"<[^>]+>", " ", term))), squash(htmllib.unescape(re.sub(r"<[^>]+>", " ", value))))
+                for term, value in re.findall(r"<dt>(.*?)</dt><dd>(.*?)</dd>", match.group(2), re.S)
+            ]
+            labels = [label for label, _ in rows]
+            if labels != ["State axis", "Coverage axis", "Content axis", NEW_LABEL]:
+                return f"index.html: the axis rows are {labels}, not the three axes and {NEW_LABEL!r}"
+            if not rows[-1][1].startswith(NEWER_DATE):
+                return f"index.html: the {NEW_LABEL!r} row reads {rows[-1][1]!r}, not the newer run's date {NEWER_DATE}"
+            return None
+
+        check("HTML: the lag sentence is the paragraph above the axis rows, ending in 'Read back at'", sentence_leads_the_list)
+
         def mixed_axes() -> str | None:
             docs_mixed = stores["mixed"][0] / "docs"
             newer = RUNS["mixed"][1]
-            for name, flat in (
-                ("index.md", squash(flat_md(md_block(read(docs_mixed / "index.md"))).replace("|", " "))),
-                ("index.html", flat_html(html_block(read(docs_mixed / "index.html")))),
-            ):
-                for axis, ok in zip(("State", "Coverage", "Content"), newer, strict=True):
-                    want = "green" if ok else "red"
-                    match = re.search(rf"\b{axis} axis (\w+)", flat)
-                    if not match:
-                        return f"{name}: the block has no {axis} axis row"
-                    if match.group(1).lower() != want:
-                        return f"{name}: the {axis} axis reads {match.group(1)}; the newer run's is {want}"
+            flat = flat_html(html_block(read(docs_mixed / "index.html")))
+            for axis, ok in zip(("State", "Coverage", "Content"), newer, strict=True):
+                want = "green" if ok else "red"
+                match = re.search(rf"\b{axis} axis (\w+)", flat)
+                if not match:
+                    return f"index.html: the block has no {axis} axis row"
+                if match.group(1).lower() != want:
+                    return f"index.html: the {axis} axis reads {match.group(1)}; the newer run's is {want}"
             return None
 
         check("each axis row reports its own value from the newer run", mixed_axes)
@@ -295,16 +299,13 @@ def main() -> int:
 
         def no_run_is_unchanged() -> str | None:
             docs_none = stores["none"][0] / "docs"
-            for name, flat in (
-                ("index.md", flat_md(md_block(read(docs_none / "index.md")))),
-                ("index.html", flat_html(html_block(read(docs_none / "index.html")))),
-            ):
-                if NO_RUN_SENTENCE not in flat:
-                    return f"{name}: the no-read-back sentence is gone"
-                if LAG_SENTENCE in flat:
-                    return f"{name}: a store with no read-back claims a publication before this one"
-                if NEW_LABEL in flat or OLD_LABEL in flat:
-                    return f"{name}: a store with no read-back prints a read-back time row"
+            flat = flat_html(html_block(read(docs_none / "index.html")))
+            if NO_RUN_SENTENCE not in flat:
+                return "index.html: the no-read-back sentence is gone"
+            if LAG_SENTENCE in flat:
+                return "index.html: a store with no read-back claims a publication before this one"
+            if NEW_LABEL in flat or OLD_LABEL in flat:
+                return "index.html: a store with no read-back prints a read-back time row"
             return None
 
         check("a store with no read-back keeps its own sentence and prints no lag claim", no_run_is_unchanged)

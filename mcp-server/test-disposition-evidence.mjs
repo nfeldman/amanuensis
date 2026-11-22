@@ -335,7 +335,7 @@ function main(mods) {
     seedClaim(ctx, id);
     dischargeVocabulary(ctx, id);
     call("update_subsystem_status", { id, status: "structural" }, ctx);
-    call("register_artifact", { path: `${id}-survey.md`, kind: "subsystem-survey", subsystem_id: id }, ctx);
+    call("decline_narrative", { subject_type: "subsystem", subject_id: id, section: "structure", reason: "Fixture subsystem: its files say nothing specific enough to narrate.", ref_sha: headSha(ctx) }, ctx);
     call("update_subsystem_status", { id, status: "concerns" }, ctx);
     return filePath;
   }
@@ -760,7 +760,7 @@ function main(mods) {
     seedClaim(ctx, "B-02");
     dischargeVocabulary(ctx, "B-02");
     call("update_subsystem_status", { id: "B-02", status: "structural" }, ctx);
-    call("register_artifact", { path: "B-02-survey.md", kind: "subsystem-survey", subsystem_id: "B-02" }, ctx);
+    call("decline_narrative", { subject_type: "subsystem", subject_id: "B-02", section: "structure", reason: "Fixture subsystem: its files say nothing specific enough to narrate.", ref_sha: headSha(ctx) }, ctx);
     addConcern(ctx, "CC-1");
     seedDispositionRow(ctx, "B-02", "CC-1");
 
@@ -1004,7 +1004,7 @@ try {
     ({ resolveProject: mods.resolveProject, ensureProjectStorage: mods.ensureProjectStorage } =
       await import("./dist/project.js"));
     mods.invariants = await import("./dist/invariants.js");
-    const [artifacts, claims, concerns, dispositions, evidence, explanations, files, gitModule, project, subsystems, vocabulary] =
+    const [artifacts, claims, concerns, dispositions, evidence, explanations, files, gitModule, narratives, project, subsystems, vocabulary] =
       await Promise.all([
         import("./dist/tools/artifacts.js"),
         import("./dist/tools/claims.js"),
@@ -1014,6 +1014,7 @@ try {
         import("./dist/tools/explanations.js"),
         import("./dist/tools/files.js"),
         import("./dist/tools/git.js"),
+        import("./dist/tools/narratives.js"),
         import("./dist/tools/project.js"),
         import("./dist/tools/subsystems.js"),
         import("./dist/tools/vocabulary.js"),
@@ -1027,6 +1028,7 @@ try {
       explanations.explanationTools,
       files.fileTools,
       gitModule.gitTools,
+      narratives.narrativeTools,
       project.projectTools,
       subsystems.subsystemTools,
       vocabulary.vocabularyTools,

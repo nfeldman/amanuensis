@@ -16,12 +16,12 @@ store with no explanation-eligible subsystem at all.
 
 Turns red when:
 
-  - the master plan has no Purpose column, or a cell is not the recorded purpose
-    with `|` replaced by `/` (recorded), the state's label from the contract
-    (declined, not recorded, ineligible), or the HTML record list drops it;
+  - the master plan's subsystem records have no Purpose field, or one is not the
+    recorded purpose with `|` replaced by `/` (recorded), the state's label from the
+    contract (declined, not recorded, ineligible), or the HTML record list drops it;
   - a subsystem id's hover definition is not its name and the first sentence of
     its recorded purpose, or changes for a subsystem without a recorded one;
-  - the architecture page does not open with `## How the parts fit together`, the
+  - the architecture page does not open with the section "How the parts fit together", the
     project account with its provenance line, the declination sentence, or the
     no-account sentence, then one line per subsystem;
   - a project account, its declination reason, or a purpose excerpt that the
@@ -383,10 +383,33 @@ def read(path: Path) -> str:
         return ""
 
 
-def unlink(text: str) -> str:
-    """Markdown links resolved to their labels: the publication links every subsystem id."""
+BLOCK_TAGS = r"p|li|ul|ol|div|h[1-6]|section|article|header|footer|tr|td|th|br|dl|dt|dd|blockquote|table|caption"
+HEADING = re.compile(r"(?is)<h([1-6])\b[^>]*>(.*?)</h\1>")
 
-    return unnamed(re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text))
+
+def visible(markup: str) -> str:
+    """The reader's text of an HTML fragment: scripts, styles and heading anchors dropped, block
+    boundaries read as spaces, inline tags as nothing, entities decoded, whitespace collapsed."""
+
+    body = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", markup)
+    body = re.sub(r'(?is)<a class="heading-anchor"[^>]*>.*?</a>', "", body)
+    body = re.sub(rf"(?i)</?(?:{BLOCK_TAGS})\b[^>]*>", " ", body)
+    body = re.sub(r"<[^>]+>", "", body)
+    return " ".join(html.unescape(body).split())
+
+
+def plain(markup: str) -> str:
+    """The reader's text with the publication's name beside a first-mentioned subsystem id read out."""
+
+    return unnamed(visible(markup))
+
+
+def article_of(markup: str) -> str:
+    """The report an HTML page carries: its content article, without the navigation around it."""
+
+    start = markup.find('<article class="content')
+    end = markup.rfind("</article>")
+    return markup[start:end] if 0 <= start < end else ""
 
 
 def unnamed(text: str) -> str:
@@ -398,25 +421,36 @@ def unnamed(text: str) -> str:
     """
 
     for sid, name, *_ in SUBSYSTEMS:
-        text = re.sub(rf"(?<![\w-])({re.escape(sid)}(?:\*\*)?) \({re.escape(name)}\)", r"\1", text)
+        text = re.sub(rf"(?<![\w-])({re.escape(sid)}) \({re.escape(name)}\)", r"\1", text)
     return text
 
 
-def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level or higher."""
+def section(markup: str, heading: str, level: int = 2) -> str:
+    """The HTML of one section of a page's report: from the heading of this text and level
+    to the next heading of its level or higher."""
 
-    marker = "#" * level + " "
-    body: list[str] = []
-    inside = False
-    for line in text.splitlines():
-        if not inside:
-            inside = line.startswith(marker) and line[len(marker):].strip() == heading
-            continue
-        depth = len(line) - len(line.lstrip("#"))
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body)
+    body = article_of(markup)
+    found = -1
+    for match in HEADING.finditer(body):
+        depth = int(match.group(1))
+        if found < 0:
+            if depth == level and visible(match.group(2)) == heading:
+                found = match.end()
+        elif depth <= level:
+            return body[found : match.start()]
+    return body[found:] if found >= 0 else ""
+
+
+def items(fragment: str) -> list[str]:
+    """The reader's text of each list item in an HTML fragment."""
+
+    return [plain(item) for item in re.findall(r"(?is)<li\b[^>]*>(.*?)</li>", fragment)]
+
+
+def blocks(fragment: str) -> list[str]:
+    """The reader's text of each paragraph and list item in an HTML fragment."""
+
+    return [plain(block) for _, block in re.findall(r"(?is)<(p|li)\b[^>]*>(.*?)</\1>", fragment)]
 
 
 def html_sections(text: str) -> dict[str, str]:
@@ -429,13 +463,19 @@ def html_sections(text: str) -> dict[str, str]:
     return {plain(parts[i]): unnamed(plain(parts[i + 1])) for i in range(1, len(parts) - 1, 2)}
 
 
-def h2s(text: str) -> list[str]:
-    return [ln[3:].strip() for ln in text.splitlines() if ln.startswith("## ")]
+def h2s(markup: str) -> list[str]:
+    return [visible(match.group(2)) for match in HEADING.finditer(article_of(markup)) if match.group(1) == "2"]
 
 
 def subsystem_page(docs: Path, sid: str) -> str:
-    pages = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.md"))
+    pages = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.html"))
     return read(pages[0]) if pages else ""
+
+
+def subsystem_text(docs: Path, sid: str) -> str:
+    """The reader's text of a subsystem page's report."""
+
+    return plain(article_of(subsystem_page(docs, sid)))
 
 
 def tree_digest(directory: Path) -> dict[str, str]:
@@ -446,24 +486,30 @@ def tree_digest(directory: Path) -> dict[str, str]:
     }
 
 
-def master_table(text: str) -> tuple[list[str], dict[str, list[str]]]:
-    """The master plan's subsystem table: its header, and each row's cells by subsystem id."""
+def master_table(markup: str) -> tuple[list[str], dict[str, dict[str, str]]]:
+    """The master plan's subsystem records: every field label in order of appearance, and each
+    record's fields by subsystem id (its name, then the labelled facts and fields it presents)."""
 
-    header: list[str] = []
-    by_id: dict[str, list[str]] = {}
-    for line in text.splitlines():
-        if not line.startswith("|"):
-            continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if cells and cells[0] == "Priority":
-            header = cells
-        elif header and len(cells) >= 2 and not set(cells[0]) <= set("-: "):
-            by_id[cells[1].strip("*")] = cells
-    return header, by_id
+    labels: list[str] = []
+    by_id: dict[str, dict[str, str]] = {}
+    for record in re.findall(r'(?is)<article class="record record-subsystem".*?</article>', markup):
+        name = re.search(r'(?is)<h3 class="record-primary"[^>]*>(.*?)</h3>', record)
+        cells = {"Name": plain(name.group(1)) if name else ""}
+        for term, value in re.findall(r'(?is)<div class="record-fact[^"]*"><dt>(.*?)</dt><dd>(.*?)</dd></div>', record):
+            cells[visible(term)] = plain(value)
+        for label, copy in re.findall(
+            r'(?is)<div class="record-field"><p class="record-label">(.*?)</p><div class="record-copy">(.*?)</div></div>',
+            record,
+        ):
+            cells[visible(label)] = plain(copy)
+        labels.extend(label for label in cells if label not in labels)
+        if "ID" in cells:
+            by_id[cells["ID"]] = cells
+    return labels, by_id
 
 
 def provenance(n: int, ageing: str, sha: str) -> str:
-    return f"*Written by a survey session at `{sha[:8]}` from {n} evidence row(s). {ageing}*"
+    return f"Written by a survey session at {sha[:8]} from {n} evidence row(s). {ageing}"
 
 
 def main() -> int:
@@ -506,7 +552,7 @@ def main() -> int:
             return stores[name][0] / "docs"
 
         def page(name: str, rel: str) -> str:
-            return unlink(read(docs_of(name) / rel))
+            return read(docs_of(name) / rel)
 
         def published(name: str = "good") -> str | None:
             if seed_error:
@@ -520,10 +566,10 @@ def main() -> int:
         def master_plan() -> str | None:
             if (why := published()):
                 return why
-            header, by_id = master_table(page("good", "master-plan.md"))
-            if "Purpose" not in header:
-                return f"{RED_EXPECT}: the subsystem table's columns are {header}"
-            at = header.index("Purpose")
+            master = page("good", "master-plan.html")
+            labels, by_id = master_table(master)
+            if "Purpose" not in labels:
+                return f"{RED_EXPECT}: the subsystem records' fields are {labels}"
             for sid, want in (
                 ("B-01", FIRST_SENTENCE_B01.replace("|", "/") + " SECOND-B-01 names the rows it never reads."),
                 ("B-02", LABEL_DECLINED),
@@ -532,16 +578,17 @@ def main() -> int:
                 ("B-05", LABEL_NOT_RECORDED),
             ):
                 cells = by_id.get(sid)
-                if cells is None or len(cells) != len(header):
+                if cells is None or set(cells) != set(labels):
                     return (
-                        f"{RED_EXPECT}: the {sid} row has {None if cells is None else len(cells)}"
-                        f" cells against {len(header)} columns"
+                        f"{RED_EXPECT}: the {sid} record has fields {None if cells is None else sorted(cells)}"
+                        f" against {sorted(labels)}"
                     )
-                if cells[at] != want:
-                    return f"{RED_EXPECT}: the {sid} Purpose cell is {cells[at]!r}, not {want!r}"
-            if PURPOSE_B04 in page("good", "master-plan.md"):
+                if cells["Purpose"] != want:
+                    return f"{RED_EXPECT}: the {sid} Purpose field is {cells['Purpose']!r}, not {want!r}"
+            if PURPOSE_B04 in plain(article_of(master)):
                 return "the master plan prints a purpose recorded for a deferred subsystem"
-            if "provenance" in by_id["B-01"][at].lower() or "Written by a survey session" in by_id["B-01"][at]:
+            purpose = by_id["B-01"]["Purpose"]
+            if "provenance" in purpose.lower() or "Written by a survey session" in purpose:
                 return "the master plan's purpose excerpt carries a provenance line"
             return None
 
@@ -551,11 +598,11 @@ def main() -> int:
             if (why := published()):
                 return why
             text = page("good", "master-plan.html")
-            plain = html.unescape(re.sub(r"<[^>]+>", " ", text))
+            shown = html.unescape(re.sub(r"<[^>]+>", " ", text))
             wanted = FIRST_SENTENCE_B01.replace("|", "/")
-            if wanted not in " ".join(plain.split()):
+            if wanted not in " ".join(shown.split()):
                 return "the HTML master plan drops the recorded purpose"
-            if "Purpose" not in plain:
+            if "Purpose" not in shown:
                 return "the HTML master plan's subsystem records carry no Purpose field"
             return None
 
@@ -591,20 +638,21 @@ def main() -> int:
         def architecture() -> str | None:
             if (why := published()):
                 return why
-            text = page("good", "architecture.md")
+            text = page("good", "architecture.html")
             if h2s(text)[:1] != [ARCH_HEADING]:
-                return f"the architecture page opens with {h2s(text)[:2]}, not `## {ARCH_HEADING}`"
-            body = section(text, ARCH_HEADING)
+                return f"the architecture page opens with {h2s(text)[:2]}, not the section `{ARCH_HEADING}`"
+            opening = section(text, ARCH_HEADING)
+            body = plain(opening)
             if ACCOUNT_PROJECT not in body:
                 return "the project account is not under the opening section"
             want = provenance(3, "None of the 3 file(s) it cites has changed since.", shas["c1"])
-            if want not in body:
-                return f"the provenance line is not `{want}`"
-            if text.count(ACCOUNT_PROJECT) != 1:
+            if want not in [visible(em) for em in re.findall(r"(?is)<em>(.*?)</em>", opening)]:
+                return f"the provenance line is not the italic line `{want}`"
+            if plain(article_of(text)).count(ACCOUNT_PROJECT) != 1:
                 return "the project account is printed more than once"
             if NO_ACCOUNT in body:
                 return "the no-account sentence is printed beside a recorded account"
-            lines = [ln.strip().removeprefix("- ") for ln in body.splitlines()]
+            lines = items(opening)
             for sid, name, rest in (
                 ("B-01", "Read path", PURPOSE_B01),
                 ("B-02", "Write path", LABEL_DECLINED),
@@ -612,10 +660,10 @@ def main() -> int:
                 ("B-04", "Console", LABEL_NOT_RECORDED),
                 ("B-05", "Cache", LABEL_NOT_RECORDED),
             ):
-                line = f"**{sid} — {name}**: {rest}"
+                line = f"{sid} — {name}: {rest}"
                 if line not in lines:
                     return f"the section has no line `{line}`"
-            if sum("Written by a survey session" in ln for ln in lines) != 1:
+            if sum("Written by a survey session" in block for block in blocks(opening)) != 1:
                 return "the section does not carry exactly one provenance line, the account's"
             rest = h2s(text)[1:]
             if "Runtime boundary map" not in rest or "Staleness map" not in rest:
@@ -627,23 +675,23 @@ def main() -> int:
         def architecture_states() -> str | None:
             if (why := published("declined")) or (why := published("none")) or (why := published("ineligible")):
                 return why
-            lines = lambda text: [ln.strip().removeprefix("- ") for ln in section(text, ARCH_HEADING).splitlines()]  # noqa: E731
-            declined = page("declined", "architecture.md")
-            body = section(declined, ARCH_HEADING)
-            declination = f"{ACCOUNT_DECLINED_STEM} `{shas['c1'][:8]}`. {REASON_PROJECT}"
-            if declination not in " ".join(body.split()):
+            lines = lambda markup: items(section(markup, ARCH_HEADING))  # noqa: E731
+            declined = page("declined", "architecture.html")
+            body = plain(section(declined, ARCH_HEADING))
+            declination = f"{ACCOUNT_DECLINED_STEM} {shas['c1'][:8]}. {REASON_PROJECT}"
+            if declination not in body:
                 return f"a declined project account does not print `{declination}`"
-            if "**B-01 — Read path**:" not in " ".join(lines(declined)):
+            if "B-01 — Read path:" not in " ".join(lines(declined)):
                 return "a declined project account drops the per-subsystem lines"
-            absent = page("none", "architecture.md")
-            if h2s(absent)[:1] != [ARCH_HEADING] or NO_ACCOUNT not in section(absent, ARCH_HEADING):
+            absent = page("none", "architecture.html")
+            if h2s(absent)[:1] != [ARCH_HEADING] or NO_ACCOUNT not in plain(section(absent, ARCH_HEADING)):
                 return "an unrecorded project account does not print the no-account sentence"
-            if f"**B-03 — Queue**: {LABEL_NOT_RECORDED}" not in lines(absent):
+            if f"B-03 — Queue: {LABEL_NOT_RECORDED}" not in lines(absent):
                 return "the per-subsystem lines do not render beside the no-account sentence"
-            nothing = page("ineligible", "architecture.md")
-            if NO_ACCOUNT not in section(nothing, ARCH_HEADING):
+            nothing = page("ineligible", "architecture.html")
+            if NO_ACCOUNT not in plain(section(nothing, ARCH_HEADING)):
                 return "a store with no eligible subsystem does not print the no-account sentence"
-            if ACCOUNT_PROJECT in nothing:
+            if ACCOUNT_PROJECT in plain(article_of(nothing)):
                 return "a project account recorded with no eligible subsystem is printed"
             return None
 
@@ -709,19 +757,19 @@ def main() -> int:
                 )
                 if inplace.get("ok"):
                     return f"an in-place render with a violating {variant} stayed green"
-                arch = unlink(read(storage / "docs-inplace" / "architecture.md"))
-                if REFUSAL.format(slot="account") not in section(arch, ARCH_HEADING):
+                arch = read(storage / "docs-inplace" / "architecture.html")
+                if REFUSAL.format(slot="account") not in plain(section(arch, ARCH_HEADING)):
                     return f"the architecture page does not carry the refusal sentence for the {variant}"
-                if bad in arch:
+                if bad in plain(article_of(arch)):
                     return f"the violating {variant} {bad!r} was printed"
-                master = unlink(read(storage / "docs-inplace" / "master-plan.md"))
-                header, by_id = master_table(master)
-                if "Purpose" not in header:
-                    return f"{RED_EXPECT}: the lint fixture's master plan has no Purpose column"
-                cell = by_id.get("B-03", [""] * len(header))[header.index("Purpose")]
+                master = read(storage / "docs-inplace" / "master-plan.html")
+                labels, by_id = master_table(master)
+                if "Purpose" not in labels:
+                    return f"{RED_EXPECT}: the lint fixture's master plan has no Purpose field"
+                cell = by_id.get("B-03", {}).get("Purpose", "")
                 if cell != REFUSAL.format(slot="purpose"):
-                    return f"the master plan's B-03 Purpose cell is {cell!r}, not the refusal sentence"
-                if VIOLATING_PURPOSE_B03 in master or VIOLATING_PURPOSE_B03 in arch:
+                    return f"the master plan's B-03 Purpose field is {cell!r}, not the refusal sentence"
+                if VIOLATING_PURPOSE_B03 in plain(article_of(master)) or VIOLATING_PURPOSE_B03 in plain(article_of(arch)):
                     return "a violating purpose was printed as an excerpt"
                 for path in (storage / "docs-inplace").rglob("*.html"):
                     if VIOLATING_PURPOSE_B03 in html.unescape(path.read_text()):
@@ -772,14 +820,14 @@ def main() -> int:
             done = run_materializer(storage, "--output", str(storage / "docs"), workspace=repo)
             if done.get("_returncode") != 0:
                 return f"the materializer failed — {done.get('_diagnostic')}"
-            arch = unlink(read(storage / "docs" / "architecture.md"))
-            line = next((ln for ln in arch.splitlines() if ln.startswith("- **B-03")), "")
-            if f"{TWO_LINES[0]} {TWO_LINES[1]}" not in line:
-                return f"the two-line purpose is not one list item: {line!r}"
             page = read(storage / "docs" / "architecture.html")
-            items = [i for i in re.findall(r"(?is)<li\b.*?</li>", page) if TWO_LINES[0] in i]
-            if len(items) != 1 or TWO_LINES[1] not in items[0]:
-                return f"the HTML has {len(items)} list item(s) with the purpose's first line, not one holding both"
+            listed = re.findall(r"(?is)<li\b[^>]*>.*?</li>", section(page, ARCH_HEADING))
+            line = next((raw for raw in listed if plain(raw).startswith("B-03")), "")
+            if f"{TWO_LINES[0]} {TWO_LINES[1]}" not in " ".join(html.unescape(line).split()):
+                return f"the two-line purpose is not one list item: {plain(line)!r}"
+            holding = [i for i in re.findall(r"(?is)<li\b.*?</li>", page) if TWO_LINES[0] in i]
+            if len(holding) != 1 or TWO_LINES[1] not in holding[0]:
+                return f"the HTML has {len(holding)} list item(s) with the purpose's first line, not one holding both"
             return None
 
         check("a purpose excerpt stays one list item when the purpose holds a line break", excerpt_is_one_line)
@@ -792,7 +840,7 @@ def main() -> int:
                 pages = json.loads(read(docs_of("good") / ".manifest.json")).get("pages", [])
             except json.JSONDecodeError:
                 return "the manifest could not be read"
-            for rel in ("architecture.md", "master-plan.md"):
+            for rel in ("architecture.html", "master-plan.html"):
                 entries = [p for p in pages if p.get("path") == rel]
                 if not entries:
                     return f"the manifest has no {rel}"
@@ -811,7 +859,7 @@ def main() -> int:
             control = run_materializer(storage, "--readback-only", "--output", str(docs), workspace=repo)
             if not control.get("ok"):
                 return f"the read-back is red on the unmodified publication — {control.get('mismatches')}"
-            target = docs / "architecture.md"
+            target = docs / "architecture.html"
             original = target.read_text()
             if ACCOUNT_TOKEN not in original:
                 return "the publication carries no project account to remove"
@@ -834,6 +882,9 @@ def main() -> int:
                     "the state axis did not name the missing project account; mismatches are"
                     f" {[(m.get('axis'), m.get('object_type'), m.get('object_id')) for m in red.get('mismatches') or []]}"
                 )
+            restored = run_materializer(storage, "--readback-only", "--output", str(docs), workspace=repo)
+            if not restored.get("ok"):
+                return f"the read-back stays red with the project account put back — {restored.get('mismatches')}"
             return None
 
         check("the read-back state axis fails when the project account is off its page", readback_red_case)
@@ -906,13 +957,13 @@ def main() -> int:
                 return f"the vocabulary rows are {sorted(vocabulary)}, not every subsystem"
             # subsystem-purpose: a row exists iff the eligible page prints the no-purpose sentence.
             for sid in ("B-01", "B-02", "B-03"):
-                printed = bool(NO_PURPOSE_PATTERN.search(subsystem_page(docs_of("good"), sid)))
+                printed = bool(NO_PURPOSE_PATTERN.search(subsystem_text(docs_of("good"), sid)))
                 if printed != (("subsystem-purpose", sid) in got):
                     return f"{sid}: the no-purpose sentence is {'printed' if printed else 'absent'} and the census disagrees"
             # subsystem-account is one-directional: a row iff no section and no declination.
             for sid in ("B-01", "B-02", "B-03"):
-                text = subsystem_page(docs_of("good"), sid)
-                owed = "## How it works" not in text and HOW_IT_WORKS_DECLINED_STEM not in text
+                text = subsystem_text(docs_of("good"), sid)
+                owed = "How it works" not in h2s(subsystem_page(docs_of("good"), sid)) and HOW_IT_WORKS_DECLINED_STEM not in text
                 if owed != (("subsystem-account", sid) in got):
                     return f"{sid}: the account section is {'absent' if owed else 'present'} and the census disagrees"
             return None
@@ -924,7 +975,7 @@ def main() -> int:
             if isinstance(rows, str):
                 return rows
             for sid in ("B-04", "B-05"):
-                text = subsystem_page(docs_of("good"), sid)
+                text = subsystem_text(docs_of("good"), sid)
                 if not NO_PURPOSE_PATTERN.search(text):
                     return f"{sid} (not explanation-eligible) does not print the no-purpose sentence"
                 for slot in ("subsystem-purpose", "subsystem-account"):
@@ -952,7 +1003,7 @@ def main() -> int:
             }:
                 return "an ineligible subsystem lost its vocabulary row"
             for sid in ("B-04", "B-05", "B-06"):
-                if not NO_PURPOSE_PATTERN.search(subsystem_page(docs_of("ineligible"), sid)):
+                if not NO_PURPOSE_PATTERN.search(subsystem_text(docs_of("ineligible"), sid)):
                     return f"{sid} in the ineligible store does not print the no-purpose sentence"
             return None
 
@@ -980,11 +1031,10 @@ def main() -> int:
         def overview_unchanged() -> str | None:
             if (why := published("good")) or (why := published("baseline")):
                 return why
-            for name in ("index.md", "index.html"):
-                with_rows = page("good", name)
-                without = page("baseline", name)
-                if not with_rows or with_rows != without:
-                    return f"{name} differs between a store with explanation rows and one with none"
+            with_rows = page("good", "index.html")
+            without = page("baseline", "index.html")
+            if not with_rows or with_rows != without:
+                return "index.html differs between a store with explanation rows and one with none"
             return None
 
         check("the overview is byte-identical with and without explanation rows", overview_unchanged)
@@ -992,14 +1042,12 @@ def main() -> int:
         def no_rows_unchanged() -> str | None:
             if (why := published("plain")) or (why := published("baseline")):
                 return why
-            for rel in ("index.md", "master-plan.md"):
-                text = page("plain", rel)
-                if rel == "master-plan.md":
-                    # With no explanation row anywhere every cell is the not-recorded label.
-                    if text.count(LABEL_NOT_RECORDED) < len(SUBSYSTEMS):
-                        return "a store with no explanation rows does not label every purpose"
-                elif text != page("baseline", rel):
-                    return f"{rel} differs between two stores with no explanation rows"
+            # With no explanation row anywhere every purpose is the not-recorded label.
+            master = plain(article_of(page("plain", "master-plan.html")))
+            if master.count(LABEL_NOT_RECORDED) < len(SUBSYSTEMS):
+                return "a store with no explanation rows does not label every purpose"
+            if page("plain", "index.html") != page("baseline", "index.html"):
+                return "index.html differs between two stores with no explanation rows"
             return None
 
         check("a store with no explanation rows labels every purpose as not recorded", no_rows_unchanged)

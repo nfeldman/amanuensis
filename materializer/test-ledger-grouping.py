@@ -19,7 +19,7 @@ Turns red when:
   - a group's head line does not carry the reason in bold, the classification, the
     file count and the revision label with the short revision;
   - a path is not its own nested list item, or an anchor is absent or repeated, or
-    a `files.md` link no longer resolves to an anchor on the page;
+    a `files.html` link no longer resolves to an anchor on the page;
   - a candidate or exempt group says `examined at`, or an examined group does not;
   - a group with two revisions does not say `<label> 2 revisions` and give each
     path its own short revision;
@@ -46,6 +46,7 @@ import sys
 import tempfile
 from collections.abc import Callable
 from hashlib import sha1
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -211,21 +212,68 @@ def read(path: Path) -> str:
         return ""
 
 
-def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level or higher."""
+class Node:
+    def __init__(self, tag: str, parent: Node | None, attrs: dict[str, str | None]) -> None:
+        self.tag = tag
+        self.parent = parent
+        self.attrs = attrs
+        self.children: list[Node | str] = []
 
-    marker = "#" * level + " "
-    body: list[str] = []
-    inside = False
-    for line in text.splitlines():
-        if not inside:
-            inside = line.startswith(marker) and line[len(marker):].strip() == heading
-            continue
-        depth = len(line) - len(line.lstrip("#"))
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body)
+    def text(self) -> str:
+        return "".join(c if isinstance(c, str) else c.text() for c in self.children)
+
+    def walk(self):
+        yield self
+        for child in self.children:
+            if isinstance(child, Node):
+                yield from child.walk()
+
+
+_VOID = {"br", "hr", "img", "meta", "link", "input"}
+
+
+class TreeBuilder(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.root = Node("#root", None, {})
+        self.cursor = self.root
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        node = Node(tag, self.cursor, dict(attrs))
+        self.cursor.children.append(node)
+        if tag not in _VOID:
+            self.cursor = node
+
+    def handle_endtag(self, tag: str) -> None:
+        node: Node | None = self.cursor
+        while node is not None and node.tag != tag:
+            node = node.parent
+        if node is not None and node.parent is not None:
+            self.cursor = node.parent
+
+    def handle_data(self, data: str) -> None:
+        self.cursor.children.append(data)
+
+
+def parse_html(text: str) -> Node:
+    builder = TreeBuilder()
+    builder.feed(text)
+    return builder.root
+
+
+def words(text: str) -> str:
+    return " ".join(text.split())
+
+
+def ledger_list(page: Node) -> Node | None:
+    """The `<ul>` of groups that follows the File ledger heading."""
+
+    for node in page.walk():
+        if node.tag == "h3" and node.attrs.get("id") == "file-ledger" and node.parent is not None:
+            siblings = [c for c in node.parent.children if isinstance(c, Node)]
+            after = siblings[siblings.index(node) + 1 :]
+            return next((c for c in after if c.tag == "ul"), None)
+    return None
 
 
 def subsystem_file(docs: Path, suffix: str) -> Path | None:
@@ -233,19 +281,33 @@ def subsystem_file(docs: Path, suffix: str) -> Path | None:
     return pages[0] if pages else None
 
 
-HEAD_LINE = re.compile(r"^- \*\*(?P<why>.+?)\*\* — (?P<cls>[a-z-]+), (?P<n>\d+) files?, (?P<rev>.*)$")
+HEAD_LINE = re.compile(r"^(?P<why>.+?) — (?P<cls>[a-z-]+), (?P<n>\d+) files?, (?P<rev>.*)$")
 
 
-def parse_groups(ledger: str) -> list[dict[str, object]]:
-    """Each top-level `- **reason**` line with the nested items beneath it."""
+def parse_groups(ledger: Node | None) -> list[dict[str, object]]:
+    """Each top-level group item (reason in bold, then its head) with the nested path items beneath it."""
 
     groups: list[dict[str, object]] = []
-    for line in ledger.splitlines():
-        m = HEAD_LINE.match(line)
-        if m:
-            groups.append({**m.groupdict(), "head": line, "items": []})
-        elif groups and re.match(r"^\s+- ", line):
-            groups[-1]["items"].append(line)  # type: ignore[union-attr]
+    for item in (c for c in ledger.children if isinstance(c, Node) and c.tag == "li") if ledger else ():
+        head = words(
+            "".join(c if isinstance(c, str) else c.text() for c in item.children if not (isinstance(c, Node) and c.tag == "ul"))
+        )
+        m = HEAD_LINE.match(head)
+        if not m:
+            continue
+        lead = next((c for c in item.children if isinstance(c, Node)), None)
+        bold = lead is not None and lead.tag == "strong" and words(lead.text()) == m["why"]
+        nested = [
+            li
+            for ul in item.children
+            if isinstance(ul, Node) and ul.tag == "ul"
+            for li in ul.children
+            if isinstance(li, Node) and li.tag == "li"
+        ]
+        has_code = any(isinstance(c, Node) and c.tag == "code" for c in item.children)
+        groups.append(
+            {**m.groupdict(), "head": head, "items": [words(li.text()) for li in nested], "nodes": nested, "has_code": has_code, "bold": bold}
+        )
     return groups
 
 
@@ -263,20 +325,22 @@ def main() -> int:
             seed_error = f"the fixture could not be seeded — {scrub(exc)}"
         outcome = publish(storage) if seed_error is None else {}
         docs = storage / "docs"
-        md_path = subsystem_file(docs, "md")
         html_path = subsystem_file(docs, "html")
-        page = read(md_path) if md_path else ""
         html = read(html_path) if html_path else ""
-        files_md = read(docs / "files.md")
-        ledger = section(page, "File ledger", level=3)
-        groups = parse_groups(ledger)
+        page = parse_html(html)
+        files_hrefs = [
+            n.attrs.get("href") or "" for n in parse_html(read(docs / "files.html")).walk() if n.tag == "a"
+        ]
+        ledger_node = ledger_list(page)
+        ledger = words(ledger_node.text()) if ledger_node else ""
+        groups = parse_groups(ledger_node)
 
         def published() -> str | None:
             if seed_error:
                 return seed_error
             if outcome.get("returncode") != 0:
                 return f"the materializer failed — {outcome.get('diagnostic')}"
-            if not page or not ledger.strip():
+            if not html or not ledger.strip():
                 return "the subsystem page or its file ledger could not be read"
             return None
 
@@ -299,8 +363,10 @@ def main() -> int:
             seen = [(str(g["why"]), str(g["cls"]), int(str(g["n"]))) for g in groups]
             if seen != EXPECTED_GROUPS:
                 return f"the groups are {seen}, not {EXPECTED_GROUPS}"
+            if not all(g["bold"] for g in groups):
+                return "a group's head does not carry its reason in bold"
             shared = next(g for g in groups if g["why"] == R_SHARED)
-            if str(shared["rev"]).strip() != f"examined at `{SHA1[:8]}`":
+            if str(shared["rev"]).strip() != f"examined at {SHA1[:8]}":
                 return f"the shared group's revision reads `{shared['rev']}`"
             if len(shared["items"]) != 40:  # type: ignore[arg-type]
                 return "the shared group does not list its 40 paths beneath it"
@@ -314,12 +380,17 @@ def main() -> int:
                 return why
             for path, *_ in ROWS:
                 a = anchor(path)
-                n = page.count(f'<a id="{a}"></a>')
+                n = sum(1 for node in page.walk() if node.attrs.get("id") == a)
                 if n != 1:
                     return f"the anchor for `{path}` appears {n} times, not once"
-                items = [ln for ln in ledger.splitlines() if f'<a id="{a}"></a>' in ln]
-                if not re.match(rf'^\s{{2,}}- <a id="{a}"></a>`{re.escape(path)}`', items[0]):
-                    return f"`{path}` is not its own nested list item: `{items[0].strip()[:80]}`"
+                items = [
+                    node
+                    for g in groups
+                    for node in g["nodes"]  # type: ignore[attr-defined]
+                    if any(isinstance(c, Node) and c.attrs.get("id") == a for c in node.children)
+                ]
+                if not items or not words(items[0].text()).startswith(path):
+                    return f"`{path}` is not its own nested list item: `{words(items[0].text())[:80] if items else ''}`"
             for g in groups:
                 if len(g["items"]) != int(str(g["n"])):  # type: ignore[arg-type]
                     return f"the group `{str(g['why'])[:24]}` says {g['n']} files and lists {len(g['items'])}"  # type: ignore[arg-type]
@@ -332,13 +403,13 @@ def main() -> int:
                 return why
             for path, *_ in ROWS:
                 a = anchor(path)
-                if f"#{a})" not in files_md:
-                    return f"files.md no longer links to the ledger entry for `{path}`"
-                if f'<a id="{a}"></a>' not in page:
-                    return f"files.md links to #{a} and the page has no such anchor"
+                if not any(href.endswith(f"#{a}") for href in files_hrefs):
+                    return f"files.html no longer links to the ledger entry for `{path}`"
+                if not any(node.attrs.get("id") == a for node in page.walk()):
+                    return f"files.html links to #{a} and the page has no such anchor"
             return None
 
-        check("files.md links still resolve", files_links)
+        check("files.html links still resolve", files_links)
 
         # -- 4. the revision label ----------------------------------------------
         def labels() -> str | None:
@@ -354,9 +425,13 @@ def main() -> int:
                 else:
                     if "examined at" in rev:
                         return f"a {g['cls']} group says `examined at`: `{g['head']}`"
-                    if not rev.startswith(f"recorded at `{SHA1[:8]}`"):
+                    if not rev.startswith(f"recorded at {SHA1[:8]}"):
                         return f"a {g['cls']} group's revision reads `{rev}`, not `recorded at`"
-            if any("examined at" in ln for ln in ledger.splitlines() if ", candidate," in ln or ", generated-ignore," in ln):
+            if any(
+                "examined at" in str(g["head"])
+                for g in groups
+                if ", candidate," in str(g["head"]) or ", generated-ignore," in str(g["head"])
+            ):
                 return "a candidate or exempt line says `examined at`"
             return None
 
@@ -371,10 +446,10 @@ def main() -> int:
             if str(g["rev"]).strip() != "examined at 2 revisions":
                 return f"the two-revision group's head reads `{g['rev']}`"
             for item, sha in zip(g["items"], (SHA1, SHA2), strict=False):  # type: ignore[arg-type]
-                if f"(`{sha[:8]}`)" not in str(item):
+                if f"({sha[:8]})" not in str(item):
                     return f"a path in the two-revision group lacks its own `({sha[:8]})`"
             single = next(g for g in groups if g["why"] == R_SHARED)
-            if any("(`" in str(item) for item in single["items"]):  # type: ignore[arg-type]
+            if any(re.search(r"\([0-9a-f]{8}\)", str(item)) for item in single["items"]):  # type: ignore[arg-type]
                 return "a single-revision group prints a revision on each path"
             return None
 
@@ -390,7 +465,7 @@ def main() -> int:
             norev = next((g for g in groups if g["why"] == R_NOREV), None)
             if norev is None or "no revision recorded" not in str(norev["rev"]):
                 return "the row with no revision does not print `no revision recorded`"
-            if "—" in "".join(str(g["rev"]) for g in groups if "`" in str(g["rev"])):
+            if "—" in "".join(str(g["rev"]) for g in groups if g["has_code"]):
                 return "a revision slot prints a bare dash"
             return None
 
@@ -402,11 +477,11 @@ def main() -> int:
             if (why := published()):
                 return why
             for reason, head, own in (
-                (R_MIX_ONE, f"examined at `{SHA1[:8]}`", ("", "(no revision recorded)")),
+                (R_MIX_ONE, f"examined at {SHA1[:8]}", ("", "(no revision recorded)")),
                 (
                     R_MIX_TWO,
                     "examined at 2 revisions",
-                    (f"(`{SHA1[:8]}`)", f"(`{SHA2[:8]}`)", "(no revision recorded)"),
+                    (f"({SHA1[:8]})", f"({SHA2[:8]})", "(no revision recorded)"),
                 ),
             ):
                 g = next((g for g in groups if g["why"] == reason), None)
@@ -417,7 +492,7 @@ def main() -> int:
                 for item, want in zip(g["items"], own, strict=True):  # type: ignore[arg-type]
                     if want and want not in str(item):
                         return f"`{item}` does not carry `{want}`"
-                    if not want and "(" in str(item).split("`")[-1]:
+                    if not want and "(" in str(item):
                         return f"`{item}` carries a revision its group's head already gives"
             return None
 

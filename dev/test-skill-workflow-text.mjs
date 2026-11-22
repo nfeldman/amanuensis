@@ -147,8 +147,8 @@ function check() {
   const flat = ss
     .slice(beforeAt, beforeEnd < 0 ? undefined : beforeAt + beforeEnd)
     .replace(/\s+/g, " ");
-  if (!/`concerns`[^.]*`subsystem-survey` artifact/.test(flat))
-    return 'the "Before the phase starts" step does not name the `subsystem-survey` artifact `concerns` needs';
+  if (!/`concerns`[^.]*structure narrative/.test(flat))
+    return 'the "Before the phase starts" step does not name the structure narrative `concerns` needs';
   if (!/`adversarial`[^.]*disposition/.test(flat))
     return 'the "Before the phase starts" step does not name the disposition `adversarial` needs';
 

@@ -43,8 +43,8 @@ first."*
    canonical branch. Use this SHA for every `ref_sha` in this
    session.
 3. Before each phase handoff:
-   `acquire_lock(artifact_path="<id>-<slug>.md", holder_id=session_id)`.
-   Release after the phase completes.
+   `acquire_lock(artifact_path="<id>", holder_id=session_id)`, the lock
+   taken on the subsystem id. Release after the phase completes.
 
 ## Running a phase
 
@@ -62,7 +62,7 @@ Run inline only if subagents are unavailable.
 Before the phase starts, apply the "before the phase starts" rows of
 the table below. The server checks the previous pass's output:
 
-- `concerns` needs the registered `subsystem-survey` artifact (Phase 2's
+- `concerns` needs a structure narrative, recorded or declined (Phase 2's
   output).
 - `adversarial` needs at least one disposition (Phase 3's output).
 
@@ -101,36 +101,26 @@ Then, once the phase has returned:
 Phase 4 returns, the subsystem is already at `adversarial`, and you
 continue straight into Phase 5:
 
-1. **Update `master-plan.md`** — the subsystem's row (status,
-   findings counts, ranked priority post-survey).
-2. **Update `findings-index.md`** — add any confirmed bugs from this
-   pass. Include severity, primary file, one-line summary, finding
-   id.
-3. **Update `entry-point.md`** — Directory Map row for this
-   subsystem if it newly appears; Confirmed Bugs section; Minimal
-   Read section if this subsystem is now load-bearing for understanding
-   the system.
-4. **Register and rehash every touched artifact**:
-   `register_artifact(path, kind, ...)` then `rehash_artifact(path,
-   ref_sha=session_sha)`.
-5. **Advance status.** Call
+1. **Settle the explanations and the narratives** (see
+   `phase-5-packaging.md`): read each with `get_explanations` and
+   `get_narratives`, then revise it with a new row or confirm it stands.
+2. **Advance status.** Call
    `update_subsystem_status(id, status="mapped")`. Refused while *"the
    store has not been reconciled against the repository at"* the
    revision being published — run `detect_changes(current_sha=<HEAD>)`
-   first and assign or exempt every unledgered path it names. Settle
-   the explanations first (see `phase-5-packaging.md`); `mapped` needs
-   the purpose and the account each recorded or declined.
-6. **Materialize**: `materialize_docs()`, so the published site shows
+   first and assign or exempt every unledgered path it names. `mapped`
+   needs the purpose and the account each recorded or declined.
+3. **Materialize**: `materialize_docs()`, so the published site shows
    the subsystem as `mapped`.
-7. **Contradiction detection.** For each finding in this pass, check
+4. **Contradiction detection.** For each finding in this pass, check
    `get_findings(subsystem_id=...)` for pre-existing findings citing
    the same file:symbol. On any incompatible classification, call
    `add_contradiction(finding_a, finding_b, shared_location,
    conflict_type)`. Do not resolve silently.
-8. **Seam assessability check.** Call `get_seam_assessability()`.
+5. **Seam assessability check.** Call `get_seam_assessability()`.
    Any seam whose status just flipped to `assessable` is queued for
    seam assessment (see the main SKILL.md "Seam assessment" section).
-9. **Close the session.** Call `end_session(outcome="completed")`.
+6. **Close the session.** Call `end_session(outcome="completed")`.
 
 ## When a phase can't produce what the next one needs
 

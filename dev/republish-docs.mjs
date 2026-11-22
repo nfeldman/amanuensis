@@ -56,6 +56,7 @@ const DEPTH_RECEIPT = "design/survey-depth/acceptance-receipt.json";
 const PROGRESS_RECORD = "design/survey-depth/survey-progress.json";
 const UNFILLED_SLOTS = "design/explanation/unfilled-slots.json";
 const READER_MEASURE = "design/explanation/reader-measure.json";
+const README_PATH = "docs/README.md";
 
 // Every tracked file a later step writes. Step 2 inventories the tree, so each has
 // to exist and be tracked by then, and these are the only changes preflight allows
@@ -476,9 +477,12 @@ const STEP_FUNCTIONS = {
     ]);
 
     const status = ctx.deps.git(["status", "--porcelain", "-z", "--untracked-files=all", "--", "docs"]);
+    // The README the publication carries (store-only PLAN D10) is generated, holds
+    // nothing a reconciliation inventories, and is new to the first republish.
     const added = statusEntries(status.stdout)
       .filter((entry) => entry.code === "??")
-      .flatMap((entry) => entry.paths);
+      .flatMap((entry) => entry.paths)
+      .filter((path) => path !== README_PATH);
     if (added.length) {
       stop(
         "The promotion added pages the reconciliation did not inventory:",

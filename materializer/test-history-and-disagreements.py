@@ -63,8 +63,11 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
+
+from store_only_seed import import_onboarding
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -129,17 +132,17 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # ---------------------------------------------------------------------------
 PROJECT_NAME = "LensFixture"
 
-DISAGREEMENTS = "disagreements.md"
-HOT_SPOTS = "hot-spots.md"
-RESOLUTION_HISTORY = "resolution-history.md"
-RESOLVED_LEADS = "resolved-leads.md"
-SESSIONS_PAGE = "sessions.md"
-CONTRADICTIONS = "contradictions.md"
-RESOLVED_FINDINGS = "resolved-findings.md"
-FINDINGS_PAGE = "findings.md"
-OPEN_QUESTIONS = "open-questions.md"
-FIELD_NOTES = "field-notes.md"
-HOW_TO_READ = "how-to-read.md"
+DISAGREEMENTS = "disagreements.html"
+HOT_SPOTS = "hot-spots.html"
+RESOLUTION_HISTORY = "resolution-history.html"
+RESOLVED_LEADS = "resolved-leads.html"
+SESSIONS_PAGE = "sessions.html"
+CONTRADICTIONS = "contradictions.html"
+RESOLVED_FINDINGS = "resolved-findings.html"
+FINDINGS_PAGE = "findings.html"
+OPEN_QUESTIONS = "open-questions.html"
+FIELD_NOTES = "field-notes.html"
+HOW_TO_READ = "how-to-read.html"
 
 # §7.1's group for each new page.
 EXPECTED_GROUP_OF: dict[str, str] = {
@@ -199,7 +202,7 @@ EMPTY_LENS_PAGES: tuple[str, ...] = (
     OPEN_QUESTIONS,
     FIELD_NOTES,
     HOT_SPOTS,
-    "stale.md",
+    "stale.html",
     RESOLVED_FINDINGS,
     RESOLUTION_HISTORY,
     RESOLVED_LEADS,
@@ -454,7 +457,6 @@ def seed_empty(storage: Path) -> None:
     )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text(ENTRY_POINT)
 
 
 def seed(storage: Path) -> None:
@@ -684,11 +686,16 @@ def seed(storage: Path) -> None:
         "INSERT INTO xrefs (from_id, to_id, relationship, strength, context)"
         " VALUES ('B-01', 'B-02', 'depends-on', 'confirmed', 'the reader drains the buffer')"
     )
+    # The pages read the imports the store holds, never a file in storage.
+    import_onboarding(
+        db,
+        session_id=SESSIONS[0][0],
+        entry_point=ENTRY_POINT,
+        onboarding_report=ONBOARDING_REPORT,
+        concern_checklist=CONCERN_CHECKLIST,
+    )
     db.commit()
     db.close()
-    (storage / "entry-point.md").write_text(ENTRY_POINT)
-    (storage / "onboarding-report.md").write_text(ONBOARDING_REPORT)
-    (storage / "concern-checklist.md").write_text(CONCERN_CHECKLIST)
 
 
 def record_access(storage: Path) -> None:
@@ -735,73 +742,102 @@ def read(path: Path) -> str | None:
         return None
 
 
-def section(text: str, heading: str, level: int = 2) -> str:
-    """The body of one Markdown section, up to the next heading of its level."""
+class _Visible(HTMLParser):
+    """The text a reader sees: tags, comments, scripts and styles dropped."""
 
-    lines = text.splitlines()
-    marker = "#" * level + " "
-    start = None
-    for index, line in enumerate(lines):
-        if line.startswith(marker) and line[len(marker):].strip() == heading:
-            start = index + 1
-            break
-    if start is None:
-        return ""
-    body: list[str] = []
-    for line in lines[start:]:
-        stripped = line.lstrip("#")
-        depth = len(line) - len(stripped)
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body)
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.hidden = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("script", "style"):
+            self.hidden += 1
+        elif tag in ("td", "th", "dt", "dd", "li", "p", "div", "tr"):
+            self.parts.append(" ")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("script", "style"):
+            self.hidden -= 1
+        elif tag in ("td", "th", "dt", "dd", "li", "p", "div", "tr"):
+            self.parts.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        if not self.hidden:
+            self.parts.append(data)
+
+
+def plain(fragment: str) -> str:
+    """The visible text of an HTML fragment on one line, whitespace collapsed."""
+
+    parser = _Visible()
+    parser.feed(fragment)
+    parser.close()
+    return " ".join("".join(parser.parts).split())
+
+
+def article(text: str) -> str:
+    """A page's article, without the navigation, footer and scripts around it."""
+
+    # Record blocks inside a page are `article` elements too, so the page's own
+    # article is the one classed `content`, closed by the last `</article>`.
+    start, end = text.find('<article class="content'), text.rfind("</article>")
+    return text[start:end] if start != -1 and end != -1 else text
+
+
+_HEADING_RE = re.compile(r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.S)
+
+
+def section(text: str, heading: str, level: int = 2) -> str:
+    """The HTML of one section, up to the next heading of its level or above."""
+
+    found = list(_HEADING_RE.finditer(text))
+    for index, match in enumerate(found):
+        if int(match.group(1)) != level:
+            continue
+        if plain(match.group(2)).lstrip("\u00a7").strip() != heading:
+            continue
+        stop = len(text)
+        for later in found[index + 1 :]:
+            if int(later.group(1)) <= level:
+                stop = later.start()
+                break
+        return text[match.end() : stop]
+    return ""
 
 
 def headings(text: str, level: int = 2) -> list[str]:
-    marker = "#" * level + " "
     return [
-        line[len(marker):].strip() for line in text.splitlines() if line.startswith(marker)
+        plain(match.group(2)).lstrip("\u00a7").strip()
+        for match in _HEADING_RE.finditer(text)
+        if int(match.group(1)) == level
     ]
 
 
 def tables(body: str) -> list[tuple[list[str], list[list[str]]]]:
-    """Every Markdown table in `body` as (headers, data rows)."""
+    """Every HTML table in `body` as (header texts, data rows of cell texts)."""
 
     out: list[tuple[list[str], list[list[str]]]] = []
-    lines = body.splitlines()
-    index = 0
-    while index < len(lines):
-        line = lines[index].strip()
-        if not line.startswith("|"):
-            index += 1
-            continue
-        cells = [cell.strip() for cell in line.strip("|").split("|")]
-        separator = lines[index + 1].strip() if index + 1 < len(lines) else ""
-        parts = [cell.strip() for cell in separator.strip("|").split("|")]
-        if not (
-            separator.startswith("|")
-            and parts
-            and all(set(cell) <= {"-", ":"} and cell for cell in parts)
-        ):
-            index += 1
-            continue
-        rows: list[list[str]] = []
-        index += 2
-        while index < len(lines) and lines[index].strip().startswith("|"):
-            rows.append(
-                [cell.strip() for cell in lines[index].strip().strip("|").split("|")]
-            )
-            index += 1
-        out.append((cells, rows))
+    for table in re.findall(r"<table\b.*?</table>", body, flags=re.S):
+        head = re.search(r"<thead\b.*?</thead>", table, flags=re.S)
+        headers = (
+            [plain(cell) for cell in re.findall(r"<th\b[^>]*>(.*?)</th>", head.group(0), flags=re.S)]
+            if head
+            else []
+        )
+        rest = table[head.end() :] if head else table
+        rows = [
+            [plain(cell) for cell in re.findall(r"<td\b[^>]*>(.*?)</td>", row, flags=re.S)]
+            for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", rest, flags=re.S)
+        ]
+        out.append((headers, rows))
     return out
 
 
-def plain(cell: str) -> str:
-    """A table cell's text with Markdown link and emphasis syntax removed."""
+def slug(text: str) -> str:
+    """A label as the store's value for it: `Pattern matched` is `pattern-matched`."""
 
-    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", cell)
-    text = re.sub(r"<a id=\"[^\"]*\"></a>", "", text)
-    return text.replace("**", "").replace("`", "").strip()
+    return text.lower().replace(" ", "-")
 
 
 def nav_group_of(html_text: str, page_html: str) -> str | None:
@@ -845,8 +881,8 @@ def main() -> int:
         summary = publish(storage, "--clean-publish") if seed_error is None else {}
         docs = storage / "docs"
         page: dict[str, str] = {}
-        for rel in sorted(p.name for p in docs.glob("*.md")) if docs.is_dir() else []:
-            page[rel] = read(docs / rel) or ""
+        for rel in sorted(p.name for p in docs.glob("*.html")) if docs.is_dir() else []:
+            page[rel] = article(read(docs / rel) or "")
         index_html = read(docs / "index.html") or ""
 
         def publish_is_green() -> str | None:
@@ -868,12 +904,9 @@ def main() -> int:
             missing = [rel for rel in EXPECTED_GROUP_OF if rel not in page]
             if missing:
                 return f"the projection publishes no {', '.join(missing)}"
-            absent_html = [
-                rel for rel in EXPECTED_GROUP_OF
-                if not (docs / rel.replace(".md", ".html")).is_file()
-            ]
-            if absent_html:
-                return f"no HTML companion for {', '.join(absent_html)}"
+            hollow = [rel for rel in EXPECTED_GROUP_OF if not page[rel].strip()]
+            if hollow:
+                return f"{', '.join(hollow)} publishes no article"
             return None
 
         check("disagreements, hot-spots, resolution-history, resolved-leads and sessions publish", pages_planned)
@@ -882,7 +915,7 @@ def main() -> int:
             if not index_html:
                 return "the published index.html is not readable"
             for rel, group in EXPECTED_GROUP_OF.items():
-                found = nav_group_of(index_html, rel.replace(".md", ".html"))
+                found = nav_group_of(index_html, rel)
                 if found is None:
                     return f"{rel} is in no navigation group"
                 if found != group:
@@ -898,10 +931,10 @@ def main() -> int:
             if not disagreements:
                 return f"{DISAGREEMENTS} is absent or empty"
             for cid in UNRESOLVED_CONTRADICTIONS:
-                if f'<a id="contradiction-{cid}"></a>' not in disagreements:
+                if f'id="contradiction-{cid}"' not in disagreements:
                     return f"contradiction {cid} has no record on {DISAGREEMENTS}"
             for mid in COMPETING_MATRICES:
-                if f"diagnosticity/dm-{mid}.md" not in disagreements:
+                if f'href="diagnosticity/dm-{mid}.html"' not in disagreements:
                     return (
                         f"matrix DM-{mid} is not linked from {DISAGREEMENTS}; §7.1 lists"
                         " open and unresolved-competition matrices there"
@@ -909,7 +942,7 @@ def main() -> int:
             subsystem, concern = UNDISCRIMINATED_DISPOSITION
             if not re.search(
                 rf"{re.escape(subsystem)}[\s\S]{{0,400}}{re.escape(concern)}",
-                disagreements,
+                plain(disagreements),
             ):
                 return (
                     f"the unresolved-competition disposition ({subsystem}, {concern})"
@@ -917,7 +950,7 @@ def main() -> int:
                 )
             return None
 
-        check("disagreements.md carries the contradictions, matrices and dispositions that stand undiscriminated", disagreements_carry_the_undiscriminated)
+        check("disagreements.html carries the contradictions, matrices and dispositions that stand undiscriminated", disagreements_carry_the_undiscriminated)
 
         def disagreements_carry_nothing_resolved() -> str | None:
             if not disagreements:
@@ -927,14 +960,14 @@ def main() -> int:
                     f"contradiction {RESOLVED_CONTRADICTION} is resolved and still"
                     f" renders on {DISAGREEMENTS}"
                 )
-            if f"diagnosticity/dm-{SETTLED_MATRIX}.md" in disagreements:
+            if f'href="diagnosticity/dm-{SETTLED_MATRIX}.html"' in disagreements:
                 return f"the settled matrix DM-{SETTLED_MATRIX} is listed on {DISAGREEMENTS}"
             for fid, _sid, _sev, _st, state, _at in FINDINGS:
                 if state in ("verified-fixed", "ruled-out", "accepted") and fid in disagreements:
                     return f"{fid} has reached a terminal state and appears on {DISAGREEMENTS}"
             return None
 
-        check("disagreements.md carries nothing already resolved", disagreements_carry_nothing_resolved)
+        check("disagreements.html carries nothing already resolved", disagreements_carry_nothing_resolved)
 
         def competing_matrix_reaches_no_history_page() -> str | None:
             token = f"dm-{[m for m in MATRICES if m[2] == 'unresolved-competition'][0][0]}"
@@ -942,7 +975,7 @@ def main() -> int:
                 body = page.get(rel)
                 if body is None:
                     return f"{rel} is absent, so the partition cannot be read"
-                if f"diagnosticity/{token}.md" in body:
+                if f'href="diagnosticity/{token}.html"' in body:
                     return (
                         f"the unresolved-competition matrix is listed on {rel}, a History"
                         " page; §1.1 puts no record in both lenses"
@@ -955,7 +988,7 @@ def main() -> int:
             body = page.get(CONTRADICTIONS)
             if not body:
                 return f"{CONTRADICTIONS} is absent or empty"
-            if f'<a id="contradiction-{RESOLVED_CONTRADICTION}"></a>' not in body:
+            if f'id="contradiction-{RESOLVED_CONTRADICTION}"' not in body:
                 return (
                     f"the resolved contradiction {RESOLVED_CONTRADICTION} has no record on"
                     f" {CONTRADICTIONS}"
@@ -968,7 +1001,7 @@ def main() -> int:
                     )
             return None
 
-        check("contradictions.md keeps only the disagreements the evidence settled", contradictions_narrowed)
+        check("contradictions.html keeps only the disagreements the evidence settled", contradictions_narrowed)
 
         # -- hot-spots.md ----------------------------------------------------
         hot_spots = page.get(HOT_SPOTS, "")
@@ -994,7 +1027,7 @@ def main() -> int:
                 )
             return None
 
-        check("hot-spots.md carries §7.6's separate measures and no composite column", hot_spot_columns)
+        check("hot-spots.html carries §7.6's separate measures and no composite column", hot_spot_columns)
 
         def hot_spot_has_no_composite() -> str | None:
             if not hot_spots:
@@ -1015,7 +1048,7 @@ def main() -> int:
                 )
             return None
 
-        check("hot-spots.md carries one row per subsystem and no total row", hot_spot_has_no_composite)
+        check("hot-spots.html carries one row per subsystem and no total row", hot_spot_has_no_composite)
 
         def hot_spot_values() -> str | None:
             if not hot_spots:
@@ -1039,7 +1072,7 @@ def main() -> int:
                 for column, (value, want) in enumerate(
                     zip(row[1:], expected[1:], strict=False), start=1
                 ):
-                    if value != want:
+                    if value != want and slug(value) != want:
                         return (
                             f"{expected[0]} reports {value!r} under"
                             f" {HOT_SPOT_COLUMNS[column]!r}, not {want!r}"
@@ -1083,7 +1116,7 @@ def main() -> int:
                 return f"{RESOLUTION_HISTORY} is absent or empty"
             reverse = {target: token for token, target in EXPECTED_EVENT_TARGET.items()}
             seen: list[str] = []
-            for target in re.findall(r"\]\(([^)]+)\)", timeline):
+            for target in re.findall(r'href="([^"]+)"', timeline):
                 token = reverse.get(target.strip())
                 if token and (not seen or seen[-1] != token):
                     seen.append(token)
@@ -1102,7 +1135,7 @@ def main() -> int:
                 )
             return None
 
-        check("resolution-history.md is newest-first and links every event to its record", timeline_is_newest_first)
+        check("resolution-history.html is newest-first and links every event to its record", timeline_is_newest_first)
 
         def timeline_covers_both_event_tables() -> str | None:
             if not timeline:
@@ -1115,7 +1148,7 @@ def main() -> int:
                     )
             return None
 
-        check("resolution-history.md spans finding and contradiction events alike", timeline_covers_both_event_tables)
+        check("resolution-history.html spans finding and contradiction events alike", timeline_covers_both_event_tables)
 
         # -- resolved-leads.md ------------------------------------------------
         leads = page.get(RESOLVED_LEADS, "")
@@ -1145,17 +1178,17 @@ def main() -> int:
                     return f"open lead {nid} renders on the History page"
             return None
 
-        check("resolved-leads.md carries the closed questions and leads in their recorded order", resolved_leads_membership)
+        check("resolved-leads.html carries the closed questions and leads in their recorded order", resolved_leads_membership)
 
         def resolved_leads_state_their_limit() -> str | None:
             if not leads:
                 return f"{RESOLVED_LEADS} is absent or empty"
-            if QUESTION_LIMIT not in leads:
+            if QUESTION_LIMIT not in plain(leads):
                 return (
                     "the questions group does not state what the store records about how"
                     f" they were resolved; §1.1 fixes the sentence: {QUESTION_LIMIT!r}"
                 )
-            if LEAD_LIMIT not in leads:
+            if LEAD_LIMIT not in plain(leads):
                 return (
                     "the leads group does not state what the store records about how they"
                     f" were closed; §1.1 fixes the sentence: {LEAD_LIMIT!r}"
@@ -1189,7 +1222,7 @@ def main() -> int:
 
         # -- sessions.md ------------------------------------------------------
         def sessions_page_is_complete() -> str | None:
-            body = page.get(SESSIONS_PAGE)
+            body = plain(page.get(SESSIONS_PAGE, ""))
             if not body:
                 return f"{SESSIONS_PAGE} is absent or empty"
             for sid, intent, started, ended, outcome in SESSIONS:
@@ -1210,10 +1243,11 @@ def main() -> int:
                     return f"the verification run does not report its {axis} axis"
             return None
 
-        check("sessions.md carries the sessions, refresh runs and verification runs", sessions_page_is_complete)
+        check("sessions.html carries the sessions, refresh runs and verification runs", sessions_page_is_complete)
 
         # -- the basis a resolution rests on (§7.7) ---------------------------
-        resolved = page.get(RESOLVED_FINDINGS, "")
+        resolved_html = page.get(RESOLVED_FINDINGS, "")
+        resolved = plain(resolved_html)
 
         def basis_is_labelled_by_kind() -> str | None:
             if not resolved:
@@ -1225,7 +1259,9 @@ def main() -> int:
                         " kind because the schema requires different things of different"
                         " states"
                     )
-            if "test-observed" not in resolved:
+            # The page words an evidence kind as a label, `Test observed`; the kind
+            # itself is the class that label carries.
+            if "evidence-test-observed" not in resolved_html:
                 return (
                     f"{EVIDENCE_BACKED} is verified-fixed and its basis does not name the"
                     " kind of the evidence row that verified it"
@@ -1251,9 +1287,9 @@ def main() -> int:
                 )
             if NO_BASIS_HEADING not in resolved:
                 return f"the page carries no {NO_BASIS_HEADING!r} section"
-            body = section(resolved, NO_BASIS_HEADING)
+            body = plain(section(resolved_html, NO_BASIS_HEADING))
             if not body.strip():
-                body = section(resolved, NO_BASIS_HEADING, level=3)
+                body = plain(section(resolved_html, NO_BASIS_HEADING, level=3))
             if not body.strip():
                 return f"the {NO_BASIS_HEADING!r} section is empty"
             for fid in NO_BASIS_FINDINGS:
@@ -1280,7 +1316,7 @@ def main() -> int:
             import hashlib
 
             corpus = "\n".join(
-                read(path) or "" for path in sorted(docs.rglob("*.md")) if path.is_file()
+                read(path) or "" for path in sorted(docs.rglob("*.html")) if path.is_file()
             )
             for fid in FINDING_IDS:
                 token = hashlib.sha256(fid.encode("utf-8")).hexdigest()
@@ -1288,14 +1324,14 @@ def main() -> int:
                 if corpus.count(marker) != 1:
                     return (
                         f"{fid} carries {corpus.count(marker)} durable markers across the"
-                        " Markdown corpus, not exactly one (§6.2)"
+                        " HTML corpus, not exactly one (§6.2)"
                     )
             return None
 
         check("each finding keeps exactly one durable marker", one_marker_per_finding)
 
         def terminal_records_leave_the_unresolved_lens() -> str | None:
-            questions = page.get(OPEN_QUESTIONS)
+            questions = plain(page.get(OPEN_QUESTIONS, ""))
             if not questions:
                 return f"{OPEN_QUESTIONS} is absent or empty"
             for qid in RESOLVED_QUESTION_ORDER:
@@ -1306,7 +1342,7 @@ def main() -> int:
                     )
             if f"Question {OPEN_QUESTION_IDS[0]}:" not in questions:
                 return f"the open question is no longer on {OPEN_QUESTIONS}"
-            notes = page.get(FIELD_NOTES)
+            notes = plain(page.get(FIELD_NOTES, ""))
             if not notes:
                 return f"{FIELD_NOTES} is absent or empty"
             for nid in CLOSED_NOTE_ORDER:
@@ -1314,18 +1350,20 @@ def main() -> int:
                     return f"closed lead {nid}'s observation still renders on {FIELD_NOTES}"
             if f"Lead {OPEN_NOTE_IDS[0]}:" not in notes:
                 return f"the open lead is no longer on {FIELD_NOTES}"
+            leads_text = plain(leads)
             for qid in RESOLVED_QUESTION_ORDER:
-                if f"Question {qid}:" not in leads:
+                if f"Question {qid}:" not in leads_text:
                     return f"question {qid} left {OPEN_QUESTIONS} without reaching {RESOLVED_LEADS}"
             for nid in CLOSED_NOTE_ORDER:
-                if f"Lead {nid}:" not in leads:
+                if f"Lead {nid}:" not in leads_text:
                     return f"lead {nid} left {FIELD_NOTES} without reaching {RESOLVED_LEADS}"
             return None
 
         check("every closed question and lead moved rather than vanished", terminal_records_leave_the_unresolved_lens)
 
         # -- how-to-read.md, generated from the enum source (§7.8, §10) -------
-        guide = page.get(HOW_TO_READ, "")
+        guide_html = page.get(HOW_TO_READ, "")
+        guide = plain(guide_html)
 
         def guide_is_generated_from_the_contract() -> str | None:
             if not guide:
@@ -1359,31 +1397,31 @@ def main() -> int:
                             )
             return None
 
-        check("how-to-read.md is generated from conspectus-vocabulary.json", guide_is_generated_from_the_contract)
+        check("how-to-read.html is generated from conspectus-vocabulary.json", guide_is_generated_from_the_contract)
 
         def guide_routes_every_published_page() -> str | None:
             if not guide:
                 return f"{HOW_TO_READ} is absent or empty"
-            body = section(guide, "Pages on this site")
+            body = section(guide_html, "Pages on this site")
             if not body.strip():
                 return "the reader's guide carries no 'Pages on this site' section"
             published = sorted(
-                str(path.relative_to(docs)) for path in docs.rglob("*.md") if path.is_file()
+                str(path.relative_to(docs)) for path in docs.rglob("*.html") if path.is_file()
             )
             # One row per subgroup (PLAN §2.4): a subsystem page or an evidence
             # matrix is routed through the page its subgroup row links to, which
             # must list it.
-            listing = {"subsystems/": "master-plan.md", "diagnosticity/": "diagnosticity.md"}
+            listing = {"subsystems/": "master-plan.html", "diagnosticity/": "diagnosticity.html"}
             for rel in published:
                 family = next((d for d in listing if rel.startswith(d)), None)
                 if family:
                     routed = (docs / listing[family]).read_text()
-                    if f"]({listing[family]})" not in body or f"]({rel})" not in routed:
+                    if f'href="{listing[family]}"' not in body or f'href="{rel}"' not in routed:
                         return (
                             f"{rel} is published and neither the guide's subgroup row nor"
                             f" {listing[family]} routes to it"
                         )
-                elif f"]({rel})" not in body:
+                elif f'href="{rel}"' not in body:
                     return (
                         f"{rel} is published and is not routed from the reader's guide;"
                         " §7.8 generates that table from the page plan"
@@ -1406,7 +1444,7 @@ def main() -> int:
                     "the republish after recording an access was not green;"
                     f" {scrub(again.get('_diagnostic'))[:200]}"
                 )
-            body = read(docs / HOT_SPOTS) or ""
+            body = article(read(docs / HOT_SPOTS) or "")
             if not body:
                 return f"{HOT_SPOTS} is absent after the republish"
             found = None
@@ -1457,9 +1495,10 @@ def main() -> int:
                     f" {scrub(empty_summary.get('_diagnostic'))[:200]}"
                 )
             for rel in EMPTY_LENS_PAGES:
-                body = read(empty_docs / rel)
-                if body is None:
+                raw = read(empty_docs / rel)
+                if raw is None:
                     return f"{rel} is not published for an empty store"
+                body = plain(article(raw))
                 for label in EMPTY_LABELS:
                     if label not in body:
                         return (

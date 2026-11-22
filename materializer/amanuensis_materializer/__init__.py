@@ -1,7 +1,7 @@
 """Amanuensis materializer package.
 
 Renders human-facing architectural documentation from a conspectus
-memory.db and the project's prose artifacts.
+memory.db. It opens no prose file in the storage directory.
 """
 from .core import Materializer
 from .renderers import PLACEHOLDER_SENTENCES

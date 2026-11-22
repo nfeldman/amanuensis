@@ -11,7 +11,7 @@ contradicts the recorded account where there is one:
   B-04  account, no claims, artifact   → survey-record placement, no claims
   B-05  account, claims, two artifacts  → survey-record placement, one dated line each
 
-Turns red when, in the Markdown or the HTML of the subsystem pages:
+Turns red when, in the HTML of the subsystem pages:
 
   - any line of B-01's artifact prose appears above the account's "How it works"
     heading;
@@ -27,7 +27,8 @@ Turns red when, in the Markdown or the HTML of the subsystem pages:
     lacks either artifact's "written on" date;
   - the narrative's provenance on B-01 to B-04 lacks "written on <artifact date>"
     (the first ten characters of the artifact's stored timestamp);
-  - an artifact file's bytes change in the publish;
+  - an imported survey body's stored bytes change in the publish, or the publish
+    writes a file into storage outside its own `docs`;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -56,6 +57,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from orientation_exposure import hidden_pages
+from store_only_seed import import_body
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -203,18 +205,30 @@ def seed(storage: Path) -> None:
                 " VALUES ('subsystem', ?, 'account', 'recorded', ?, ?, 'o13', ?)",
                 (sid, ACCOUNT_BODY, ACCOUNT_SHA, ACCOUNT_RECORDED),
             )
-        (storage / artifact_path(sid)).write_text(artifact_text(sid))
-        cur.execute(
-            "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha,"
-            " session_id, written_at) VALUES (?, 'subsystem-survey', ?, ?, ?, 'o13', ?)",
-            (artifact_path(sid), sid, HASH, NOTES_SHA, NOTES_WRITTEN),
+        # The page reads the bodies the import stored, never a file in storage
+        # (store-only PLAN §3.3).
+        import_body(
+            db,
+            artifact_path(sid),
+            "subsystem-survey",
+            artifact_text(sid),
+            session_id="o13",
+            subsystem_id=sid,
+            ref_sha=NOTES_SHA,
+            written_at=NOTES_WRITTEN,
+            registered_hash=HASH,
         )
         for path, text, sha, written in EXTRA_ARTIFACTS.get(sid, ()):
-            (storage / path).write_text(text)
-            cur.execute(
-                "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha,"
-                " session_id, written_at) VALUES (?, 'subsystem-survey', ?, ?, ?, 'o13', ?)",
-                (path, sid, HASH, sha, written),
+            import_body(
+                db,
+                path,
+                "subsystem-survey",
+                text,
+                session_id="o13",
+                subsystem_id=sid,
+                ref_sha=sha,
+                written_at=written,
+                registered_hash=HASH,
             )
     db.commit()
     db.close()
@@ -238,7 +252,7 @@ def read(path: Path) -> str:
 
 
 def pages(docs: Path, sid: str, suffix: str) -> str:
-    found = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*.{suffix}"))
+    found = sorted((docs / "subsystems").glob(f"{sid.lower().replace('-', '')}-*{suffix}"))
     return read(found[0]) if found else ""
 
 
@@ -255,19 +269,22 @@ def squash(text: str) -> str:
     return " ".join(text.split())
 
 
-def section(text: str, heading: str, level: int = 2) -> str:
-    marker = "#" * level + " "
-    body: list[str] = []
-    inside = False
-    for line in text.splitlines():
-        if not inside:
-            inside = line.startswith(marker) and line[len(marker):].strip() == heading
-            continue
-        depth = len(line) - len(line.lstrip("#"))
-        if line.startswith("#") and 0 < depth <= level:
-            break
-        body.append(line)
-    return "\n".join(body)
+def section(markup: str, heading_id: str) -> str:
+    """The reader's text of one H2 section of an HTML page, from its heading to the next H2."""
+
+    match = re.search(rf'(?is)<h2 id="{re.escape(heading_id)}".*?(?=<h2 |</article>|\Z)', markup)
+    return html_text(match.group(0)) if match else ""
+
+
+def stored_bodies(storage: Path) -> dict[str, str]:
+    db = sqlite3.connect(storage / "memory.db")
+    try:
+        return {
+            str(path): str(body)
+            for path, body in db.execute("SELECT path, body FROM imported_artifacts ORDER BY path")
+        }
+    finally:
+        db.close()
 
 
 def main() -> int:
@@ -278,17 +295,17 @@ def main() -> int:
         storage = root / "store"
         storage.mkdir()
         seed_error: str | None = None
-        before: dict[str, bytes] = {}
+        before: dict[str, str] = {}
         try:
             seed(storage)
-            before = {p.name: p.read_bytes() for p in storage.glob("*-survey.md")}
+            before = stored_bodies(storage)
         except Exception as exc:
             seed_error = f"the fixture could not be seeded — {scrub(exc)}"
         outcome = publish(storage) if seed_error is None else {}
         docs = storage / "docs"
-        md = {sid: pages(docs, sid, "md") for sid, *_ in SUBSYSTEMS}
-        html = {sid: html_text(pages(docs, sid, "html")) for sid, *_ in SUBSYSTEMS}
-        views = {"Markdown": md, "HTML": html}
+        raw = {sid: pages(docs, sid, ".html") for sid, *_ in SUBSYSTEMS}
+        html = {sid: html_text(markup) for sid, markup in raw.items()}
+        views = {"HTML": html}
 
         def published() -> str | None:
             if seed_error:
@@ -339,9 +356,10 @@ def main() -> int:
                     survey = text.rfind("Survey artifact", 0, text.find(want))
                     if survey < 0 or text.find("Survey artifact") > text.find(want):
                         return f"{sid} {view}: the dated line is not under `Survey artifact`"
-            if squash(md["B-01"]).count("*" + want + "*") != 1:
-                return "B-01 Markdown: the dated line is not one italic line"
-            if not re.search(r"<em>\s*Written on " + NOTES_DATE, read_html_raw(docs, "B-01")):
+            italic = [squash(html_text(inner)) for inner in re.findall(r"(?is)<em>(.*?)</em>", raw["B-01"])]
+            if italic.count(want) != 1:
+                return "B-01 HTML: the dated line is not one italic line"
+            if not re.search(r"<em>\s*Written on " + NOTES_DATE, raw["B-01"]):
                 return "B-01 HTML: the dated line is not italic"
             return None
 
@@ -389,23 +407,23 @@ def main() -> int:
         def provenance_dated() -> str | None:
             if (why := published()):
                 return why
-            want = f"recorded at `{NOTES_SHA[:12]}`, written on {NOTES_DATE}"
-            for sid, text in (("B-02", md["B-02"]), ("B-03", md["B-03"]), ("B-04", md["B-04"])):
-                if want not in text:
-                    return f"{sid} Markdown: the narrative's provenance lacks `{want}`"
+            want = f"recorded at {NOTES_SHA[:12]}, written on {NOTES_DATE}"
+            for sid in ("B-02", "B-03", "B-04"):
+                if want not in squash(html[sid]):
+                    return f"{sid} HTML: the narrative's provenance lacks `{want}`"
             for sid in ("B-01", "B-02", "B-03", "B-04"):
                 if f"written on {NOTES_DATE}" not in squash(html[sid]).lower():
                     return f"{sid} HTML: the provenance lacks `written on {NOTES_DATE}`"
-            structure = section(md["B-02"], "Structure")
+            structure = squash(section(raw["B-02"], "structure"))
             if f"written on {NOTES_DATE}" not in structure:
                 return "B-02: the narrative inside Structure carries no `written on` date"
-            structure = section(md["B-03"], "Structure")
+            structure = squash(section(raw["B-03"], "structure"))
             if f"written on {NOTES_DATE}" not in structure:
                 return "B-03: the fallback narrative carries no `written on` date"
-            structure = section(md["B-04"], "Structure")
+            structure = squash(section(raw["B-04"], "structure"))
             if f"written on {NOTES_DATE}" not in structure:
                 return "B-04: the pointer to the recorded account carries no `written on` date"
-            if f"written on {ACCOUNT_DATE}" in md["B-02"] + md["B-03"]:
+            if f"written on {ACCOUNT_DATE}" in html["B-02"] + html["B-03"]:
                 return "a narrative's provenance names the account's date as its own"
             return None
 
@@ -415,15 +433,21 @@ def main() -> int:
         def files_unchanged() -> str | None:
             if (why := published()):
                 return why
+            after = stored_bodies(storage)
             for name, data in before.items():
-                after = (storage / name).read_bytes() if (storage / name).is_file() else None
-                if after != data:
+                if after.get(name) != data:
                     return f"{name} was modified by the publish"
             if not before:
-                return "no artifact file was seeded"
+                return "no survey body was seeded"
+            written = sorted(
+                p.name for p in storage.iterdir() if p.name not in {"docs", "memory.db"}
+                and not p.name.startswith("memory.db-")
+            )
+            if written:
+                return f"the publish left files in storage: {written}"
             return None
 
-        check("no artifact file is modified", files_unchanged)
+        check("no survey body is modified and no file is written to storage", files_unchanged)
         check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
     finally:
         shutil.rmtree(root, ignore_errors=True)
@@ -445,10 +469,6 @@ def main() -> int:
         return 1
     emit(f"GATE {PACKET} GREEN")
     return 0
-
-
-def read_html_raw(docs: Path, sid: str) -> str:
-    return pages(docs, sid, "html")
 
 
 if __name__ == "__main__":

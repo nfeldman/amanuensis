@@ -20,8 +20,8 @@
 //     closed, or drops that claim from a historical reading at the base commit;
 //   - a subsystem with zero claims does not carry §9.1's literal
 //     "Structural inventory not recorded as claims", or carries a narrative
-//     that is not labelled `revision_bound: false`, omits the artifact's
-//     `content_hash`, or is attached beside claims;
+//     pointer that is not `revision_bound: true`, names no record id or
+//     revision, names a file, or is attached beside claims;
 //   - the structure section of a `scoped-unread` locus carries an item, a
 //     narrative, or the zero-claims sentence, when a claim cites that file and
 //     its subsystem carries claims;
@@ -68,7 +68,7 @@ const CI_REL = ".github/workflows/test.yml";
 // §9.1's literal, and §3.4's label. Written out here rather than imported so
 // that rewording the implementation cannot also reword what this gate expects.
 const NO_CLAIMS_SENTENCE = "Structural inventory not recorded as claims";
-const NARRATIVE_LABEL = "Narrative from the survey artifact; not individually bound to a revision";
+const NARRATIVE_LABEL = "Structure narrative from the survey, bound to the revision named";
 
 // §9.1's five structural categories, as the `claim_key` segment that names each
 // and the heading the subsystem page groups it under.
@@ -323,22 +323,35 @@ function buildFixture() {
      VALUES ('S-01', 'the ledger row', 'table', 'B-01', 'B-02')`,
   ).run();
 
-  // B-02 carries a survey artifact and no claim: the narrative fallback's
-  // subject. B-03 carries neither, so the fallback has to say that too.
+  // B-02 carries a recorded structure narrative and no claim: the narrative
+  // fallback's subject. B-03 carries neither, so the fallback has to say that too.
+  const narrativeBody = "The index keeps one row per key, rebuilt from the ledger.";
+  const narrativeId = Number(
+    db
+      .prepare(
+        `INSERT INTO narratives (subject_type, subject_id, section, topic, disposition, body, ref_sha, session_id)
+         VALUES ('subsystem', 'B-02', 'structure', '', 'recorded', ?, ?, ?)`,
+      )
+      .run(narrativeBody, head, ctx.sessionId).lastInsertRowid,
+  );
+  // The subsystem page is built from the body an import stored, never from the
+  // survey file (design/store-only SO8), so the page checks below read an
+  // `imported_artifacts` row. The file and its registry row stay as an earlier
+  // server wrote them: neither the tool nor the page reads them, and the
+  // pointer test below must hold with both present.
   const narrativePath = "B-02-index.md";
-  const narrativeBody =
-    "# B-02 — Index\n\nThe index keeps one row per key, rebuilt from the ledger.\n";
-  writeFileSync(join(project.storagePath, narrativePath), narrativeBody);
+  const fileBody = "# B-02 — Index\n\nThe index keeps one row per key, rebuilt from the ledger.\n";
+  const fileHash = createHash("sha256").update(fileBody).digest("hex");
+  writeFileSync(join(project.storagePath, narrativePath), fileBody);
   db.prepare(
     `INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha, session_id, bytes)
      VALUES (?, 'subsystem-survey', 'B-02', ?, ?, ?, ?)`,
-  ).run(
-    narrativePath,
-    createHash("sha256").update(narrativeBody).digest("hex"),
-    head,
-    ctx.sessionId,
-    Buffer.byteLength(narrativeBody),
-  );
+  ).run(narrativePath, fileHash, head, ctx.sessionId, Buffer.byteLength(fileBody));
+  db.prepare(
+    `INSERT INTO imported_artifacts (path, kind, subsystem_id, body, body_sha256, registered_hash,
+                                     hash_matches, registered_ref_sha, written_at, session_id)
+     VALUES (?, 'subsystem-survey', 'B-02', ?, ?, ?, 1, ?, '2026-11-12 10:00:00', ?)`,
+  ).run(narrativePath, fileBody, fileHash, fileHash, head, ctx.sessionId);
 
   const evidenceId = (path, kind, symbol, sha) =>
     call(
@@ -383,6 +396,7 @@ function buildFixture() {
     ctx,
     base,
     head,
+    narrativeId,
     ev,
     addClaim,
     call: (name, args) => call(name, args, ctx),
@@ -661,24 +675,23 @@ check("a subsystem with zero claims carries §9.1's literal and the labelled nar
     return `the statement is ${JSON.stringify(section.statement ?? null)}, not the literal §9.1 fixes`;
   }
   const narrative = section.narrative;
-  if (!narrative) return "no narrative is attached although a subsystem-survey artifact is recorded";
-  if (narrative.revision_bound !== false) return "the narrative is not marked revision_bound: false";
+  if (!narrative) return "no narrative is attached although a structure narrative is recorded";
+  if (narrative.revision_bound !== true) return "a recorded narrative is not marked revision_bound: true";
   if (narrative.label !== NARRATIVE_LABEL) {
     return `the narrative label is ${JSON.stringify(narrative.label ?? null)}`;
   }
-  if (narrative.artifact_path !== "B-02-index.md") {
-    return `the narrative points at ${JSON.stringify(narrative.artifact_path ?? null)}`;
+  if (JSON.stringify(narrative.record_ids) !== JSON.stringify([fixture.narrativeId])) {
+    return `the narrative names records ${JSON.stringify(narrative.record_ids ?? null)}, not [${fixture.narrativeId}]`;
   }
-  const stored = fixture.db
-    .prepare("SELECT content_hash FROM artifacts WHERE path = 'B-02-index.md'")
-    .get();
-  if (!stored?.content_hash) return "the fixture artifact carries no content_hash";
-  return narrative.content_hash === stored.content_hash
-    ? null
-    : `the narrative's content_hash is ${JSON.stringify(narrative.content_hash ?? null)}, not the artifact's`;
+  if (narrative.ref_sha !== fixture.head) {
+    return `the narrative's revision is ${JSON.stringify(narrative.ref_sha ?? null)}, not the one it was recorded at`;
+  }
+  return JSON.stringify(narrative).includes(".md")
+    ? "the narrative pointer names a file path"
+    : null;
 });
 
-check("a subsystem with zero claims and no artifact carries the literal and no narrative", () => {
+check("a subsystem with zero claims and no narrative carries the literal and no pointer", () => {
   const blocked = needFixture();
   if (blocked) return blocked;
   const { section } = structureOf({ locus: "B-03", sections: SECTIONS });
@@ -688,7 +701,7 @@ check("a subsystem with zero claims and no artifact carries the literal and no n
   }
   return section.narrative === undefined
     ? null
-    : "a narrative is attached although no subsystem-survey artifact is recorded";
+    : "a narrative is attached although no structure narrative is recorded";
 });
 
 check("the structure section is empty for a scoped-unread locus regardless of subsystem claims", () => {
@@ -734,14 +747,15 @@ from pathlib import Path
 
 sys.path.insert(0, sys.argv[1])
 from amanuensis_materializer.db import rows
-from amanuensis_materializer.renderers import render_subsystem
+from amanuensis_materializer.renderers import page_text, render_subsystem
 
 conn = sqlite3.connect(f"file:{sys.argv[2]}?mode=ro", uri=True)
 storage = Path(sys.argv[3])
 out = {}
 for s in rows(conn, "SELECT id, name, status, layer, scope, jump_in_reading, notes FROM subsystems ORDER BY id"):
-    text, sources = render_subsystem(conn, storage, s)
-    out[s["id"]] = {"text": text, "sources": sorted(sources)}
+    page, sources = render_subsystem(conn, storage, s)
+    # The page is a model (store-only SO15); its words, a line to a heading, item or table row, are what these checks read.
+    out[s["id"]] = {"text": page_text(page), "sources": sorted(sources)}
 sys.stdout.write(json.dumps(out))
 `;
 
@@ -845,7 +859,9 @@ check("a subsystem with zero claims renders the literal and the labelled narrati
     return "the page does not render the survey artifact's narrative under the fallback";
   }
   const stored = fixture.db
-    .prepare("SELECT content_hash, ref_sha FROM artifacts WHERE path = 'B-02-index.md'")
+    .prepare(
+      "SELECT registered_hash AS content_hash, registered_ref_sha AS ref_sha FROM imported_artifacts WHERE path = 'B-02-index.md'",
+    )
     .get();
   if (!section.includes(String(stored?.content_hash ?? "").slice(0, 12))) {
     return "the fallback does not carry the artifact's content hash";

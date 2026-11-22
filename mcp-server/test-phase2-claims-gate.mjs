@@ -143,7 +143,7 @@ const built = ensureBuilt();
 let mods = null;
 let loadError = null;
 try {
-  const [db, project, invariants, subsystems, files, artifacts, claims, evidence, projectTools, vocabulary] =
+  const [db, project, invariants, subsystems, files, artifacts, narratives, claims, evidence, projectTools, vocabulary] =
     await Promise.all([
       import("./dist/db.js"),
       import("./dist/project.js"),
@@ -151,12 +151,13 @@ try {
       import("./dist/tools/subsystems.js"),
       import("./dist/tools/files.js"),
       import("./dist/tools/artifacts.js"),
+      import("./dist/tools/narratives.js"),
       import("./dist/tools/claims.js"),
       import("./dist/tools/evidence.js"),
       import("./dist/tools/project.js"),
       import("./dist/tools/vocabulary.js"),
     ]);
-  mods = { db, project, invariants, subsystems, files, artifacts, claims, evidence, projectTools, vocabulary };
+  mods = { db, project, invariants, subsystems, files, artifacts, narratives, claims, evidence, projectTools, vocabulary };
 } catch (e) {
   loadError = e && e.message ? e.message : String(e);
 }
@@ -166,6 +167,7 @@ function toolNamed(name) {
     mods?.subsystems?.subsystemTools,
     mods?.files?.fileTools,
     mods?.artifacts?.artifactTools,
+    mods?.narratives?.narrativeTools,
     mods?.claims?.claimTools,
     mods?.evidence?.evidenceTools,
     mods?.projectTools?.projectTools,
@@ -635,8 +637,8 @@ check("reset_subsystem can still regress a claimless subsystem to structural", (
   });
   call("update_subsystem_status", { id: "B-11", status: "structural" }, fixture.ctx);
   call(
-    "register_artifact",
-    { path: "B-11-survey.md", kind: "subsystem-survey", subsystem_id: "B-11" },
+    "decline_narrative",
+    { subject_type: "subsystem", subject_id: "B-11", section: "structure", reason: "Fixture subsystem: its files say nothing specific enough to narrate.", ref_sha: fixture.base },
     fixture.ctx,
   );
   call("update_subsystem_status", { id: "B-11", status: "concerns" }, fixture.ctx);
@@ -789,8 +791,8 @@ check("a reset that stops at structural keeps the claims it did not regress past
   });
   call("update_subsystem_status", { id: "B-24", status: "structural" }, fixture.ctx);
   call(
-    "register_artifact",
-    { path: "B-24-survey.md", kind: "subsystem-survey", subsystem_id: "B-24" },
+    "decline_narrative",
+    { subject_type: "subsystem", subject_id: "B-24", section: "structure", reason: "Fixture subsystem: its files say nothing specific enough to narrate.", ref_sha: fixture.base },
     fixture.ctx,
   );
   call("update_subsystem_status", { id: "B-24", status: "concerns" }, fixture.ctx);

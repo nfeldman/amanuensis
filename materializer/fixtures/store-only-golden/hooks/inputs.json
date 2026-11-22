@@ -1,0 +1,73 @@
+{
+ "context": {
+  "canonical_branch": "main",
+  "identifier_definitions": {
+   "B-01": "Job Scheduler",
+   "SM-01": "jobs queue seam"
+  },
+  "last_checked_at": "2026-11-20T00:00:00Z",
+  "last_checked_sha": "deadbeefdeadbeef",
+  "project_name": "Hooks",
+  "repository_url": "https://github.com/acme/hooks",
+  "staleness_measured": false
+ },
+ "locus_index": {
+  "paths": [],
+  "symbols": []
+ },
+ "notice": "",
+ "pages": [
+  {
+   "group": "Overview",
+   "hint": "Every hook once.",
+   "kind": "reference",
+   "label": "Hooks",
+   "markdown_path": "hooks.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [],
+   "title": "Recognition hooks",
+   "use_when": ""
+  },
+  {
+   "group": "Codebase",
+   "hint": "",
+   "kind": "reference",
+   "label": "Architecture",
+   "markdown_path": "architecture.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [],
+   "title": "Architecture",
+   "use_when": ""
+  },
+  {
+   "group": "Codebase",
+   "hint": "",
+   "kind": "reference",
+   "label": "Seams",
+   "markdown_path": "seams.md",
+   "record_id": null,
+   "status": null,
+   "subgroup": "",
+   "terms": [],
+   "title": "Seams",
+   "use_when": ""
+  },
+  {
+   "group": "Codebase",
+   "hint": "",
+   "kind": "subsystem",
+   "label": "Job Scheduler",
+   "markdown_path": "subsystems/b-01.md",
+   "record_id": "B-01",
+   "status": "mapped",
+   "subgroup": "Subsystems",
+   "terms": [],
+   "title": "B-01 Job Scheduler",
+   "use_when": ""
+  }
+ ]
+}

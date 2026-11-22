@@ -2,8 +2,8 @@
 """A link on an unchanged page follows its target when the target moves.
 
 A beta tester's publish rendered every page and was marked failed: a finding
-had been verified fixed, so its record moved from findings.md to
-resolved-findings.md, but the leads page still linked findings.md#<id>. The
+had been verified fixed, so its record moved from findings to
+resolved-findings, but the leads page still linked findings#<id>. The
 leads page's own sources had not changed, so the materializer kept last run's
 file, and the cross-reference pass leaves an ID that is already inside a link
 alone. This test publishes with the finding open, resolves it, publishes again
@@ -16,6 +16,7 @@ import json
 import sqlite3
 import sys
 import tempfile
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -36,10 +37,36 @@ def check(label: str, problem: str | None) -> None:
         print(f"  ok   {label}")
 
 
+class LinkTexts(HTMLParser):
+    """Every link's target with the visible text it carries."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.links: list[tuple[str, str]] = []
+        self._href: str | None = None
+        self._text = ""
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "a":
+            self._href = next((v or "" for k, v in attrs if k == "href"), "")
+            self._text = ""
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "a" and self._href is not None:
+            self.links.append((self._href, self._text.strip()))
+            self._href = None
+
+    def handle_data(self, data: str) -> None:
+        if self._href is not None:
+            self._text += data
+
+
 def leads_link(docs: Path) -> str | None:
-    text = (docs / "field-notes.md").read_text()
-    for target in ("resolved-findings.md#b02-1", "findings.md#b02-1"):
-        if f"[B02-1]({target})" in text:
+    parser = LinkTexts()
+    parser.feed((docs / "field-notes.html").read_text())
+    targets = {href for href, text in parser.links if text == "B02-1"}
+    for target in ("resolved-findings.html#b02-1", "findings.html#b02-1"):
+        if target in targets:
             return target
     return None
 
@@ -56,7 +83,7 @@ def rendered_at(docs: Path, set_to: str | None = None) -> str | None:
     path = docs / ".manifest.json"
     manifest = json.loads(path.read_text())
     for page in manifest.get("pages", []):
-        if page.get("path") == "field-notes.md":
+        if page.get("path") == "field-notes.html":
             if set_to is not None:
                 page["rendered_at"] = set_to
                 path.write_text(json.dumps(manifest))
@@ -81,8 +108,8 @@ def main() -> int:
         planted = rendered_at(docs, set_to=SENTINEL)
         first = leads_link(docs)
         check(
-            "an open finding is linked on findings.md",
-            None if first == "findings.md#b02-1" else f"the leads page links {first!r}",
+            "an open finding is linked on findings.html",
+            None if first == "findings.html#b02-1" else f"the leads page links {first!r}",
         )
 
         evidence = db.execute(
@@ -111,8 +138,8 @@ def main() -> int:
         )
         second = leads_link(docs)
         check(
-            "once resolved, the same link points at resolved-findings.md",
-            None if second == "resolved-findings.md#b02-1" else f"the leads page links {second!r}",
+            "once resolved, the same link points at resolved-findings.html",
+            None if second == "resolved-findings.html#b02-1" else f"the leads page links {second!r}",
         )
         html = (docs / "field-notes.html").read_text() if (docs / "field-notes.html").is_file() else ""
         check(
