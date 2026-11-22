@@ -36,7 +36,7 @@ import { claimTools } from "../tools/claims.js";
 import { findingTools } from "../tools/findings.js";
 import { vocabularyTools } from "../tools/vocabulary.js";
 import { matchQuery } from "./search.js";
-import { type CodeIndex, searchWords, type Unavailable } from "./store.js";
+import { type CodeIndex, identifierWords, searchWords, type Unavailable } from "./store.js";
 
 export const RECORD_KINDS = [
   "claim",
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS records (
     UNIQUE (kind, key)
 );
 CREATE VIRTUAL TABLE IF NOT EXISTS records_fts USING fts5(
-    key, text, tokenize='porter unicode61'
+    key, text, words, tokenize='porter unicode61'
 );
 CREATE TABLE IF NOT EXISTS records_sync (
     kind              TEXT    PRIMARY KEY,
@@ -141,6 +141,21 @@ CREATE TABLE IF NOT EXISTS records_sync (
 `;
 
 const sha256 = (text: string): string => createHash("sha256").update(text).digest("hex");
+
+/**
+ * The case-split words of the identifiers a record's text quotes (`requireEvidenceCitation` →
+ * `require Evidence Citation`), which the tokenizer would keep whole, so a record is found by
+ * an identifier's words as a definition is by its name's.
+ */
+function identifierParts(text: string): string {
+  return text
+    .split(/[^\p{L}\p{N}]+/u)
+    .flatMap((word) => {
+      const parts = identifierWords(word);
+      return parts.length > 1 ? parts : [];
+    })
+    .join(" ");
+}
 
 function textOf(source: RecordSource, row: Record<string, unknown>): string {
   return source.columns
@@ -175,11 +190,13 @@ function syncSource(sidecar: Database.Database, store: Database.Database, source
      RETURNING id`,
   );
   const removeText = sidecar.prepare("DELETE FROM records_fts WHERE rowid = ?");
-  const addText = sidecar.prepare("INSERT INTO records_fts (rowid, key, text) VALUES (?, ?, ?)");
+  const addText = sidecar.prepare(
+    "INSERT INTO records_fts (rowid, key, text, words) VALUES (?, ?, ?, ?)",
+  );
   const index = (key: string, rowid: number, text: string) => {
     const { id } = upsert.get(source.kind, key, rowid, sha256(text)) as { id: number };
     removeText.run(id);
-    addText.run(id, searchWords(key), text);
+    addText.run(id, searchWords(key), text, identifierParts(text));
   };
   const saveState = (cursor: number, guard: string) =>
     sidecar
@@ -528,12 +545,12 @@ export async function searchRecords(
       (sidecar) =>
         sidecar
           .prepare(
-            `SELECT r.kind, r.key, snippet(records_fts, -1, '', '', '…', 40) AS snippet
+            `SELECT r.kind, r.key, snippet(records_fts, 1, '', '', '…', 40) AS snippet
                FROM records_fts
                JOIN records r ON r.id = records_fts.rowid
               WHERE records_fts MATCH ?
                 AND r.kind IN (${kinds.map(() => "?").join(", ")})
-              ORDER BY bm25(records_fts, 2.0, 1.0), r.kind, r.key
+              ORDER BY bm25(records_fts, 2.0, 1.0, 1.0), r.kind, r.key
               LIMIT ? OFFSET ?`,
           )
           .all(match, ...kinds, SEARCH_BATCH, offset) as {

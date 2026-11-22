@@ -54,13 +54,22 @@ export interface FindResult {
 const DEFINITION_WEIGHTS = "10.0, 5.0, 2.0, 1.0";
 
 /**
- * An FTS5 query from free text: its words split on punctuation and case, each quoted, all
- * required. Null when the text holds no word.
+ * An FTS5 query from free text: its words split on punctuation, each quoted, all required. A
+ * word that splits on case (`requireEvidenceCitation`) matches either whole, as the tokenizer
+ * keeps it in a doc comment or a record, or as all of its parts, as a name is indexed. Null
+ * when the text holds no word.
  */
 export function matchQuery(text: string): string | null {
-  const words = [...new Set(identifierWords(text).map((w) => w.toLowerCase()))];
-  if (words.length === 0) return null;
-  return words.map((w) => `"${w}"`).join(" ");
+  const terms = new Set<string>();
+  for (const word of text.split(/[^\p{L}\p{N}]+/u).filter(Boolean)) {
+    const parts = [...new Set(identifierWords(word).map((w) => w.toLowerCase()))];
+    const whole = `"${word.toLowerCase()}"`;
+    terms.add(
+      parts.length > 1 ? `(${whole} OR (${parts.map((w) => `"${w}"`).join(" AND ")}))` : whole,
+    );
+  }
+  if (terms.size === 0) return null;
+  return [...terms].join(" ");
 }
 
 function partialReason(tree: TreeResult): string {
