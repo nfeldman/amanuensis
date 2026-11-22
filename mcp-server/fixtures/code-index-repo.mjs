@@ -95,6 +95,9 @@ export function bigSource() {
   return `${lines.join("\n")}\n`;
 }
 
+/** A doc line whose 160-byte cut falls inside a two-byte character. */
+export const LONG_DOC_SOURCE = `/** a${"é".repeat(100)} */\nexport function longDoc(): number {\n  return 1;\n}\n`;
+
 export const UNICODE_SOURCE = `// Ünïcödé fixture: offsets are UTF-8 bytes, not UTF-16 code units.
 export const 名前 = "東京";
 
@@ -157,6 +160,7 @@ export function buildCodeIndexRepo(dir) {
   write(dir, "lib/twice.js", TWICE_SOURCE);
   write(dir, "src/Parser.java", PARSER_SOURCE);
   write(dir, "docs/notes.txt", "Notes in no language the index parses.\n");
+  write(dir, "src/longdoc.ts", LONG_DOC_SOURCE);
   git(dir, ["add", "-A"]);
   git(dir, ["commit", "-q", "--no-verify", "-m", "first revision"]);
   const first = git(dir, ["rev-parse", "HEAD"]).trim();

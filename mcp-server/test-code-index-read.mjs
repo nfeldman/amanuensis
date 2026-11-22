@@ -318,6 +318,13 @@ async function main() {
     const outline = (path, extra = {}) => server.call("outline_file", { path, ...extra });
     const read = (path, symbol, extra = {}) => server.call("read_symbol", { path, symbol, ...extra });
 
+    // A doc line is cut to 160 bytes on a character boundary.
+    {
+      const out = await outline("src/longdoc.ts");
+      check(out.ok === true, `outline_file src/longdoc.ts was refused: ${oneLine(out.error)}`);
+      same("outline_file src/longdoc.ts: the cut doc line", out.symbols?.[0]?.doc, `a${"é".repeat(79)}`);
+    }
+
     // -------------------------------------------------------------------------------------
     // outline_file
 
