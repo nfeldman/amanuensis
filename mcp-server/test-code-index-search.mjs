@@ -28,6 +28,7 @@
 //     answered question is present by default or absent with include_history;
 //   - definitions or records are not in BM25 order (a name match above a doc-comment match, a
 //     dense vocabulary gloss above a long claim), or a hit lacks one of the query's words;
+//   - a term scoped to two subsystems is not kept by a subject filter for each;
 //   - kinds or subject (a subsystem id, or a claim_key prefix) do not narrow the hits, or a
 //     snippet is over 240 bytes, is not valid UTF-8 or lacks the word;
 //   - the source list in code-index/records.ts does not match schema.sql: a table, key or text
@@ -471,6 +472,17 @@ async function main() {
   same("search_records wombat after the update", hits(await search("wombat")), [{ kind: "vocabulary", id: "Quokka", status: "current" }]);
   await define({ term: "Aardwolf", gloss: "The aardwolf sweeper collects stale handles." });
   same("search_records aardwolf (a low-sorting term)", hits(await search("aardwolf")), [{ kind: "vocabulary", id: "Aardwolf", status: "current" }]);
+
+  // A term shared by two subsystems is kept by a subject filter for either, as list_vocabulary
+  // scopes it.
+  await define({ term: "Kinkajou", gloss: "The kinkajou relay forwards frames.", subsystem_id: "S-01" });
+  await define({ term: "Kinkajou", gloss: "The kinkajou relay forwards frames.", subsystem_id: "S-02" });
+  for (const subject of ["S-01", "S-02"]) {
+    same(`search_records kinkajou for ${subject}`, hits(await search("kinkajou", { subject })), [
+      { kind: "vocabulary", id: "Kinkajou", status: "current" },
+    ]);
+  }
+  same("search_records kinkajou for S-03", hits(await search("kinkajou", { subject: "S-03" })), []);
 
   // A superseded claim: absent by default, present with include_history.
   await addClaim("pel-1", "S-01/behaviour/pelican", "The pelican queue is unbounded.");
