@@ -152,6 +152,7 @@ function selfTest() {
     "Read whole files sparingly.",
     "Open a whole file only when `read_symbol` is not enough.",
     "Reach for the index ahead of the file itself.",
+    "Prefer read_symbol to reading whole files.",
   ];
   for (const s of badRestrictions) if (!restricts(s)) fail(`self-test: the restriction detector missed "${s}"`);
   const goodRestrictions = [
