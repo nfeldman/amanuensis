@@ -10,12 +10,17 @@
 //     whole-file `Read`, sliced `Read`, search, shell, other), the `usage` counts, the weighted sum,
 //     or the per-side session count, totals and medians differ from the hand counts of the fixture
 //     transcripts;
-//   - a repeated assistant message id is counted more than once, or a whole-file `Read` is counted as
-//     a sliced one (or the reverse), or multi-byte text is measured in characters;
+//   - a repeated assistant message id is counted more than once, also when it repeats in another file
+//     of a resumed session; one session's files make more than one session, or a path named twice
+//     (or a directory and a file in it) is read twice; a whole-file `Read` is counted as a sliced
+//     one (or the reverse); multi-byte text, in a string or in an array of text blocks, is measured
+//     in characters; an Amanuensis write tool is counted among other Amanuensis reads;
 //   - the output does not say that host reads are not covered when no transcripts are given, or says
 //     it when they are;
 //   - the call log is not opened read-only: its bytes, mtime or directory listing change, a missing
-//     path is created, or the script does not open it with `readonly: true`;
+//     path is created, the script does not open it with `readonly: true` (outside a comment), or a
+//     WAL-mode `.backup` copy cannot be read from a read-only directory or gains `-shm` or `-wal`
+//     beside it in a writable one;
 //   - anything but standard output (or `--out`) is written;
 //   - the output contains a verdict, a threshold or a change figure between the sides;
 //   - the output omits the price ratios or the reminder that the two sides differ in task, subject and time.
@@ -25,6 +30,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -78,8 +84,9 @@ try {
   finish();
 }
 const spec = JSON.parse(readFileSync(join(fixtures, "call-log.json"), "utf8"));
-for (const [name, content] of Object.entries(spec.files)) {
-  const db = new Database(join(logs, name));
+/** A call log holding one file's hand-countable rows, left in WAL mode as the server writes it, or not. */
+function buildCallLog(path, content, { wal }) {
+  const db = new Database(path);
   db.pragma("journal_mode = WAL");
   db.exec(`
     CREATE TABLE call_log_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -95,12 +102,32 @@ for (const [name, content] of Object.entries(spec.files)) {
   for (const c of content.connections) addConnection.run(c.id, c.started_at, c.server_version);
   const addRow = db.prepare("INSERT INTO call_log VALUES (NULL,?,?,?,NULL,?,?,?,NULL,1.5,10,'0',?)");
   content.rows.forEach((r, i) => addRow.run(r.connection, i + 1, r.started_at, r.tool, r.outcome, r.rule, r.response_bytes));
-  db.pragma("wal_checkpoint(TRUNCATE)");
-  db.pragma("journal_mode = DELETE");
-  db.close();
+  if (!wal) {
+    db.pragma("wal_checkpoint(TRUNCATE)");
+    db.pragma("journal_mode = DELETE");
+  }
+  return db;
 }
+for (const [name, content] of Object.entries(spec.files)) buildCallLog(join(logs, name), content, { wal: false }).close();
 const beforeDb = join(logs, "before-calls.db");
 const afterDb = join(logs, "after-calls.db");
+
+// A copy as §6 takes it, `.backup` of a live WAL call log: the copy keeps WAL mode in its header.
+// It sits in a directory nobody may write, so any open that would add `-shm` or `-wal` beside it,
+// read-only or read-write, fails instead of passing unseen.
+const walDir = join(work, "wal-copy");
+mkdirSync(walDir);
+const walDb = join(walDir, "before-calls.db");
+{
+  const live = buildCallLog(join(work, "live-calls.db"), spec.files["before-calls.db"], { wal: true });
+  await live.backup(walDb);
+  live.close();
+  const header = readFileSync(walDb);
+  if (header[18] !== 2 || header[19] !== 2) fail("the WAL-mode call-log copy was not made in WAL mode");
+  chmodSync(walDb, 0o444);
+  chmodSync(walDir, 0o555);
+}
+const walListing = () => readdirSync(walDir).sort().join(",");
 
 const run = (args, options = {}) =>
   spawnSync(process.execPath, [script, ...args], { encoding: "utf8", cwd: options.cwd ?? work, timeout: 60000 });
@@ -302,7 +329,52 @@ if (onlyTranscripts) {
 const onlyTranscriptsText = run([...splitTranscripts("--before-transcripts", ["before-1.jsonl"]), ...splitTranscripts("--after-transcripts", ["after-2.jsonl"])]);
 if (!/call log[^\n]*not covered/i.test(onlyTranscriptsText.stdout)) fail("transcripts-only: does not say that Amanuensis calls are not covered");
 
+// --- 4b. a resumed session in two files, a repeated path, a write tool, multi-byte text blocks ------
+// resumed-2.jsonl replays msg_r_1 and its result from resumed-1.jsonl, as a resumed session does.
+// add_evidence writes, so it is `other`; get_findings reads, so it is `amanuensis_other`. Result
+// bytes are UTF-8: "évidence ✓" is 13 bytes, "日本語" + "ok" 11.
+const RESUMED = {
+  sessions: 1,
+  unreadable_lines: 0,
+  totals: {
+    calls: klass([0, 1, 1, 0, 0, 0, 1]),
+    bytes: klass([0, 11, 3, 0, 0, 0, 13]),
+    tokens: tokens(16, 100, 0, 600, 576),
+  },
+  medians: {
+    bytes: klass([0, 11, 3, 0, 0, 0, 13]),
+    tokens: tokens(16, 100, 0, 600, 576),
+  },
+};
+const resumedDir = join(fixtures, "resumed");
+const resumedArgs = (...paths) => paths.flatMap((p) => ["--before-transcripts", p]);
+for (const [label, paths] of [
+  ["resumed session across two files", [join(resumedDir, "resumed-1.jsonl"), join(resumedDir, "resumed-2.jsonl")]],
+  ["resumed session, a file named twice", [join(resumedDir, "resumed-1.jsonl"), join(resumedDir, "resumed-2.jsonl"), join(resumedDir, "resumed-1.jsonl")]],
+  ["resumed session, a directory and a file in it", [resumedDir, join(resumedDir, "resumed-2.jsonl")]],
+]) {
+  const r = runJson(label, resumedArgs(...paths));
+  if (r) check(label, pickTranscripts(r.sides?.before?.transcripts), RESUMED);
+}
+const twice = runJson("one transcript named twice", [
+  ...splitTranscripts("--before-transcripts", ["before-2.jsonl", "before-2.jsonl"]),
+  ...splitTranscripts("--after-transcripts", ["after-2.jsonl"]),
+]);
+if (twice) {
+  check("one transcript named twice: sessions", twice.sides?.before?.transcripts?.sessions, 1);
+  check("one transcript named twice: weighted median", twice.sides?.before?.transcripts?.medians?.tokens?.weighted, 980);
+}
+
 // --- 5. read-only, and nothing written but the output ----------------------------------------------
+// before-calls.db alone: every row is on the before side.
+const WAL_COPY_CALLS = [tool("describe_locus", 4, 6500, 1500, 3000, 1), tool("get_project_info", 1, 400, 400, 400, 0)];
+const walRun = runJson("WAL-mode copy in a read-only directory", ["--call-log", walDb, "--after-version", "0.3.0-beta.2"]);
+if (walRun) check("WAL-mode copy: per-tool", walRun.sides?.before?.call_log?.tools, WAL_COPY_CALLS);
+check("WAL-mode copy: nothing appears beside it", walListing(), "before-calls.db");
+chmodSync(walDir, 0o755);
+const walBeside = runJson("WAL-mode copy in a writable directory", ["--call-log", walDb, "--after-version", "0.3.0-beta.2"]);
+if (walBeside) check("WAL-mode copy (writable directory): per-tool", walBeside.sides?.before?.call_log?.tools, WAL_COPY_CALLS);
+check("WAL-mode copy: no -shm or -wal left beside it", walListing(), "before-calls.db");
 check("call-log copies unchanged by every run", [stat(beforeDb), stat(afterDb), listing()], dbsBefore);
 const missing = join(logs, "absent-calls.db");
 const missingRun = run(["--call-log", missing, "--after-version", "0.3.0-beta.2"]);
@@ -312,9 +384,10 @@ const notSqlite = join(work, "not-a-database.db");
 writeFileSync(notSqlite, "this is not a database\n");
 if (run(["--call-log", notSqlite, "--after-version", "x"]).status === 0) fail("a file that is not a call log was accepted");
 check("call-log copies unchanged after the refused paths", [stat(beforeDb), stat(afterDb), listing()], dbsBefore);
-const source = readFileSync(script, "utf8");
+// The open itself, outside comments; a missing path is refused above, and a WAL copy in a read-only
+// directory shows the open adds nothing beside the copy.
+const source = readFileSync(script, "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
 if (!/readonly:\s*true/.test(source)) fail("dev/token-report.mjs does not open the call log with `readonly: true`");
-if (!/fileMustExist:\s*true/.test(source)) fail("dev/token-report.mjs does not require the call log to exist");
 
 const cleanDir = mkdtempSync(join(tmpdir(), "token-report-cwd-"));
 const outFile = join(cleanDir, "report.txt");
@@ -336,6 +409,7 @@ if (unknownFlag.status === 0) fail("an unknown flag was accepted");
 const nothing = run([]);
 if (nothing.status === 0) fail("a run with no inputs was accepted");
 
+chmodSync(walDir, 0o755);
 rmSync(work, { recursive: true, force: true });
 rmSync(cleanDir, { recursive: true, force: true });
 finish();
