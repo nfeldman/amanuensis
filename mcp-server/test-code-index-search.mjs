@@ -5,7 +5,8 @@
 //   - dist/tools/code-index.js or dist/code-index/records.js is missing, or find_symbol and
 //     search_records are not among the code-index tools;
 //   - a definition is not found by a camel-case fragment of its name (`Request`, `HTTP` in
-//     `parseHTTPRequest`) or by a word of its doc comment (`frobnication`), or the rows are not,
+//     `parseHTTPRequest`), by a word of its doc comment (`frobnication`) or by an identifier its
+//     doc comment quotes (`checkEvidenceCitation`), or the rows are not,
 //     row for row, the golden definitions (path, symbol_id, kind, lines, signature), or a row
 //     carries a body; kind and path_prefix do not narrow them;
 //   - a reference row does not carry match: "name", or the reference rows are not the golden
@@ -13,6 +14,8 @@
 //     select the older revision's references;
 //   - an incomplete tree index does not report partial, or a completed one still does;
 //   - a claim written after the first search is not found by the next;
+//   - a claim quoting `requireEvidenceCitation` is not found by that identifier, by
+//     `EvidenceCitation` or by `citation`, with the identifier in its snippet;
 //   - a vocabulary update adding a new word is not found by it;
 //   - a low-sorting text key (a claim id `0-low` written after `zz-first`, a term `Aardwolf`
 //     after `Zymurgy`) is not found;
@@ -95,6 +98,11 @@ export function parseHTTPRequest(line: string): string[] {
 /** Computes the frobnication checksum of a block. */
 export function digestBlock(block: string): number {
   return block.length;
+}
+
+/** Wraps the checkEvidenceCitation rule. */
+export function citeGuard(): boolean {
+  return true;
 }
 `;
 const useTs = (revision) => `import { parseHTTPRequest } from "./http";
@@ -270,6 +278,15 @@ async function main() {
     doc_start_line: 6,
     signature: "export function digestBlock(block: string): number {",
   };
+  const CITE_GUARD = {
+    path: "src/http.ts",
+    symbol_id: "citeGuard",
+    kind: "function",
+    start_line: 12,
+    end_line: 14,
+    doc_start_line: 11,
+    signature: "export function citeGuard(): boolean {",
+  };
   const rowsOf = (r) =>
     [...r.results].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : a.start_line - b.start_line));
   const definition = (row) => ({
@@ -285,6 +302,7 @@ async function main() {
     ["the camel-case fragment Request", { query: "Request" }, [PY_PARSE, TS_PARSE]],
     ["the camel-case fragment HTTP", { query: "HTTP" }, [PY_PARSE, TS_PARSE]],
     ["the doc-comment word frobnication", { query: "frobnication" }, [DIGEST]],
+    ["the identifier checkEvidenceCitation its doc comment quotes", { query: "checkEvidenceCitation" }, [CITE_GUARD]],
     ["Request under src/", { query: "Request", path_prefix: "src/" }, [TS_PARSE]],
     ["Request as a class", { query: "Request", kind: "class" }, []],
     ["a word nothing holds", { query: "xylophone" }, []],
@@ -407,6 +425,14 @@ async function main() {
   same("search_records quetzal (a low-sorting claim id)", hits(await search("quetzal")), [
     { kind: "claim", id: "0-low", status: "current" },
   ]);
+
+  // A record is found by an identifier it quotes, whole or by its camel-case words.
+  await addClaim("cam-1", "S-01/behaviour/guard", "The requireEvidenceCitation check refuses a loose excerpt.");
+  for (const query of ["requireEvidenceCitation", "EvidenceCitation", "citation"]) {
+    const r = await search(query);
+    same(`search_records ${query}`, hits(r), [{ kind: "claim", id: "cam-1", status: "current" }]);
+    check(r.results[0].snippet.includes("requireEvidenceCitation"), `search_records ${query}: the snippet does not quote the identifier`);
+  }
 
   // Vocabulary: an update adding a new word is found by it; a low-sorting term is found.
   const define = async (args) => {
