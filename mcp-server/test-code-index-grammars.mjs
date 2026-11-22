@@ -202,6 +202,7 @@ const RUNTIME_DEPENDENCIES = [
 
 // Ceilings just above the sizes measured at SI1 (the package before grammars was 1.96 MB
 // packed and 11.27 MB unpacked; the ten grammars add 16.8 MB unpacked and 1.32 MB gzipped).
+// test-package-artifact.mjs holds the same ceilings over the real tarball and install.
 const PACKED_CEILING_BYTES = 3_600_000;
 const UNPACKED_CEILING_BYTES = 31_000_000;
 
