@@ -196,8 +196,10 @@ function bytesText(n) {
   return fail(`budget ${n} is not a whole number of MiB`);
 }
 
-function checkSection(body, grammars, facts) {
-  const rows = documentedRows(body);
+function checkSection(section, grammars, facts) {
+  const rows = documentedRows(section);
+  // Prose is checked on one line, so a sentence wrapped in the document still reads as one.
+  const body = section.replace(/\s+/g, " ");
   const want = Object.keys(grammars).map((l) => NAMES[l] ?? fail(`manifest language ${l} has no documented name`));
   check(
     sameSet(Object.keys(rows), want),
@@ -287,7 +289,7 @@ function checkSection(body, grammars, facts) {
 
 function checkReadme(grammars, facts) {
   const text = read("mcp-server/README.md");
-  const body = section(text, "Code index", "mcp-server/README.md");
+  const body = section(text, "Code index", "mcp-server/README.md").replace(/\s+/g, " ");
   for (const lang of Object.keys(grammars)) {
     check(body.includes(NAMES[lang]), `README's code-index paragraph does not name ${NAMES[lang]}`);
   }
@@ -454,8 +456,8 @@ function checkScript(grammars) {
     ["mkdtemp", "an empty directory"],
     ["StdioClientTransport", "the stdio server"],
     ["amanuensis-memory", "the installed server shim"],
-    ['"outline_file"', "outline_file"],
-    ['"read_symbol"', "read_symbol"],
+    ['call("outline_file"', "a call to outline_file"],
+    ['call("read_symbol"', "a call to read_symbol"],
     ["fixtures/installed-artifact", "the fixture directory"],
     ["installedProbe", "the probe symbol"],
     ["process.exit", "a failing exit"],

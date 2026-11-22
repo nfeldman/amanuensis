@@ -38,6 +38,19 @@ change. Publishing the human-readable map also needs Python 3.11 or newer.
 
 This is a beta. Until `1.0.0`, expect breaking changes between releases.
 
+## Code index
+
+From 0.3.0-beta.2 the server keeps a cache of each source file's definitions, so an agent
+can see a file's shape (`outline_file`), read one definition and cite it exactly
+(`read_symbol`), and find a definition by name (`find_symbol`) and a record by topic
+(`search_records`). It adds to reading files and never replaces it. A reference
+`find_symbol` returns is name-matched, so it is a lead to confirm in the code.
+
+It parses TypeScript, TSX, JavaScript, Python, Rust, Go, Java, C, C++ and C# with
+tree-sitter grammars vendored into the package (16.8 MB unpacked). It is on by default;
+set `AMANUENSIS_CODE_INDEX=off` to remove the tools. Languages, location, limits and
+notices are in [Installation and operations](https://github.com/nfeldman/amanuensis/blob/main/INSTALLATION.md#code-index).
+
 ## Documentation
 
 - [README](https://github.com/nfeldman/amanuensis#readme): what Amanuensis does and
