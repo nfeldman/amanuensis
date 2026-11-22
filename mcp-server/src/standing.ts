@@ -1045,7 +1045,8 @@ const OPERATOR_NAME = /^operator(?:\(\)|\[\]|\s*(?:new|delete)(?:\[\])?|[-+*/%^&
  * id without its overload discriminator — a parameter list and what follows it (`(String,int)`,
  * `() const`), an indexer's `[…]`, a template arity `<2>` — and without C#'s generic arity
  * marks (`` `1 ``). An operator's own punctuation (`operator()`, `operator[]`, `operator<`)
- * is part of its name, not a discriminator. The bare name is the qualified name's last segment.
+ * is part of its name, not a discriminator, as is a computed member's bracket at the start of
+ * a segment (`C.[key]`). The bare name is the qualified name's last segment.
  */
 export function symbolIdNames(symbolId: string): { qname: string; name: string } {
   let depth = 0;
@@ -1061,7 +1062,7 @@ export function symbolIdNames(symbolId: string): { qname: string; name: string }
     }
     if (c === "<") depth++;
     else if (c === ">" && depth > 0) depth--;
-    else if ((c === "(" || c === "[") && depth === 0 && i > 0) {
+    else if ((c === "(" || c === "[") && depth === 0 && i > 0 && symbolId[i - 1] !== ".") {
       cut = i;
       break;
     }
@@ -1085,7 +1086,8 @@ export interface SymbolEvidenceMatch {
 /**
  * The one symbol matcher `describe_locus` and the standing block share. A locus symbol names
  * an evidence row on the file whose `symbol` equals it, and an anchored row whose `symbol_id`
- * equals it or whose `symbol_id`'s qualified name or bare name does. An unanchored row holds
+ * equals it or, when none's `symbol_id` equals it, whose `symbol_id`'s qualified name or bare
+ * name does. An unanchored row holds
  * what its writer typed and is matched on that text alone. When the locus names more than one
  * `symbol_id`, neither surface merges their evidence: the anchored rows are left out and the
  * ids are returned, so each surface can say the name is ambiguous.
@@ -1105,8 +1107,12 @@ export function matchSymbolEvidence(db: DB, path: string, symbol: string): Symbo
     symbol: string;
     symbol_id: string | null;
   }[];
+  // A locus that is some row's symbol_id names that definition alone, never also another
+  // whose qualified or bare name it happens to equal (a top-level `add` beside `Calc.add`).
+  const exact = rows.some((row) => row.symbol_id === symbol);
   const names = (symbolId: string): boolean => {
     if (symbolId === symbol) return true;
+    if (exact) return false;
     const { qname, name } = symbolIdNames(symbolId);
     return qname === symbol || name === symbol;
   };
