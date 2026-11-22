@@ -9,6 +9,11 @@
 (function_declaration name: (identifier) @name) @definition.function
 (generator_function_declaration name: (identifier) @name) @definition.function
 
+; Bodiless declarations: overload signatures and ambient functions. Each shares its
+; implementation's identity and is a further occurrence of it.
+(function_signature name: (identifier) @name) @definition.declaration
+(class_body (method_signature name: (_) @name) @definition.declaration)
+
 ; Classes and their members.
 (class_declaration name: (type_identifier) @name) @definition.class
 (abstract_class_declaration name: (type_identifier) @name) @definition.class

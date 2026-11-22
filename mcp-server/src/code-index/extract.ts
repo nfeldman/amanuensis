@@ -36,7 +36,7 @@ import { fileURLToPath } from "node:url";
 import { Language, type Node, Parser, Query } from "web-tree-sitter";
 
 /** Bump when a change to this file changes any extraction. */
-export const EXTRACTOR_VERSION = "2";
+export const EXTRACTOR_VERSION = "3";
 
 export type CodeLanguage =
   | "typescript"
@@ -901,6 +901,8 @@ function cut(value: string, max: number): string {
 interface Candidate {
   node: Node;
   span: Node;
+  /** What the definition encloses: its span, or its own declarator when it shares one. */
+  owner: { start: number; end: number };
   nameNode: Node | null;
   name: string;
   nameStart: number;
@@ -1017,6 +1019,16 @@ export async function extract(
       }
     }
 
+    // Definitions sharing one declaration (`const a = …, b = …`) each own only their part of
+    // it, so a definition nested in one declarator is never qualified by a sibling.
+    const sharing = new Map<number, number>();
+    for (const { node } of chosen.values()) sharing.set(node.id, (sharing.get(node.id) ?? 0) + 1);
+    const ownPart = (node: Node, name: Node | null): Node => {
+      if (!name || (sharing.get(node.id) ?? 0) < 2) return node;
+      let part = name;
+      while (part.parent && part.parent.id !== node.id) part = part.parent;
+      return part.parent ? part : node;
+    };
     const candidates: Candidate[] = [];
     for (const { kind, node, name } of chosen.values()) {
       const span = spec.span(node);
@@ -1024,9 +1036,14 @@ export async function extract(
       const docstring = spec.docstring(node);
       let end = span.endIndex;
       while (end > span.startIndex && (source[end - 1] === "\n" || source[end - 1] === "\r")) end--;
+      const part = ownPart(node, name);
       candidates.push({
         node,
         span,
+        owner:
+          part === node
+            ? { start: span.startIndex, end: span.endIndex }
+            : { start: part.startIndex, end: part.endIndex },
         nameNode: name,
         name: name?.text ?? kind,
         nameStart: name?.startIndex ?? node.startIndex,
@@ -1045,7 +1062,7 @@ export async function extract(
         (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0),
     );
 
-    // Enclosing chains, by strict containment of declaration spans. A definition is
+    // Enclosing chains, by strict containment in what each definition owns. A definition is
     // qualified by the nearest enclosing one that scopes, else by a file-scoped namespace
     // before it.
     interface Scope {
@@ -1069,17 +1086,23 @@ export async function extract(
     const stack: Scope[] = [];
     let fileScope: Scope | null = null;
     for (const candidate of candidates) {
-      const contains = (outer: Candidate) =>
+      // Siblings share a span, so the stack keeps whatever spans the candidate, and the
+      // scope is the nearest entry whose own part strictly contains it.
+      const spans = (outer: Candidate) =>
         outer.span.startIndex <= candidate.span.startIndex &&
-        candidate.span.endIndex <= outer.span.endIndex &&
-        (outer.span.startIndex < candidate.span.startIndex ||
-          candidate.span.endIndex < outer.span.endIndex);
-      while (stack.length > 0 && !contains((stack[stack.length - 1] as Scope).candidate)) {
+        candidate.span.endIndex <= outer.span.endIndex;
+      const owns = (outer: Candidate) =>
+        outer.owner.start <= candidate.span.startIndex &&
+        candidate.span.endIndex <= outer.owner.end &&
+        (outer.owner.start < candidate.span.startIndex ||
+          candidate.span.endIndex < outer.owner.end);
+      while (stack.length > 0 && !spans((stack[stack.length - 1] as Scope).candidate)) {
         stack.pop();
       }
       let scope: Scope | null = null;
       for (let i = stack.length - 1; i >= 0 && !scope; i--) {
-        if ((stack[i] as Scope).scopes) scope = stack[i] as Scope;
+        const entry = stack[i] as Scope;
+        if (entry.scopes && owns(entry.candidate)) scope = entry;
       }
       if (!scope && fileScope && fileScope.candidate.span.endIndex <= candidate.span.startIndex) {
         scope = fileScope;

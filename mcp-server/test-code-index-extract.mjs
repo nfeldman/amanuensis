@@ -203,9 +203,9 @@ const GOLDEN = {
       ["method", "Push", "List.Push", "List.Push", 45, 47, 45, 1],
       ["method", "Area", "Circle.Area", "Circle.Area", 49, 51, 49, 1],
       ["type", "Circle", "Circle", "Circle", 53, 53, 53, 1],
-      ["var", "Fallback", "Fallback", "Fallback", 58, 58, 57, 1],
-      ["var", "count", "count", "count", 59, 59, 59, 1],
-      ["var", "limit", "limit", "limit", 59, 59, 59, 1],
+      ["var", "Fallback", "Fallback", "Fallback", 57, 57, 56, 1],
+      ["var", "count", "count", "count", 58, 58, 58, 1],
+      ["var", "limit", "limit", "limit", 58, 58, 58, 1],
     ],
     imports: [
       ["fmt", 5],
