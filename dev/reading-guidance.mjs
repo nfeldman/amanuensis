@@ -20,7 +20,7 @@ export function sentences(text) {
 export const RESTRICTIONS = [
   /\b(do not|don't|never|avoid|must not|should not|shouldn't|refrain from|stop)\b[^.]*\b(read|reads|reading|open|opening)\b[^.]*\b(files?|source|whole|entire|full)\b/i,
   /\b(instead of|rather than|in place of)\b[^.]*\b(read|reading|whole files?|file reads?)\b/i,
-  /\bprefer\b[^.]*\bover\b[^.]*\b(read|reading|whole files?)\b/i,
+  /\bprefer\b[^.]*\b(over|to)\b[^.]*\b(read|reading|whole files?)\b/i,
   /\b(before|until|unless|only after|first)\b[^.]*\b(read|reading|open|opening)\b[^.]*\b(files?|whole)\b/i,
   /\b(only|just)\b[^.]*\b(use|via|through|with)\b[^.]*\b(outline_file|read_symbol|find_symbol)\b/i,
   /\b(must|required to|always|need to|have to)\b[^.]*\b(outline_file|read_symbol|find_symbol)\b[^.]*\b(before|first|prior)\b/i,
