@@ -46,7 +46,8 @@
 // Hermetic: fixture git repositories and stores are built in a temporary directory, and the
 // built tool handlers are called in-process, as test-explanation-read.mjs does. No network.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import Database from "better-sqlite3";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -132,6 +133,8 @@ const OTHER_PY = `def parseHTTPRequest(x):
 parseHTTPRequest(1)
 `;
 
+const TWIN = "export function twinBlob() {\n  return 1;\n}\n";
+
 function buildRepo(dir) {
   mkdirSync(dir, { recursive: true });
   git(dir, ["init", "-q", "-b", "main"]);
@@ -139,10 +142,15 @@ function buildRepo(dir) {
   write(dir, "src/use.ts", useTs(1));
   write(dir, "lib/other.py", OTHER_PY);
   write(dir, "docs/readme.txt", "Not code.\n");
+  // One blob under a .ts and a .js path; a definition only the first revision has.
+  write(dir, "src/twin.ts", TWIN);
+  write(dir, "src/twin.js", TWIN);
+  write(dir, "src/gone.ts", "export function vanishedOnce(): number {\n  return 1;\n}\n");
   git(dir, ["add", "-A"]);
   git(dir, ["commit", "-q", "--no-verify", "-m", "first"]);
   const first = git(dir, ["rev-parse", "HEAD"]);
   write(dir, "src/use.ts", useTs(2));
+  git(dir, ["rm", "-q", "src/gone.ts"]);
   git(dir, ["commit", "-q", "--no-verify", "-am", "second"]);
   const second = git(dir, ["rev-parse", "HEAD"]);
   // A commit HEAD does not reach, for a claim inapplicable at HEAD.
@@ -336,6 +344,33 @@ async function main() {
       }
       check(!JSON.stringify(row).includes("line.split"), `find_symbol ${label} carries a body`);
     }
+  }
+
+  // Identical bytes under a .ts and a .js path give each path its own language's row, once.
+  {
+    const r = await tryCall(ctx, "find_symbol", { query: "twinBlob" });
+    check(r.ok === true, `find_symbol twinBlob was refused: ${oneLine(r.error)}`);
+    same(
+      "find_symbol twinBlob",
+      rowsOf(r).map((row) => ({ path: row.path, symbol_id: row.symbol_id })),
+      [
+        { path: "src/twin.js", symbol_id: "twinBlob" },
+        { path: "src/twin.ts", symbol_id: "twinBlob" },
+      ],
+    );
+  }
+
+  // Definitions are read at the asked revision: one only the first revision has is found there
+  // and not at HEAD, and no row repeats when both trees are indexed.
+  {
+    const older = await tryCall(ctx, "find_symbol", { query: "vanishedOnce", ref_sha: first });
+    check(older.ok === true && older.ref_sha === first, `find_symbol vanishedOnce at the first revision: ${oneLine(older.error ?? older.ref_sha)}`);
+    same("find_symbol vanishedOnce at the first revision", rowsOf(older).map((row) => row.path), ["src/gone.ts"]);
+    const atHead = await tryCall(ctx, "find_symbol", { query: "vanishedOnce" });
+    check(atHead.ok === true && atHead.ref_sha === second, `find_symbol vanishedOnce at HEAD: ${oneLine(atHead.error ?? atHead.ref_sha)}`);
+    same("find_symbol vanishedOnce at HEAD", atHead.results, []);
+    const twins = await tryCall(ctx, "find_symbol", { query: "twinBlob", ref_sha: first });
+    same("find_symbol twinBlob at the first revision", rowsOf(twins).map((row) => row.path), ["src/twin.js", "src/twin.ts"]);
   }
 
   // Definitions are ranked by BM25: a name match outranks a doc-comment match, whatever the
@@ -694,8 +729,12 @@ async function main() {
       { kind: "open-question", id: String(openQ), status: "open" },
       { kind: "open-question", id: String(answeredQ), status: "open" },
     ]));
-    const resolved = await tryCall(ctx, "resolve_open_question", { id: answeredQ, resolution: "answered", answer: "Yes, through jerboaLimit." });
+    const resolved = await tryCall(ctx, "resolve_open_question", { id: answeredQ, resolution: "answered", answer: "Yes, through jerboaLimit and the numbat setting." });
     check(resolved?.ok !== false, `resolve_open_question was refused: ${oneLine(resolved?.error)}`);
+    // An answer written in place is indexed: the question's digest changed.
+    same("search_records numbat, a word only the answer holds", hits(await search("numbat", { include_history: true })), [
+      { kind: "open-question", id: String(answeredQ), status: "answered" },
+    ]);
     same("search_records gecko", hits(await search("gecko")), [{ kind: "finding", id: "S03-1", status: "confirmed-bug" }]);
     same("search_records gecko for S-03", hits(await search("gecko", { subject: "S-03" })), [{ kind: "finding", id: "S03-1", status: "confirmed-bug" }]);
     same("search_records iguana", hits(await search("iguana")), [{ kind: "field-note", id: String(Number(note.id)), status: "open" }]);
@@ -705,6 +744,54 @@ async function main() {
       { kind: "open-question", id: String(answeredQ), status: "answered" },
     ]));
     same("search_records jerboa in findings only", hits(await search("jerboa", { kinds: ["finding"] })), []);
+  }
+
+  // A row deleted from the store leaves the index, and a store whose store_identity differs
+  // from the one a source was synced against starts that source over.
+  {
+    const sidecars = () =>
+      readdirSync(storageRoot, { recursive: true, withFileTypes: true })
+        .filter((p) => p.isFile() && p.name === "index.db")
+        .map((p) => join(p.parentPath ?? p.path, p.name));
+    const sidecarRows = (sql, ...params) =>
+      sidecars().flatMap((path) => {
+        const sidecar = new Database(path);
+        try {
+          const known = sidecar.prepare("SELECT 1 FROM sqlite_master WHERE name = 'records'").get();
+          return known ? sidecar.prepare(sql).all(...params) : [];
+        } finally {
+          sidecar.close();
+        }
+      });
+    const note = await tryCall(ctx, "add_field_note", { category: "anomaly", observation: "The bandicoot retry loop never backs off.", location: "src/http.ts" });
+    check(note?.ok !== false, `add_field_note was refused: ${oneLine(note?.error)}`);
+    same("search_records bandicoot", hits(await search("bandicoot")), [{ kind: "field-note", id: String(Number(note.id)), status: "open" }]);
+    store.prepare("DELETE FROM field_notes WHERE id = ?").run(Number(note.id));
+    same("search_records bandicoot after its row was deleted", hits(await search("bandicoot", { include_history: true })), []);
+    same(
+      "the index's rows for the deleted field note",
+      sidecarRows("SELECT key FROM records WHERE kind = 'field-note' AND key = ?", String(Number(note.id))),
+      [],
+    );
+
+    const before = sidecarRows("SELECT id FROM records").map((r) => r.id);
+    check(before.length > 0, "the records index holds no rows to start over");
+    for (const path of sidecars()) {
+      const sidecar = new Database(path);
+      try {
+        if (sidecar.prepare("SELECT 1 FROM sqlite_master WHERE name = 'records_sync'").get()) {
+          sidecar.prepare("UPDATE records_sync SET store_generation = 'another-store'").run();
+        }
+      } finally {
+        sidecar.close();
+      }
+    }
+    same("search_records jackal after a store_identity change", hits(await search("jackal")), [{ kind: "claim", id: "re-1", status: "current" }]);
+    const after = new Set(sidecarRows("SELECT id FROM records").map((r) => r.id));
+    check(
+      before.every((id) => !after.has(id)),
+      "a source synced against another store_identity was not started over (its rows kept their ids)",
+    );
   }
 
   // Records are ranked by BM25, not by kind; every word of the query must match.
@@ -768,7 +855,7 @@ async function main() {
       explanation: ["body"],
       finding: ["symptom", "root_cause"],
       "field-note": ["observation"],
-      "open-question": ["question"],
+      "open-question": ["question", "answer"],
       vocabulary: ["gloss", "expansion"],
     };
     const schema = readFileSync(join(here, "src", "schema.sql"), "utf8");
