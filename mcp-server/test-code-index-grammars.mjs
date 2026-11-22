@@ -216,6 +216,10 @@ function checkSources() {
   );
   for (const [i, want] of GOLDEN.entries()) {
     const got = sources.grammars[i];
+    check(
+      got?.tarball === undefined,
+      `sources.json row ${i} (${want.language}) names a local tarball; the pins fetch from the registry`,
+    );
     for (const key of ["language", "package", "version", "integrity", "wasm"]) {
       check(
         got && got[key] === want[key],

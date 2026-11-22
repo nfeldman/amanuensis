@@ -68,6 +68,12 @@ export function loadSources(path = defaultSources) {
       throw new Error(`${path}: ${row.language} needs a sha512 integrity`);
     }
     if (!MEMBER.test(row.wasm ?? "")) throw new Error(`${path}: bad wasm name for ${row.language}`);
+    if (row.tarball !== undefined) {
+      if (typeof row.tarball !== "string" || !row.tarball.endsWith(".tgz")) {
+        throw new Error(`${path}: ${row.language} tarball must be a path to a .tgz`);
+      }
+      row.tarball = resolve(dirname(path), row.tarball);
+    }
   }
   return sources;
 }
@@ -133,9 +139,30 @@ function currentManifest(sources, out) {
   }
 }
 
+// A row's optional `tarball` names a local .tgz to verify instead of fetching from the
+// registry; the SI1 gate uses it to stay off the network. The pinned rows have none.
 function pack(row, scratch) {
   const directory = mkdtempSync(join(scratch, "pack-"));
-  const spec = `${row.package}@${row.version}`;
+  const spec = row.tarball ?? `${row.package}@${row.version}`;
+  if (row.tarball) {
+    if (!existsSync(row.tarball)) throw new Error(`tarball not found: ${row.tarball}`);
+    writeFileSync(join(directory, "local.tgz"), readFileSync(row.tarball));
+  } else {
+    fetchTarball(spec, directory);
+  }
+  const tarballs = readdirSync(directory).filter((name) => name.endsWith(".tgz"));
+  if (tarballs.length !== 1) throw new Error(`npm pack ${spec} produced ${tarballs.length} tarballs`);
+  const tarball = join(directory, tarballs[0]);
+  const digest = `sha512-${createHash("sha512").update(readFileSync(tarball)).digest("base64")}`;
+  if (digest !== row.integrity) {
+    throw new Error(
+      `integrity mismatch for ${spec}: sources.json pins ${row.integrity}, the tarball is ${digest}`,
+    );
+  }
+  return tarball;
+}
+
+function fetchTarball(spec, directory) {
   const result = spawnSync(
     "npm",
     ["pack", spec, "--ignore-scripts", "--silent", "--pack-destination", directory],
@@ -148,16 +175,6 @@ function pack(row, scratch) {
   if (result.status !== 0) {
     throw new Error(`npm pack ${spec} failed: ${(result.stderr || result.stdout).trim().slice(0, 300)}`);
   }
-  const tarballs = readdirSync(directory).filter((name) => name.endsWith(".tgz"));
-  if (tarballs.length !== 1) throw new Error(`npm pack ${spec} produced ${tarballs.length} tarballs`);
-  const tarball = join(directory, tarballs[0]);
-  const digest = `sha512-${createHash("sha512").update(readFileSync(tarball)).digest("base64")}`;
-  if (digest !== row.integrity) {
-    throw new Error(
-      `integrity mismatch for ${spec}: sources.json pins ${row.integrity}, the tarball is ${digest}`,
-    );
-  }
-  return tarball;
 }
 
 // Extract exactly the three members a grammar needs, into a directory that holds nothing else.
