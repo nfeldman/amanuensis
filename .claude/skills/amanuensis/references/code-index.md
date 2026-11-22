@@ -104,7 +104,9 @@ workspace HEAD where the reader takes a revision:
 status that says why: `superseded`, `invalidated` or `inapplicable` for a
 claim; `replaced` or `withdrawn` for a narrative; `replaced`, `withdrawn`,
 `unreachable` or `not-eligible` for an explanation; `answered`, `dismissed` or
-`superseded` for an open question.
+`superseded` for an open question. A claim closed at a revision HEAD does not
+descend from still holds at HEAD, so `get_claims` returns it and its status is
+`applies-at-head`.
 
 `kinds` keeps some kinds; `subject` keeps one subsystem id (and claims whose
 `claim_key` starts with it). Each call brings the index up to date with the
