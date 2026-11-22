@@ -28,7 +28,8 @@ Turns red when:
     them or does not list them all in the account, or an exit's box or account line names a
     target other than its stored one (a step it unwinds to, or `leaves-flow`);
   - an arrow or a box of a strip is not a link a keyboard can reach (rules 1 and 8);
-  - a mark's account line or box does not open with its kind's `claim_mark_kind` label, or a
+  - a mark's account line does not open with, or its box's words lack, its kind's
+    `claim_mark_kind` label, or a
     kind the contract does not hold is drawn rather than refused (final review F18/claude);
   - a step is hatched for a file another subsystem's ledger row holds as stale while its
     own subsystem's reading is fresh (final review F4/codex);
@@ -735,7 +736,8 @@ def main() -> int:
                 mark = {"kind": kind, "step": "03", "label": "half written", "target": "SM-01" if kind == "crosses-seam" else "leaves-flow"}
                 line = diagrams._flow_mark_text(mark)
                 box = diagrams._flow_mark_box(mark)
-                if not line.startswith(label) or not box.startswith(label):
+                # The box's words are its accessible name, whole; a narrow box may draw them cut.
+                if not line.startswith(label) or label not in box:
                     return f"a {kind} mark reads {line!r} / {box!r}; the contract names it {label!r}"
             try:
                 said = diagrams._flow_mark_box({"kind": "rollback", "step": "03", "label": "", "target": ""})

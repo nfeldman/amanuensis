@@ -1068,6 +1068,16 @@ _STANDING_ORDER: tuple[tuple[str, str, str], ...] = (
 #: Appendix B rule 2: a subsystem's files are drawn as coverage from `scoping` up.
 COVERAGE_FROM = ("scoping", "structural", "concerns", "adversarial", "mapped")
 _STANDING_LABELS = labels("standing_state")
+#: A flow mark is named by its kind's contract label (`claim_mark_kind`), never by the renderer's words.
+_MARK_LABELS = labels("claim_mark_kind")
+
+
+def _mark_label(kind: str) -> str:
+    """The contract's label for a flow mark's kind; a kind the contract does not hold is an error, not a trigger."""
+
+    if kind not in _MARK_LABELS:
+        raise ValueError(f"flow mark kind {kind!r} is not in the contract's claim_mark_kind")
+    return _MARK_LABELS[kind]
 _NOT_MEASURED = "Coverage not measured"
 
 
@@ -1521,31 +1531,32 @@ def _flow_mark_text(mark: dict[str, Any]) -> str:
 
     step, label, target = mark["step"], str(mark["label"] or "").strip(), str(mark["target"] or "").strip()
     kind = str(mark["kind"])
+    named = _mark_label(kind)
     if kind == "commit-point":
-        return f"Commit point after step {step}: the flow's effect is kept from here."
+        return f"{named} after step {step}: the flow's effect is kept from here."
     if kind == "crash-point":
-        return f"Crash point at step {step}: {label or 'no label recorded'}."
+        return f"{named} at step {step}: {label or 'no label recorded'}."
     if kind == "exit":
         where = "leaves the flow" if target == _LEAVES_FLOW else f"unwinds to step {target}"
-        return f"Exit at step {step}: {label or 'no label recorded'}, {where}."
+        return f"{named} at step {step}: {label or 'no label recorded'}, {where}."
     if kind == "crosses-seam":
-        return f"Crosses seam {target} at step {step}."
-    return f"Trigger at step {step}: the flow starts here."
+        return f"{named} at step {step}: {target}."
+    return f"{named} at step {step}: the flow starts here."
 
 
 def _flow_mark_box(mark: dict[str, Any]) -> str:
     """What a mark's box says, shorter than its account line."""
 
     kind, label, target = str(mark["kind"]), str(mark["label"] or "").strip(), str(mark["target"] or "").strip()
+    named = _mark_label(kind)
     if kind == "crash-point":
-        return f"Crash: {label}"
+        return f"{named}: {label}"
     if kind == "exit":
-        return f"Exit: {label} → " + ("leaves flow" if target == _LEAVES_FLOW else f"step {target}")
+        return f"{named}: {label} → " + ("leaves flow" if target == _LEAVES_FLOW else f"step {target}")
     if kind == "crosses-seam":
-        return f"Seam {target}"
-    if kind == "commit-point":
-        return "Kept"
-    return "Trigger"
+        # The seam first: a narrow box keeps two lines, and the seam is what the reader follows.
+        return f"{target}: {named}"
+    return named
 
 
 def flow_strip_model(conn: sqlite3.Connection, flow_key: str) -> Diagram:
@@ -2132,9 +2143,9 @@ def _draw_flow(diagram: Diagram) -> str:
     for mark in commits:
         x = _FLOW_LEFT + (mark.column + 1) * colw
         y1, y2 = top_of[mark.row] + _FLOW_HEAD - 2, box_top[mark.row] + _FLOW_BOX_H + 4
-        label = svg_text(["Kept"], x, top_of[mark.row] + 6, size=11, weight="600", fill="var(--accent)")
+        label = svg_text([mark.label], x, top_of[mark.row] + 6, size=11, weight="600", fill="var(--accent)")
         line = f'<rect x="{_n(x - 1.5)}" y="{_n(y1)}" width="3" height="{_n(y2 - y1)}" fill="var(--accent)"/>'
-        name = escape(f"Commit point: {mark.label}", quote=True)
+        name = escape(mark.label, quote=True)
         body.append(f'<g data-node="{escape(mark.record, quote=True)}"><a href="{escape(mark.href, quote=True)}" aria-label="{name}">{line}{label}</a></g>')
     boxes, arrows = len(diagram.nodes), len(diagram.edges)
     description = f"{boxes} {'box' if boxes == 1 else 'boxes'} and {arrows} {'arrow' if arrows == 1 else 'arrows'}: {diagram.caption}"
