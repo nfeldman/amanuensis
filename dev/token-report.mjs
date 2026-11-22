@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 // Descriptive token report (design/semantic-index/PLAN.md §6).
 //
-// Reads copies of the call log (`<storage>/call-log/calls.db`, opened read-only) and, optionally,
+// Reads copies of the call log (`<storage>/call-log/calls.db`, read into memory and opened read-only,
+// so nothing is added beside a WAL-mode copy) and, optionally,
 // Claude Code transcript files, and prints what each side — before and after — shows. It decides
 // nothing: there is no verdict, no threshold and no figure for the change between the sides. The
 // two sides differ in task, subject and time, so the comparison is descriptive.
 //
 // Call log: per Amanuensis tool, calls, response bytes (total, median, 90th percentile) and
 // refusals, split by server version (`--after-version`) or by a cutover date (`--cutover`).
-// Transcripts: per session, tool-result bytes by class and the four `usage` counts, deduplicated
-// by message id, split by two file lists (`--before-transcripts`, `--after-transcripts`) or by the
-// date a session began (`--transcripts` with `--cutover`). Without transcripts the report says
-// that host reads (`Read`, `Grep`, shell) are not covered.
+// Transcripts: per session (the files of one session id are one session, and a file named twice is
+// read once), tool-result bytes by class and the four `usage` counts, deduplicated by message id,
+// split by two file lists (`--before-transcripts`, `--after-transcripts`) or by the date a session
+// began (`--transcripts` with `--cutover`). Amanuensis's read tools are the index class and "other
+// Amanuensis reads"; its write tools count as `other`. Without transcripts the report says that
+// host reads (`Read`, `Grep`, shell) are not covered.
 //
 // Writes nothing but standard output, or the one file named by `--out`.
 //
@@ -23,7 +26,7 @@
 // repeated. Take the call-log copy with `sqlite3 calls.db ".backup before-calls.db"` once every
 // server on the store has stopped.
 
-import { readdirSync, readFileSync, writeFileSync, statSync, lstatSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,6 +40,11 @@ const PRICE_RATIOS = { input: 1, output: 5, cache_creation: 1.25, cache_read: 0.
 const PRICE_HUNDREDTHS = { input: 100, output: 500, cache_creation: 125, cache_read: 10 };
 
 const INDEX_TOOLS = new Set(["find_symbol", "outline_file", "read_symbol", "search_records"]);
+// Amanuensis's read tools, by the rule the server's readOnlyHint follows (mcp-server/src/index.ts,
+// toolAnnotations): describe_locus and the four index tools by name, the rest by a get_, list_ or
+// lookup_ prefix. Every other Amanuensis tool writes, and its results count as `other`.
+const isAmanuensisRead = (tool) =>
+  tool === "describe_locus" || INDEX_TOOLS.has(tool) || /^(get|list|lookup)_/.test(tool);
 const CLASSES = ["index", "amanuensis_other", "read_whole", "read_sliced", "search", "shell", "other"];
 const TOKEN_KEYS = ["input", "output", "cache_creation", "cache_read"];
 const USAGE_FIELDS = {
@@ -123,6 +131,25 @@ const sum = (values) => values.reduce((a, b) => a + b, 0);
 
 // --- call log ------------------------------------------------------------------------------------
 
+/**
+ * Open a call-log copy from its bytes, in memory and read-only. Opening the file itself, even
+ * read-only, adds `-shm` and `-wal` beside a WAL-mode copy, which a `.backup` of the live log is; the
+ * header's WAL bytes are set back to rollback mode in the in-memory copy only. A copy with a
+ * write-ahead log beside it is refused, because its last calls would be in that log.
+ */
+function openCopy(Database, path) {
+  const wal = `${path}-wal`;
+  if (existsSync(wal) && statSync(wal).size > 0) {
+    throw new Error(`a write-ahead log is beside it (${basename(wal)}); take the copy with sqlite3 calls.db ".backup <copy>"`);
+  }
+  const bytes = readFileSync(path);
+  if (bytes.length >= 20 && bytes[18] === 2 && bytes[19] === 2) {
+    bytes[18] = 1;
+    bytes[19] = 1;
+  }
+  return new Database(bytes, { readonly: true });
+}
+
 function readCallLogs(paths, args) {
   const Database = require(join(root, "mcp-server", "node_modules", "better-sqlite3"));
   const sides = { before: { rows: [], versions: new Set() }, after: { rows: [], versions: new Set() } };
@@ -130,7 +157,7 @@ function readCallLogs(paths, args) {
   for (const path of paths) {
     let db;
     try {
-      db = new Database(path, { readonly: true, fileMustExist: true });
+      db = openCopy(Database, path);
     } catch (e) {
       throw new Error(`cannot open call log ${path} read-only: ${String(e.message).split("\n")[0]}`);
     }
@@ -187,19 +214,27 @@ function summariseCalls(side) {
 
 // --- transcripts ---------------------------------------------------------------------------------
 
+/** The transcript files the paths name, each once however often it is named, directly or by a directory. */
 function collectTranscriptFiles(paths) {
   const files = [];
+  const seen = new Set();
+  const add = (path) => {
+    const real = realpathSync(path);
+    if (seen.has(real)) return;
+    seen.add(real);
+    files.push(path);
+  };
   const visit = (path) => {
     const st = lstatSync(path);
     if (st.isDirectory()) {
       for (const name of readdirSync(path).sort()) visit(join(path, name));
     } else if (st.isFile() && path.endsWith(".jsonl")) {
-      files.push(path);
+      add(path);
     }
   };
   for (const p of paths) {
     const st = statSync(p);
-    if (st.isFile()) files.push(p);
+    if (st.isFile()) add(p);
     else visit(p);
   }
   return files;
@@ -209,7 +244,9 @@ function classify(name, input) {
   if (name.startsWith("mcp__")) {
     const [, server = "", ...rest] = name.split("__");
     if (!/amanuensis/i.test(server)) return "other";
-    return INDEX_TOOLS.has(rest.join("__")) ? "index" : "amanuensis_other";
+    const tool = rest.join("__");
+    if (INDEX_TOOLS.has(tool)) return "index";
+    return isAmanuensisRead(tool) ? "amanuensis_other" : "other";
   }
   if (name === "Read") {
     const sliced = input && (input.offset != null || input.limit != null || input.pages != null);
@@ -238,14 +275,16 @@ const zeroClasses = () => Object.fromEntries(CLASSES.map((c) => [c, 0]));
 const zeroTokens = () => Object.fromEntries(TOKEN_KEYS.map((k) => [k, 0]));
 
 /**
- * Read transcript files into sessions, one per file. A message id is counted once for its usage and
- * a tool-use id once for its result, across every file, because a resumed session repeats earlier
- * lines and a streamed message appears once per content block.
+ * Read transcript files into sessions, one per session id: the files of a resumed session are one
+ * session. A message id is counted once for its usage and a tool-use id once for its result, across
+ * every file, because a resumed session repeats earlier lines and a streamed message appears once
+ * per content block.
  */
 function readSessions(files) {
   const seenMessages = new Set();
   const seenResults = new Set();
   const sessions = [];
+  const groups = new Map();
   for (const file of files) {
     let unreadable = 0;
     const entries = [];
@@ -259,6 +298,13 @@ function readSessions(files) {
         unreadable += 1;
       }
     }
+    const id = entries.find((e) => typeof e.sessionId === "string")?.sessionId ?? basename(file, ".jsonl");
+    if (!groups.has(id)) groups.set(id, { entries: [], unreadable: 0 });
+    const group = groups.get(id);
+    group.entries.push(...entries);
+    group.unreadable += unreadable;
+  }
+  for (const [id, { entries, unreadable }] of groups) {
     const uses = new Map();
     for (const entry of entries) {
       const content = entry.message?.content;
@@ -268,7 +314,7 @@ function readSessions(files) {
       }
     }
     const session = {
-      session: entries.find((e) => typeof e.sessionId === "string")?.sessionId ?? basename(file, ".jsonl"),
+      session: id,
       unreadable,
       started_at: null,
       calls: zeroClasses(),

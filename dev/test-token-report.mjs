@@ -356,6 +356,20 @@ for (const [label, paths] of [
   const r = runJson(label, resumedArgs(...paths));
   if (r) check(label, pickTranscripts(r.sides?.before?.transcripts), RESUMED);
 }
+// resumed-3.jsonl is a resume that got a new session id, sess-r2, and replays msg_r_1 and its result:
+// both still count once, in the session that first had them.
+const newId = runJson("resumed under a new session id", resumedArgs(resumedDir, join(fixtures, "resumed-new-id", "resumed-3.jsonl")));
+if (newId) {
+  const t = newId.sides?.before?.transcripts;
+  check("resumed under a new session id: sessions", t?.sessions, 2);
+  check("resumed under a new session id: tokens", t?.totals?.tokens, tokens(18, 110, 0, 650, 633));
+  check("resumed under a new session id: bytes", t?.totals?.bytes, klass([0, 11, 3, 0, 2, 0, 13]));
+  check("resumed under a new session id: sess-r2", pickSession(t, "sess-r2"), {
+    session: "sess-r2",
+    bytes: klass([0, 0, 0, 0, 2, 0, 0]),
+    tokens: tokens(2, 10, 0, 50, 57),
+  });
+}
 const twice = runJson("one transcript named twice", [
   ...splitTranscripts("--before-transcripts", ["before-2.jsonl", "before-2.jsonl"]),
   ...splitTranscripts("--after-transcripts", ["after-2.jsonl"]),
@@ -363,6 +377,12 @@ const twice = runJson("one transcript named twice", [
 if (twice) {
   check("one transcript named twice: sessions", twice.sides?.before?.transcripts?.sessions, 1);
   check("one transcript named twice: weighted median", twice.sides?.before?.transcripts?.medians?.tokens?.weighted, 980);
+}
+// before-2.jsonl has an unreadable line, which no id deduplicates: named twice, it is still one.
+const once = runJson("before-2 once", splitTranscripts("--before-transcripts", ["before-2.jsonl"]));
+if (once && twice) {
+  check("before-2 once: unreadable lines", once.sides?.before?.transcripts?.unreadable_lines, 1);
+  check("before-2 named twice reads as once", pickTranscripts(twice.sides?.before?.transcripts), pickTranscripts(once.sides?.before?.transcripts));
 }
 
 // --- 5. read-only, and nothing written but the output ----------------------------------------------
