@@ -46,11 +46,13 @@
 //     definition's; an unknown symbol is refused with its candidates and the pass writes
 //     nothing; a failed anchor insert leaves no evidence row and no judgment behind.
 //
-// Hermetic: the fixture repository and the store are built in a temporary directory, the
+// Hermetic: the fixture repository and the store are built in a temporary directory, under a
+// global git configuration with a failing pre-commit hook the fixture must not depend on; the
 // tools run in this process from dist/, and nothing reaches the network.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -113,6 +115,27 @@ function gitLines(workspace, rev, path, from, to) {
   const lines = text.split("\n");
   if (text.endsWith("\n")) lines.pop();
   return lines.slice(from - 1, to).join("\n");
+}
+
+/**
+ * Run `fn` with a global git configuration whose pre-commit hook always fails, as a user's
+ * own `core.hooksPath` might: the fixtures must not depend on git state outside the gate.
+ */
+function withHostileGitConfig(dir, fn) {
+  const hooks = join(dir, "hooks");
+  mkdirSync(hooks, { recursive: true });
+  writeFileSync(join(hooks, "pre-commit"), "#!/bin/sh\necho hostile pre-commit >&2\nexit 1\n");
+  chmodSync(join(hooks, "pre-commit"), 0o755);
+  const config = join(dir, "gitconfig");
+  writeFileSync(config, `[core]\n\thooksPath = ${hooks}\n[init]\n\tdefaultBranch = hostile\n`);
+  const saved = process.env.GIT_CONFIG_GLOBAL;
+  process.env.GIT_CONFIG_GLOBAL = config;
+  try {
+    return fn();
+  } finally {
+    if (saved === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+    else process.env.GIT_CONFIG_GLOBAL = saved;
+  }
 }
 
 /**
@@ -232,7 +255,9 @@ async function main() {
   process.env.AMANUENSIS_CALL_LOG = "off";
   delete process.env.AMANUENSIS_CODE_INDEX;
 
-  const { workspace, commit } = buildEvidenceAnchorsRepo(join(scratch, "workspace"));
+  const { workspace, commit } = withHostileGitConfig(join(scratch, "hostile-git"), () =>
+    buildEvidenceAnchorsRepo(join(scratch, "workspace")),
+  );
   const project = mods.project.resolveProject(workspace, { selectionSource: "si7-gate" });
   mods.project.ensureProjectStorage(project, (p) => mods.db.openDatabase(p).close());
   const db = mods.db.openDatabase(project.dbPath);

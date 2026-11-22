@@ -35,9 +35,19 @@
 //   - a refresh run built from the backlog (get_refresh_run) does not carry the same hints at
 //     its own head revision, for the stale files inside its allowed_sources and no others.
 //
-// Hermetic: the fixture repository and the store are built in a temporary directory, the
+// Hermetic: the fixture repository and the store are built in a temporary directory, under a
+// global git configuration with a failing pre-commit hook the fixture must not depend on; the
 // tools run in this process from dist/, and nothing reaches the network.
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -72,6 +82,27 @@ const SIGNATURES =
   /Cannot find module|MODULE_NOT_FOUND|ModuleNotFoundError|SyntaxError|No such file or directory|ENOENT|ImportError|ReferenceError|is not defined|command not found/g;
 function oneLine(text) {
   return String(text).replace(SIGNATURES, "[error]").split("\n")[0].slice(0, 500);
+}
+
+/**
+ * Run `fn` with a global git configuration whose pre-commit hook always fails, as a user's
+ * own `core.hooksPath` might: the fixtures must not depend on git state outside the gate.
+ */
+function withHostileGitConfig(dir, fn) {
+  const hooks = join(dir, "hooks");
+  mkdirSync(hooks, { recursive: true });
+  writeFileSync(join(hooks, "pre-commit"), "#!/bin/sh\necho hostile pre-commit >&2\nexit 1\n");
+  chmodSync(join(hooks, "pre-commit"), 0o755);
+  const config = join(dir, "gitconfig");
+  writeFileSync(config, `[core]\n\thooksPath = ${hooks}\n[init]\n\tdefaultBranch = hostile\n`);
+  const saved = process.env.GIT_CONFIG_GLOBAL;
+  process.env.GIT_CONFIG_GLOBAL = config;
+  try {
+    return fn();
+  } finally {
+    if (saved === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+    else process.env.GIT_CONFIG_GLOBAL = saved;
+  }
 }
 
 /**
@@ -164,7 +195,10 @@ async function main() {
   process.env.AMANUENSIS_CALL_LOG = "off";
   delete process.env.AMANUENSIS_CODE_INDEX;
 
-  const { workspace, base, target, reorder } = buildRefreshRepo(join(scratch, "workspace"));
+  const hostile = join(scratch, "hostile-git");
+  const { workspace, base, target, reorder } = withHostileGitConfig(hostile, () =>
+    buildRefreshRepo(join(scratch, "workspace")),
+  );
   const project = mods.project.resolveProject(workspace, { selectionSource: "si8-gate" });
   mods.project.ensureProjectStorage(project, (p) => mods.db.openDatabase(p).close());
   const db = mods.db.openDatabase(project.dbPath);
@@ -453,7 +487,7 @@ async function main() {
   // -------------------------------------------------------------------------------------
   // Reordering definitions no evidence cites changes no state and no lines.
 
-  const reordered = reorder();
+  const reordered = withHostileGitConfig(hostile, reorder);
   same("get_stale_backlog after reordering alpha and beta", await backlog(), expectedRows(reordered));
   same(
     "get_refresh_run's anchor_hints stay at the run's head revision",
