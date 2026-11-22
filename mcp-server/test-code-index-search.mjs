@@ -20,7 +20,12 @@
 //     narrative key, an explanation whose revision the workspace does not reach and one below
 //     its phase are present by default, or absent with include_history, or carry the wrong
 //     status; or an effective narrative or explanation is not found by default;
-//   - kinds or subject do not narrow the hits, or a snippet is over 240 bytes or lacks the word;
+//   - a finding, a field note or an open question is not found with its reader's status, or an
+//     answered question is present by default or absent with include_history;
+//   - definitions or records are not in BM25 order (a name match above a doc-comment match, a
+//     dense vocabulary gloss above a long claim), or a hit lacks one of the query's words;
+//   - kinds or subject (a subsystem id, or a claim_key prefix) do not narrow the hits, or a
+//     snippet is over 240 bytes, is not valid UTF-8 or lacks the word;
 //   - the source list in code-index/records.ts does not match schema.sql: a table, key or text
 //     column it names is not in the schema, an append-only source is not cursored by rowid or a
 //     table updated in place is not reconciled by content digest;
@@ -82,7 +87,7 @@ function write(dir, path, content) {
 // ---------------------------------------------------------------------------------------
 // The fixture repository: two revisions. The second adds a call to parseHTTPRequest.
 
-const HTTP_TS = `/** Parses an incoming request line into its parts. */
+const HTTP_TS = `/** Parses an incoming request line into its parts, one block at a time. */
 export function parseHTTPRequest(line: string): string[] {
   return line.split(" ");
 }
@@ -162,6 +167,9 @@ async function loadModules() {
     ["dist/tools/narratives.js", "narrativeTools"],
     ["dist/tools/explanations.js", "explanationTools"],
     ["dist/tools/vocabulary.js", "vocabularyTools"],
+    ["dist/tools/findings.js", "findingTools"],
+    ["dist/tools/field-notes.js", "fieldNoteTools"],
+    ["dist/tools/open-questions.js", "openQuestionTools"],
     ["dist/tools/code-index.js", "codeIndexTools"],
   ]) {
     const mod = await load(path);
@@ -295,6 +303,16 @@ async function main() {
     }
   }
 
+  // Definitions are ranked by BM25: a name match outranks a doc-comment match, whatever the
+  // file order. Every word of the query must match.
+  {
+    const r = await tryCall(ctx, "find_symbol", { query: "block" });
+    check(r.ok === true, `find_symbol block was refused: ${oneLine(r.error)}`);
+    same("find_symbol block, in rank order", r.results.map(definition), [DIGEST, TS_PARSE]);
+    const both = await tryCall(ctx, "find_symbol", { query: "frobnication block" });
+    same("find_symbol frobnication block (both words required)", rowsOf(both).map(definition), [DIGEST]);
+  }
+
   // find_symbol: references, matched by name only.
   const REFS_SECOND = [
     { path: "lib/other.py", name: "parseHTTPRequest", kind: "call", line: 4, match: "name" },
@@ -331,7 +349,9 @@ async function main() {
   const store = ctx.db;
   store.prepare("INSERT INTO subsystems (id, name, status) VALUES (?, ?, ?)").run("S-01", "S-01 fixture", "structural");
   store.prepare("INSERT INTO subsystems (id, name, status) VALUES (?, ?, ?)").run("S-02", "S-02 fixture", "scoping");
-  for (const sid of ["S-01", "S-02"]) {
+  // A subsystem deep enough to hold a finding.
+  store.prepare("INSERT INTO subsystems (id, name, status) VALUES (?, ?, ?)").run("S-03", "S-03 fixture", "concerns");
+  for (const sid of ["S-01", "S-02", "S-03"]) {
     store
       .prepare(
         `INSERT INTO file_ledger (subsystem_id, file_path, why_in_scope, classification, ref_sha)
@@ -518,6 +538,93 @@ async function main() {
   same("search_records ocelot for S-01", hits(await search("ocelot", { subject: "S-01" })), [
     { kind: "narrative", id: String(newOcelot), status: "recorded" },
   ]);
+
+  // A claim_key prefix as subject keeps a claim whose key starts with it.
+  same("search_records zebrafish for the claim_key prefix S-01/behaviour", hits(await search("zebrafish", { subject: "S-01/behaviour" })), [
+    { kind: "claim", id: "zz-first", status: "current" },
+  ]);
+  same("search_records zebrafish for the claim_key prefix S-01/structure", hits(await search("zebrafish", { subject: "S-01/structure" })), []);
+
+  // Findings, field notes and open questions are found, each with its reader's status; an
+  // answered question only with include_history.
+  {
+    const f = await tryCall(ctx, "add_finding", {
+      finding_id: "S03-1",
+      subsystem_id: "S-03",
+      symptom: "The gecko cache never expires.",
+      root_cause: "Its sweeper is never scheduled.",
+      severity: "MEDIUM",
+      status: "confirmed-bug",
+      ref_sha: head,
+      pass_type: "survey",
+    });
+    check(f?.ok !== false, `add_finding was refused: ${oneLine(f?.error)}`);
+    const note = await tryCall(ctx, "add_field_note", {
+      category: "anomaly",
+      observation: "The iguana handler swallows its errors.",
+      location: "src/http.ts",
+    });
+    check(note?.ok !== false, `add_field_note was refused: ${oneLine(note?.error)}`);
+    const ask = async (question) => {
+      const r = await tryCall(ctx, "record_open_question", { category: "domain-knowledge", question, subsystem_id: "S-01" });
+      check(r?.ok !== false, `record_open_question was refused: ${oneLine(r?.error)}`);
+      return Number(r.id);
+    };
+    const openQ = await ask("Why does the jerboa queue drop its tail?");
+    const answeredQ = await ask("Is the jerboa limit configurable?");
+    same("search_records jerboa before an answer", hits(await search("jerboa")), sorted([
+      { kind: "open-question", id: String(openQ), status: "open" },
+      { kind: "open-question", id: String(answeredQ), status: "open" },
+    ]));
+    const resolved = await tryCall(ctx, "resolve_open_question", { id: answeredQ, resolution: "answered", answer: "Yes, through jerboaLimit." });
+    check(resolved?.ok !== false, `resolve_open_question was refused: ${oneLine(resolved?.error)}`);
+    same("search_records gecko", hits(await search("gecko")), [{ kind: "finding", id: "S03-1", status: "confirmed-bug" }]);
+    same("search_records gecko for S-03", hits(await search("gecko", { subject: "S-03" })), [{ kind: "finding", id: "S03-1", status: "confirmed-bug" }]);
+    same("search_records iguana", hits(await search("iguana")), [{ kind: "field-note", id: String(Number(note.id)), status: "open" }]);
+    same("search_records jerboa by default", hits(await search("jerboa")), [{ kind: "open-question", id: String(openQ), status: "open" }]);
+    same("search_records jerboa with include_history", hits(await search("jerboa", { include_history: true })), sorted([
+      { kind: "open-question", id: String(openQ), status: "open" },
+      { kind: "open-question", id: String(answeredQ), status: "answered" },
+    ]));
+    same("search_records jerboa in findings only", hits(await search("jerboa", { kinds: ["finding"] })), []);
+  }
+
+  // Records are ranked by BM25, not by kind; every word of the query must match.
+  {
+    await define({ term: "Tapir", gloss: "The tapir pool, where tapir workers wait." });
+    await addClaim(
+      "tap-1",
+      "S-01/behaviour/burrow",
+      "The burrow scheduler hands a batch to whichever pool is free, a tapir among them, and then records the hand-off in its journal before it moves on.",
+    );
+    const r = await search("tapir");
+    same(
+      "search_records tapir, in rank order",
+      r.results.map((h) => ({ kind: h.kind, id: String(h.id) })),
+      [
+        { kind: "vocabulary", id: "Tapir" },
+        { kind: "claim", id: "tap-1" },
+      ],
+    );
+    same("search_records tapir journal (both words required)", hits(await search("tapir journal")), [
+      { kind: "claim", id: "tap-1", status: "current" },
+    ]);
+  }
+
+  // A snippet of a long multibyte record is cut to 240 bytes on a character boundary. The
+  // indexed text is the claim_key's line (20 bytes) and the statement; after "Okapi " (6 bytes)
+  // each "東京都 " is 10 bytes, so byte 240 falls inside a character.
+  {
+    const long = `Okapi ${"東京都 ".repeat(60)}`;
+    await addClaim("oka-1", "S-01/behaviour/long", long);
+    const r = await search("okapi");
+    same("search_records okapi", hits(r), [{ kind: "claim", id: "oka-1", status: "current" }]);
+    const snippet = r.results[0].snippet;
+    const bytes = Buffer.from(snippet, "utf8");
+    check(bytes.length > 200 && bytes.length <= 240, `the okapi snippet is ${bytes.length} bytes, not 201 to 240`);
+    check(!snippet.includes("\uFFFD"), "the okapi snippet is cut inside a character");
+    check(snippet.includes("Okapi 東京都"), `the okapi snippet is not from the claim's text: ${JSON.stringify(snippet.slice(0, 40))}`);
+  }
 
   // -------------------------------------------------------------------------------------
   // The source list matches schema.sql.
