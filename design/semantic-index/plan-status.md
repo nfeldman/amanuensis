@@ -16,7 +16,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| SI5 | outline_file and read_symbol | ready (1 attempt) | SI4 | `mcp-server/test-code-index-read.mjs` | §8 SI5, §4.3 |
+| SI5 | outline_file and read_symbol | done (1 attempt) | SI4 | `mcp-server/test-code-index-read.mjs` | §8 SI5, §4.3 |
 | SI6 | find_symbol and search_records | ready | SI5 | `mcp-server/test-code-index-search.mjs` | §8 SI6, §4.3, §4.6 |
 
 ## S3 · Evidence and refresh (review: pending)
