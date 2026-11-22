@@ -1034,6 +1034,7 @@ def status_ladder_model(
     standing = next((d for d in depths if d["value"] == here), {})
     paragraphs = [
         f"{subject} is here, at {labels_by_value.get(here, here)}. {standing.get('meaning', '')}"
+        f" It authorizes {standing.get('authorizes', 'only what it records')}."
         f" It cannot justify {standing.get('cannot_justify', 'more than it records')}.".replace("  ", " "),
         "Deferred is drawn beside the ladder, not as a rung: it parks a subsystem outside the climb.",
     ]
@@ -1795,10 +1796,29 @@ def _clip(cx: float, cy: float, w: float, h: float, toward: tuple[float, float])
     return cx + dx * t, cy + dy * t
 
 
+def arrow_name(diagram: Diagram, edge: DiagramEdge) -> str:
+    """What an arrow's link is called: the boxes it joins, and its own label when it has one (Appendix B rule 8)."""
+
+    names = {n.record: n.label for n in diagram.nodes}
+    target = names.get(edge.target, edge.target)
+    joined = f"{names.get(edge.source, edge.source)} to {target}" if edge.source else f"To {target}"
+    return f"{joined}: {edge.label}" if edge.label else joined
+
+
 def svg_arrow(
-    record: str, start: tuple[float, float], control: tuple[float, float], end: tuple[float, float], *, style: str = "solid", href: str = ""
+    record: str,
+    start: tuple[float, float],
+    control: tuple[float, float],
+    end: tuple[float, float],
+    *,
+    style: str = "solid",
+    href: str = "",
+    name: str = "",
 ) -> str:
-    """One marked path from `start` to `end`, bowed through `control`, and its head as a polygon; a link to its account line."""
+    """One marked path from `start` to `end`, bowed through `control`, and its head as a polygon; a link to its account line.
+
+    The link holds only the path and a hidden head, so `name` is its accessible name.
+    """
 
     dash = f' stroke-dasharray="{_DASH[style]}"' if style in _DASH else ""
     straight = control == ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
@@ -1814,7 +1834,10 @@ def svg_arrow(
         f'<path data-edge="{escape(record, quote=True)}" d="{d}" fill="none" stroke="var(--accent)" stroke-width="1.5"{dash}/>'
         f'<polygon aria-hidden="true" points="{_n(end[0])},{_n(end[1])} {_n(left[0])},{_n(left[1])} {_n(right[0])},{_n(right[1])}" fill="var(--accent)"/>'
     )
-    return f'<a href="{escape(href, quote=True)}">{drawn}</a>' if href else drawn
+    if not href:
+        return drawn
+    label = f' aria-label="{escape(name, quote=True)}"' if name else ""
+    return f'<a href="{escape(href, quote=True)}"{label}>{drawn}</a>'
 
 
 def _id_part(text: str) -> str:
@@ -1865,7 +1888,7 @@ def draw_svg(diagram: Diagram) -> str:
             end = _clip(*target, boxw, boxh, (target[0] - 100, target[1]))
             start = (end[0] - 36, end[1])
             control = ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
-        body.append(svg_arrow(edge.record, start, control, end, style=edge.style, href=edge.href))
+        body.append(svg_arrow(edge.record, start, control, end, style=edge.style, href=edge.href, name=arrow_name(diagram, edge)))
     for node in diagram.nodes:
         cx, cy = centres[node.record]
         width = boxw if not node.marker else boxw * 0.6
@@ -1985,7 +2008,7 @@ def _draw_seam(diagram: Diagram) -> str:
         facing = 1 if target[0] > source[0] else -1
         start = (source[0] + facing * (boxw / 2 + 2), y)
         end = (target[0] - facing * (boxw / 2 + 2), y)
-        body.append(svg_arrow(edge.record, start, ((start[0] + end[0]) / 2, y), end, style=edge.style, href=edge.href))
+        body.append(svg_arrow(edge.record, start, ((start[0] + end[0]) / 2, y), end, style=edge.style, href=edge.href, name=arrow_name(diagram, edge)))
         lines = _seam_label(edge.label)
         mid = (start[0] + end[0]) / 2
         absent = edge.label == SEAM_NOT_RECORDED
@@ -2081,7 +2104,7 @@ def _draw_flow(diagram: Diagram) -> str:
     centre = {n.record: (_FLOW_LEFT + n.column * colw + colw / 2, box_top[n.row] + _FLOW_BOX_H / 2) for n in steps}
     for edge in diagram.edges:
         (sx, sy), (tx, ty) = centre[edge.source], centre[edge.target]
-        body.append(svg_arrow(edge.record, (sx + boxw / 2 + 3, sy), ((sx + tx) / 2, sy), (tx - boxw / 2 - 3, ty), style=edge.style, href=edge.href))
+        body.append(svg_arrow(edge.record, (sx + boxw / 2 + 3, sy), ((sx + tx) / 2, sy), (tx - boxw / 2 - 3, ty), style=edge.style, href=edge.href, name=arrow_name(diagram, edge)))
     for node in steps:
         cx, cy = centre[node.record]
         lines = _flow_label(node.detail, chars, 2) if chars >= 14 else []
