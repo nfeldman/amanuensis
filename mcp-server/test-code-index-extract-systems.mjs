@@ -28,7 +28,12 @@
 //     halves are not a `declaration` and a `method` with one symbol_id (in two files and in
 //     one), properties, events, indexers or records are missing, a local function is a
 //     definition, or overloads that differ by generic arity or by `ref`/`out` share an id;
-//   - a parameter's name, attribute or default value enters a C++ or C# discriminator;
+//   - a parameter's name, attribute or default value enters a C++ or C# discriminator, or a
+//     function-pointer parameter's own parameter names do, so a prototype and its definition
+//     differ;
+//   - a C++ function-local prototype or most-vexing-parse local is a definition, an object-like
+//     `#define` is missing, a forward-declared class or opaque enum is a definition, or a
+//     member template defined out of class does not cite both `template` heads;
 //   - any symbol_id changes when its file's definitions are reordered;
 //   - output differs across two runs, or CRLF line endings change a golden row.
 //
@@ -791,6 +796,32 @@ async function checkPackageRoot(mod) {
 
 const CRASH = /Cannot find module|MODULE_NOT_FOUND|ModuleNotFoundError|SyntaxError|No such file or directory|ENOENT|ImportError|ReferenceError|is not defined|command not found|Traceback/g;
 
+async function checkCppEdges(mod) {
+  const text = [
+    "void f() { Buf b(size); int g(int); }",
+    "#define K 1",
+    "class Fwd;",
+    "enum E : int;",
+    "template <typename T>",
+    "struct A {",
+    "  template <typename U>",
+    "  void m(U u);",
+    "};",
+    "template <typename T>",
+    "template <typename U>",
+    "void A<T>::m(U u) {}",
+    "int apply(int (*cb)(int x), int k = 3);",
+    "int apply(int (*cb)(int y), int) { return 0; }",
+    "",
+  ].join("\n");
+  const result = await extractText(mod, "cpp edges", text, "cpp");
+  const ids = result.symbols.map((s) => `${s.kind} ${s.symbol_id}`);
+  const want = ["function f()", "macro K", "struct A", "declaration A.m<1>(U)", "method A.m<1>(U)", "declaration apply(int(*)(int),int)", "function apply(int(*)(int),int)"];
+  check(JSON.stringify(ids) === JSON.stringify(want), `C++ edge rows are ${JSON.stringify(ids)}, expected ${JSON.stringify(want)}`);
+  const method = result.symbols.find((s) => s.kind === "method");
+  check(spanText(text, method).startsWith("template <typename T>\ntemplate <typename U>\nvoid A<T>::m"), `an out-of-class member template's span starts ${JSON.stringify(spanText(text, method).slice(0, 40))}`);
+}
+
 async function main() {
   const mod = await loadExtractor();
   checkLanguages(mod);
@@ -798,6 +829,7 @@ async function main() {
   checkDetails(results);
   await checkPartials(mod, results);
   await checkDefaults(mod);
+  await checkCppEdges(mod);
   await checkHashEdits(mod);
   await checkReordering(mod);
   await checkCrlfAndDeterminism(mod);
