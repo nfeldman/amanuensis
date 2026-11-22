@@ -108,8 +108,9 @@ claim; `replaced` or `withdrawn` for a narrative; `replaced`, `withdrawn`,
 descend from still holds at HEAD, so `get_claims` returns it and its status is
 `applies-at-head`.
 
-`kinds` keeps some kinds; `subject` keeps one subsystem id (and claims whose
-`claim_key` starts with it). Each call brings the index up to date with the
+`kinds` keeps some kinds; `subject` keeps one subsystem id (with claims whose
+`claim_key` starts with it, and terms scoped to it, as `list_vocabulary`
+scopes them). Each call brings the index up to date with the
 store first, so a record written a moment ago is found.
 
 ## Refusals and how to recover

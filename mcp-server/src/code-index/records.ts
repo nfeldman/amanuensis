@@ -289,6 +289,8 @@ interface Resolved {
   subject: string | null;
   /** For a claim, its key: a `subject` filter also matches `<subject>/` at its start. */
   claimKey?: string;
+  /** For a term, every subsystem it is scoped to, as `list_vocabulary` reads the scope set. */
+  scopes?: string[];
 }
 
 function handlerOf(tools: ToolDefinition[], name: string): ToolDefinition["handler"] {
@@ -483,10 +485,16 @@ class Readers {
   private async term(term: string): Promise<Resolved | null> {
     const row = (await lookupTerm({ term }, this.ctx)) as Record<string, unknown> | null;
     if (!row) return null;
+    const scopes = (
+      this.ctx.db
+        .prepare("SELECT subsystem_id FROM vocabulary_scopes WHERE term = ? ORDER BY subsystem_id")
+        .all(term) as { subsystem_id: string }[]
+    ).map((s) => s.subsystem_id);
     return {
       current: true,
       status: "current",
       subject: (row.subsystem_id as string | null) ?? null,
+      scopes,
     };
   }
 }
@@ -568,6 +576,7 @@ export async function searchRecords(
       if (
         search.subject !== null &&
         resolved.subject !== search.subject &&
+        !resolved.scopes?.includes(search.subject) &&
         !resolved.claimKey?.startsWith(`${search.subject}/`)
       ) {
         continue;
