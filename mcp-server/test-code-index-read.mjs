@@ -11,7 +11,7 @@
 //     signatures, first doc lines, occurrences of a repeated symbol_id, imports, bytes, lines,
 //     blob_sha, status and the extractor generation; or any of it carries source text;
 //   - read_symbol does not return exactly the citeable span's bytes (doc comment included,
-//     non-ASCII text included) for a symbol_id, a qname and a bare name (an overloaded Java
+//     non-ASCII text included), labelled with the extractor generation, for a symbol_id, a qname and a bare name (an overloaded Java
 //     method's qname naming both overloads and each symbol_id one), or its source differs
 //     from what git holds at that revision;
 //   - evidence_args is not exactly { file_path, symbol: <symbol_id>, ref_sha: <resolved commit>,
@@ -343,6 +343,8 @@ async function main() {
         check(!hasKey(out.symbols, key), `outline_file ${label} carries a ${key} field: it returns no source`);
       }
     }
+    // The extractor generation every read is labelled with (PLAN §4.7).
+    const generation = (await outline("src/shapes.ts")).extractor_id;
     // The default revision is HEAD: `add`'s older body appears only at the first revision.
     const bodyDefault = await outline("src/shapes.ts");
     check(JSON.stringify(bodyDefault).includes("subtract"), "outline_file without ref_sha is not at HEAD");
@@ -369,6 +371,7 @@ async function main() {
       check(r.start_line === 4 && r.end_line === 7, `read_symbol ${label}: lines are ${r.start_line}-${r.end_line}`);
       check(r.symbol_id === "add" && r.kind === "function", `read_symbol ${label}: symbol_id ${r.symbol_id} kind ${r.kind}`);
       check(r.span_sha256 === sha256(want), `read_symbol ${label}: span_sha256 is not the sha256 of the source`);
+      check(r.extractor_id === generation, `read_symbol ${label}: extractor_id is ${r.extractor_id}, not outline_file's ${generation}`);
       check(r.truncated === undefined || r.truncated === false, `read_symbol ${label}: truncated`);
       same(`read_symbol ${label}: evidence_args`, r.evidence_args, {
         file_path: "src/shapes.ts",
@@ -456,6 +459,7 @@ async function main() {
       const r = await read("src/shapes.ts", "render");
       check(r.ok === true && r.ambiguous === true, `read_symbol render is not reported ambiguous: ${canonical(r).slice(0, 300)}`);
       check(!("source" in r) && !("evidence_args" in r), "an ambiguous read_symbol returned source or evidence_args");
+      check(r.extractor_id === generation, `an ambiguous read_symbol: extractor_id is ${r.extractor_id}`);
       same("candidates for render", r.candidates, [
         item("Label.render", "method", 16, 18, "render(): string {", { doc_start_line: 15, doc: "Renders the label." }),
         item("Button.render", "method", 22, 24, "render(): string {"),
@@ -559,6 +563,7 @@ async function main() {
       check(r.source === gitLines(workspace, second, "src/big.ts", 1, 400), "the truncated source is not lines 1-400");
       check(r.start_line === 1 && r.end_line === 400, `the truncated read says lines ${r.start_line}-${r.end_line}`);
       check(r.definition_end_line === 500, `definition_end_line is ${r.definition_end_line}, not 500`);
+      check(r.extractor_id === generation, `a truncated read_symbol: extractor_id is ${r.extractor_id}`);
       same("the truncated read's nested outline", r.nested, BIG_OUTLINE[0].children);
       check(r.source === bigSource().split("\n").slice(0, 400).join("\n"), "the truncated source differs from the fixture's first 400 lines");
       const inner = await read("src/big.ts", "bigFunction.inner");
