@@ -27,6 +27,10 @@ Turns red when:
     (unledgered, exempt, ledgered) or uses an earlier row;
   - a store with no reconciliation draws a coverage bar, or its page lacks "coverage not
     measured", or prints a zero where nothing was measured;
+  - (final review F4/claude, F11/claude) a subsystem with open findings is badged at a depth
+    other than concerns, adversarial or mapped (structural, deferred, unmapped, scoping), a
+    badge count differs from the store's open findings by severity, the badge note's "n of m"
+    miscounts, or a coverage segment loses the line style its standing is drawn with;
   - an SVG lacks `role="img"`, a `<title>` or a `<desc>` that counts its segments, states a font
     size under 11, uses a literal colour, runs a script, or is not 960 wide, or a mark has no
     `data-node`;
@@ -569,6 +573,98 @@ def main() -> int:
             return None
 
         check("badges: none at zero, none below concerns, none clean, under review where it applies", badge_rules)
+
+        def badge_depths() -> str | None:
+            # Appendix B rule 2: badges from `concerns` up, at no other depth. The fixtures hold no
+            # open finding at `structural` or `deferred`, so B-01, which holds open findings, is
+            # moved through every depth on a copy of store A (final review F4/claude, F11/claude).
+            source = sqlite3.connect(f"file:{store_a / 'memory.db'}?mode=ro", uri=True)
+            db = sqlite3.connect(":memory:")
+            try:
+                source.backup(db)
+            finally:
+                source.close()
+            db.row_factory = sqlite3.Row
+            try:
+                vocab = json.loads((REPO / "mcp-server" / "contracts" / "conspectus-vocabulary.json").read_text())
+                depths = [str(v["value"]) for v in vocab["enums"]["subsystem_status"]["values"]]
+                for depth in [*depths, "deferred"]:
+                    db.execute("UPDATE subsystems SET status = ? WHERE id = 'B-01'", (depth,))
+                    badged = bool(diagrams.finding_badges(db).get("B-01"))
+                    if badged != (depth in BADGED):
+                        return f"B-01 at {depth} {'carries' if badged else 'lacks'} a badge"
+                # A mapped subsystem with nothing to count is one more eligible subsystem with no
+                # badge, and the note's "n of m" must say so (F11/claude: `bare = 0` stayed green).
+                db.execute("UPDATE subsystems SET status = 'concerns' WHERE id = 'B-01'")
+
+                def note_counts() -> tuple[int, int] | None:
+                    note = " ".join(b.text for b in diagrams.badge_note(db, diagrams.finding_badges(db)))
+                    said = re.search(r"(\d+) of (\d+) subsystems", note)
+                    return (int(said.group(1)), int(said.group(2))) if said else None
+
+                before = note_counts()
+                db.execute("INSERT INTO subsystems (id, name, status) VALUES ('Z-09', 'Quiet fixture', 'mapped')")
+                after = note_counts()
+                if before is None or after != (before[0] + 1, before[1] + 1):
+                    return f"a mapped subsystem with no open finding moved the badge note from {before} to {after}, not one more of one more"
+            finally:
+                db.close()
+            return None
+
+        check("a subsystem with open findings is badged at concerns, adversarial and mapped and at no other depth", badge_depths)
+
+        def badge_counts_and_note() -> str | None:
+            # The counts are the store's open findings by severity, read here without the
+            # renderer's measures (F11/claude), and the note's "n of m" counts the eligible
+            # subsystems that show none.
+            open_rows = table(
+                store_a,
+                "SELECT f.subsystem_id, f.severity FROM finding_state_current v"
+                " JOIN findings f ON f.finding_id = v.finding_id WHERE v.resolution_state = 'open'",
+            )
+            seeded = {
+                "crit-high": sum(1 for sid, sev in open_rows if sid == "B-01" and sev in ("CRITICAL", "HIGH")),
+                "med-low": sum(1 for sid, sev in open_rows if sid == "B-01" and sev in ("MEDIUM", "LOW")),
+            }
+            boundary = {b["measure"]: b["count"] for b in badges_on((out_a / ARCHITECTURE).read_text())
+                        if b["surface"] == "boundary" and b["subsystem"] == "B-01"}
+            for measure, n in seeded.items():
+                if str(boundary.get(measure, "0") or "0") != str(n):
+                    return f"B-01's {measure} badge says {boundary.get(measure)!r}; the store holds {n} such open findings"
+            if seeded["med-low"] < 2:
+                return "the fixture holds fewer than two open medium or low findings on B-01"
+            status = statuses(store_a)
+            eligible = sorted(sid for sid, st in status.items() if st in BADGED)
+            shown = {sid for (sid, _measure) in wanted_badges(store_a, hot_a)}
+            bare = len([sid for sid in eligible if sid not in shown])
+            note = re.search(r'<p class="finding-badge-note"[^>]*>(.*?)</p>', (out_a / ARCHITECTURE).read_text(), re.S)
+            said = re.search(r"(\d+) of (\d+) subsystems", plain(note.group(1)) if note else "")
+            if said is None or (int(said.group(1)), int(said.group(2))) != (bare, len(eligible)):
+                return f"the badge note says {said.group(0) if said else None!r}; {bare} of {len(eligible)} eligible subsystems show no badge"
+            return None
+
+        check("badge counts are the store's open findings, and the note counts the eligible subsystems with none", badge_counts_and_note)
+
+        def segment_lines() -> str | None:
+            # Appendix B rule 9: colour is never the only signal, so each standing keeps its line.
+            want = {"examined": None, "examined-stale": "5 3", "scoped-unread": None, "excluded": "1.5 3", "absent": "5 3"}
+            figure = figures((out_a / PAGES["B-01"]).read_text())
+            if len(figure) != 1:
+                return "B-01's page holds no single coverage figure"
+            seen = 0
+            for state, dash in want.items():
+                node = re.search(rf'<g\b[^>]*data-node="coverage:B-01:{state}"[^>]*>(.*?)</g>', figure[0], re.S)
+                if node is None:
+                    continue
+                seen += 1
+                got = re.search(r'stroke-dasharray="([^"]*)"', node.group(1))
+                if (got.group(1) if got else None) != dash:
+                    return f"B-01's {state} segment is drawn with dash {got.group(1) if got else None!r}, not {dash!r}"
+            if seen < 2 or 'data-node="coverage:B-01:examined-stale"' not in figure[0]:
+                return "B-01's bar does not draw a stale segment beside another to compare"
+            return None
+
+        check("each coverage segment keeps the line its standing is drawn with", segment_lines)
 
         # -- A5 --------------------------------------------------------------
         def segment_nodes(storage: Path, sid: str) -> list[str]:
