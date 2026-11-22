@@ -8,6 +8,7 @@
 //   src/Parser.java  an overloaded method, whose qname differs from each symbol_id
 //   lib/dup.py       one function defined twice, in the branches of an `if`
 //   src/latin1.ts    a file that is not valid UTF-8, which the index cannot read
+//   src/fun.cpp      C++ operators whose names hold the punctuation of a discriminator
 //   src/partial.ts   an intact definition beside one whose syntax is broken: it parses in part
 //   docs/notes.txt   a file in no supported language
 import { spawnSync } from "node:child_process";
@@ -79,6 +80,13 @@ export function broken(): number {
 }
 `;
 
+export const FUN_SOURCE = `struct Fun {
+  int operator()(int x) const { return x; }
+  int operator[](int i) { return i; }
+  bool operator<(const Fun& o) const { return true; }
+};
+`;
+
 /** "café" in Latin-1: the 0xE9 byte alone is not valid UTF-8. */
 export const LATIN1_BYTES = Buffer.concat([
   Buffer.from('export const caf = "caf', "latin1"),
@@ -98,6 +106,7 @@ export function buildEvidenceAnchorsRepo(dir) {
   write(dir, "lib/dup.py", DUP_SOURCE);
   write(dir, "src/latin1.ts", LATIN1_BYTES);
   write(dir, "src/partial.ts", PARTIAL_SOURCE);
+  write(dir, "src/fun.cpp", FUN_SOURCE);
   write(dir, "docs/notes.txt", "Notes in no language the index parses.\n");
   git(dir, ["add", "-A"]);
   git(dir, ["commit", "-q", "-m", "evidence anchors fixture"]);

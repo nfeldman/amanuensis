@@ -33,7 +33,8 @@
 //   - a refusal of add_evidence is not registered in contracts/refusal-parity.json against
 //     add_evidence, or the skill reference it names does not state it;
 //   - the whole describe_locus result — standing and the account's structure section — does
-//     not find an anchored row by bare name, by qname and by symbol_id; finds anything by a
+//     not find an anchored row by bare name, by qname and by symbol_id (C++ operators, whose
+//     names hold `()`, `[]` or `<`, included); finds anything by a
 //     bare name that names two symbol_ids instead of saying so on both surfaces, naming both
 //     in standing and in every section that reads evidence (structure, defects, reviews);
 //     stops finding an unanchored row by its exact free text; or stops matching the
@@ -690,6 +691,21 @@ async function main() {
     same(`describe_locus ${locus}: standing cites`, evidenceRows(r), [evidence]);
     const claims = structureClaims(r);
     check(claims.counted === 1, `describe_locus ${locus}: the structure section counts ${claims.counted} claims, not ${claim}`);
+  }
+  for (const [qname, symbolId, lines] of [
+    ["Fun.operator()", "Fun.operator()(int) const", "2"],
+    ["Fun.operator[]", "Fun.operator[](int)", "3"],
+    ["Fun.operator<", "Fun.operator<(const Fun&) const", "4"],
+  ]) {
+    // An operator's name holds a discriminator's punctuation; it is still found by name.
+    const id = await written(qname, { file_path: "src/fun.cpp", symbol: qname });
+    same(`${qname}'s stored symbol`, evidenceRow(id).symbol, symbolId);
+    same(`${qname}'s filled range`, evidenceRow(id).line_range, lines);
+    const bare = qname.slice("Fun.".length);
+    for (const name of [symbolId, qname, bare]) {
+      const r = await describe(`src/fun.cpp:${name}`);
+      same(`describe_locus src/fun.cpp:${name}: standing cites`, evidenceRows(r), [id]);
+    }
   }
   {
     // Every anchored row on `add` is found by its bare name and nothing else is.
