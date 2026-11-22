@@ -239,7 +239,7 @@ const GOLDEN = {
   "unicode.ts": {
     lang: "typescript",
     rows: [
-      ["variable", "名前", "名前", "名前", 2, 2, 2, 1],
+      ["variable", "名前", "名前", "名前", 2, 2, 1, 1],
       ["function", "grüße", "grüße", "grüße", 5, 7, 4, 1],
       ["variable", "after", "after", "after", 9, 9, 9, 1],
     ],
@@ -248,7 +248,7 @@ const GOLDEN = {
   "unicode.py": {
     lang: "python",
     rows: [
-      ["variable", "café", "café", "café", 2, 2, 2, 1],
+      ["variable", "café", "café", "café", 2, 2, 1, 1],
       ["function", "größe", "größe", "größe", 5, 7, 5, 1],
       ["function", "danach", "danach", "danach", 10, 11, 10, 1],
     ],
@@ -551,14 +551,22 @@ function checkDetails(results) {
 
 async function checkUnicode(mod) {
   const cases = [
-    ["unicode.ts", "名前", 'export const 名前 = "東京";'],
+    [
+      "unicode.ts",
+      "名前",
+      '// Ünïcödé fixture: offsets are UTF-8 bytes, not UTF-16 code units.\nexport const 名前 = "東京";',
+    ],
     [
       "unicode.ts",
       "grüße",
       "/** Grüße — returns a greeting with an emoji 😀. */\nexport function grüße(wer: string): string {\n  return `Hallo, ${wer} 👋`;\n}",
     ],
     ["unicode.ts", "after", 'export const after = "ß";'],
-    ["unicode.py", "café", 'café = "☕"'],
+    [
+      "unicode.py",
+      "café",
+      '# Ünïcödé fixture: offsets are UTF-8 bytes, not UTF-16 code units.\ncafé = "☕"',
+    ],
     ["unicode.py", "größe", 'def größe(wert):\n    """Gibt die Größe zurück — 📏."""\n    return len(wert)'],
     ["unicode.py", "danach", 'def danach():\n    return "ß"'],
   ];
@@ -760,6 +768,11 @@ async function checkCrlf(mod) {
       check(refused, `${name} CRLF: requireEvidenceCitation accepts a line past the extractor's line count`);
       helpers.requireEvidenceCitation(workspace, rev, name, `${result.lines}`, null);
     }
+    // A lone CR is not a line break, for requireEvidenceCitation or the extractor.
+    const cr = "const s = `a\rb`;\nexport function after() {}\n";
+    const crResult = await mod.extract(cr, "typescript");
+    const after = crResult.symbols.find((s) => s.symbol_id === "after");
+    check(crResult.lines === 2 && after?.start_line === 2, "a lone CR was counted as a line break");
   } finally {
     rmSync(workspace, { recursive: true, force: true });
   }
@@ -796,9 +809,9 @@ async function checkDeterminism(mod) {
 
 async function checkPartial(mod) {
   const cases = [
-    ["rows.ts", "  for (let i = 0; i < limit; i++) yield i;", "  for (let i = 0; i < limit; i++ yield i;", ["counter"]],
-    ["rows.py", "    return await h(url)\n", "    return await h(url\n", ["fetch"]],
-    ["rows.go", "\treturn &Square{Side: side}\n", "\treturn &Square{Side: side\n", ["NewSquare"]],
+    ["rows.ts", "  for (let i = 0; i < limit; i++) yield i;", "  for (let i = 0; i < limit; i++) yield i +* ;", ["counter"]],
+    ["rows.py", "    return await h(url)\n", "    return await h(url) +\n", ["fetch"]],
+    ["rows.go", "\treturn &Square{Side: side}\n", "\treturn &Square{Side: := side}\n", ["NewSquare"]],
     ["Parser.java", "    return List.of(text);\n", "    return List.of(text;\n", ["Parser.parse(String)"]],
   ];
   for (const [name, from, to, broken] of cases) {
@@ -846,53 +859,75 @@ async function checkPackageRoot(mod) {
   }
   const pkg = JSON.parse(readFileSync(join(here, "package.json"), "utf8"));
   check(pkg.files.includes("queries/"), "package.json files omits queries/");
-  const root = mkdtempSync(join(tmpdir(), "amanuensis-si2-root-"));
-  try {
+  // A generation's files are fixed while a process uses it, so each change below gets a
+  // fresh copy of the package root.
+  const roots = [];
+  const copyRoot = (change) => {
+    const root = mkdtempSync(join(tmpdir(), "amanuensis-si2-root-"));
+    roots.push(root);
     cpSync(join(here, "queries"), join(root, "queries"), { recursive: true });
     cpSync(join(here, "grammars"), join(root, "grammars"), { recursive: true });
-    check(mod.extractorId({ packageRoot: root }) === id, "an identical package root gives a different extractor_id");
+    change?.(root);
+    return root;
+  };
+  const refusal = async (text, lang, root) => {
+    try {
+      await mod.extract(text, lang, { packageRoot: root });
+    } catch (error) {
+      return String(error?.message ?? error);
+    }
+    return null;
+  };
+  try {
+    const same = copyRoot();
+    check(mod.extractorId({ packageRoot: same }) === id, "an identical package root gives a different extractor_id");
     const text = fixture("rows.go");
     const base = await mod.extract(text, "go");
-    const same = await mod.extract(text, "go", { packageRoot: root });
-    check(JSON.stringify(same) === JSON.stringify(base), "an identical package root extracts differently");
+    const copied = await mod.extract(text, "go", { packageRoot: same });
+    check(JSON.stringify(copied) === JSON.stringify(base), "an identical package root extracts differently");
 
     // A changed query file is a new generation, and its patterns are what define symbols.
-    const goQuery = readFileSync(join(root, "queries", "go.scm"), "utf8");
-    writeFileSync(join(root, "queries", "go.scm"), `${goQuery}\n; changed\n`);
-    const changed = mod.extractorId({ packageRoot: root });
+    const goQuery = join("queries", "go.scm");
+    const changedRoot = copyRoot((root) => writeFileSync(join(root, goQuery), `${readFileSync(join(root, goQuery), "utf8")}\n; changed\n`));
+    const changed = mod.extractorId({ packageRoot: changedRoot });
     check(changed !== id, "a changed queries/go.scm leaves extractor_id unchanged");
-    const moved = await mod.extract(text, "go", { packageRoot: root });
+    const moved = await mod.extract(text, "go", { packageRoot: changedRoot });
     check(moved.extractor_id === changed, "an extraction is not labelled with its generation's extractor_id");
-    writeFileSync(join(root, "queries", "go.scm"), "");
-    const empty = await mod.extract(text, "go", { packageRoot: root });
+    check(JSON.stringify(golden(moved.symbols)) === JSON.stringify(golden(base.symbols)), "a comment in queries/go.scm changed the definitions");
+    const emptyRoot = copyRoot((root) => writeFileSync(join(root, goQuery), ""));
+    const empty = await mod.extract(text, "go", { packageRoot: emptyRoot });
     check(empty.symbols.length === 0, "an empty queries/go.scm still yields definitions (they come from elsewhere)");
+    check(empty.refs.length > 0, "an empty queries/go.scm also removed the tags.scm references");
+    const manifestRoot = copyRoot((root) => {
+      const path = join(root, "grammars", "manifest.json");
+      writeFileSync(path, `${readFileSync(path, "utf8")}\n`);
+    });
+    check(mod.extractorId({ packageRoot: manifestRoot }) !== id, "a changed grammar manifest leaves extractor_id unchanged");
 
     // A missing query file is refused, not replaced by tags.scm.
-    rmSync(join(root, "queries", "python.scm"));
-    let missing = null;
-    try {
-      await mod.extract(fixture("rows.py"), "python", { packageRoot: root });
-    } catch (error) {
-      missing = String(error?.message ?? error);
-    }
+    const missingRoot = copyRoot((root) => rmSync(join(root, "queries", "python.scm")));
+    const missing = await refusal(fixture("rows.py"), "python", missingRoot);
     check(missing !== null, "a missing queries/python.scm was not refused");
     check(/python\.scm/.test(missing), `a missing query was refused without naming it: ${missing.slice(0, 120)}`);
 
     // A grammar whose bytes differ from the manifest is refused at load.
-    const wasm = join(root, "grammars", "java", "grammar.wasm");
-    const bytes = readFileSync(wasm);
-    bytes[Math.floor(bytes.length / 2)] ^= 0x01;
-    writeFileSync(wasm, bytes);
-    let tampered = null;
-    try {
-      await mod.extract(fixture("Parser.java"), "java", { packageRoot: root });
-    } catch (error) {
-      tampered = String(error?.message ?? error);
-    }
+    const tamperedRoot = copyRoot((root) => {
+      const wasm = join(root, "grammars", "java", "grammar.wasm");
+      const bytes = readFileSync(wasm);
+      bytes[Math.floor(bytes.length / 2)] ^= 0x01;
+      writeFileSync(wasm, bytes);
+    });
+    const tampered = await refusal(fixture("Parser.java"), "java", tamperedRoot);
     check(tampered !== null, "a grammar whose bytes differ from the manifest was loaded");
     check(/sha256/.test(tampered), `a tampered grammar was refused without naming the hash: ${tampered.slice(0, 120)}`);
+    const tagsRoot = copyRoot((root) => {
+      const tags = join(root, "grammars", "go", "tags.scm");
+      writeFileSync(tags, `${readFileSync(tags, "utf8")} `);
+    });
+    const tags = await refusal(text, "go", tagsRoot);
+    check(tags !== null && /size|sha256/.test(tags), "a tags.scm whose bytes differ from the manifest was loaded");
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    for (const root of roots) rmSync(root, { recursive: true, force: true });
   }
 }
 
