@@ -81,7 +81,7 @@ Neither runs a survey either.
 4. Assemble a reply that leads with the most interesting item. A
    tension beats a pattern; a pattern beats a count.
 
-### "What do we know about X?" when `describe_locus` has nothing
+### When `describe_locus` has nothing about X
 
 <!-- code-index:begin -->
 When `describe_locus` returns nothing for X, answer with
