@@ -56,10 +56,10 @@
         "SI11"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "984f09b9e75378e8d48e97cc2141e98cfbe3f07b",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "5f23742a650114349f26a618acf279c152bb22ef",
+        "findings": 21
       }
     }
   ],
