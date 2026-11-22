@@ -28,7 +28,13 @@
 //     purpose, not a `## What is this codebase?` section);
 //   - a call a reference teaches names a tool or an argument the server does not define
 //     (checked against the built server, as check-reference-calls.mjs does);
-//   - a file the skill lists does not exist, or a reference is listed in no skill file.
+//   - a file the skill lists does not exist, or a reference is listed in no skill file;
+//   - (final review) a sentence, read whole across its wrapped lines, tells the agent to save,
+//     create, put or store a file, a "Markdown file" or one under the storage directory, or to
+//     use the Write tool (F10/claude); a sentence promises a Markdown companion or a portable
+//     Markdown projection, or says a page renders under a `.md` name (F8/codex, F5/claude,
+//     F6/claude); the skill waits on a store-only packet that has landed (F9/codex); or a
+//     refusal the skill quotes is not one the server emits (F16/claude).
 // Reads the skill and the contract; it touches no store.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -243,21 +249,64 @@ const FORBIDDEN = [
   [/_meta\/prompts/, "`_meta/prompts`"],
   [/\bprose artifacts?\b/i, "\"prose artifacts\""],
   [/## What is this codebase\?/, "the `## What is this codebase?` heading"],
+  // The publication is HTML only (SO13, SO19): no sentence promises a Markdown view of it
+  // (final review F8/codex, F5/claude, F6/claude).
+  [/\bMarkdown companions?\b/i, "a Markdown companion to the HTML"],
+  [/\bportable (?:schema )?projection\b/i, "a Markdown \"portable projection\""],
+  // Every store-only packet has landed: the skill describes what ships, not a packet to wait
+  // for (final review F9/codex).
+  [/\bstore-only packet SO\d+/i, "a store-only packet still to come"],
+  [/\bNo page draws a flow's marks\b/i, "\"No page draws a flow's marks\" (SO25 draws them)"],
 ];
+// A sentence that says a page renders under a `.md` name names a page the run no longer writes.
+const RENDERED_MD = /\brender(?:s|ed|ing)?\b[^.]*?(?<![\w/-])((?:[\w<>-]+\/)*[\w<>-]+\.md)\b|(?<![\w/-])((?:[\w<>-]+\/)*[\w<>-]+\.md)`?\s+renders?\b/i;
 
 // An instruction to write a file: a verb of writing on a line that names a `.md` file, in a code
 // span or in ordinary prose (F12/codex, slice S2), that is not one of the skill's own references or
 // a design document.
-const WRITE_VERB = /\b(?:writ(?:e|es|ing|ten)|append(?:s|ed|ing)?|updat(?:e|es|ing)|edit(?:s|ing)?)\b/i;
+const WRITE_VERB =
+  /\b(?:writ(?:e|es|ing|ten)|append(?:s|ed|ing)?|updat(?:e|es|ing)|edit(?:s|ing)?|sav(?:e|es|ing)|creat(?:e|es|ing)|puts?|putting|stor(?:e|es|ing))\b/i;
+// A file the agent is told to write may go unnamed: "a Markdown file", or a file put "under the
+// storage directory" / "next to the database" (F10/claude).
+const UNNAMED_FILE = /\bMarkdown files?\b|\b(?:in|into|under|to) the storage directory\b|\bnext to the database\b|\bthe Write tool\b/i;
 const MD_NAME = /(?<![\w.\/-])((?:[\w.<>-]+\/)*[\w.<>-]+\.md)(?![\w-])/g;
 /** The `.md` files a line tells the agent to write: none unless it has a verb of writing. */
-function writtenFiles(line) {
-  if (!WRITE_VERB.test(line)) return [];
-  return [...line.matchAll(MD_NAME)]
-    .map((match) => match[1])
-    .filter(
-      (name) => !/^(?:references\/|\.\.\/|design\/|docs\/)/.test(name) && !/^(?:SKILL|AGENTS|CLAUDE)\.md$/.test(name),
+// A sentence that says nothing is written is the rule, not a breach of it.
+const NEGATED = /\b(?:nothing|never|not|no)\b/i;
+function writtenFiles(text) {
+  const found = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+(?=[A-Z`(\[])/)) {
+    if (!WRITE_VERB.test(sentence)) continue;
+    found.push(
+      ...[...sentence.matchAll(MD_NAME)]
+        .map((match) => match[1])
+        .filter(
+          (name) =>
+            !/^(?:references\/|\.\.\/|design\/|docs\/)/.test(name) &&
+            !/^(?:SKILL|AGENTS|CLAUDE)\.md$/.test(name),
+        ),
     );
+    const unnamed = UNNAMED_FILE.exec(sentence);
+    if (unnamed && !NEGATED.test(sentence)) found.push(unnamed[0]);
+  }
+  return found;
+}
+/** Each paragraph or list item as one line, so an instruction wrapped across lines is read whole. */
+function paragraphs(text) {
+  const out = [];
+  let current = null;
+  text.split("\n").forEach((line, index) => {
+    const opens = /^\s*(?:[-*+]\s|\d+[.)]\s|#{1,6}\s|```)/.test(line);
+    if (!line.trim() || opens) {
+      if (current) out.push(current);
+      current = line.trim() ? { line: index + 1, text: line } : null;
+      return;
+    }
+    if (current) current.text += ` ${line.trim()}`;
+    else current = { line: index + 1, text: line };
+  });
+  if (current) out.push(current);
+  return out;
 }
 // The detector's own cases: a write in a code span and one in plain prose are both caught; a
 // reference to the skill's own file is not.
@@ -266,6 +315,9 @@ for (const [line, want] of [
   ["Write .amanuensis/review-notes.md.", ".amanuensis/review-notes.md"],
   ["Then append the result to notes.md and stop.", "notes.md"],
   ["Read references/records.md before you write.", null],
+  ["Save the survey as survey-notes.md next to the database.", "survey-notes.md"],
+  ["Write the survey to a Markdown file under the storage directory.", "Markdown file"],
+  ["Use the Write tool to put the survey under the storage directory.", "the Write tool"],
 ]) {
   const found = writtenFiles(line);
   if (want === null ? found.length > 0 : !found.includes(want)) {
@@ -276,9 +328,31 @@ for (const [file, text] of texts) {
   for (const [pattern, label] of FORBIDDEN) {
     if (pattern.test(text)) fail(`${file} names ${label}`);
   }
-  text.split("\n").forEach((line, index) => {
-    for (const name of writtenFiles(line)) fail(`${file}:${index + 1} tells the agent to write ${name}`);
-  });
+  for (const { line, text: joined } of paragraphs(text)) {
+    for (const name of writtenFiles(joined)) fail(`${file}:${line} tells the agent to write ${name}`);
+    const rendered = RENDERED_MD.exec(joined);
+    if (rendered) fail(`${file}:${line} says a page renders as ${rendered[1] ?? rendered[2]}; pages are .html`);
+  }
+}
+
+// Every refusal the skill quotes is one the server emits: each literal run between its
+// <placeholders> appears in mcp-server/src (F16/claude). The server assembles some refusals
+// from parts (a tool name, a cap, a quoted value), so a run holding a digit or a quote mark is
+// not compared, and the `<tool> refuses: ` prefix is read apart from the sentence.
+const serverText = readdirSync(join(root, "mcp-server", "src", "tools"))
+  .filter((name) => name.endsWith(".ts"))
+  .map((name) => read(join(root, "mcp-server", "src", "tools", name)) ?? "")
+  .join("\n");
+for (const [file, text] of texts) {
+  for (const quoted of text.matchAll(/`([a-z_]+ refuses: [^`]+)`/g)) {
+    const flat = quoted[1].replace(/\s+/g, " ");
+    for (const piece of flat.replace(/^[a-z_]+ refuses: /, "").split(/<[^>]+>/)) {
+      const words = piece.trim();
+      if (words.length >= 8 && !/[\d'"|]/.test(words) && !serverText.includes(words)) {
+        fail(`${file} quotes the refusal "${flat}", and the server emits no "${words}"`);
+      }
+    }
+  }
 }
 
 // ------------------------------------------------- the file list and records.md
@@ -320,6 +394,10 @@ for (const row of sectionMeanings) {
   const meaning = row.meaning.replace(/\.$/, "").replace(/\s+/g, " ");
   const said = `\`${row.value}\` holds ${meaning.charAt(0).toLowerCase()}${meaning.slice(1)}`.toLowerCase();
   if (!narratives.includes(said)) fail(`records.md's narratives section does not say what \`${row.value}\` contains: "${meaning}"`);
+}
+// A mark on a claim that is not a flow step is refused as the writer says it (F16/claude).
+if (!/`record_claim_mark refuses: <key> is not a flow step`/.test(section(records, /^Flow marks/i))) {
+  fail("records.md's flow marks section does not quote `record_claim_mark refuses: <key> is not a flow step`");
 }
 if (/dispatch/i.test(records) && /prompt/i.test(records) && /template/i.test(records)) {
   fail("records.md still carries a dispatch-prompt template (D8)");
