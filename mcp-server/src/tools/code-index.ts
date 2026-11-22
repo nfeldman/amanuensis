@@ -10,7 +10,7 @@
 // to ration it, and each refusal states its own way on, reading the file being always open.
 import { createHash } from "node:crypto";
 import { BlobReader } from "../code-index/git-blobs.js";
-import { RECORD_KINDS, type RecordKind, searchRecords } from "../code-index/records.js";
+import { cutBytes, RECORD_KINDS, type RecordKind, searchRecords } from "../code-index/records.js";
 import { FIND_MODES, findSymbols } from "../code-index/search.js";
 import {
   type CodeIndex,
@@ -207,7 +207,7 @@ function firstDocLine(doc: string): string {
       .replace(/\s*(\*\/|"""|''')$/, "")
       .replace(/^(\/\*+|\/\/[/!]?|#+|\*+|"""|''')\s*/, "")
       .trim();
-    if (text) return Buffer.from(text, "utf8").subarray(0, DOC_LINE_BYTES).toString("utf8");
+    if (text) return cutBytes(text, DOC_LINE_BYTES);
   }
   return "";
 }

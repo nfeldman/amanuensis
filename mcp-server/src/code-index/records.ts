@@ -519,7 +519,7 @@ export interface RecordHit {
 }
 
 /** `text` cut to at most `bytes` UTF-8 bytes, on a character boundary. */
-function cutBytes(text: string, bytes: number): string {
+export function cutBytes(text: string, bytes: number): string {
   const buffer = Buffer.from(text, "utf8");
   if (buffer.length <= bytes) return text;
   let end = bytes;
