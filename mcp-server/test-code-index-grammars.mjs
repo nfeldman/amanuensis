@@ -22,9 +22,9 @@
 //   - .github/workflows/test.yml does not run the vendoring step before the gate's step;
 //   - `npm pack` omits a grammar, the manifest or the notices, or the tarball is over the ceiling.
 //
-// Network: this gate's integrity arms run the vendoring script, which fetches one pinned
-// package with `npm pack`. Nothing else here reaches the network. Run `node
-// scripts/vendor-grammars.mjs` first (the gate command does).
+// Hermetic: the integrity arms vendor a tarball the gate builds itself, with npm forced
+// offline. Run `node scripts/vendor-grammars.mjs` first (the gate command does); that step,
+// not this gate, fetches the pinned packages.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -494,30 +494,50 @@ function checkRefusedAtLoad(vendor) {
   }
 }
 
+// Hermetic: the script reads a tarball built here from the vendored go files, through a
+// `tarball` field in a scratch sources.json, with npm forced offline over an empty cache. A
+// script that still reached for the registry fails here, wherever the gate runs.
 function checkIntegrityRefusal(sources, manifest) {
   const row = sources.grammars.find((entry) => entry.language === "go");
   const scratch = mkdtempSync(join(tmpdir(), "amanuensis-grammar-integrity-"));
   const script = join(here, "scripts", "vendor-grammars.mjs");
+  const env = {
+    ...process.env,
+    npm_config_offline: "true",
+    npm_config_cache: join(scratch, "empty-npm-cache"),
+    npm_config_registry: "http://127.0.0.1:9/",
+  };
   try {
-    const flipped = row.integrity.replace(
-      /^sha512-(.)/,
-      (_m, c) => `sha512-${c === "A" ? "B" : "A"}`,
+    const packageDir = join(scratch, "package");
+    mkdirSync(join(packageDir, "queries"), { recursive: true });
+    copyFileSync(join(grammarsDir, "go", "grammar.wasm"), join(packageDir, row.wasm));
+    copyFileSync(join(grammarsDir, "go", "tags.scm"), join(packageDir, "queries", "tags.scm"));
+    copyFileSync(join(grammarsDir, "go", "LICENSE"), join(packageDir, "LICENSE"));
+    writeFileSync(
+      join(packageDir, "package.json"),
+      JSON.stringify({ name: row.package, version: row.version }),
     );
-    check(flipped !== row.integrity, "gate could not alter the integrity");
-    const pin = (integrity) =>
-      JSON.stringify({ schema: 1, grammars: [{ ...row, integrity }] }, null, 2);
+    const tarball = join(scratch, "local.tgz");
+    const tar = run("tar", ["-czf", tarball, "-C", scratch, "package"]);
+    check(tar.status === 0, `gate could not build a local tarball: ${tar.stderr}`);
+    const integrity = `sha512-${createHash("sha512").update(readFileSync(tarball)).digest("base64")}`;
+    const flipped = integrity.replace(/^sha512-(.)/, (_m, c) => `sha512-${c === "A" ? "B" : "A"}`);
+    check(flipped !== integrity, "gate could not alter the integrity");
+    const pin = (pinned) =>
+      JSON.stringify({ schema: 1, grammars: [{ ...row, integrity: pinned, tarball }] }, null, 2);
 
     const badSources = join(scratch, "bad-sources.json");
     const badOut = join(scratch, "bad-out");
     writeFileSync(badSources, pin(flipped));
     const bad = run(process.execPath, [script, "--sources", badSources, "--out", badOut], {
       cwd: scratch,
+      env,
       timeout: 180_000,
     });
     check(bad.status !== 0, "a tarball whose integrity differs from sources.json was accepted");
     check(
-      /integrity/i.test(`${bad.stdout}${bad.stderr}`),
-      "the integrity refusal does not say integrity",
+      /integrity mismatch/i.test(`${bad.stdout}${bad.stderr}`),
+      `the integrity refusal does not say integrity mismatch: ${(bad.stderr || bad.stdout).slice(0, 200)}`,
     );
     const leftovers = existsSync(badOut) ? readdirSync(badOut) : [];
     check(
@@ -527,9 +547,10 @@ function checkIntegrityRefusal(sources, manifest) {
 
     const goodSources = join(scratch, "good-sources.json");
     const goodOut = join(scratch, "good-out");
-    writeFileSync(goodSources, pin(row.integrity));
+    writeFileSync(goodSources, pin(integrity));
     const good = run(process.execPath, [script, "--sources", goodSources, "--out", goodOut], {
       cwd: scratch,
+      env,
       timeout: 180_000,
     });
     check(
@@ -539,12 +560,16 @@ function checkIntegrityRefusal(sources, manifest) {
     const fetched = readFileSync(join(goodOut, "go", "grammar.wasm"));
     check(
       sha256(fetched) === manifest.grammars.go.files["grammar.wasm"].sha256,
-      "a fresh vendoring of go differs from the vendored grammar",
+      "a vendoring of the local go tarball differs from its grammar.wasm",
     );
     const freshManifest = readJson(join(goodOut, "manifest.json"), "the fresh manifest");
     check(
+      freshManifest.grammars.go.integrity === integrity,
+      "the fresh manifest does not record the local tarball's integrity",
+    );
+    check(
       freshManifest.grammars.go.files["tags.scm"].sha256 === manifest.grammars.go.files["tags.scm"].sha256,
-      "a fresh vendoring of go has a different tags.scm",
+      "a vendoring of the local go tarball has a different tags.scm",
     );
   } finally {
     rmSync(scratch, { recursive: true, force: true });
