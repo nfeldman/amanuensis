@@ -778,6 +778,13 @@ async function main() {
     after.close();
   });
 
+  await step("a directory is not a file: indexFile answers not-found", async () => {
+    const index = store.openCodeIndex(newStorage("directory"));
+    const dir = await index.indexFile(repo, rev2, "src");
+    check(dir.state === "not-found", `indexFile on the directory src: ${canonical(dir)}`);
+    index.close();
+  });
+
   await step("a tree pruned while it is indexed is not recorded complete", async () => {
     const storage = newStorage("pruned-mid-index");
     const index = store.openCodeIndex(storage);
