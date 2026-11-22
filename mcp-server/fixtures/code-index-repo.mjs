@@ -20,8 +20,12 @@ import { dirname, join } from "node:path";
 
 export const BIG_SPAN_LINES = 500;
 
+// Git runs with no global or system configuration, so a user's hooks, templates or default
+// branch never reach the fixture.
+const GIT_ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+
 function git(cwd, args) {
-  const r = spawnSync("git", args, { cwd, encoding: "utf8" });
+  const r = spawnSync("git", args, { cwd, encoding: "utf8", env: GIT_ENV });
   if (r.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${r.stderr}`);
   return r.stdout;
 }
@@ -154,11 +158,11 @@ export function buildCodeIndexRepo(dir) {
   write(dir, "src/Parser.java", PARSER_SOURCE);
   write(dir, "docs/notes.txt", "Notes in no language the index parses.\n");
   git(dir, ["add", "-A"]);
-  git(dir, ["commit", "-q", "-m", "first revision"]);
+  git(dir, ["commit", "-q", "--no-verify", "-m", "first revision"]);
   const first = git(dir, ["rev-parse", "HEAD"]).trim();
   write(dir, "src/shapes.ts", shapesSource(2));
   git(dir, ["add", "-A"]);
-  git(dir, ["commit", "-q", "-m", "second revision"]);
+  git(dir, ["commit", "-q", "--no-verify", "-m", "second revision"]);
   const second = git(dir, ["rev-parse", "HEAD"]).trim();
   return { workspace: dir, first, second };
 }

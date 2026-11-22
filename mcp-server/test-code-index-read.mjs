@@ -36,12 +36,19 @@
 // server runs from dist/. No network.
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
+// Hermetic: the caller's code-index switches and git configuration (hooks, templates) never
+// reach the gate, its git fixtures or the servers it starts.
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith("AMANUENSIS_CODE_INDEX")) delete process.env[key];
+}
+process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+process.env.GIT_CONFIG_NOSYSTEM = "1";
 const root = mkdtempSync(join(tmpdir(), "amanuensis-si5-"));
 
 class GateFailure extends Error {}
@@ -643,11 +650,14 @@ async function main() {
   }
 }
 
+let status;
 try {
   await main();
-  console.log("GATE SI5 GREEN");
-  process.exit(0);
+  status = "GATE SI5 GREEN";
 } catch (e) {
-  console.log(`GATE SI5 RED: ${oneLine(e?.message ?? e)}`);
-  process.exit(1);
+  status = `GATE SI5 RED: ${oneLine(e?.message ?? e)}`;
+} finally {
+  rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
+console.log(status);
+process.exit(status === "GATE SI5 GREEN" ? 0 : 1);

@@ -705,7 +705,7 @@ function checkWorkflow() {
 }
 
 function checkPackedSize() {
-  const result = run("npm", ["pack", "--dry-run", "--json"], { timeout: 300_000 });
+  const result = run("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], { timeout: 300_000 });
   check(result.status === 0, "npm pack --dry-run failed");
   const at = result.stdout.lastIndexOf("\n[\n");
   check(at >= 0 || result.stdout.startsWith("[\n"), "npm pack --dry-run printed no JSON");

@@ -48,6 +48,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
+// Hermetic: the caller's code-index switches and git configuration (hooks, templates) never
+// reach the gate, its git fixtures or the servers it starts.
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith("AMANUENSIS_CODE_INDEX")) delete process.env[key];
+}
+process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+process.env.GIT_CONFIG_NOSYSTEM = "1";
 const fixtures = join(here, "fixtures", "code-index");
 
 class GateFailure extends Error {}
@@ -811,7 +818,7 @@ async function checkCrlf(mod) {
     const files = ["rows.ts", "rows.py", "rows.go", "Parser.java"];
     for (const name of files) writeFileSync(join(workspace, name), fixture(name).replace(/\n/g, "\r\n"));
     git("add", ".");
-    git("commit", "-q", "-m", "crlf");
+    git("commit", "-q", "--no-verify", "-m", "crlf");
     const rev = git("rev-parse", "HEAD");
     for (const name of files) {
       const lf = fixture(name);

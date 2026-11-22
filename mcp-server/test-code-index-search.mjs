@@ -46,12 +46,19 @@
 // Hermetic: fixture git repositories and stores are built in a temporary directory, and the
 // built tool handlers are called in-process, as test-explanation-read.mjs does. No network.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
+// Hermetic: the caller's code-index switches and git configuration (hooks, templates) never
+// reach the gate, its git fixtures or the servers it starts.
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith("AMANUENSIS_CODE_INDEX")) delete process.env[key];
+}
+process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+process.env.GIT_CONFIG_NOSYSTEM = "1";
 const scratch = mkdtempSync(join(tmpdir(), "amanuensis-si6-"));
 
 class GateFailure extends Error {}
@@ -862,5 +869,7 @@ try {
   const reason = e instanceof GateFailure ? e.message : `the gate did not finish: ${e?.message ?? e}`;
   console.log(`GATE SI6 RED: ${oneLine(reason)}`);
   code = 1;
+} finally {
+  rmSync(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 process.exit(code);

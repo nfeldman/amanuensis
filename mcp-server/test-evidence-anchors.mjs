@@ -67,6 +67,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
+// Hermetic: the caller's code-index switches and git configuration (hooks, templates) never
+// reach the gate, its git fixtures or the servers it starts.
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith("AMANUENSIS_CODE_INDEX")) delete process.env[key];
+}
+process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+process.env.GIT_CONFIG_NOSYSTEM = "1";
 const scratch = mkdtempSync(join(tmpdir(), "amanuensis-si7-"));
 
 class GateFailure extends Error {}

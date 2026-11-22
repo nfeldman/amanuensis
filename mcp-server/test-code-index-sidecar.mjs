@@ -67,6 +67,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
+// Hermetic: the caller's code-index switches and git configuration (hooks, templates) never
+// reach the gate, its git fixtures or the servers it starts.
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith("AMANUENSIS_CODE_INDEX")) delete process.env[key];
+}
+process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+process.env.GIT_CONFIG_NOSYSTEM = "1";
 const require = createRequire(import.meta.url);
 const root = mkdtempSync(join(tmpdir(), "amanuensis-si4-"));
 const DAY = 86_400_000;
@@ -112,7 +119,7 @@ function write(dir, path, content) {
 }
 function commit(dir, message) {
   git(dir, ["add", "-A"]);
-  git(dir, ["commit", "-q", "-m", message]);
+  git(dir, ["commit", "-q", "--no-verify", "-m", message]);
   return git(dir, ["rev-parse", "HEAD"]).trim();
 }
 function blobSha(dir, rev, path) {
@@ -460,7 +467,7 @@ async function main() {
   const rev1 = commit(repo, "first");
   // A gitlink: a submodule entry pointing at a commit, without a .gitmodules.
   git(repo, ["update-index", "--add", "--cacheinfo", `160000,${rev1},vendor/sub`]);
-  git(repo, ["commit", "-q", "-m", "gitlink"]);
+  git(repo, ["commit", "-q", "--no-verify", "-m", "gitlink"]);
   const rev2 = git(repo, ["rev-parse", "HEAD"]).trim();
 
   await step("the off switch registers no tool and creates no directory", async () => {
