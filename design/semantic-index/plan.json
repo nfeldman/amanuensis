@@ -27,10 +27,10 @@
         "SI6"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "3c9598088c6bd614a9bd5be3beb5e44896c46e58",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "c6dd1c46892809d808d605070c9c100eeda9b20c",
+        "findings": 16
       }
     },
     {

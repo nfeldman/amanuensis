@@ -12,7 +12,7 @@
 | SI3 | Rust, C, C++ and C# definitions | done (1 attempt) | SI2 | `mcp-server/test-code-index-extract-systems.mjs` | §8 SI3, §4.2 |
 | SI4 | Sidecar, git reader and off switch | done (1 attempt) | SI3 | `mcp-server/test-code-index-sidecar.mjs` | §8 SI4, §4.1 |
 
-## S2 · Tools (review: pending)
+## S2 · Tools (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
