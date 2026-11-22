@@ -313,6 +313,10 @@ def inlines(text: str) -> Inlines:
 
 
 _HEADING_LINE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+# A fence opens on three or more backticks or tildes, indented up to three spaces, and
+# closes only on a run of the same character at least as long: the grammar the writers'
+# `isStoredProse` reads, so a line it accepted inside a fence is code here too (F3/codex).
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 
 
 def render_prose(text: str, *, under: int | None = None) -> tuple[Block, ...]:
@@ -336,15 +340,20 @@ def render_prose(text: str, *, under: int | None = None) -> tuple[Block, ...]:
         if not line.strip():
             i += 1
             continue
-        fence = re.match(r"^```\s*([\w-]*)\s*$", line)
+        fence = _FENCE.match(line)
         if fence:
+            run = fence.group(1)
+            language = re.match(r"\s*([\w-]*)", fence.group(2)).group(1)  # type: ignore[union-attr]
             code_lines: list[str] = []
             i += 1
-            while i < len(lines) and not lines[i].startswith("```"):
+            while i < len(lines):
+                closer = _FENCE.match(lines[i])
+                if closer and closer.group(1)[0] == run[0] and len(closer.group(1)) >= len(run):
+                    break
                 code_lines.append(lines[i])
                 i += 1
             i += 1 if i < len(lines) else 0
-            blocks.append(Code(fence.group(1).lower(), "\n".join(code_lines)))
+            blocks.append(Code(language.lower(), "\n".join(code_lines)))
             continue
         heading = _HEADING_LINE.match(line) if under is not None else None
         if heading:
@@ -367,7 +376,7 @@ def render_prose(text: str, *, under: int | None = None) -> tuple[Block, ...]:
         i += 1
         while i < len(lines) and lines[i].strip():
             candidate = lines[i]
-            if candidate.startswith(("```", ">")) or re.match(r"^\s*([-*+] |\d+\. )", candidate):
+            if candidate.startswith(">") or _FENCE.match(candidate) or re.match(r"^\s*([-*+] |\d+\. )", candidate):
                 break
             if under is not None and _HEADING_LINE.match(candidate):
                 break
