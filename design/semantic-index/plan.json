@@ -13,10 +13,10 @@
         "SI4"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "3187093cd9eecc4851e4c0e366262055fb0a558c",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "cfafcd1c9bf0187a129bbed94163f22cc22a305b",
+        "findings": 23
       }
     },
     {
