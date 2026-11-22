@@ -23,7 +23,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| SI7 | evidence_anchors and anchored add_evidence | ready (1 attempt) | SI5 | `mcp-server/test-evidence-anchors.mjs` | §8 SI7, §4.4, §11 |
+| SI7 | evidence_anchors and anchored add_evidence | done (1 attempt) | SI5 | `mcp-server/test-evidence-anchors.mjs` | §8 SI7, §4.4, §11 |
 | SI8 | The refresh hint | ready | SI7 | `mcp-server/test-code-index-refresh.mjs` | §8 SI8, §4.5 |
 
 ## S4 · Skill, report and docs (review: pending)
