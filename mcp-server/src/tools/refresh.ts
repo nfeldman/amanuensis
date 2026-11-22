@@ -638,9 +638,16 @@ function readRun(ctx: ServerContext, runId: string): Record<string, unknown> {
     : null;
   const { manifest_json: manifestJson, blocking_reasons_json: blockingJson, ...columns } = run;
   // The stale backlog's refresh hint (semantic-index PLAN §4.5), read at the run's head: what
-  // happened to each cited definition, for every stale file evidence cites. A hint only;
-  // nothing is cleared.
-  const anchorHints = withAnchorHints(ctx, staleLedgerRows(ctx, null), run.head_sha).filter(
+  // happened to each cited definition, for every stale file evidence cites inside the run's
+  // allowed_sources. A hint only; nothing is cleared.
+  const sources = JSON.parse(run.allowed_sources) as string[];
+  const inSources = staleLedgerRows(ctx, null).filter((row) =>
+    sources.some((prefix) => {
+      const base = prefix.endsWith("/") ? prefix : `${prefix}/`;
+      return row.source_path === prefix || row.source_path.startsWith(base);
+    }),
+  );
+  const anchorHints = withAnchorHints(ctx, inSources, run.head_sha).filter(
     (row) => row.evidence.length > 0,
   );
   return {
