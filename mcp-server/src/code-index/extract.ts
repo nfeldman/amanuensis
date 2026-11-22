@@ -7,17 +7,25 @@
 // checked against grammars/manifest.json when it is loaded, and one whose bytes differ is
 // refused.
 //
-// Identity: `qname` is the chain of enclosing definitions; a Go method is
-// `<Receiver>.<name>`. `symbol_id` is the qname plus, for a Java method or constructor, its
-// parameter types as written, so overloads differ. It has no positional part: two
-// definitions in one file that share a symbol_id are occurrences 1, 2, … in file order.
+// Identity: `qname` is the chain of enclosing definitions, with each language's rules: a Go
+// method is `<Receiver>.<name>`; inside a Rust `impl T` an item is `T.<name>` and inside
+// `impl Trait for T` it is `<T as Trait>.<name>`; a C++ qualified declarator is relative to
+// its lexical namespace chain unless it starts with `::`; a C# file-scoped namespace
+// qualifies everything after it. `symbol_id` is the qname plus a syntactic discriminator
+// where a language has overloads: Java parameter types; C++ template arity, parameter types
+// and cv/ref qualifiers; C# generic arity on every type and method segment, and parameter
+// types with their modifiers. It has no positional part: two definitions in one file that
+// share a symbol_id (a C++ prototype and its definition, a C# partial method's halves) are
+// occurrences 1, 2, … in file order. A C# partial type's declaration is a file-local
+// fragment and carries `partial: true`.
 //
-// Spans: start_line and end_line are the declaration node's. The citeable span starts
-// earlier, at `doc_start_line`, over contiguous leading comments and through wrappers
-// (`export`, `declare`, Python decorators); start_byte and end_byte bound it in UTF-8 bytes
-// and span_sha256 hashes exactly those bytes, so a comment edit is a change. Lines are
-// counted by `\n`, as requireEvidenceCitation counts them, so a CRLF file numbers its lines
-// as git does.
+// Spans: start_line and end_line are the declaration's (past attributes inside a C#
+// declaration). The citeable span starts earlier, at `doc_start_line`, over contiguous
+// leading comments and through wrappers and attributes (`export`, `declare`, Python
+// decorators, C++ `template` lines, Rust attributes); start_byte and end_byte bound it in
+// UTF-8 bytes, without a trailing line break, and span_sha256 hashes exactly those bytes, so
+// a comment edit is a change. Lines are counted by `\n`, as requireEvidenceCitation counts
+// them, so a CRLF file numbers its lines as git does.
 //
 // A file with a syntax error is `parse-partial`: a definition whose declaration holds an
 // error is left out, and every intact one is reported as if the file had parsed.
@@ -28,9 +36,19 @@ import { fileURLToPath } from "node:url";
 import { Language, type Node, Parser, Query } from "web-tree-sitter";
 
 /** Bump when a change to this file changes any extraction. */
-export const EXTRACTOR_VERSION = "1";
+export const EXTRACTOR_VERSION = "2";
 
-export type CodeLanguage = "typescript" | "tsx" | "javascript" | "python" | "go" | "java";
+export type CodeLanguage =
+  | "typescript"
+  | "tsx"
+  | "javascript"
+  | "python"
+  | "go"
+  | "java"
+  | "rust"
+  | "c"
+  | "cpp"
+  | "csharp";
 
 export type ExtractionStatus = "ok" | "parse-partial" | "unsupported-language";
 
@@ -49,6 +67,8 @@ export interface SymbolRow {
   signature: string;
   doc: string;
   span_sha256: string;
+  /** Present, and true, only on a C# partial type's declaration: a file-local fragment. */
+  partial?: true;
 }
 
 export interface RefRow {
@@ -102,6 +122,43 @@ interface LanguageSpec {
   docstring(node: Node): string | null;
   /** An import capture's specifier. */
   specifier(node: Node): string;
+  /** Sibling node types before a definition that join its citeable span (Rust attributes). */
+  leading?: string[];
+  /** Where the declaration proper starts, past attributes inside it; defaults to its start. */
+  head?(node: Node): number;
+  /** Name, kind and identity where the query alone cannot give them; null drops the match. */
+  identify?(context: IdentifyContext): Identity | null;
+}
+
+interface IdentifyContext {
+  node: Node;
+  /** The node the query captured as @name, if any. */
+  name: Node | null;
+  /** The kind the query named. */
+  kind: string;
+  /** The enclosing definition whose qname qualifies this one. */
+  parent: { name: string; kind: string } | null;
+  source: string;
+}
+
+interface Identity {
+  name: string;
+  kind: string;
+  /** Qualifying segments written in the declaration itself (`Foo::bar`, a Go receiver). */
+  qualifier?: string[];
+  /** The qualifier is global and replaces the enclosing chain. */
+  global?: boolean;
+  /** This definition's segment of a symbol_id, when it differs from its name (C# arity). */
+  segment?: string;
+  /** Appended to the symbol_id to tell overloads apart. */
+  discriminator?: string;
+  /** The segment the definition's members are qualified by, when not its own name. */
+  childScope?: string;
+  /** False when the definition qualifies nothing inside it (a C typedef or struct). */
+  scopes?: boolean;
+  /** Qualifies every later definition outside any other (a C# file-scoped namespace). */
+  fileScope?: boolean;
+  partial?: boolean;
 }
 
 const none = () => null;
@@ -187,6 +244,341 @@ function pythonDocstring(node: Node): string | null {
   return string.text.slice(start.endIndex - string.startIndex, end.startIndex - string.startIndex);
 }
 
+// Rust: an impl block is named for its type and trait, generic arguments stripped from the
+// type; its items are qualified by `T` or `<T as Trait>`.
+function rustIdentify({ node, name, kind }: IdentifyContext): Identity {
+  if (node.type !== "impl_item") return { name: name?.text ?? kind, kind };
+  const selfType = node.childForFieldName("type");
+  const type =
+    (selfType?.type === "generic_type" ? selfType.childForFieldName("type") : selfType)?.text ?? "";
+  const trait = node.childForFieldName("trait")?.text;
+  const plain = (text: string) => text.replace(/\s+/g, " ").trim();
+  if (!trait) return { name: `impl ${plain(type)}`, kind, childScope: plain(type) };
+  return {
+    name: `impl ${plain(trait)} for ${plain(type)}`,
+    kind,
+    childScope: `<${plain(type)} as ${plain(trait)}>`,
+  };
+}
+
+// C and C++: the node types a declarator's name can be.
+const C_NAMES = new Set([
+  "identifier",
+  "field_identifier",
+  "type_identifier",
+  "qualified_identifier",
+  "operator_name",
+  "destructor_name",
+  "template_function",
+  "operator_cast",
+]);
+
+// The name inside a declarator, through pointer, reference, array and init declarators, and
+// the function declarator whose own declarator is that name (so `int (*fp)(int)` is not a
+// function).
+function declaratorName(node: Node | null): { name: Node | null; fn: Node | null } {
+  let fn: Node | null = null;
+  for (let n = node; n; ) {
+    if (C_NAMES.has(n.type)) return { name: n, fn };
+    const inner: Node | null =
+      n.childForFieldName("declarator") ??
+      n.namedChildren.find(
+        (child) => !!child && (child.type.endsWith("declarator") || C_NAMES.has(child.type)),
+      ) ??
+      null;
+    if (n.type === "function_declarator" && inner && C_NAMES.has(inner.type)) fn = n;
+    n = inner;
+  }
+  return { name: null, fn: null };
+}
+
+// `geo::Buf<T>::get` is segments geo and Buf, one of them templated, and the name get; a
+// leading `::` makes it global.
+function qualifiedName(name: Node): {
+  segments: string[];
+  templated: number;
+  last: Node;
+  global: boolean;
+} {
+  const segments: string[] = [];
+  let templated = 0;
+  let global = false;
+  let n = name;
+  while (n.type === "qualified_identifier") {
+    const scope = n.childForFieldName("scope");
+    if (!scope) global = segments.length === 0;
+    else if (scope.type === "template_type") {
+      segments.push(scope.childForFieldName("name")?.text ?? scope.text);
+      templated++;
+    } else segments.push(scope.text.replace(/\s+/g, ""));
+    const next = n.childForFieldName("name");
+    if (!next) break;
+    n = next;
+  }
+  return { segments, templated, last: n, global };
+}
+
+function cNameText(node: Node): string {
+  if (node.type === "template_function") return node.childForFieldName("name")?.text ?? node.text;
+  return node.text.replace(/\s+/g, node.type === "operator_cast" ? " " : "");
+}
+
+// Collapse whitespace, then drop it beside punctuation: `const Buf &` is `const Buf&`.
+function tight(text: string): string {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/\s*([*&,()<>[\]:?.])\s*/g, "$1")
+    .trim();
+}
+
+// C++: parameter types as written (names and default values removed), then cv- and
+// ref-qualifiers.
+function cppParameters(source: string, fn: Node): string {
+  const types: string[] = [];
+  for (const parameter of fn.childForFieldName("parameters")?.children ?? []) {
+    if (!parameter) continue;
+    if (parameter.type === "...") types.push("...");
+    if (!parameter.isNamed || parameter.type === "comment") continue;
+    if (parameter.type === "variadic_parameter") {
+      types.push("...");
+      continue;
+    }
+    let end = parameter.endIndex;
+    const equals = parameter.children.find((child) => child?.type === "=");
+    if (equals) end = equals.startIndex;
+    const { name } = declaratorName(parameter.childForFieldName("declarator"));
+    let text = source.slice(parameter.startIndex, end);
+    if (name && name.type === "identifier" && name.endIndex <= end) {
+      text = source.slice(parameter.startIndex, name.startIndex) + source.slice(name.endIndex, end);
+    }
+    types.push(tight(text));
+  }
+  const qualifiers = fn.children
+    .filter((child) => child && (child.type === "type_qualifier" || child.type === "ref_qualifier"))
+    .map((child) => child?.text ?? "");
+  return `(${types.join(",")})${qualifiers.length > 0 ? ` ${qualifiers.join(" ")}` : ""}`;
+}
+
+const C_SCOPE = new Set([
+  "translation_unit",
+  "declaration_list",
+  "namespace_definition",
+  "linkage_specification",
+  "template_declaration",
+  "preproc_if",
+  "preproc_ifdef",
+  "preproc_else",
+  "preproc_elif",
+  "preproc_elifdef",
+]);
+
+// At file or namespace scope: no enclosing function, class or block.
+function atFileScope(node: Node): boolean {
+  for (let n = node.parent; n; n = n.parent) {
+    if (n.type === "translation_unit") return true;
+    if (!C_SCOPE.has(n.type)) return false;
+  }
+  return false;
+}
+
+// Directly in a class body, through `template` and preprocessor wrappers.
+function inClassBody(node: Node): boolean {
+  for (let n = node.parent; n; n = n.parent) {
+    if (n.type === "field_declaration_list") return true;
+    if (n.type !== "template_declaration" && !n.type.startsWith("preproc_")) return false;
+  }
+  return false;
+}
+
+const C_RECORDS = ["class", "struct", "union"];
+
+function cIdentify(cpp: boolean) {
+  return ({ node, name, kind, parent, source }: IdentifyContext): Identity | null => {
+    if (!name) return null;
+    switch (kind) {
+      case "namespace":
+        return { name: name.text.replace(/\s+/g, "").replace(/::/g, "."), kind };
+      case "class":
+      case "struct":
+      case "union":
+      case "enum": {
+        const { segments, last, global } = qualifiedName(name);
+        return { name: last.text, kind, qualifier: segments, global, scopes: cpp };
+      }
+      case "type":
+      case "concept":
+      case "macro":
+        return { name: name.text, kind, scopes: false };
+      case "typedef":
+      case "variable": {
+        if (kind === "variable" && !atFileScope(node)) return null;
+        const found = declaratorName(name).name;
+        return found ? { name: cNameText(found), kind, scopes: false } : null;
+      }
+    }
+    // Functions, member declarations and prototypes.
+    const { name: found, fn } = declaratorName(name);
+    if (!found) return null;
+    if (kind === "field" && !fn) return { name: cNameText(found), kind, scopes: false };
+    if (kind !== "function" && !fn) return null;
+    if (kind === "declaration" && !atFileScope(node) && !inClassBody(node)) return null;
+    const { segments, templated, last, global } = qualifiedName(found);
+    const text = cNameText(last);
+    let refined = kind === "function" ? "function" : "declaration";
+    if (cpp && refined === "function") {
+      const classScope = parent && C_RECORDS.includes(parent.kind);
+      if (text.startsWith("~")) refined = "destructor";
+      else if (/^operator\b/.test(text)) refined = "operator";
+      else if (
+        segments.length > 0
+          ? text === segments[segments.length - 1]
+          : classScope && text === parent?.name
+      ) {
+        refined = "constructor";
+      } else if (segments.length > 0 || classScope) refined = "method";
+    }
+    if (!cpp) return { name: text, kind: refined };
+    // A template's own parameter count: the template lists left once each templated
+    // qualifier (`Buf<T>::`) has taken its own.
+    const wrappers: Node[] = [];
+    let outer = node;
+    while (outer.parent?.type === "template_declaration") {
+      wrappers.push(outer.parent);
+      outer = outer.parent;
+    }
+    const own = wrappers.length > templated ? wrappers[0] : undefined;
+    const arity =
+      own?.childForFieldName("parameters")?.namedChildren.filter((p) => p && p.type !== "comment")
+        .length ?? 0;
+    return {
+      name: text,
+      kind: refined,
+      qualifier: segments,
+      global,
+      discriminator: `${arity > 0 ? `<${arity}>` : ""}${fn ? cppParameters(source, fn) : "()"}`,
+    };
+  };
+}
+
+// C and C++: a specifier with no declarator of its own (`struct S {…};` in a class) is cited
+// as its whole declaration.
+function cSpan(node: Node): Node {
+  const parent = node.parent;
+  if (
+    parent &&
+    (parent.type === "field_declaration" || parent.type === "declaration") &&
+    parent.childForFieldName("type")?.id === node.id &&
+    !parent.childForFieldName("declarator")
+  ) {
+    return parent;
+  }
+  return node;
+}
+
+// C#: parameter types as written with their modifiers (`ref int`), names, attributes and
+// default values removed. A `params` parameter's parts sit directly in the list, so
+// parameters are read as the runs of children between commas.
+function csharpParameters(list: Node | null): string {
+  if (!list) return "";
+  type Part = { node: Node; field: string | null };
+  const groups: Part[][] = [[]];
+  for (let i = 0; i < list.childCount; i++) {
+    const child = list.child(i);
+    if (
+      !child ||
+      child.type === "(" ||
+      child.type === ")" ||
+      child.type === "[" ||
+      child.type === "]"
+    ) {
+      continue;
+    }
+    if (child.type === ",") groups.push([]);
+    else
+      (groups[groups.length - 1] as Part[]).push({ node: child, field: list.fieldNameForChild(i) });
+  }
+  const types: string[] = [];
+  for (const group of groups) {
+    let parts = group;
+    const only = group.length === 1 ? group[0] : undefined;
+    if (only?.node.type === "parameter") {
+      parts = [];
+      for (let i = 0; i < only.node.childCount; i++) {
+        const child = only.node.child(i);
+        if (child) parts.push({ node: child, field: only.node.fieldNameForChild(i) });
+      }
+    }
+    const kept: string[] = [];
+    for (const { node, field } of parts) {
+      if (node.type === "=") break;
+      if (field === "name" || node.type === "attribute_list" || node.type === "comment") continue;
+      kept.push(node.text);
+    }
+    const type = tight(kept.join(" "));
+    if (type) types.push(type);
+  }
+  return types.join(",");
+}
+
+const CSHARP_TYPES = ["class", "struct", "interface", "record"];
+const CSHARP_CALLABLE = ["method", "constructor", "destructor", "operator"];
+
+function csharpIdentify({ node, name, kind }: IdentifyContext): Identity {
+  let text = name?.text ?? kind;
+  if (kind === "namespace") text = text.replace(/\s+/g, "");
+  else if (node.type === "destructor_declaration") text = `~${text}`;
+  else if (node.type === "indexer_declaration") text = "this";
+  else if (node.type === "operator_declaration") {
+    const children = node.children;
+    const at = children.findIndex((child) => child?.type === "operator");
+    text = `operator${children[at + 1]?.text ?? ""}`;
+  } else if (node.type === "conversion_operator_declaration") {
+    text = `operator ${node.childForFieldName("type")?.text.replace(/\s+/g, "") ?? ""}`;
+  }
+  const typeParameters =
+    node.childForFieldName("type_parameters") ??
+    node.namedChildren.find((child) => child?.type === "type_parameter_list") ??
+    null;
+  const arity = typeParameters?.namedChildren.filter((p) => p?.type === "type_parameter").length;
+  const partial = node.namedChildren.some(
+    (child) => child?.type === "modifier" && child.text === "partial",
+  );
+  let refined = kind;
+  if (kind === "method" && partial && !node.childForFieldName("body")) refined = "declaration";
+  let discriminator = "";
+  if (CSHARP_CALLABLE.includes(kind)) {
+    discriminator = `(${csharpParameters(node.childForFieldName("parameters"))})`;
+  } else if (kind === "indexer") {
+    discriminator = `[${csharpParameters(node.childForFieldName("parameters"))}]`;
+  }
+  return {
+    name: text,
+    kind: refined,
+    segment: arity ? `${text}\`${arity}` : text,
+    discriminator,
+    fileScope: node.type === "file_scoped_namespace_declaration",
+    partial: partial && CSHARP_TYPES.includes(kind),
+  };
+}
+
+// C#: a declaration's head starts after its attribute lists.
+function csharpHead(node: Node): number {
+  const first = node.children.find(
+    (child) => child && child.type !== "attribute_list" && child.type !== "comment",
+  );
+  return first?.startIndex ?? node.startIndex;
+}
+
+const cFamily = {
+  comments: ["comment"],
+  wrapper: (node: Node) => parentIf(node, ["template_declaration"]),
+  span: cSpan,
+  receiver: none,
+  discriminator: empty,
+  docstring: none,
+  specifier: (node: Node) => node.text.replace(/^["<]|[">]$/g, ""),
+};
+
 const LANGUAGES: Record<CodeLanguage, LanguageSpec> = {
   typescript: { query: "typescript.scm", tags: ["javascript", "typescript"], ...ecmascript },
   tsx: { query: "typescript.scm", tags: ["javascript", "tsx"], ...ecmascript },
@@ -231,6 +623,34 @@ const LANGUAGES: Record<CodeLanguage, LanguageSpec> = {
         .replace(/;\s*$/, "")
         .replace(/\s+/g, ""),
   },
+  rust: {
+    query: "rust.scm",
+    tags: ["rust"],
+    comments: ["line_comment", "block_comment"],
+    leading: ["attribute_item"],
+    wrapper: none,
+    span: self,
+    receiver: none,
+    discriminator: empty,
+    docstring: none,
+    specifier: text,
+    identify: rustIdentify,
+  },
+  c: { query: "c.scm", tags: ["c"], ...cFamily, identify: cIdentify(false) },
+  cpp: { query: "cpp.scm", tags: ["cpp"], ...cFamily, identify: cIdentify(true) },
+  csharp: {
+    query: "csharp.scm",
+    tags: ["csharp"],
+    comments: ["comment"],
+    wrapper: none,
+    span: self,
+    receiver: none,
+    discriminator: empty,
+    docstring: none,
+    specifier: text,
+    head: csharpHead,
+    identify: csharpIdentify,
+  },
 };
 
 const EXTENSIONS: Record<string, CodeLanguage> = {
@@ -246,6 +666,18 @@ const EXTENSIONS: Record<string, CodeLanguage> = {
   ".pyi": "python",
   ".go": "go",
   ".java": "java",
+  ".rs": "rust",
+  ".c": "c",
+  ".h": "cpp",
+  ".cc": "cpp",
+  ".cpp": "cpp",
+  ".cxx": "cpp",
+  ".c++": "cpp",
+  ".hpp": "cpp",
+  ".hh": "cpp",
+  ".hxx": "cpp",
+  ".h++": "cpp",
+  ".cs": "csharp",
 };
 
 /** The language a tree entry's path is parsed as, or null when it is not supported. */
@@ -469,12 +901,22 @@ function cut(value: string, max: number): string {
 interface Candidate {
   node: Node;
   span: Node;
+  nameNode: Node | null;
   name: string;
   nameStart: number;
   kind: string;
   citeStart: number;
+  /** The span's end, without a trailing line break. */
+  end: number;
   doc: string;
   broken: boolean;
+}
+
+// The last row a node's text is on: a node that ends with its line break (a Rust `///`
+// comment, a `#define`) ends on the row before its end position.
+function lastRow(node: Node): number {
+  const end = node.endPosition;
+  return end.column === 0 && end.row > node.startPosition.row ? end.row - 1 : end.row;
 }
 
 function countErrors(node: Node): number {
@@ -484,24 +926,20 @@ function countErrors(node: Node): number {
   return count;
 }
 
-// The citeable start: through wrappers, then over contiguous leading comments that are not
-// a trailing comment of the code before them.
+// The citeable start: through wrappers, then over contiguous leading comments (and leading
+// attributes) that are not a trailing comment of the code before them.
 function citeableStart(spec: LanguageSpec, span: Node): { start: Node; comments: Node[] } {
   let outer = span;
   for (let wrapper = spec.wrapper(outer); wrapper; wrapper = spec.wrapper(outer)) outer = wrapper;
+  const absorbed = (node: Node) =>
+    spec.comments.includes(node.type) || (spec.leading?.includes(node.type) ?? false);
   const comments: Node[] = [];
   let first = outer;
-  for (let prev = outer.previousSibling; prev && spec.comments.includes(prev.type); ) {
-    if (prev.endPosition.row < first.startPosition.row - 1) break;
+  for (let prev = outer.previousSibling; prev && absorbed(prev); ) {
+    if (lastRow(prev) < first.startPosition.row - 1) break;
     const before = prev.previousSibling;
-    if (
-      before &&
-      !spec.comments.includes(before.type) &&
-      before.endPosition.row === prev.startPosition.row
-    ) {
-      break;
-    }
-    comments.unshift(prev);
+    if (before && !absorbed(before) && lastRow(before) === prev.startPosition.row) break;
+    if (spec.comments.includes(prev.type)) comments.unshift(prev);
     first = prev;
     prev = before;
   }
@@ -584,13 +1022,17 @@ export async function extract(
       const span = spec.span(node);
       const { start, comments } = citeableStart(spec, span);
       const docstring = spec.docstring(node);
+      let end = span.endIndex;
+      while (end > span.startIndex && (source[end - 1] === "\n" || source[end - 1] === "\r")) end--;
       candidates.push({
         node,
         span,
+        nameNode: name,
         name: name?.text ?? kind,
         nameStart: name?.startIndex ?? node.startIndex,
         kind,
         citeStart: start.startIndex,
+        end,
         doc: docstring ?? comments.map((comment) => comment.text.trim()).join("\n"),
         broken: span.hasError,
       });
@@ -603,52 +1045,118 @@ export async function extract(
         (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0),
     );
 
-    // Enclosing chains, by strict containment of declaration spans.
-    const qnames = new Map<Candidate, string>();
-    const stack: Candidate[] = [];
+    // Enclosing chains, by strict containment of declaration spans. A definition is
+    // qualified by the nearest enclosing one that scopes, else by a file-scoped namespace
+    // before it.
+    interface Scope {
+      candidate: Candidate;
+      name: string;
+      kind: string;
+      childQ: string;
+      childId: string;
+      scopes: boolean;
+    }
+    interface Named {
+      qname: string;
+      symbolId: string;
+      name: string;
+      kind: string;
+      partial: boolean;
+    }
+    const join = (prefix: string, segment: string) =>
+      prefix && segment ? `${prefix}.${segment}` : prefix || segment;
+    const named = new Map<Candidate, Named>();
+    const stack: Scope[] = [];
+    let fileScope: Scope | null = null;
     for (const candidate of candidates) {
       const contains = (outer: Candidate) =>
         outer.span.startIndex <= candidate.span.startIndex &&
         candidate.span.endIndex <= outer.span.endIndex &&
         (outer.span.startIndex < candidate.span.startIndex ||
           candidate.span.endIndex < outer.span.endIndex);
-      while (stack.length > 0 && !contains(stack[stack.length - 1] as Candidate)) stack.pop();
-      const parent = stack[stack.length - 1];
-      const receiver = spec.receiver(candidate.node);
-      const prefix = receiver ?? (parent ? qnames.get(parent) : undefined);
-      qnames.set(candidate, prefix ? `${prefix}.${candidate.name}` : candidate.name);
-      stack.push(candidate);
+      while (stack.length > 0 && !contains((stack[stack.length - 1] as Scope).candidate)) {
+        stack.pop();
+      }
+      let scope: Scope | null = null;
+      for (let i = stack.length - 1; i >= 0 && !scope; i--) {
+        if ((stack[i] as Scope).scopes) scope = stack[i] as Scope;
+      }
+      if (!scope && fileScope && fileScope.candidate.span.endIndex <= candidate.span.startIndex) {
+        scope = fileScope;
+      }
+      let identity: Identity | null;
+      if (spec.identify) {
+        identity = spec.identify({
+          node: candidate.node,
+          name: candidate.nameNode,
+          kind: candidate.kind,
+          parent: scope ? { name: scope.name, kind: scope.kind } : null,
+          source,
+        });
+      } else {
+        const receiver = spec.receiver(candidate.node);
+        identity = {
+          name: candidate.name,
+          kind: candidate.kind,
+          qualifier: receiver ? [receiver] : [],
+          global: receiver !== null,
+          discriminator: spec.discriminator(candidate.node, candidate.kind),
+        };
+      }
+      if (!identity) continue;
+      const qualifier = (identity.qualifier ?? []).join(".");
+      const qPrefix = identity.global ? qualifier : join(scope?.childQ ?? "", qualifier);
+      const idPrefix = identity.global ? qualifier : join(scope?.childId ?? "", qualifier);
+      const qname = join(qPrefix, identity.name);
+      const idBase = join(idPrefix, identity.segment ?? identity.name);
+      named.set(candidate, {
+        qname,
+        symbolId: idBase + (identity.discriminator ?? ""),
+        name: identity.name,
+        kind: identity.kind,
+        partial: identity.partial === true,
+      });
+      const entry: Scope = {
+        candidate,
+        name: identity.name,
+        kind: identity.kind,
+        childQ: identity.childScope !== undefined ? join(qPrefix, identity.childScope) : qname,
+        childId: identity.childScope !== undefined ? join(idPrefix, identity.childScope) : idBase,
+        scopes: identity.scopes ?? true,
+      };
+      if (identity.fileScope) fileScope = entry;
+      stack.push(entry);
     }
 
     const occurrences = new Map<string, number>();
     const symbols: SymbolRow[] = [];
     for (const candidate of candidates) {
-      if (candidate.broken) continue;
-      const qname = qnames.get(candidate) as string;
-      const symbolId = qname + spec.discriminator(candidate.node, candidate.kind);
+      const identity = named.get(candidate);
+      if (candidate.broken || !identity) continue;
+      const symbolId = identity.symbolId;
       const occurrence = (occurrences.get(symbolId) ?? 0) + 1;
       occurrences.set(symbolId, occurrence);
       const startByte = at.byte(candidate.citeStart);
-      const endByte = at.byte(candidate.span.endIndex);
-      const startLine = at.line(candidate.span.startIndex);
-      symbols.push({
+      const endByte = at.byte(candidate.end);
+      const startLine = at.line(spec.head?.(candidate.span) ?? candidate.span.startIndex);
+      const row: SymbolRow = {
         ordinal: symbols.length + 1,
         symbol_id: symbolId,
-        name: candidate.name,
-        qname,
-        kind: candidate.kind,
+        name: identity.name,
+        qname: identity.qname,
+        kind: identity.kind,
         start_line: startLine,
-        end_line: at.line(Math.max(candidate.span.startIndex, candidate.span.endIndex - 1)),
+        end_line: at.line(Math.max(candidate.span.startIndex, candidate.end - 1)),
         occurrence,
         doc_start_line: at.line(candidate.citeStart),
         start_byte: startByte,
         end_byte: endByte,
         signature: cut(at.lineText(startLine).trim(), SIGNATURE_BYTES),
         doc: cut(candidate.doc.trim(), DOC_BYTES),
-        span_sha256: sha256(
-          Buffer.from(source.slice(candidate.citeStart, candidate.span.endIndex), "utf8"),
-        ),
-      });
+        span_sha256: sha256(Buffer.from(source.slice(candidate.citeStart, candidate.end), "utf8")),
+      };
+      if (identity.partial) row.partial = true;
+      symbols.push(row);
     }
 
     // References: tags.scm's @reference.* captures, unresolved, by name; one row per name,

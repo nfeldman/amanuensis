@@ -25,6 +25,7 @@
 //     halves are not a `declaration` and a `method` with one symbol_id (in two files and in
 //     one), properties, events, indexers or records are missing, a local function is a
 //     definition, or overloads that differ by generic arity or by `ref`/`out` share an id;
+//   - a parameter's name, attribute or default value enters a C++ or C# discriminator;
 //   - any symbol_id changes when its file's definitions are reordered;
 //   - output differs across two runs, or CRLF line endings change a golden row.
 //
@@ -154,6 +155,7 @@ const GOLDEN = {
       ["field", "size_", "geo.Buf.size_", "geo.Buf.size_", 34, 34, 34, 1],
       ["field", "data_", "geo.Buf.data_", "geo.Buf.data_", 35, 35, 35, 1],
       ["struct", "Cursor", "geo.Buf.Cursor", "geo.Buf.Cursor", 37, 39, 37, 1],
+      ["field", "at", "geo.Buf.Cursor.at", "geo.Buf.Cursor.at", 38, 38, 38, 1],
       ["struct", "Point", "geo.Point", "geo.Point", 42, 44, 42, 1],
       ["field", "x", "geo.Point.x", "geo.Point.x", 43, 43, 43, 1],
       ["field", "y", "geo.Point.y", "geo.Point.y", 43, 43, 43, 1],
@@ -214,7 +216,7 @@ const GOLDEN = {
   "Widget.A.cs": {
     lang: "csharp",
     rows: [
-      ["namespace", "Acme.Parts", "Acme.Parts", "Acme.Parts", 2, 2, 2, 1],
+      ["namespace", "Acme.Parts", "Acme.Parts", "Acme.Parts", 2, 2, 1, 1],
       ["class", "Widget", "Acme.Parts.Widget", "Acme.Parts.Widget`1", 5, 12, 4, 1],
       ["property", "Size", "Acme.Parts.Widget.Size", "Acme.Parts.Widget`1.Size", 7, 7, 7, 1],
       ["declaration", "OnChanged", "Acme.Parts.Widget.OnChanged", "Acme.Parts.Widget`1.OnChanged(int)", 9, 9, 9, 1],
@@ -226,7 +228,7 @@ const GOLDEN = {
   "Widget.B.cs": {
     lang: "csharp",
     rows: [
-      ["namespace", "Acme.Parts", "Acme.Parts", "Acme.Parts", 2, 13, 2, 1],
+      ["namespace", "Acme.Parts", "Acme.Parts", "Acme.Parts", 2, 13, 1, 1],
       ["class", "Widget", "Acme.Parts.Widget", "Acme.Parts.Widget`1", 4, 12, 4, 1],
       ["method", "OnChanged", "Acme.Parts.Widget.OnChanged", "Acme.Parts.Widget`1.OnChanged(int)", 6, 9, 6, 1],
       ["method", "Render", "Acme.Parts.Widget.Render", "Acme.Parts.Widget`1.Render()", 11, 11, 11, 1],
@@ -594,6 +596,15 @@ async function checkPartials(mod, results) {
   ]);
 }
 
+async function checkDefaults(mod) {
+  const cs = await extractText(mod, "C# defaults", "class D {\n  void M([In] ref int a, string b = \"x,y\", params int[] rest) { }\n}\n", "csharp");
+  const m = cs.symbols.find((s) => s.name === "M");
+  check(m?.symbol_id === "D.M(ref int,string,params int[])", `C# defaults: M's id is ${m?.symbol_id}, expected D.M(ref int,string,params int[])`);
+  const cpp = await extractText(mod, "C++ defaults", "struct D {\n  void m(const char* s = \"a,b\", int (*cb)(int) = nullptr) const;\n};\n", "cpp");
+  const mm = cpp.symbols.find((s) => s.name === "m");
+  check(mm?.symbol_id === "D.m(const char*,int(*)(int)) const", `C++ defaults: m's id is ${mm?.symbol_id}, expected D.m(const char*,int(*)(int)) const`);
+}
+
 async function checkHashEdits(mod) {
   // [file, target symbol_id, occurrence, from, to, what]
   const cases = [
@@ -773,6 +784,7 @@ async function main() {
   const results = await checkGolden(mod);
   checkDetails(results);
   await checkPartials(mod, results);
+  await checkDefaults(mod);
   await checkHashEdits(mod);
   await checkReordering(mod);
   await checkCrlfAndDeterminism(mod);
