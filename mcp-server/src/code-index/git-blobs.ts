@@ -94,7 +94,7 @@ export function entryAt(
 ): TreeEntry | null | undefined {
   const r = runGit(workspace, ["ls-tree", "-z", "--full-tree", commit, "--", path]);
   if (r.status !== 0) return null;
-  return parseListing(r.stdout).find((e) => e.path === path);
+  return parseListing(r.stdout).find((e) => e.path === path && e.type !== "tree");
 }
 
 /** Each object's size, or null when the object is missing; one `cat-file --batch-check`. */
