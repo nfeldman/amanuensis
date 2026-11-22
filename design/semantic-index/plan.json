@@ -66,14 +66,14 @@
   "packets": [
     {
       "needs_mcp": false,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "3187093cd9eecc4851e4c0e366262055fb0a558c",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "0645b49",
+      "green_sha": "0f60525",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "",
+      "notes": "Item added to BACKLOG.md after the store-only item; gate also registered in test.yml beside SO0 (SI11 will find it present). Gate's scope paragraph check requires hybrid, adds-to-reading, no benchmark/threshold, name-matched lead-not-proof; removed D7/D8/D9/D11/D13 are one entry.",
       "id": "SI0",
       "slice": "S1",
       "title": "Record the plan in BACKLOG.md",
