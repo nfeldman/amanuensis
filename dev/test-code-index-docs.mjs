@@ -21,7 +21,9 @@
 //     grammars/, queries/ or THIRD_PARTY_NOTICES.md, or web-tree-sitter is not the exact version
 //     the section names, or the Node floor differs from package.json `engines`;
 //   - the section does not say the index adds to reading whole files and that a name-matched
-//     reference is a lead, or it mentions a benchmark, a threshold or a quality risk;
+//     reference is a lead, or it mentions a benchmark, a threshold or a quality risk, or a
+//     sentence of it or of the README paragraph restricts reading (SI9's detector,
+//     dev/reading-guidance.mjs);
 //   - a gate in design/semantic-index/plan.json is not a step of .github/workflows/test.yml with
 //     the working directory its command names, or runs after nothing that builds or vendors what
 //     its command builds or vendors, or is conditional or allowed to fail;
@@ -29,18 +31,24 @@
 //     and macOS (matrix not exactly those four, runs-on not the matrix, setup-node not the matrix
 //     version, an exclude or include, allowed to fail, or no `npm ci` before it);
 //   - that script does not pack, install the tarball into an empty directory, and call
-//     outline_file and read_symbol over the stdio server for every language, or
+//     outline_file and read_symbol over the stdio server for every language: its FIXTURES is not
+//     each manifest language once with a file of that language, its loop does not run
+//     checkFixture over all of FIXTURES, or checkFixture, run on canned responses, accepts a
+//     refused, mislabelled, not-ok or probe-less outline or a read_symbol without source or
+//     evidence_args for the file; or
 //     fixtures/installed-artifact/ lacks exactly one file per manifest language, a file's
 //     extension maps to another language, or a file does not define `installedProbe`.
 //   - an absent grammars/manifest.json is not reported as absent, or the gate runs anything (the
 //     vendoring script fetches from the registry) to make one.
-// Reads files only and runs nothing: when the generated grammars/manifest.json is absent (a fresh
-// checkout) it turns red and names `node scripts/vendor-grammars.mjs`, the step CI and prepack take.
+// Reads files, and imports the installed-artifact script for its FIXTURES and checkFixture; it runs
+// nothing. When the generated grammars/manifest.json is absent (a fresh checkout) it turns red and
+// names `node scripts/vendor-grammars.mjs`, the step CI and prepack take.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, extname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { restricts, sentences } from "./reading-guidance.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const server = join(root, "mcp-server");
@@ -300,6 +308,14 @@ function checkSection(section, grammars, facts) {
   for (const banned of [/benchmark/i, /threshold/i, /quality risk/i, /discourag/i]) {
     check(!banned.test(body), `the section mentions ${banned}`);
   }
+  checkNoRestriction(body, "INSTALLATION.md's Code index section");
+}
+
+/** SI9's restriction detector over install text: it adds to reading and takes nothing away. */
+function checkNoRestriction(text, where) {
+  for (const s of sentences(text)) {
+    check(!restricts(s), `${where} restricts reading: "${s.slice(0, 110)}"`);
+  }
 }
 
 function checkReadme(grammars, facts) {
@@ -313,6 +329,7 @@ function checkReadme(grammars, facts) {
   }
   check(body.includes("`AMANUENSIS_CODE_INDEX=off`"), "README's code-index paragraph does not name `AMANUENSIS_CODE_INDEX=off`");
   check(/INSTALLATION\.md#code-index/.test(body), "README's code-index paragraph does not link INSTALLATION.md#code-index");
+  checkNoRestriction(section(text, "Code index", "mcp-server/README.md"), "README's code-index paragraph");
   for (const extra of ["Kotlin", "Ruby", "PHP", "Swift", "Scala", "Lua", "Haskell"]) {
     check(!body.includes(extra), `README's code-index paragraph names ${extra}, which is not vendored`);
   }
@@ -463,7 +480,7 @@ function checkInstalledJob(workflow) {
 // ---------------------------------------------------------------------------------------
 // The installed-artifact check and its fixture
 
-function checkScript(grammars) {
+async function checkScript(grammars) {
   const text = read("mcp-server/scripts/check-installed-package.mjs");
   for (const [needle, what] of [
     ['"pack"', "npm pack"],
@@ -480,6 +497,31 @@ function checkScript(grammars) {
     check(text.includes(needle), `scripts/check-installed-package.mjs does not use ${what}`);
   }
   check(/for \(const .* of .*(FIXTURES|fixtures|files)/.test(text), "scripts/check-installed-package.mjs does not loop over the fixture files");
+  check(
+    /for \(const (\w+) of FIXTURES\) await checkFixture\(call, \1\);/.test(text),
+    "scripts/check-installed-package.mjs does not run checkFixture over every entry of FIXTURES",
+  );
+
+  // What the script exercises: FIXTURES holds each manifest language once, and checkFixture
+  // turns down each way a language can fail to load, on canned responses.
+  let script;
+  try {
+    script = await import(pathToFileURL(join(server, "scripts", "check-installed-package.mjs")).href);
+  } catch (error) {
+    fail(`scripts/check-installed-package.mjs cannot be imported: ${String(error?.message ?? error).split("\n")[0]}`);
+  }
+  check(Array.isArray(script.FIXTURES) && typeof script.checkFixture === "function", "scripts/check-installed-package.mjs does not export FIXTURES and checkFixture");
+  const listed = script.FIXTURES.map((f) => f.language).sort();
+  check(
+    JSON.stringify(listed) === JSON.stringify(Object.keys(grammars).sort()),
+    `the installed-artifact check exercises ${listed.join(", ")}, not each manifest language once (${Object.keys(grammars).sort().join(", ")})`,
+  );
+  const fixtureExtensions = extensionsOfCode();
+  for (const f of script.FIXTURES) {
+    check(existsSync(join(server, "fixtures", "installed-artifact", f.file)), `the installed-artifact check names ${f.file}, which fixtures/installed-artifact/ lacks`);
+    check(fixtureExtensions[f.language]?.includes(extname(f.file).toLowerCase()), `the installed-artifact check gives ${f.language} the file ${f.file}, whose extension is not that language's`);
+  }
+  await checkFixtureVerdicts(script);
 
   const dir = join(server, "fixtures", "installed-artifact");
   check(existsSync(dir), "mcp-server/fixtures/installed-artifact/ is missing");
@@ -504,6 +546,39 @@ function checkScript(grammars) {
   }
 }
 
+/** checkFixture accepts a good response and refuses each way a grammar or query fails to show. */
+async function checkFixtureVerdicts(script) {
+  const fixture = script.FIXTURES[0];
+  const good = {
+    outline_file: { ok: true, lang: fixture.language, status: "ok", symbols: [{ symbol_id: "x", children: [{ symbol_id: "installedProbe" }] }] },
+    read_symbol: { ok: true, source: "function installedProbe() {}", evidence_args: { file_path: fixture.file, symbol: "installedProbe" } },
+  };
+  const verdict = async (tool, patch) => {
+    const responses = { ...good, [tool]: patch === null ? good[tool] : { ...good[tool], ...patch } };
+    try {
+      await script.checkFixture(async (name) => responses[name], fixture);
+      return "accepted";
+    } catch (error) {
+      return error instanceof script.CheckFailure ? "refused" : `threw ${String(error?.message ?? error).split("\n")[0]}`;
+    }
+  };
+  check((await verdict("outline_file", null)) === "accepted", "checkFixture refuses a good outline and read");
+  for (const [tool, patch, what] of [
+    ["outline_file", { ok: false }, "a refused outline"],
+    ["outline_file", { lang: "plaintext" }, "an outline in another language"],
+    ["outline_file", { status: "partial" }, "an outline whose status is not ok"],
+    ["outline_file", { status: "unavailable" }, "an outline whose grammar did not load"],
+    ["outline_file", { symbols: [{ symbol_id: "other" }] }, "an outline without the probe"],
+    ["read_symbol", { ok: false }, "a refused read_symbol"],
+    ["read_symbol", { source: undefined }, "a read_symbol without source"],
+    ["read_symbol", { evidence_args: undefined }, "a read_symbol without evidence_args"],
+    ["read_symbol", { evidence_args: { file_path: "elsewhere.ts", symbol: "installedProbe" } }, "evidence_args for another file"],
+  ]) {
+    const got = await verdict(tool, patch);
+    check(got === "refused", `checkFixture does not refuse ${what} (${got})`);
+  }
+}
+
 try {
   const installation = read("INSTALLATION.md");
   const body = section(installation, "Code index", "INSTALLATION.md");
@@ -515,7 +590,7 @@ try {
   const workflow = read(".github/workflows/test.yml");
   checkRegistration(workflow);
   checkInstalledJob(workflow);
-  checkScript(grammars);
+  await checkScript(grammars);
   console.log("GATE SI11 GREEN");
 } catch (error) {
   if (!(error instanceof Red)) {

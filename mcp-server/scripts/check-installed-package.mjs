@@ -9,6 +9,9 @@
 // language does not parse and the probe is not found.
 //
 //   node scripts/check-installed-package.mjs
+//
+// FIXTURES and checkFixture are exported so the SI11 gate can hold them to the manifest and run
+// the per-language checks on canned responses; importing the module runs nothing.
 import { spawnSync } from "node:child_process";
 import {
   cpSync,
@@ -17,6 +20,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -30,7 +34,7 @@ const FIXTURE_DIR = join(moduleDir, "fixtures/installed-artifact");
 const PROBE = "installedProbe";
 
 // The fixture file of each language the package must parse.
-const FIXTURES = [
+export const FIXTURES = [
   { language: "typescript", file: "probe.ts" },
   { language: "tsx", file: "probe.tsx" },
   { language: "javascript", file: "probe.js" },
@@ -43,7 +47,7 @@ const FIXTURES = [
   { language: "csharp", file: "Probe.cs" },
 ];
 
-class CheckFailure extends Error {}
+export class CheckFailure extends Error {}
 function check(condition, message) {
   if (!condition) throw new CheckFailure(message);
 }
@@ -62,9 +66,43 @@ function flatten(symbols) {
   return (symbols ?? []).flatMap((s) => [s, ...flatten(s.children)]);
 }
 
-const scratch = mkdtempSync(join(tmpdir(), "amanuensis-installed-check-"));
+/**
+ * outline_file and read_symbol on one fixture file, through `call(name, args)`: the language is the
+ * fixture's, it parsed with status ok, the outline lists the probe, and read_symbol returns its
+ * source and evidence_args.
+ */
+export async function checkFixture(call, fixture) {
+  const where = `${fixture.language} (${fixture.file})`;
+  const outline = await call("outline_file", { path: fixture.file });
+  check(outline.ok === true, `outline_file ${where} was refused: ${JSON.stringify(outline)}`);
+  check(
+    outline.lang === fixture.language,
+    `outline_file ${where} parsed as ${outline.lang}, not ${fixture.language}`,
+  );
+  check(
+    outline.status === "ok",
+    `outline_file ${where} has status ${outline.status}; a grammar or query did not load`,
+  );
+  check(
+    flatten(outline.symbols).some((s) => String(s.symbol_id).includes(PROBE)),
+    `outline_file ${where} lists no definition of ${PROBE}: ${JSON.stringify(outline.symbols)}`,
+  );
+  const read = await call("read_symbol", { path: fixture.file, symbol: PROBE });
+  check(read.ok === true, `read_symbol ${where} was refused: ${JSON.stringify(read)}`);
+  check(
+    typeof read.source === "string" && read.source.includes(PROBE),
+    `read_symbol ${where} returned no source for ${PROBE}`,
+  );
+  check(
+    read.evidence_args?.file_path === fixture.file && read.evidence_args?.symbol,
+    `read_symbol ${where} returned no evidence_args`,
+  );
+}
+
+let scratch;
 
 async function main() {
+  scratch = mkdtempSync(join(tmpdir(), "amanuensis-installed-check-"));
   const npmCache = join(scratch, "npm-cache");
   const npmEnv = { ...process.env, npm_config_cache: npmCache };
   let packageSpec = process.env.AMANUENSIS_TEST_PACKAGE;
@@ -156,33 +194,7 @@ async function main() {
     for (const name of ["outline_file", "read_symbol"]) {
       check(tools.includes(name), `the installed server does not advertise ${name}`);
     }
-    for (const fixture of FIXTURES) {
-      const where = `${fixture.language} (${fixture.file})`;
-      const outline = await call("outline_file", { path: fixture.file });
-      check(outline.ok === true, `outline_file ${where} was refused: ${JSON.stringify(outline)}`);
-      check(
-        outline.lang === fixture.language,
-        `outline_file ${where} parsed as ${outline.lang}, not ${fixture.language}`,
-      );
-      check(
-        outline.status === "ok",
-        `outline_file ${where} has status ${outline.status}; a grammar or query did not load`,
-      );
-      check(
-        flatten(outline.symbols).some((s) => String(s.symbol_id).includes(PROBE)),
-        `outline_file ${where} lists no definition of ${PROBE}: ${JSON.stringify(outline.symbols)}`,
-      );
-      const read = await call("read_symbol", { path: fixture.file, symbol: PROBE });
-      check(read.ok === true, `read_symbol ${where} was refused: ${JSON.stringify(read)}`);
-      check(
-        typeof read.source === "string" && read.source.includes(PROBE),
-        `read_symbol ${where} returned no source for ${PROBE}`,
-      );
-      check(
-        read.evidence_args?.file_path === fixture.file && read.evidence_args?.symbol,
-        `read_symbol ${where} returned no evidence_args`,
-      );
-    }
+    for (const fixture of FIXTURES) await checkFixture(call, fixture);
   } finally {
     await client.close();
   }
@@ -191,13 +203,16 @@ async function main() {
   );
 }
 
-main().then(
-  () => {
-    rmSync(scratch, { recursive: true, force: true });
-  },
-  (error) => {
-    console.error(error instanceof CheckFailure ? error.message : error);
-    console.error(`kept ${scratch} for inspection`);
-    process.exit(1);
-  },
-);
+// Run as a script (Node gives the main module its real path), not when imported.
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().then(
+    () => {
+      rmSync(scratch, { recursive: true, force: true });
+    },
+    (error) => {
+      console.error(error instanceof CheckFailure ? error.message : error);
+      if (scratch) console.error(`kept ${scratch} for inspection`);
+      process.exit(1);
+    },
+  );
+}
