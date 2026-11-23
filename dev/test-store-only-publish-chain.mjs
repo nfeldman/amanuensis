@@ -19,11 +19,9 @@
 //     stop on a red one and restore what was there; promotes a source that holds
 //     a Markdown page the contract names, or no README; or does not refuse a
 //     destination holding a file no manifest claims (a `.txt` and a `.md`);
-//   - any of the six `dev/` readers of `docs/` still opens a `.md` page (a
-//     `docs/…​.md` path, an `.md` filter, or a bare page name ending `.md`);
-//   - the republish chain's promote step (`dev/republish-docs.mjs`) stops on the
-//     generated README, or lets a new page beside it through: EX7's check of that
-//     step (`dev/test-republish-chain.mjs`) is absent, not run, or not ok;
+//   - either `dev/` reader of published pages (`read-html-page.mjs`,
+//     `measure-reader-prose.mjs`) opens a `.md` page (a `docs/…​.md` path, an
+//     `.md` filter, or a bare page name ending `.md`);
 //   - `dev/read-html-page.mjs`'s `articleOf` stops at the close of a record
 //     article inside the page's own, or reads past the page's article;
 //   - `dev/measure-reader-prose.mjs` counts a `.md` beside the HTML pages it is
@@ -62,13 +60,7 @@ const MANIFEST = ".manifest.json";
 const README = "README.md";
 const SENTINEL = "ZEBRA-SENTINEL-4471";
 
-const READERS = [
-  "dev/test-reader-lenses-dogfood.mjs",
-  "dev/test-rebuild-readback.mjs",
-  "dev/test-explanations-published.mjs",
-  "dev/test-republish-chain.mjs",
-  "dev/test-receipt-gates-restored.mjs",
-];
+const READERS = ["dev/read-html-page.mjs", "dev/measure-reader-prose.mjs"];
 // What a reader of a published page must not open any more.
 const MARKDOWN_PAGE_USES = [
   { what: "a docs/ path ending .md", pattern: /docs(?:-not)?\/(?!README\.md\b)[^\s"'`)]*\.md\b/ },
@@ -454,21 +446,6 @@ for (const reader of READERS) {
     return null;
   });
 }
-
-// The republish chain's promote step accepts the generated README and nothing beside it
-// (D10). EX7 drives that step through its stubbed world; SO21 requires its check to pass.
-const README_CHECK = "a promotion that adds only the generated README does not stop the run, and a page beside it still does";
-check("the republish chain's promote step accepts the generated README and still stops on a new page beside it", () => {
-  const chainTest = join(REPO, "dev/test-republish-chain.mjs");
-  if (!existsSync(chainTest)) return "dev/test-republish-chain.mjs is absent";
-  if (!readFileSync(chainTest, "utf8").includes(README_CHECK)) return "dev/test-republish-chain.mjs no longer checks the README promotion";
-  const result = run(process.execPath, [chainTest]);
-  const lines = result.stdout.split("\n").map((line) => line.trim());
-  if (lines.includes(`ok      ${README_CHECK}`)) return null;
-  return lines.includes(`not ok  ${README_CHECK}`)
-    ? `the README promotion check failed: ${result.stdout.split("\n").filter((line) => line.startsWith("GATE ")).pop() ?? "(no gate line)"}`
-    : "the README promotion check did not run";
-});
 
 // A page's article holds record articles of its own (findings, dispositions, runtime
 // boundaries); the reader must return the outer article whole, not stop at the first close.

@@ -2,12 +2,10 @@
 // Is this *store* fully surveyed? ADR-0001's seven clauses, evaluated read-only
 // against an open conspectus.
 //
-// `dev/check-living-conspectus.mjs` is not this. It resolves its fixture to
-// `dev/conspectus/self-baseline.json` and calls `evaluateConspectus(manifest)`
-// over the parsed JSON: it evaluates a **supplied manifest**, never an open
-// store, and that manifest is the immutable A0 historical fixture at `b8b566f`
-// which `design/reader-lenses/spec.md` §12.3 forbids retargeting or
-// regenerating. Nor does the server carry the predicate — before this file,
+// The A0 checker (`dev/check-living-conspectus.mjs`, deleted 2026-11-23 and in
+// git history) was not this: it evaluated a **supplied manifest**, the A0
+// historical fixture at `b8b566f`, never an open store. Nor does the server
+// carry the predicate — before this file,
 // `grep -rn "fully.surveyed" mcp-server/src/` returned one hit, a word inside a
 // vocabulary list. Clause 7 added to a predicate with no store-scoped
 // implementation would have been vacuous wherever it was enforced

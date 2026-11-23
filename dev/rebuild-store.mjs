@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Steps 1-5 of the self-conspectus rebuild (spec.md §12.1), performed once
-// against this repository's own store, writing the receipt that
-// `dev/test-rebuild-readback.mjs` asserts over.
+// Rebuild a project's store from scratch (design/reader-lenses/spec.md §12.1):
+// snapshot, stop, discard, reinitialize and read back, carrying the
+// predecessor's findings forward, and write a receipt of what was done.
 //
 // This is a destructive operation and says so: it discards the live store. It
 // refuses to run without `--confirm`, and refuses a store that holds a survey
@@ -33,7 +33,7 @@
 //
 // The archived Git history is then carried into the rebuilt store, so the
 // snapshot stays reachable from the store that replaced it, and a closing phase
-// gate records the empty starting point the rebuild (P17) begins from.
+// gate records the empty starting point the rebuild begins from.
 //
 // Step 5a carries the predecessor's findings into the store that replaced it.
 // That step exists because the 2026-09-14 rebuild did not have it: six open
@@ -45,19 +45,19 @@
 // (design/survey-depth/spec.md §5.4).
 //
 // Usage:
-//   node dev/rebuild-self-conspectus-store.mjs --confirm
+//   node dev/rebuild-store.mjs --confirm
 //                                              --carry-from <store|export|none>
 //                                              --carry-reason "<text>"
 //                                              [--carry-verify-store <path>]
 //                                              [--archive <dir>]
-//                                              [--receipt <path>]
+//                                              [--receipt <path>]   (default: <archive>/rebuild-receipt.json)
 //                                              [--discard-populated-store]
 //                                              [--workspace <dir>]
 //
-// `--workspace` exists for the gate: it runs this procedure against a
-// throwaway workspace, so the sequence below is executed rather than described.
+// `--workspace` defaults to this repository; the gate (mcp-server/test-carried-findings.mjs)
+// runs this procedure against throwaway workspaces, so the sequence below is executed
+// rather than described.
 import { spawn, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -74,11 +74,9 @@ import { fileURLToPath } from "node:url";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SERVER = join(REPO, "mcp-server", "dist", "index.js");
-// The repository root is the workspace in the real run. `--workspace` points it
-// at a throwaway instead, which is how dev/test-rebuild-readback.mjs runs *this
-// procedure* rather than a reimplementation of it: the review found that
-// deleting the stop step below left the gate green (F1/codex). REPO still
-// supplies the built server and the A0 fixtures either way.
+// The repository root is the default workspace. `--workspace` points it at
+// another, which is how the gate runs *this procedure* rather than a
+// reimplementation of it. REPO supplies the built server either way.
 const WORKSPACE = resolve(
   process.argv.indexOf("--workspace") >= 0 && process.argv[process.argv.indexOf("--workspace") + 1]
     ? process.argv[process.argv.indexOf("--workspace") + 1]
@@ -88,16 +86,8 @@ const STORAGE = join(WORKSPACE, ".amanuensis");
 const DB_FILES = ["memory.db", "memory.db-wal", "memory.db-shm"];
 const MARKER_FILE = "initialization.json";
 const REQUIRED_VIEWS = ["file_standing", "finding_state_current"];
-const SNAPSHOT_LABEL =
-  "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild";
-const CLOSING_LABEL =
-  "Post-discard empty store (P16): reinitialized and read back, ready for the rebuild";
-const FIXTURES = [
-  "dev/conspectus/self-baseline.json",
-  "dev/conspectus/baseline-report.json",
-  "dev/conspectus/baseline-report-detector-1.0.0.json",
-  "dev/conspectus/detector-registry.json",
-];
+const SNAPSHOT_LABEL = "Pre-rebuild snapshot: the state discarded before the rebuild";
+const CLOSING_LABEL = "Post-discard empty store: reinitialized and read back, ready for the rebuild";
 const CENSUS_COUNTERS = [
   "subsystem_count",
   "mapped_count",
@@ -434,7 +424,7 @@ async function resolveCarrySource() {
 // ---------------------------------------------------------------------------
 if (!flag("--confirm")) {
   die(
-    "refusing to run: this discards the live self-conspectus store at\n" +
+    "refusing to run: this discards the live store at\n" +
       `  ${STORAGE}\n` +
       "Re-run with --confirm once that is what you mean.",
   );
@@ -450,11 +440,11 @@ step(
     : `carry source: ${carry.kind} ${carry.path} (${carry.archivedStoreId}, ${carry.findings.length} finding(s))`,
 );
 
-const receiptPath = resolve(WORKSPACE, arg("--receipt", "design/reader-lenses/rebuild-receipt.json"));
 const archive = resolve(
   arg("--archive", join(tmpdir(), `amanuensis-pre-rebuild-${Date.now()}`)),
 );
 if (existsSync(archive)) die(`the archive path already exists: ${archive}`);
+const receiptPath = resolve(WORKSPACE, arg("--receipt", join(archive, "rebuild-receipt.json")));
 
 const repositorySha = spawnSync("git", ["-C", WORKSPACE, "rev-parse", "HEAD"], {
   encoding: "utf8",
@@ -472,7 +462,7 @@ const storePresent = existsSync(STORAGE) && preInfo.db_exists === true;
 step(`storage ${storePresent ? "present" : "absent"} at ${preInfo.storage_path}`);
 
 const sessionOne = await before.call("start_session", {
-  intent: "P16 — snapshot, discard, and reinitialize the self-conspectus store",
+  intent: "Rebuild — snapshot, discard, and reinitialize the store",
 });
 const preDashboard = await before.call("get_dashboard");
 const populated = CENSUS_COUNTERS.filter((key) => Number(preDashboard[key] ?? 0) !== 0);
@@ -586,7 +576,7 @@ step(`read back: db_exists=${readbackInfo.db_exists}, subsystems=${subsystems.le
 const carrying = client();
 await carrying.handshake();
 const carrySession = await carrying.call("start_session", {
-  intent: "P16 — carry the predecessor's findings into the reinitialized store",
+  intent: "Rebuild — carry the predecessor's findings into the reinitialized store",
 });
 const carryRun = await carrying.call("begin_carry_run", {
   source_kind: carry.kind,
@@ -640,7 +630,7 @@ cpSync(join(archive, ".git"), join(STORAGE, ".git"), { recursive: true });
 const closing = client();
 await closing.handshake();
 const sessionTwo = await closing.call("start_session", {
-  intent: "P16 — record the reinitialized empty store",
+  intent: "Rebuild — record the reinitialized empty store",
 });
 const closingGate = await closing.call("commit_phase_gate", { label: CLOSING_LABEL });
 const historyAfter = await closing.call("get_storage_history", { limit: 10 });
@@ -649,20 +639,14 @@ await closing.stop();
 step(`history carried across; closing gate ${closingGate.commit_sha}`);
 
 // --- the receipt ------------------------------------------------------------
-const digests = {};
-for (const path of FIXTURES) {
-  digests[path] = createHash("sha256").update(readFileSync(join(REPO, path))).digest("hex");
-}
-
 const receipt = {
-  contract: "amanuensis-reader-lenses/rebuild-receipt/v1",
-  packet: "P16",
+  contract: "amanuensis-reader-lenses/rebuild-receipt/v2",
   recorded_at: new Date().toISOString(),
   repository_sha: repositorySha,
   workspace_path: info.workspace_path,
   storage_path: info.storage_path,
   project_key: info.project_key,
-  produced_by: "dev/rebuild-self-conspectus-store.mjs --confirm",
+  produced_by: "dev/rebuild-store.mjs --confirm",
   pre_rebuild: {
     store_present: storePresent,
     db_exists: preInfo.db_exists === true,
@@ -671,7 +655,7 @@ const receipt = {
     database_bytes: dbSizes,
     note: storePresent
       ? "The store discarded here is the one this worktree carried before the rebuild."
-      : "This worktree carried no self-conspectus store before the rebuild: the branch's" +
+      : "This workspace carried no store before the rebuild: the branch's" +
         " work had never opened one, so the snapshot records an empty store this packet" +
         " initialized to run the procedure at the real path, and the discard removed that." +
         " The recoverability of a populated snapshot is proved in the gate's procedure arm," +
@@ -758,10 +742,6 @@ const receipt = {
     snapshot_sha: snapshot.commit_sha,
     head_message: historyAfter.commits?.[0]?.message ?? null,
     commits: historyAfter.commits ?? [],
-  },
-  fixtures_unchanged: {
-    checked: "sha256 of each A0 historical fixture after the rebuild (§12.3)",
-    digests,
   },
 };
 

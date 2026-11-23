@@ -1287,7 +1287,7 @@ function buildHistoryPointer(
  * The default `describe_locus` budget was 8192 until 2026-11-19. Measured on
  * the self-conspectus, the item-free floor of a default call on a surveyed
  * file was 8548–8708 bytes, so the default served no item at all, purpose
- * sentence included (`design/explanation/locus-default-measure.json`). The
+ * sentence included (measured with `dev/measure-locus-default.mjs`). The
  * owner raised it to 15 KiB.
  */
 const WIRE_BUDGET = 15360;

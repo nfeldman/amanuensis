@@ -45,7 +45,7 @@
 //   call describe_locus with sections                                      → M3
 //   measure the original store, or write to it                             → O1, O2
 //   leave the copy behind                                                  → O3
-//   write the record somewhere else, or for other loci                     → R1, R2
+//   write the record somewhere else, or for other loci                     → R1
 //   edit locus.ts or the locus contract                                    → F1
 //   forget the gate in test.yml                                            → L1
 //
@@ -73,8 +73,6 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, "..");
 const SCRIPT_REL = "dev/measure-locus-default.mjs";
-const RECORD_REL = "design/explanation/locus-default-measure.json";
-const RECEIPT_REL = "design/reader-lenses/dogfood-receipt.json";
 const CI_REL = ".github/workflows/test.yml";
 const GATE_REL = "dev/test-locus-default-measure.mjs";
 const PROTECTED = ["mcp-server/src/tools/locus.ts", "mcp-server/contracts/locus-account.schema.json"];
@@ -725,24 +723,6 @@ async function main() {
     for (const entry of written.loci) {
       const reason = judgeEntry(entry, reference.get(entry.locus));
       if (reason) return reason;
-    }
-    return null;
-  });
-
-  await check("R2", () => {
-    const receipt = JSON.parse(readFileSync(join(repo, RECEIPT_REL), "utf8"));
-    const named = (receipt.loci ?? []).map((entry) => entry.locus);
-    if (named.length !== 3) return `the dogfood receipt names ${named.length} loci, not three`;
-    const path = join(repo, RECORD_REL);
-    if (!existsSync(path)) return `${RECORD_REL} is not committed`;
-    const record = JSON.parse(readFileSync(path, "utf8"));
-    const loci = (record.loci ?? []).map((entry) => entry.locus);
-    if (JSON.stringify(loci) !== JSON.stringify(named)) {
-      return `${RECORD_REL} holds ${JSON.stringify(loci)}, the dogfood receipt names ${JSON.stringify(named)}`;
-    }
-    for (const entry of record.loci) {
-      const reason = judgeEntry(entry, null);
-      if (reason) return `${RECORD_REL}: ${reason}`;
     }
     return null;
   });

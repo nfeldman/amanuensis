@@ -8,8 +8,7 @@
 // with no `sections`, and reports:
 //
 //   wire_bytes     the whole result the host receives — the compact text block
-//                  and the `structuredContent` that duplicates it — as
-//                  `dev/record-dogfood-receipt.mjs` measures it
+//                  and the `structuredContent` that duplicates it
 //   payload_bytes  the compact payload alone
 //   floor_bytes    the same response with every item removed (each section's
 //                  `items` and the standing `unknown` list), re-serialized in the
@@ -26,11 +25,10 @@
 // original is only ever read as files; nothing opens it as a database.
 //
 //   node dev/measure-locus-default.mjs --workspace <dir> --locus <path> [--locus <path> ...] [--kind file]
-//   node dev/measure-locus-default.mjs --record [--workspace <dir>] [--receipt <file>] [--out <file>]
+//   node dev/measure-locus-default.mjs --record [--workspace <dir>] --receipt <file> --out <file>
 //
-// `--record` measures the loci the dogfood receipt names and writes
-// `design/explanation/locus-default-measure.json`. `--workspace` defaults to
-// this worktree.
+// `--record` measures the loci a dogfood receipt names (its `loci` array) and
+// writes the measurement to `--out`. `--workspace` defaults to this worktree.
 
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -49,8 +47,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SERVER = join(REPO, "mcp-server", "dist", "index.js");
-const RECEIPT_REL = "design/reader-lenses/dogfood-receipt.json";
-const OUT_REL = "design/explanation/locus-default-measure.json";
 const CONTRACT = "amanuensis-explanation/locus-default-measure/v1";
 
 function fail(message) {
@@ -76,7 +72,8 @@ function parseArgs(argv) {
   }
   if (options.record) {
     if (options.loci.length > 0) fail("--record measures the loci the dogfood receipt names; drop --locus");
-    const receiptPath = options.receipt ?? join(REPO, RECEIPT_REL);
+    if (!options.receipt || !options.out) fail("--record needs --receipt and --out");
+    const receiptPath = options.receipt;
     if (!existsSync(receiptPath)) fail(`no dogfood receipt at ${receiptPath}`);
     const receipt = JSON.parse(readFileSync(receiptPath, "utf8"));
     options.loci = (receipt.loci ?? []).map((entry) => ({
@@ -84,7 +81,6 @@ function parseArgs(argv) {
       kind: entry.kind ?? null,
     }));
     if (options.loci.length === 0) fail(`the dogfood receipt ${receiptPath} names no locus`);
-    options.out = options.out ?? join(REPO, OUT_REL);
   } else {
     if (options.loci.length === 0) fail("at least one --locus is required");
     if (options.receipt || options.out) fail("--receipt and --out apply to --record only");

@@ -2,7 +2,7 @@
 // GATE CF1 (spec.md §8.4) — packet P4 of the survey-depth lane.
 //
 // A reinitialization discards a conspectus. Today nothing carries a prior
-// finding into the successor: `dev/rebuild-self-conspectus-store.mjs` snapshots,
+// finding into the successor: `dev/rebuild-store.mjs` snapshots,
 // stops, deletes and reinitializes, and the six baseline open findings B03-5,
 // B03-6, B03-7, B03-8, B04-5 and B07-1 survive only as text in an archive
 // nobody re-reads. `pecia audit` flags closed records whose reference stopped
@@ -1546,7 +1546,7 @@ async function main(mods) {
     const result = runChecker(undecided);
     check("E1 the store-scoped predicate refuses a store with an undecided carried finding", () => {
       if (result.absent) {
-        return `${CHECKER_REL} is absent, so a carried finding has no terminal outcome and no predicate says so; §5.5 makes it this packet's deliverable because dev/check-living-conspectus.mjs evaluates a supplied manifest and never an open store`;
+        return `${CHECKER_REL} is absent, so a carried finding has no terminal outcome and no predicate says so; §5.5 makes it this packet's deliverable`;
       }
       if (result.report === null) {
         return `${CHECKER_REL} printed no parseable report (exit ${result.status}): ${result.stderr || result.stdout.slice(0, 200)}`;
@@ -1830,21 +1830,9 @@ async function main(mods) {
     });
   }
 
-  check("E2 dev/check-living-conspectus.mjs still reads the frozen A0 fixture", () => {
-    const path = join(REPO, "dev", "check-living-conspectus.mjs");
-    if (!existsSync(path)) return "dev/check-living-conspectus.mjs is absent";
-    const text = readFileSync(path, "utf8");
-    if (!text.includes("dev/conspectus/self-baseline.json")) {
-      return "it no longer resolves dev/conspectus/self-baseline.json; design/reader-lenses/spec.md §12.3 forbids retargeting the A0 fixture, and §5.5 adds a *new* store-scoped checker instead of moving this one";
-    }
-    return /--store\b/.test(text)
-      ? "it grew a --store argument; the store-scoped predicate is a separate deliverable so the historical fixture keeps answering about b8b566f"
-      : null;
-  });
-
   // ---------------------------------- C1..C9: the carry, driven by the rebuild
 
-  const DRIVER_REL = "dev/rebuild-self-conspectus-store.mjs";
+  const DRIVER_REL = "dev/rebuild-store.mjs";
   function throwawayWorkspace(label) {
     const root = join(scratch, `driver-${label}`);
     const workspace = join(root, "workspace");

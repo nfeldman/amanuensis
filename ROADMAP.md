@@ -383,7 +383,7 @@ Risks:
 - A single model/runtime baseline can be mistaken for a general reliability estimate.
 
 **Practice basis:** GP8, GP12, GP20, GP24, GP25, GP28, VP4, VP5, VP6, VP10, VP11, VP12, VP17, VP19, VP20, VP21, VP25, VP26<br>
-**Baseline evidence:** `dev/adr/0001-living-conspectus-terms.md`, `dev/conspectus/self-baseline.json`, `dev/conspectus/baseline-report.json`, `dev/conspectus/baseline-report-detector-1.0.0.json`, `dev/conspectus/detector-registry.json`, `dev/test-living-conspectus.mjs`
+**Baseline evidence:** `dev/adr/0001-living-conspectus-terms.md`
 
 #### A1 — Temporal claim and supersession model
 

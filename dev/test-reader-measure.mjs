@@ -66,7 +66,6 @@ const here = dirname(fileURLToPath(import.meta.url));
 const REPO = join(here, "..");
 const SCRIPT_REL = "dev/measure-reader-prose.mjs";
 const SCRIPT = join(REPO, SCRIPT_REL);
-const RECORD_REL = "design/explanation/reader-measure.json";
 const WORKFLOW_REL = ".github/workflows/test.yml";
 const COUNTS_PHRASE = "the reader-prose measure does not report the fixture's known counts";
 
@@ -278,22 +277,5 @@ if (!Array.isArray(entries) || entries.map((e) => e.label).join() !== "two,one")
 
 // 4. Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
 // so this gate no longer asserts that it is listed there.
-
-// 5. The recorded "before" entry exists and is shaped by this packet.
-let recorded = null;
-try {
-  recorded = JSON.parse(readFileSync(join(REPO, RECORD_REL), "utf8"));
-} catch {
-  recorded = null;
-}
-const before = Array.isArray(recorded?.entries) ? recorded.entries.find((e) => e.label === "before") : null;
-if (!before) red(`${RECORD_REL} has no "before" entry`);
-if (before.placeholder_list_sha256 !== PLACEHOLDER_SHA256) red('the "before" entry carries the wrong placeholder hash');
-if (!/^[0-9a-f]{40}$/.test(before.commit ?? "")) red('the "before" entry carries no commit');
-if (!/^[0-9a-f]{64}$/.test(before.contract_sha256 ?? "")) red('the "before" entry carries no contract hash');
-const t = before.totals ?? {};
-if (!Number.isInteger(t.pages) || t.pages < 1 || !Number.isInteger(t.table_chars) || !Number.isInteger(t.prose_chars) || !Number.isInteger(t.placeholders) || typeof t.table_share !== "number") {
-  red('the "before" entry carries no measured totals');
-}
 
 console.log("GATE EX1 GREEN");

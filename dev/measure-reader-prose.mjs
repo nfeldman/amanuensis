@@ -3,7 +3,7 @@
 // (design/explanation/spec.md §1).
 //
 //   node dev/measure-reader-prose.mjs <docs-dir> [--basis html|markdown]
-//   node dev/measure-reader-prose.mjs --record <label> [<docs-dir>] [--basis html|markdown]
+//   node dev/measure-reader-prose.mjs --record <label> --file <record.json> <docs-dir> [--basis html|markdown]
 //
 // A publication is HTML only (store-only PLAN §3.2 step 3), so the measure reads
 // the `.html` pages. A directory holding no `.html` page is a publication from
@@ -42,9 +42,9 @@
 //     article, `<pre>` included.
 //
 // `--record` appends {label, commit, contract_sha256, placeholder_list_sha256,
-// totals} to the `entries` array of design/explanation/reader-measure.json. A
-// label that already exists is replaced and moved to the end. `--file` and
-// `--contract` override the record and the contract file, for the gate.
+// totals} to the `entries` array of the JSON file `--file` names. A label that
+// already exists is replaced and moved to the end. The contract hashed is the
+// publication's own `.projection-contract.json` unless `--contract` names another.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -67,8 +67,6 @@ export const MEASURE_PLACEHOLDERS = [
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO = join(here, "..");
-const DEFAULT_RECORD = join(REPO, "design/explanation/reader-measure.json");
-const DEFAULT_CONTRACT = join(REPO, "docs/.projection-contract.json");
 
 const sha256 = (data) => createHash("sha256").update(data).digest("hex");
 const round4 = (n) => Math.round(n * 10000) / 10000;
@@ -227,15 +225,16 @@ function main(argv) {
       positional.push(arg);
     }
   }
-  const docs = positional[0] ?? (options.record !== undefined ? join(REPO, "docs") : undefined);
-  if (!docs) throw new Error("usage: measure-reader-prose.mjs <docs-dir> | --record <label> [<docs-dir>]");
+  const docs = positional[0];
+  if (!docs) throw new Error("usage: measure-reader-prose.mjs <docs-dir> | --record <label> --file <record.json> <docs-dir>");
+  if (options.record !== undefined && !options.file) throw new Error("--record needs --file");
   const report = measureDirectory(docs, options.basis);
   if (options.record !== undefined) {
     const entry = record(
       options.record,
       report,
-      options.file ?? DEFAULT_RECORD,
-      options.contract ?? DEFAULT_CONTRACT,
+      options.file,
+      options.contract ?? join(docs, ".projection-contract.json"),
     );
     console.log(JSON.stringify(entry, null, 2));
   } else {

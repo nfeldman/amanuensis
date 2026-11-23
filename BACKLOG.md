@@ -12,6 +12,11 @@ log). The ledger was deleted on 2026-11-23, before a fresh self-survey; it is in
 before that date. Its open defects are listed under [Older defects](#older-defects-from-the-pecia-ledger) so
 they are not lost.
 
+On the same day the self-conspectus was deleted with everything that recorded or checked it: the
+store, the published `docs/`, the `dev/` receipt scripts and gates, their receipts under
+`design/`, the A0 fixture in `dev/conspectus/` and the concern-checklist contract. Items below that
+cite those files describe them as they were; all of them are in git history before 2026-11-23.
+
 Each item says what to change, why, and how to tell it is done. "Measured" means counted in a
 real run; "read" means found by reading code and not reproduced.
 
@@ -31,7 +36,8 @@ real run; "read" means found by reading code and not reproduced.
   claim wrong when recorded to the recording commit. The `mapped` check still accepts any outcome
   on a current claim; a claim disproved after recording `survived` now has a way to be closed,
   but the server cannot make the pass do it.
-- ~~**Resume the self-rebuild?**~~ Wait, decided 2026-11-20: not until the orientation plan
+- ~~**Resume the self-rebuild?**~~ Superseded 2026-11-23 by a fresh self-survey of every tracked
+  file. Wait, decided 2026-11-20: not until the orientation plan
   (`design/orientation/`) and the backlog's other improvements have landed. Paused 2026-11-06. The plan has three stages: real exclusion (an
   `.amanuensisignore` file: excluded paths get no ledger row, count or label anywhere), a model
   pilot (Haiku, Sonnet, Opus, Luna, Terra and Sol, two runs each, judged blind; judge not settled
@@ -45,7 +51,8 @@ real run; "read" means found by reading code and not reproduced.
   a live Codex capture first, and the capture harness needs repair before it passes on current
   code. `dev/test-activation-evidence.mjs` (B07-R1) is red for the same reason: a recorded source
   digest for `mcp-server/src/project.ts` has drifted.
-- ~~**Reconcile the self-conspectus, or wait for the rebuild?**~~ Wait, decided 2026-11-20:
+- ~~**Reconcile the self-conspectus, or wait for the rebuild?**~~ Moot 2026-11-23: the
+  self-conspectus and the P11, EX8 and EX14 gates were deleted. Wait, decided 2026-11-20:
   P11, EX8 and EX14 stay red until the rebuild replaces the self-conspectus. P11
   (`dev/test-survey-depth-acceptance.mjs`) is red only on its binding: the acceptance receipt's
   ledger accounts for 690 paths; at 7d7e153 the tree has 711, of which 23 are unledgered, and two ledgered paths were deleted with P20. The gap grows with each commit that adds a file.
@@ -353,18 +360,10 @@ new ids (B03-6 became B03-R2, for example), and some ids were later re-minted fo
 | ~~B01-R1~~ | ~~The phase references drift from the tools they describe, unchecked~~ Fixed 2026-11-19 (22a3005): `scripts/check-reference-calls.mjs`, in CI, requires every `tool(args)` code span in the skill to name a real tool and real arguments. Its first run found four drifts (`field_note` twice, `open_question`, `get_findings(finding_id=…)`), fixed. It cannot see a call outside a code span or a wrong argument value |
 | ~~B07-1~~ | ~~A research refresh can hang on a network fetch~~ Fixed 2026-11-19 (dc5ad34): the GitHub fetch, the npm and shadcn CLI calls and the two snapshot verifiers' detector runs are bounded, and fail with the cause |
 | B07-R1 | `dev/test-activation-evidence.mjs` never runs in CI. That is now the owner's CI scope (6c6d789); the gate is red on a drifted source digest and needs a live Codex capture (see "Release-time host evidence") |
-| B07-R2 | `dev/test-rebuild-depth.mjs` cannot pass on a genuine clean-slate rebuild. It now exits at its designed CANNOT RUN state (2) rather than red, since its CI self-check was removed |
+| ~~B07-R2~~ | ~~`dev/test-rebuild-depth.mjs` cannot pass on a genuine clean-slate rebuild~~ Retired 2026-11-23: the gate was deleted with the self-conspectus |
 | ~~—~~ | ~~The regeneration gate asserts over a store the acceptance rebuild deleted~~ Deleted 2026-11-19 (443174e), by the owner's 2026-11-06 decision. **Replace it:** a regeneration gate bound to the store it reads, whose denominators come from the live store's own subsystems: every ladder rung witnessed by a recorded transition, every current claim challenged before `mapped`, every cross-subsystem import carried by a recorded edge, and the dogfood and depth receipts recorded at one store revision. Known gaps it would find today: no subsystem is `mapped`, three current claims have no challenge outcome, and the B-02→B-03 edge is unrecorded |
 | ~~—~~ | ~~A mistaken outcome on a carried finding cannot be corrected~~ Fixed 2026-11-18 (f564925): `record_carried_outcome` takes `corrects_outcome_id`; the correction is a new append-only row that names the one it supersedes, and every reader takes the current outcome |
 
-The `dev/` receipt gates are no longer in CI. On 2026-11-19 (97b62b4) the twelve that asserted
-their own step in `test.yml` stopped doing so. Measured in a worktree with a copy of the store,
-19 of the 26 left are green and P19 is at its designed CANNOT RUN exit. Six are still red:
-- P11, EX8 and EX14: the self-conspectus is not reconciled with the tree (see the decision above).
-- `dev/test-activation-evidence.mjs`: a drifted source digest that needs a live Codex capture.
-- `dev/test-pecia-carry-audit.mjs` (P9): `dev/pecia-dogfood.md` does not account for `pc-5465`.
-- `dev/test-amanuensis-pecia-defects.mjs`: Pecia v3.5 moved its output behind `--json`, and the
-  ledger is rejected by the current Pecia CLI anyway (`E013`).
-
-`dev/republish-docs.mjs` needs P11 among others, so a republish still ends red until the store is
-reconciled or rebuilt.
+The `dev/` receipt gates, the Pecia gates and `dev/republish-docs.mjs` were deleted on
+2026-11-23 with the self-conspectus. Of the red gates listed here before then, one remains:
+`dev/test-activation-evidence.mjs`, on a drifted source digest that needs a live Codex capture.

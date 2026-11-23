@@ -16,7 +16,7 @@
 //     refused for a store whose history already tracks it;
 //   - storage migration compares stores without it (`storageManifest`).
 // It is not part of the record, so a procedure that discards or archives a
-// store (dev/rebuild-self-conspectus-store.mjs) takes the call history with it.
+// store (dev/rebuild-store.mjs) takes the call history with it.
 //
 // What it never stores: argument values, response text, or refusal and
 // exception messages, which echo arguments. A refusal is identified by its

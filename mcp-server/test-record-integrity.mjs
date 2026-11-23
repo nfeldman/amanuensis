@@ -431,8 +431,9 @@ try {
   check("R3 carrying an id a live finding already holds names a reference the resolver accepts", () => {
     const result = carry("B01-1");
     const said = String(result.shadowed_by_live_finding ?? "");
-    // dev/pecia-resolve-finding.mjs accepts `<store-id>:<finding-id>` and
-    // nothing longer, so the obligation id (`carried:...`) would be refused.
+    // An external reference names a finding as `<store-id>:<finding-id>` and
+    // nothing longer (the Pecia resolver did, until 2026-11-23), so the
+    // obligation id (`carried:...`) would be refused.
     const named = said.match(/\bas (\S+), the qualified form/)?.[1];
     if (named !== "store-recordintegrity:B01-1") return `carry_finding returned ${JSON.stringify(result)}`;
     return /^[A-Za-z0-9._-]+:[A-Za-z0-9._-]+$/.test(named) ? null : `${named} is not the resolver's form`;

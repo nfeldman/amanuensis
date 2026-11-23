@@ -48,8 +48,6 @@ To run a representative slice locally:
 ```bash
 node dev/render-roadmap.mjs --check     # roadmap structure and generated projection
 node dev/test-roadmap.mjs               # prove roadmap gates fail under sabotage
-node dev/check-living-conspectus.mjs    # verify the pinned self-survey and derived report
-node dev/test-living-conspectus.mjs     # prove every A0 gate red + clean-export read-back
 
 cd mcp-server
 
@@ -180,25 +178,6 @@ CI fails if the generated document drifts from its source. This check proves the
 roadmap's structure and correspondence, not the truth of its product assumptions;
 those are governed by the roadmap's controls, metrics, and kill criteria.
 
-## Living-conspectus baseline
-
-[`dev/conspectus/self-baseline.json`](dev/conspectus/self-baseline.json) is the
-immutable A0 self-survey pinned to commit `b8b566f`. It owns the expected file,
-subsystem, concern, seam, run, and export sets. The checker derives
-[`dev/conspectus/baseline-report-detector-1.1.0.json`](dev/conspectus/baseline-report-detector-1.1.0.json)
-from that fixture and fails if the checked-in successor report drifts. The
-original [`dev/conspectus/baseline-report.json`](dev/conspectus/baseline-report.json)
-remains frozen under its unversioned historical checker; the detector registry
-preserves both identities.
-
-Run both A0 commands after changing the fixture or completion contract. The
-control test removes obligations independently, executes all eight graded
-controls, regenerates an export under a clean temporary root, and reads state,
-coverage, and content back. A detector change requires an explicit successor
-report identity. Retargeting the baseline requires a new fixture ID,
-revision/tree inventory, and report; do not edit the existing fixture to follow
-HEAD.
-
 ## Recording follow-on work
 
 Work that is agreed or proposed but not scheduled goes in
@@ -212,9 +191,9 @@ ledger (`.pecia/`) by `dev/amanuensis-defects-to-pecia.mjs`, resolved back by
 `dev/pecia-resolve-finding.mjs`. That was an experiment and has stopped: nothing
 has been written to the ledger since, its CI job was removed on 2026-11-06, and
 the current Pecia CLI rejects the ledger's pre-hash-chain log (`E013`). Its open
-defects are copied into the backlog. The ledger and its write gate
-(`dev/hooks/pre-commit`) were deleted on 2026-11-23 and remain in git history;
-the scripts and `dev/test-amanuensis-pecia-defects.mjs` remain for the record.
+defects are copied into the backlog. The ledger, its write gate
+(`dev/hooks/pre-commit`) and its scripts were deleted on 2026-11-23 and remain
+in git history.
 
 ## Auto-generated tool inventory
 

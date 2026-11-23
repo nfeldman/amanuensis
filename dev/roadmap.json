@@ -916,12 +916,7 @@
             "M12"
           ],
           "baselineEvidence": [
-            "dev/adr/0001-living-conspectus-terms.md",
-            "dev/conspectus/self-baseline.json",
-            "dev/conspectus/baseline-report.json",
-            "dev/conspectus/baseline-report-detector-1.0.0.json",
-            "dev/conspectus/detector-registry.json",
-            "dev/test-living-conspectus.mjs"
+            "dev/adr/0001-living-conspectus-terms.md"
           ]
         },
         {
