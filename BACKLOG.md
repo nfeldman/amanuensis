@@ -112,6 +112,22 @@ real run; "read" means found by reading code and not reproduced.
   - D12 decided 2026-11-22: the index is on by default, with `AMANUENSIS_CODE_INDEX=off` to turn it off.
   - Removed with the benchmark: D7 (budget), D8 (subjects), D9 (thresholds), D11 (authentication) and D13 (quality margin); none is open.
 
+  Merged 2026-11-23 as 0bd365e. The final review left three low findings unrepaired for lack of
+  budget; the owner deferred them here
+  ([dispositions](design/semantic-index/reviews/final/dispositions.md)):
+  - **F15: no gate kills the index writer mid-publish.** SI4 stays green with the blobs row
+    inserted first inside the transaction, with the publish outside its transaction, or with
+    plain `INSERT`. Add a case that kills the worker mid-publish and asserts no orphan `symbols`
+    rows.
+  - **F20: cache eviction is never reported.** `ensureTree` drops `evicted` and
+    `disk_over_budget`, and `locate()` drops `file.evicted`, although PLAN §4.1 says each limit is
+    reported when it bites. Return them from `find_symbol` and `outline_file` when non-zero.
+  - **F21: the refusal register and two descriptions drift from the code.**
+    `code-index.line-range` is not in `contracts/refusal-parity.json` or
+    `references/code-index.md`; the unsupported-language note says every tool refuses, but
+    `find_symbol` answers `ok: true` with a status; and `search_records` calls `subject` a prefix
+    when it matches whole segments only.
+
 ## Explanation quality
 
 From the AxiomDB catch-up. Codex blind-read every model-written explanation (71 slots, about
