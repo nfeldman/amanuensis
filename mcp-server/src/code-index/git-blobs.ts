@@ -35,6 +35,9 @@ function readTimeoutMs(): number {
 
 const GIT_ENV = { GIT_TERMINAL_PROMPT: "0", GIT_OPTIONAL_LOCKS: "0" };
 
+/** A batch reader lives at most this many read timeouts (30 × 120 s by default). */
+const READER_LIFETIME_READS = 30;
+
 function runGit(workspace: string, args: string[], input?: string) {
   return spawnSync("git", args, {
     cwd: workspace,
@@ -156,10 +159,16 @@ export class BlobReader {
 
   private start(): ChildProcessWithoutNullStreams {
     if (this.child) return this.child;
+    // Each read carries its own stall timer (readOne). The lifetime timeout is a
+    // backstop for a reader its caller never closes, whose git would otherwise
+    // live as long as the server; a reader killed by it starts a fresh process
+    // on its next read.
     const child = spawn("git", ["cat-file", "--batch"], {
       cwd: this.workspace,
       env: { ...process.env, ...GIT_ENV },
       stdio: ["pipe", "pipe", "pipe"],
+      timeout: readTimeoutMs() * READER_LIFETIME_READS,
+      killSignal: "SIGKILL",
     });
     // Events from a process this reader has already closed are ignored.
     child.stdout.on("data", (chunk: Buffer) => {
@@ -170,6 +179,8 @@ export class BlobReader {
     const end = () => {
       if (this.child !== child) return;
       this.ended = true;
+      // A process that ended on its own (lifetime kill, git exit) is not reused.
+      this.child = null;
       this.wake();
     };
     child.stdout.on("end", end);

@@ -673,8 +673,20 @@ await check("describe_locus declares the compact path and no other tool does", a
   if (tool.compact !== true)
     return "describe_locus does not declare the compact path, so the dispatcher cannot honor it";
   // The flag is what the dispatcher reads, so a second tool carrying it would
-  // change a response this packet promised not to touch.
-  const locusNames = new Set((mods.locus.locusTools ?? []).map((entry) => entry.name));
+  // change a response this packet promised not to touch. The code-index tools
+  // (semantic-index PLAN §4.3) were added later and compact from their first
+  // release, so no earlier response of theirs changes; they are named here.
+  let codeIndexNames = [];
+  try {
+    const codeIndex = await import("./dist/tools/code-index.js");
+    codeIndexNames = (codeIndex.codeIndexTools ?? []).map((entry) => entry.name);
+  } catch {
+    return "dist/tools/code-index.js could not be loaded";
+  }
+  const locusNames = new Set([
+    ...(mods.locus.locusTools ?? []).map((entry) => entry.name),
+    ...codeIndexNames,
+  ]);
   const foreign = [];
   let files = [];
   try {

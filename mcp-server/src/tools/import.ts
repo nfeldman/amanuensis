@@ -1,9 +1,9 @@
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { ok, optBool, optString, type ServerContext, type ToolDefinition } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { spawnSync } from "../subprocess.js";
 import { resolveArtifactPath } from "./artifacts.js";
 import { findMaterializer } from "./materialize.js";
 
