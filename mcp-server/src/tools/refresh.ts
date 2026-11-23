@@ -20,6 +20,7 @@ import { impactTools } from "./impact.js";
 import { materializeTools } from "./materialize.js";
 import { resolutionTools } from "./resolution.js";
 import { revalidationTools } from "./revalidation.js";
+import { staleLedgerRows, withAnchorHints } from "./stale.js";
 
 const DETERMINISM_MODES = ["provider-default", "seeded", "local-deterministic"] as const;
 const DISCOVERY_MODES = ["explicit-only", "request-if-gap"] as const;
@@ -636,6 +637,19 @@ function readRun(ctx: ServerContext, runId: string): Record<string, unknown> {
     ? ctx.db.prepare("SELECT * FROM revalidation_runs WHERE run_id=?").get(run.revalidation_run_id)
     : null;
   const { manifest_json: manifestJson, blocking_reasons_json: blockingJson, ...columns } = run;
+  // The stale backlog's refresh hint (semantic-index PLAN §4.5), read at the run's head: what
+  // happened to each cited definition, for every stale file evidence cites inside the run's
+  // allowed_sources. A hint only; nothing is cleared.
+  const sources = JSON.parse(run.allowed_sources) as string[];
+  const inSources = staleLedgerRows(ctx, null).filter((row) =>
+    sources.some((prefix) => {
+      const base = prefix.endsWith("/") ? prefix : `${prefix}/`;
+      return row.source_path === prefix || row.source_path.startsWith(base);
+    }),
+  );
+  const anchorHints = withAnchorHints(ctx, inSources, run.head_sha).filter(
+    (row) => row.evidence.length > 0,
+  );
   return {
     ...columns,
     manifest: JSON.parse(manifestJson),
@@ -645,6 +659,7 @@ function readRun(ctx: ServerContext, runId: string): Record<string, unknown> {
     revalidation,
     projection,
     completion_basis: run.status === "completed" ? "durable-reconciliation-and-readback" : null,
+    anchor_hints: anchorHints,
   };
 }
 

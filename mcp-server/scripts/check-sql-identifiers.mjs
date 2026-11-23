@@ -26,9 +26,16 @@ const srcDir = join(mcpRoot, "src");
 // Strip `--` single-line comments before parsing — SQL comments can
 // contain semicolons that confuse the body-capture regex.
 // The call log keeps its tables in a sidecar database, not in schema.sql
-// (src/call-log.ts explains why); its DDL is the schema for those names.
-const callLogSchemaPath = join(mcpRoot, "src", "call-log.ts");
-const schemaText = [readFileSync(schemaPath, "utf8"), readFileSync(callLogSchemaPath, "utf8")]
+// (src/call-log.ts explains why); its DDL is the schema for those names. The
+// code index's sidecar is the same (src/code-index/store.ts, and the records
+// index in src/code-index/records.ts).
+const sidecarSchemaPaths = [
+  join(mcpRoot, "src", "call-log.ts"),
+  join(mcpRoot, "src", "code-index", "store.ts"),
+  join(mcpRoot, "src", "code-index", "records.ts"),
+];
+const schemaText = [schemaPath, ...sidecarSchemaPaths]
+  .map((path) => readFileSync(path, "utf8"))
   .join("\n")
   .split("\n")
   .map((l) => {
@@ -60,13 +67,27 @@ function recordColumns(tableName, body) {
 
 // Tables: CREATE TABLE IF NOT EXISTS <name> (...body...);
 const tableRe =
-  /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^;]*?)\)\s*;/gis;
+  /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^;]*?)\)\s*(?:WITHOUT\s+ROWID\s*)?;/gis;
 let m;
 while ((m = tableRe.exec(schemaText)) !== null) {
   const name = m[1];
   const body = m[2];
   tables.add(name);
   recordColumns(name, body);
+}
+
+// Full-text tables: CREATE VIRTUAL TABLE <name> USING fts5(<columns>, <options>);
+// An option is `key=value`; the table's own name is a hidden column, as is rank.
+const ftsRe =
+  /CREATE\s+VIRTUAL\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s+USING\s+fts5\s*\(([^;]*?)\)\s*;/gis;
+while ((m = ftsRe.exec(schemaText)) !== null) {
+  const name = m[1];
+  const columns = m[2]
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(part));
+  tables.add(name);
+  columnsByTable.set(name, new Set([...columns, name, "rank"]));
 }
 
 // Views: CREATE VIEW ... AS ...;
@@ -135,13 +156,17 @@ const SQL_KEYWORDS = new Set(
     "IF",
   ].map((k) => k.toLowerCase()),
 );
+// SQLite's JSON1 table-valued functions are relations no schema declares.
+// They are accepted only when called, as `FROM json_each(...)`.
+const TABLE_FUNCTIONS = new Set(["json_each", "json_tree"]);
 function tokenizeSql(sql) {
   const rels = new Set();
-  const re = /\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+([a-zA-Z_][a-zA-Z0-9_]*)/gi;
+  const re = /\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()?/gi;
   let m;
   while ((m = re.exec(sql)) !== null) {
     const ident = m[1];
     if (SQL_KEYWORDS.has(ident.toLowerCase())) continue;
+    if (m[2] && TABLE_FUNCTIONS.has(ident.toLowerCase())) continue;
     rels.add(ident);
   }
   return { rels };

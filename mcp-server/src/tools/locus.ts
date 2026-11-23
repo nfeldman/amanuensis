@@ -37,14 +37,17 @@ import {
 } from "../helpers.js";
 import { importedSurveyBodies, readNarratives } from "../invariants.js";
 import {
+  ambiguousSymbolSentence,
   describeLocusStanding,
   type FileStandingBlock,
   type LocusKind,
+  matchSymbolEvidence,
   type ResolvedLocus,
   STANDING_AUTHORITY_ORDER,
   STATUS_ORDER,
   type StandingBlock,
   type StandingState,
+  type SymbolEvidenceMatch,
   type SymbolStandingBlock,
   type UnknownEntry,
 } from "../standing.js";
@@ -79,6 +82,9 @@ const DEFAULT_SECTIONS: readonly AccountSection[] = [
   "boundaries",
   "terms",
 ];
+
+/** The sections that read a symbol locus's evidence rows. */
+const EVIDENCE_SECTIONS: readonly AccountSection[] = ["structure", "defects", "reviews"];
 
 /** §3.1's defects partition, in order, against the resolution states it covers. */
 const DEFECT_PARTITIONS = [
@@ -199,6 +205,12 @@ interface AccountScope {
    * namespace of its own.
    */
   claimKeyPrefix: string | null;
+  /**
+   * A symbol locus's evidence rows, from the matcher the standing block uses
+   * (semantic-index PLAN §4.4), so the two surfaces cite the same rows and
+   * report the same ambiguity. Null for every other locus kind.
+   */
+  symbolEvidence: SymbolEvidenceMatch | null;
 }
 
 function ownersOfPath(db: DB, path: string): string[] {
@@ -223,6 +235,7 @@ function buildScope(db: DB, locus: ResolvedLocus): AccountScope {
       term: null,
       subjectIds: [id],
       claimKeyPrefix: `${id.replace(/([%_\\])/g, "\\$1")}/%`,
+      symbolEvidence: null,
     };
   }
   if (locus.kind === "term") {
@@ -239,6 +252,7 @@ function buildScope(db: DB, locus: ResolvedLocus): AccountScope {
       term,
       subjectIds: [term],
       claimKeyPrefix: null,
+      symbolEvidence: null,
     };
   }
   const path = locus.path as string;
@@ -253,6 +267,8 @@ function buildScope(db: DB, locus: ResolvedLocus): AccountScope {
     term: null,
     subjectIds: [...new Set(subjectIds)],
     claimKeyPrefix: null,
+    symbolEvidence:
+      locus.kind === "symbol" ? matchSymbolEvidence(db, path, locus.symbol as string) : null,
   };
 }
 
@@ -422,13 +438,18 @@ function severityRank(severity: string): number {
  * meets SQLite's variable ceiling. Returns null when nothing can cite the
  * locus (a term), so a caller drops the arm rather than binding a false one.
  *
- * A symbol locus is cited only by evidence naming that exact symbol: a file's
- * citations are never silently inherited by one of its symbols (§2.5).
+ * A symbol locus is cited only by the evidence rows that name it, as the
+ * standing block's matcher decides (semantic-index PLAN §4.4): a file's
+ * citations are never silently inherited by one of its symbols (§2.5). Those
+ * rows are one file's, so binding their ids as one JSON array stays small.
  */
 function evidenceMatch(scope: AccountScope): { sql: string; params: unknown[] } | null {
   if (scope.path) {
-    return scope.symbol
-      ? { sql: "e.file_path = ? AND e.symbol = ?", params: [scope.path, scope.symbol] }
+    return scope.symbolEvidence
+      ? {
+          sql: "e.id IN (SELECT value FROM json_each(?))",
+          params: [JSON.stringify(scope.symbolEvidence.rows.map((row) => row.id))],
+        }
       : { sql: "e.file_path = ?", params: [scope.path] };
   }
   if (scope.subsystemId) {
@@ -1615,6 +1636,13 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
       view.statement = asOfUnsupportedSentence(asOf);
     } else if (build.statement) {
       view.statement = build.statement;
+    }
+    // A symbol that names several symbol_ids is said to be ambiguous in each
+    // section that reads its evidence, as the standing block says it.
+    const ambiguous = scope.symbolEvidence?.ambiguous;
+    if (ambiguous && EVIDENCE_SECTIONS.includes(name)) {
+      const sentence = ambiguousSymbolSentence(locus.symbol as string, ambiguous);
+      view.statement = view.statement ? `${sentence} ${view.statement}` : sentence;
     }
     if (uncheckedSince) view.as_of = uncheckedSince;
     const retention = retentionOrder(name, build);

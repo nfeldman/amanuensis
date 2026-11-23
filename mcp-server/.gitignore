@@ -10,3 +10,8 @@ dist/
 
 # Scratch server copies the P5 locus-standing gate builds and removes.
 .locus-standing-scratch-*/
+
+# Grammars extracted by scripts/vendor-grammars.mjs (prepack and CI run it);
+# grammars/sources.json is the tracked pin.
+/grammars/*/
+/grammars/manifest.json

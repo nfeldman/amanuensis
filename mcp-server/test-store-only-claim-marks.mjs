@@ -254,8 +254,9 @@ async function main(mods) {
     seam.run("SM-02", "table", "S2", "S3"); // S1 is not a party
     seam.run("SM-03", "cache", "S2", "S1"); // S1 is party B
     const head = git(ws, "rev-parse", "HEAD");
-    const ev = (file, kind, symbol, line = "1-1") =>
-      call("add_evidence", { file_path: file, symbol, line_range: line, ref_sha: head, kind }, ctx).id;
+    // The files define only `a` and `b`, so each row's label goes in note (semantic-index §11).
+    const ev = (file, kind, label, line = "1-1") =>
+      call("add_evidence", { file_path: file, note: label, line_range: line, ref_sha: head, kind }, ctx).id;
     const evidence = {
       a: ev("src/a.ts", "code-verified", "Unit"),
       aContract: ev("src/a.ts", "contract-stated", "Contract"),
@@ -522,7 +523,7 @@ async function main(mods) {
       return git(ws, "rev-parse", "HEAD");
     };
     const readAt = (sha) =>
-      call("add_evidence", { file_path: "src/a.ts", symbol: "Unit", line_range: "1-1", ref_sha: sha, kind: "code-verified" }, w.ctx).id;
+      call("add_evidence", { file_path: "src/a.ts", note: "Unit", line_range: "1-1", ref_sha: sha, kind: "code-verified" }, w.ctx).id;
     const later = commit("later.txt", "later");
     git(ws, "checkout", "-q", "-b", "side", w.head);
     const side = commit("side.txt", "side");
@@ -633,7 +634,7 @@ async function main(mods) {
     // The successor needs evidence the predecessor does not carry, on the same file.
     const fresh = call(
       "add_evidence",
-      { file_path: "src/a.ts", symbol: "Fresh", line_range: "1-1", ref_sha: w.head, kind: "code-verified" },
+      { file_path: "src/a.ts", note: "Fresh", line_range: "1-1", ref_sha: w.head, kind: "code-verified" },
       w.ctx,
     ).id;
     call(

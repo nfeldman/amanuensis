@@ -635,7 +635,11 @@ check("index.ts registers the locus tools first and carries an explicit read-onl
   if (!/READ_ONLY_TOOLS/.test(source)) return "index.ts declares no READ_ONLY_TOOLS set";
   if (!/READ_ONLY_TOOLS[\s\S]{0,200}describe_locus/.test(source))
     return "describe_locus is not in READ_ONLY_TOOLS";
-  const composition = source.match(/const allTools: ToolDefinition\[\] = \[([\s\S]*?)\];/);
+  // The list may be wrapped by the code-index switch (semantic-index SI4); the order inside is
+  // what is checked.
+  const composition = source.match(
+    /const allTools: ToolDefinition\[\] = (?:withCodeIndexSwitch\()?\[([\s\S]*?)\]\)?;/,
+  );
   if (!composition) return "allTools could not be read from index.ts";
   const first = composition[1]
     .split("\n")

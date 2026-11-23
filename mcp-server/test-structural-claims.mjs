@@ -353,10 +353,12 @@ function buildFixture() {
      VALUES (?, 'subsystem-survey', 'B-02', ?, ?, ?, 1, ?, '2026-11-12 10:00:00', ?)`,
   ).run(narrativePath, fileBody, fileHash, fileHash, head, ctx.sessionId);
 
-  const evidenceId = (path, kind, symbol, sha) =>
+  // Each file defines one constant and none of these names, so the label goes in note
+  // (semantic-index §11).
+  const evidenceId = (path, kind, label, sha) =>
     call(
       "add_evidence",
-      { file_path: path, symbol, ref_sha: sha ?? head, kind, note: "structural fixture" },
+      { file_path: path, ref_sha: sha ?? head, kind, note: `structural fixture: ${label}` },
       ctx,
     ).id;
 

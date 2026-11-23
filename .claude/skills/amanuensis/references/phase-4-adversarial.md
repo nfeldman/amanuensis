@@ -67,8 +67,16 @@ Find those.
 
 ### 3. Go look
 
-Semantic tools to find call sites, implementations, type
-constraints. Walk out from the finding's location in both
+<!-- code-index:begin -->
+Use `find_symbol` to find definitions and implementations. Its `references`
+mode lists places where a name appears; they are matched by name, so confirm
+each one in the code before calling it a call site. Verify a claim from its
+cited definition (`read_symbol`) and from whatever surrounding code it depends
+on, reading whole files when that helps. If the code index cannot read a path,
+read the file directly.
+<!-- code-index:end -->
+
+Walk out from the finding's location in both
 directions. Do not limit yourself to the ledger if the answer might
 live outside — add files via `add_files_to_scope` with
 `why_in_scope="adversarial probe for ${finding_id}"`.
@@ -198,8 +206,8 @@ the claim and where you looked for it, in prose, not a one-word note.
   pass its id as `field_note_id`; the note alone does not count.
 
 For the purpose and the account, record a field note naming any sentence
-the code contradicts, with the evidence: `add_evidence` for what you read,
-then `add_field_note(category="anomaly", observation="<slot> says '<the
+the code contradicts, with the evidence: `add_evidence` for what you read
+(its `symbol` names a definition; a free-text label belongs in `note`), then `add_field_note(category="anomaly", observation="<slot> says '<the
 sentence>'; <what the code does> at <file:symbol@sha>", location=<sid>)`.
 Phase 5 reads these notes when it revises the account.
 

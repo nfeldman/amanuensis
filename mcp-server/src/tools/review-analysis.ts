@@ -14,6 +14,7 @@ import {
 import { requireActiveSession } from "../invariants.js";
 import { spawnSync } from "../subprocess.js";
 import { EVIDENCE_KINDS, SEVERITIES } from "../vocabulary.js";
+import { type EvidenceAnchor, insertEvidenceAnchor, resolveEvidenceAnchor } from "./evidence.js";
 
 const ROLES = ["generator", "refuter", "verifier"] as const;
 const CONDITIONS = ["same-context", "varied-context", "heterogeneous-runtime"] as const;
@@ -908,7 +909,10 @@ function land(args: Record<string, unknown>, ctx: ServerContext): Record<string,
   );
   // Catalog rows were checked when they were written; new rows are checked here,
   // as add_evidence checks them. A ref_sha given as a name (HEAD, a branch) is
-  // stored as the commit it named, or the citation would move with the name.
+  // stored as the commit it named, or the citation would move with the name. A
+  // symbol in a language the code index parses is resolved and anchored as
+  // add_evidence anchors it (semantic-index PLAN §4.4).
+  const anchors = new Map<string, EvidenceAnchor>();
   for (const row of newEvidence) {
     row.ref_sha = resolveCommit(ctx, row.ref_sha);
     row.line_range = requireEvidenceCitation(
@@ -918,6 +922,17 @@ function land(args: Record<string, unknown>, ctx: ServerContext): Record<string,
       row.line_range,
       row.excerpt,
     );
+    const resolved = resolveEvidenceAnchor(
+      ctx,
+      row.ref_sha,
+      row.file_path,
+      row.symbol,
+      row.line_range,
+      row.excerpt,
+    );
+    row.symbol = resolved.symbol;
+    row.line_range = resolved.lineRange;
+    if (resolved.anchor) anchors.set(row.local_key, resolved.anchor);
   }
   const localEvidence = new Map<string, number>();
   const dispatchedInput = parseJson<Record<string, unknown>>(pass.runtime_input_json, {});
@@ -965,6 +980,8 @@ function land(args: Record<string, unknown>, ctx: ServerContext): Record<string,
         sessionId,
       );
       localEvidence.set(row.local_key, Number(inserted.lastInsertRowid));
+      const anchor = anchors.get(row.local_key);
+      if (anchor) insertEvidenceAnchor(ctx.db, Number(inserted.lastInsertRowid), anchor);
     }
     const judgmentInsert = ctx.db.prepare(
       `INSERT INTO review_judgments

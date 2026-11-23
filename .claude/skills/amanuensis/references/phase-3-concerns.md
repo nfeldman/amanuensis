@@ -41,10 +41,21 @@ intentions produce vague findings.
 
 ### 2. Find the relevant code
 
-Semantic tools first (find-references, call-hierarchy,
-find-implementations). Grep last.
+<!-- code-index:begin -->
+`find_symbol` finds a definition, and its `references` mode finds places where
+a name appears: those are matched by name, so they are leads to confirm, not
+call sites. `outline_file` shows a file's shape, and `rg` covers strings,
+config and languages the index does not parse. If the code index cannot read a
+path, read the file directly.
+<!-- code-index:end -->
 
 ### 3. Read to sufficient depth
+
+<!-- code-index:begin -->
+Verify a claim from its cited definition (`read_symbol`) and from whatever
+surrounding code the claim depends on: callers, callees, configuration, or the
+rest of the file. Whole files may be read whenever that helps.
+<!-- code-index:end -->
 
 Sufficient = **you could defend the classification under
 adversarial questioning.** If you are not sure, it is not sufficient
@@ -61,6 +72,27 @@ a comma-separated list) must lie inside the file. `excerpt` must appear in those
 lines: quote the source as it is at that revision. Whitespace is ignored, so
 code can be reflowed onto one line, and `...` marks an elision. A paraphrase or
 HTML-escaped text is refused.
+
+In a language the code index parses, `symbol` must name a definition at
+`ref_sha`: a `symbol_id`, a qualified name, or a bare name naming one
+definition. `read_symbol` returns these location fields as `evidence_args`;
+add `kind`. The row stores the canonical `symbol_id` and is anchored to the
+definition, and an omitted `line_range` is filled with the definition's
+citeable span. The rules and their refusals are in
+[`code-index.md`](code-index.md#citing-a-definition-with-add_evidence):
+
+- `add_evidence refuses: <symbol> names no definition in <path>`: the refusal
+  lists the nearest `symbol_id`s. Pass one of them, or omit symbol: a
+  free-text label belongs in note.
+- `<symbol> names <count> definitions … and line_range does not fall within exactly
+  one of them`: give a `line_range` inside the one to cite.
+- `line_range … reaches outside <symbol_id>`: cite lines inside the
+  definition, or omit symbol to cite lines no definition holds.
+- `the excerpt is not inside <symbol_id>`: quote that definition's own text;
+  text from a neighbouring definition, even on the same line, is not part of it.
+
+Without a `symbol`, in another language, or with `AMANUENSIS_CODE_INDEX=off`,
+the row is written as before, with no anchor.
 
 `kind` ladder (use the strongest the evidence actually supports —
 overstating quality is the #1 way the methodology fails):

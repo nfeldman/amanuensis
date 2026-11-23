@@ -34,10 +34,11 @@ const GITIGNORE_CONTENTS = [
   "",
 ].join("\n");
 const STORAGE_MODE_FILE = ".storage-mode";
-// The call log (call-log.ts) lives beside the record and is never part of
-// its history. Its own `.gitignore` is the first guard; this pathspec is the
-// second, and it also holds for a store whose top-level ignore predates it.
-const STORAGE_PATHSPEC = [".", ":(exclude)call-log"];
+// The call log (call-log.ts) and the code index (code-index/store.ts) live
+// beside the record and are never part of its history. Each directory's own
+// `.gitignore` is the first guard; this pathspec is the second, and it also
+// holds for a store whose top-level ignore predates them.
+const STORAGE_PATHSPEC = [".", ":(exclude)call-log", ":(exclude)code-index"];
 const INDEPENDENT_MODE = "independent\n";
 
 // Per-invocation config overrides applied to every amanuensis git call.

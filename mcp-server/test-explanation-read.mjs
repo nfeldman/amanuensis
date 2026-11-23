@@ -315,7 +315,7 @@ async function main(mods) {
   function evidence(ctx, file = "src/a.ts") {
     return call(
       "add_evidence",
-      { file_path: file, symbol: "Unit", line_range: "1-1", ref_sha: headSha(ctx), kind: "code-verified" },
+      { file_path: file, line_range: "1-1", note: "Unit", ref_sha: headSha(ctx), kind: "code-verified" },
       ctx,
     ).id;
   }

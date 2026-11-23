@@ -78,7 +78,8 @@ the body.
 `record_explanation(subject_type, subject_id?, slot, body, evidence_ids, ref_sha)`
 records an explanation as `recorded`. Call it for a subsystem that has been
 advanced to `structural` or later, citing the `add_evidence` rows the
-explanation was written from. A project's purpose is accepted at any status, with
+explanation was written from. An `add_evidence` `symbol` names a definition; a free-text
+label belongs in `note`. A project's purpose is accepted at any status, with
 one evidence row at least. Call it again to correct an earlier explanation,
 even at the same commit.
 

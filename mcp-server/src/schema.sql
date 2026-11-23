@@ -1416,6 +1416,37 @@ CREATE TABLE IF NOT EXISTS finding_evidence (
 CREATE INDEX IF NOT EXISTS idx_disp_evidence_evidence ON disposition_evidence(evidence_id);
 CREATE INDEX IF NOT EXISTS idx_find_evidence_evidence ON finding_evidence(evidence_id);
 
+-- EVIDENCE ANCHORS (semantic-index PLAN §4.4). An evidence row whose `symbol`
+-- names a definition the code index parsed is anchored to that definition at
+-- its revision: the blob, the canonical symbol_id, the citeable span's lines
+-- and the hash of its bytes. The anchor is written in the transaction that
+-- writes the evidence row, once, and never changed; the evidence row then
+-- holds the symbol_id as its `symbol`. A separate table rather than columns on
+-- `evidence`, because the anchor is optional and append-only while `evidence`
+-- is not, and no write path that does not anchor changes. A store made before
+-- 0.3.0-beta.2 opens with this table empty (D6): nothing backfills it.
+CREATE TABLE IF NOT EXISTS evidence_anchors (
+    evidence_id     INTEGER PRIMARY KEY REFERENCES evidence(id) ON DELETE RESTRICT,
+    blob_sha        TEXT    NOT NULL,
+    lang            TEXT    NOT NULL,
+    symbol_id       TEXT    NOT NULL,
+    kind            TEXT    NOT NULL,
+    def_start_line  INTEGER NOT NULL,   -- doc_start_line: the citeable span's first line
+    def_end_line    INTEGER NOT NULL,
+    span_sha256     TEXT    NOT NULL,
+    extractor_id    TEXT    NOT NULL,
+    range_source    TEXT    NOT NULL CHECK (range_source IN ('cited','filled')),
+    anchored_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (def_start_line >= 1 AND def_end_line >= def_start_line)
+);
+
+CREATE TRIGGER IF NOT EXISTS evidence_anchor_is_immutable
+BEFORE UPDATE ON evidence_anchors FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'evidence anchors are immutable; an anchor is written once with its evidence row'); END;
+CREATE TRIGGER IF NOT EXISTS evidence_anchor_cannot_be_deleted
+BEFORE DELETE ON evidence_anchors FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'evidence anchors cannot be deleted'); END;
+
 ----------------------------------------------------------------------
 -- RESOLUTION PROOFS: append-only authority for "fixed" and resolved
 ----------------------------------------------------------------------

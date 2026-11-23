@@ -26,6 +26,14 @@ entries (`define_term`) for the non-obvious names. Each term's
 and whose path must exist in that revision's tree, or the call is
 refused.
 
+<!-- code-index:begin -->
+`outline_file` lists a subsystem's types, with each definition's `symbol_id`,
+kind and lines, so the type graph can be read from the outline and the
+definitions that matter read in full. When you record a flow's steps, cite each
+step through `evidence_args` from `read_symbol`, and add `kind`. If the code index
+cannot read a path, read the file directly.
+<!-- code-index:end -->
+
 ### 2. State containers
 
 For every significant mutable state holder:
@@ -274,7 +282,8 @@ or table line. The typed parts already have their own records (claims, seams,
 vocabulary), so say what they do not: why the parts are shaped as they are, and
 how work moves between them. Cite each symbol as `file:symbol@sha`. At least
 one of `evidence_ids` must be an `add_evidence` row for a file in the
-subsystem's ledger.
+subsystem's ledger. Its `symbol` names a definition; a free-text label belongs
+in `note`.
 
 Where the code supports no prose beyond the claims, say so:
 `decline_narrative(subject_type="subsystem", subject_id, section="structure",

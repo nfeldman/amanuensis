@@ -272,6 +272,91 @@ startup stays read-only. Rows are written after each response and never wait on
 another process's lock. Set `AMANUENSIS_CALL_LOG=off` to disable it. Nothing is sent
 anywhere.
 
+## Code index
+
+Available from 0.3.0-beta.2. The code index reads a source file at one revision and
+keeps what it finds, the file's definitions and imports, in a cache beside the store.
+Four tools use it: `outline_file` (a file's shape), `read_symbol` (one definition's
+source and the location fields for `add_evidence`), `find_symbol` (definitions by name,
+and references matched by name) and `search_records` (the store's own records).
+
+The index adds to reading files. An agent may read a whole file whenever that helps;
+nothing here asks it not to. One real limit applies: a `find_symbol` reference is
+name-matched, not resolved, so it is a lead to confirm in the code, not proof of a call.
+
+### Languages
+
+Ten languages are parsed with vendored tree-sitter grammars. A file in any other language
+is refused as `unsupported-language`; read it directly.
+
+| Language | Extensions | Grammar | Size |
+|---|---|---|---|
+| TypeScript | `.ts` `.mts` `.cts` | `tree-sitter-typescript@0.23.2` | 1.41 MB |
+| TSX | `.tsx` | `tree-sitter-typescript@0.23.2` | 1.45 MB |
+| JavaScript | `.js` `.mjs` `.cjs` `.jsx` | `tree-sitter-javascript@0.25.0` | 0.41 MB |
+| Python | `.py` `.pyi` | `tree-sitter-python@0.25.0` | 0.46 MB |
+| Rust | `.rs` | `tree-sitter-rust@0.24.0` | 1.10 MB |
+| Go | `.go` | `tree-sitter-go@0.25.0` | 0.22 MB |
+| Java | `.java` | `tree-sitter-java@0.23.5` | 0.41 MB |
+| C | `.c` | `tree-sitter-c@0.24.1` | 0.63 MB |
+| C++ | `.h` `.cc` `.cpp` `.cxx` `.c++` `.hpp` `.hh` `.hxx` `.h++` | `tree-sitter-cpp@0.23.4` | 3.43 MB |
+| C# | `.cs` | `tree-sitter-c-sharp@0.24.0` | 7.25 MB |
+
+Size is the compiled grammar. Each language has its own definition queries in
+`queries/` (TSX shares TypeScript's). The runtime is `web-tree-sitter@0.27.2`, an npm
+dependency with no install script. The grammars are not dependencies: they are vendored
+into the package at pinned versions, and the server refuses a grammar file whose bytes
+differ from `grammars/manifest.json`.
+
+### Weight
+
+The grammars take 16.8 MB unpacked, in the package's `grammars/` directory. The package
+test fails when the tarball grows above 3.6 MB packed or 31 MB installed.
+
+### Location
+
+The index is a cache, not a record. It is stored at
+`<storage>/code-index/<extractor_id>/index.db`, beside the store's database and not in
+`memory.db`. The `extractor_id` changes with the extractor, the definition queries and
+the grammars, so two package versions sharing a storage directory do not rebuild each
+other's cache. Its directory has its own `.gitignore` and the store's history never
+includes it. Deleting `code-index/` is always safe; the next call rebuilds what it needs
+from the repository's own revisions. A generation untouched for 30 days is collected.
+
+### Switches and limits
+
+The index is on by default. Set `AMANUENSIS_CODE_INDEX=off` to turn it off; `off`, `0`,
+`false` and `no` all do. The four tools are then not registered and nothing under
+`code-index/` is created. `add_evidence` behaves as it does without a symbol.
+
+`AMANUENSIS_CODE_INDEX_MAX_FILES` sets how many files one whole-tree call parses. Other
+limits are fixed. Defaults:
+
+- a file over 2 MiB is recorded as too large and not parsed;
+- one whole-tree call parses at most 20,000 files and 200 MiB of source, and stops
+  after 30 seconds;
+- a generation may use 1 GiB on disk; older entries are evicted first.
+
+### Notices
+
+The grammars and the runtime are MIT licensed. Each grammar directory carries the
+license its package published, and `THIRD_PARTY_NOTICES.md`, which ships in the package,
+lists every package, its version and its copyright holder.
+
+### Check an installed package
+
+CI packs the package, installs the tarball into an empty directory, starts the installed
+server and calls `outline_file` and `read_symbol` on a fixture with one file per
+language. It fails if a grammar or a definition query is missing from the tarball. It
+runs on Node 20 and 22, on Linux and macOS. To run it locally:
+
+```bash
+cd mcp-server && node scripts/check-installed-package.mjs
+```
+
+Node 20 is still the floor. Set `AMANUENSIS_TEST_PACKAGE` to check a tarball or a registry
+version instead of packing the checkout.
+
 ## Diagnose and repair Codex activation
 
 Diagnosis is read-only:

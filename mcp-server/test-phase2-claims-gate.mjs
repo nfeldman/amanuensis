@@ -280,11 +280,12 @@ function seedEvidence(filePath, kind = "code-verified") {
     "add_evidence",
     {
       file_path: filePath,
-      symbol: `sym${evidenceSeq}`,
+      // The cited file's lines 1-4 are its `Unit` definition (fixtures/cited-source.mjs).
+      symbol: "Unit",
       line_range: "1-4",
       ref_sha: fixture.base,
       kind,
-      note: "phase-2 claims gate fixture",
+      note: `phase-2 claims gate fixture sym${evidenceSeq}`,
     },
     fixture.ctx,
   );
@@ -572,7 +573,7 @@ check("a claim whose validity interval was closed no longer satisfies the gate",
     "add_evidence",
     {
       file_path: "src/B-09.ts",
-      symbol: "ingest",
+      symbol: "Unit",
       line_range: "1-4",
       ref_sha: fixture.head,
       kind: "code-verified",

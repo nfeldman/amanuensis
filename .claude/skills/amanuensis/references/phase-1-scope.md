@@ -33,8 +33,13 @@ files participating in the subsystem by:
 - Name patterns consistent with the subsystem's domain vocabulary.
 - Import/dependency graph edges from seed files.
 - Directory neighborhood of seed files.
-- Callers and callees of key symbols (semantic tools first; grep
-  last).
+<!-- code-index:begin -->
+- Callers and callees of key symbols: `find_symbol` for definitions, and for
+  references, which are matched by name and are leads to confirm by reading
+  the file at that line. `outline_file` for a file's imports. `rg` for
+  strings, comments, config and files in other languages. If the code index
+  cannot read a path, read its imports, signatures and types directly.
+<!-- code-index:end -->
 
 ### 2. Classify each file
 

@@ -46,7 +46,8 @@ Processes, services, IPC mechanisms, external dependencies. Produce the
 peers, mechanism). Each crossing between two runtimes is one row: the
 runtime it leaves and that runtime's language, the runtime it enters, the
 mechanism, and a note where a reader needs one. Add an `add_evidence` row for
-each crossing as you read it, and carry the ids to Phase 7, which records the
+each crossing as you read it (a `symbol` must name a definition; a free-text
+label belongs in `note`), and carry the ids to Phase 7, which records the
 rows with `record_runtime_boundary`. The architecture page is built from
 those records and from nothing else; with none recorded it says no map is
 recorded and `materialize_docs` lists the slot in `unfilled_slots`. Continue

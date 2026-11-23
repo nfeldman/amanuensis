@@ -11,6 +11,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -33,6 +34,17 @@ function run(command, args, options = {}) {
 }
 
 const moduleDir = fileURLToPath(new URL(".", import.meta.url));
+
+// PLAN §4.8: ceilings just above the size measured at SI1 with the ten grammars vendored
+// (3.35 MB packed, 28.1 MB unpacked). test-code-index-grammars.mjs holds the same numbers.
+const PACKED_CEILING_BYTES = 3_600_000;
+const UNPACKED_CEILING_BYTES = 31_000_000;
+
+function treeBytes(path) {
+  const stat = statSync(path);
+  if (!stat.isDirectory()) return stat.size;
+  return readdirSync(path).reduce((total, name) => total + treeBytes(join(path, name)), 0);
+}
 const scratch = mkdtempSync(join(tmpdir(), "amanuensis-package-artifact-"));
 
 // A desktop app starts its agent with the system PATH, not the shell's, and
@@ -185,6 +197,11 @@ try {
     const tarballs = readdirSync(scratch).filter((name) => name.endsWith(".tgz"));
     assert(tarballs.length === 1, `expected one npm tarball, found ${tarballs.length}`);
     packageSpec = join(scratch, tarballs[0]);
+    const packed = statSync(packageSpec).size;
+    assert(
+      packed < PACKED_CEILING_BYTES,
+      `the packed tarball is ${packed} bytes, over the ${PACKED_CEILING_BYTES} ceiling`,
+    );
   }
   const installRoot = join(scratch, "install");
   run("npm", ["install", "--prefix", installRoot, "--no-audit", "--no-fund", packageSpec], {
@@ -193,6 +210,11 @@ try {
   });
 
   const packageRoot = join(installRoot, "node_modules", "@gruetech", "amanuensis");
+  const unpacked = treeBytes(packageRoot);
+  assert(
+    unpacked < UNPACKED_CEILING_BYTES,
+    `the installed package is ${unpacked} bytes, over the ${UNPACKED_CEILING_BYTES} ceiling`,
+  );
   const binRoot = join(installRoot, "node_modules", ".bin");
   const cli = join(binRoot, "amanuensis");
   const server = join(binRoot, "amanuensis-memory");

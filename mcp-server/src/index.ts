@@ -8,6 +8,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 import { CallLog, type CallOutcome, digestArguments, throwSite } from "./call-log.js";
+import { collectStaleGenerations, withCodeIndexSwitch } from "./code-index/store.js";
 import { discoverCodexParentLaunch, STARTUP_PROBE_TIMEOUT_MS } from "./codex-host.js";
 import { type DB, openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
@@ -23,6 +24,7 @@ import { carriedTools } from "./tools/carried.js";
 import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
 import { claimMarkTools } from "./tools/claim-marks.js";
 import { claimTools } from "./tools/claims.js";
+import { codeIndexTools } from "./tools/code-index.js";
 import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
 import { locusTools } from "./tools/locus.js";
@@ -103,8 +105,15 @@ const ADDITIVE_TOOLS = new Set([
 // what the record holds about one locus and writes nothing. Naming them here
 // is the same explicit carve-out ADDITIVE_TOOLS already is, and it keeps the
 // prefix rule as the fallback rather than widening it into a fourth prefix
-// that any future write tool could accidentally match.
-const READ_ONLY_TOOLS = new Set(["describe_locus"]);
+// that any future write tool could accidentally match. The code index's four
+// tools write only their own cache beside the store, never a record.
+const READ_ONLY_TOOLS = new Set([
+  "describe_locus",
+  "outline_file",
+  "read_symbol",
+  "find_symbol",
+  "search_records",
+]);
 
 function toolAnnotations(name: string) {
   // MCP annotations are hints, not authorization. Keep the read-only set
@@ -308,6 +317,8 @@ async function main(): Promise<void> {
       candidate.close();
     });
     db = openDatabase(bound.dbPath);
+    // A server starting up collects code-index generations untouched for 30 days.
+    collectStaleGenerations(bound.storagePath);
     return db;
   };
 
@@ -321,7 +332,7 @@ async function main(): Promise<void> {
     sessionId: null,
   };
 
-  const allTools: ToolDefinition[] = [
+  const allTools: ToolDefinition[] = withCodeIndexSwitch([
     // §5.5: the reader-lens tools head the advertised list, because the list
     // order is the order a host reads and the consumer route is the one a
     // reader needs first.
@@ -373,7 +384,8 @@ async function main(): Promise<void> {
     ...openQuestionTools,
     ...storageHistoryTools,
     ...compareTools,
-  ];
+    ...codeIndexTools,
+  ]);
   const byName = new Map(allTools.map((t) => [t.name, t]));
   const ajv = new Ajv({ allErrors: true, strict: true, strictSchema: true, useDefaults: false });
   const validators = new Map<string, ValidateFunction>(
@@ -441,7 +453,7 @@ async function main(): Promise<void> {
     return { outcome: "ok", rule: null, site: null };
   };
 
-  const dispatchTool = (name: string, rawArgs: unknown): Dispatched => {
+  const dispatchTool = async (name: string, rawArgs: unknown): Promise<Dispatched> => {
     const tool = byName.get(name);
     if (!tool) {
       const message = `unknown tool: ${name}`;
@@ -506,7 +518,8 @@ async function main(): Promise<void> {
       }
       assertProjectBinding(requireProject());
       if (name !== "get_project_info") ensureDatabase();
-      const data = tool.handler(args, ctx);
+      // A handler may answer asynchronously (the code-index tools read git and parse).
+      const data = await tool.handler(args, ctx);
       // §4.1: the tool declares whether its text block is serialized compactly,
       // and the dispatcher honors the declaration. A tool that carries a byte
       // budget therefore has it enforced on the emitted response.
@@ -538,7 +551,7 @@ async function main(): Promise<void> {
     const sessionBefore = ctx.sessionId;
     const startedAt = new Date().toISOString();
     const started = performance.now();
-    let dispatched = dispatchTool(name, rawArgs);
+    let dispatched = await dispatchTool(name, rawArgs);
     let result: ReturnType<typeof jsonResult>;
     try {
       result = jsonResult(dispatched.data, { compact: dispatched.compact });

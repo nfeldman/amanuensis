@@ -1,4 +1,12 @@
+import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { languageForPath } from "../code-index/extract.js";
+import { entryAt } from "../code-index/git-blobs.js";
+import { type CodeIndex, codeIndexEnabled, type IndexedSymbol } from "../code-index/store.js";
+import type { DB } from "../db.js";
 import {
+  excerptMiss,
+  lineSpans,
   ok,
   optInt,
   optString,
@@ -8,10 +16,305 @@ import {
   requireString,
   requireWorkspaceSourcePath,
   resolveWorkspaceCommit,
+  type ServerContext,
+  shownExcerpt,
   type ToolDefinition,
+  ToolError,
 } from "../helpers.js";
-import { requireActiveSession } from "../invariants.js";
+import { requireActiveSession, requireEvidenceAnchor } from "../invariants.js";
+import { spawnSync } from "../subprocess.js";
 import { EVIDENCE_KINDS } from "../vocabulary.js";
+import { indexOrUnavailable, lineRangeOf, matching, nearestIds } from "./code-index.js";
+
+// ---------------------------------------------------------------------------------------
+// Evidence anchors (semantic-index PLAN §4.4)
+//
+// With the code index on and a file in a language it parses, a `symbol` is resolved against
+// the definitions at `ref_sha`: by symbol_id, then qname, then a unique bare name. The row
+// stores the canonical symbol_id and an `evidence_anchors` row is written in the same
+// transaction. Every cited span must lie within the definition's citeable span, an excerpt
+// must come from the definition's own bytes within those spans, and an omitted line_range is
+// filled with the citeable span. No symbol, another language, a file the index cannot read
+// or the index off write the row as before, with no anchor: citing a whole file or a region
+// that is no definition stays open that way.
+
+export interface EvidenceAnchor {
+  blob_sha: string;
+  lang: string;
+  symbol_id: string;
+  kind: string;
+  def_start_line: number;
+  def_end_line: number;
+  span_sha256: string;
+  extractor_id: string;
+  range_source: "cited" | "filled";
+}
+
+/** An evidence row's location after resolution, ready to write. */
+export interface ResolvedCitation {
+  symbol: string | null;
+  lineRange: string | null;
+  anchor: EvidenceAnchor | null;
+  /** Why a given symbol was written with no anchor; null when anchored or no symbol. */
+  unanchoredReason: string | null;
+}
+
+/** Whether a citation is resolved against the code index before it is written. */
+export function anchorsCitation(filePath: string, symbol: string | null): boolean {
+  return symbol !== null && codeIndexEnabled() && languageForPath(filePath) !== null;
+}
+
+const short = (commit: string): string => commit.slice(0, 12);
+
+const linesOf = (s: IndexedSymbol): string => `${s.symbol_id} lines ${lineRangeOf(s)}`;
+
+function symbolNotFound(
+  symbol: string,
+  path: string,
+  commit: string,
+  nearest: string[],
+  partial: boolean,
+) {
+  return new ToolError(
+    `add_evidence refuses: ${symbol} names no definition in ${path} at ${short(commit)}; ` +
+      (nearest.length > 0
+        ? `nearest symbol_ids: ${nearest.join(", ")}. Pass one of them as symbol`
+        : "the file has no definitions the index lists") +
+      ", or omit symbol: a free-text label belongs in note" +
+      (partial
+        ? ". The file parsed only in part, so a definition whose syntax is broken is not listed: cite it without symbol"
+        : ""),
+    "evidence.symbol-not-found",
+  );
+}
+
+function symbolAmbiguous(symbol: string, path: string, commit: string, named: IndexedSymbol[]) {
+  return new ToolError(
+    `add_evidence refuses: ${symbol} names ${named.length} definitions in ${path} at ${short(commit)} ` +
+      `(${named.map(linesOf).join("; ")}) and line_range does not fall within exactly one of ` +
+      "them; give line_range inside the one to cite",
+    "evidence.symbol-ambiguous",
+  );
+}
+
+function rangeOutside(lineRange: string, def: IndexedSymbol, path: string, commit: string) {
+  return new ToolError(
+    `add_evidence refuses: line_range ${lineRange} reaches outside ${def.symbol_id}, which spans ` +
+      `lines ${lineRangeOf(def)} of ${path} at ${short(commit)}; cite lines inside the ` +
+      "definition, or omit symbol to cite lines no definition holds",
+    "evidence.range-outside-symbol",
+  );
+}
+
+function excerptOutside(
+  missing: string,
+  def: IndexedSymbol,
+  lineRange: string | null,
+  path: string,
+  commit: string,
+) {
+  const where = lineRange === null ? `lines ${lineRangeOf(def)}` : `lines ${lineRange}`;
+  return new ToolError(
+    `add_evidence refuses: the excerpt is not inside ${def.symbol_id} within ${where} of ${path} ` +
+      `at ${short(commit)}: ${JSON.stringify(shownExcerpt(missing))}. Quote that definition's ` +
+      "own text; text from a neighbouring definition, even on the same line, is not part of it",
+    "evidence.excerpt-outside-symbol",
+  );
+}
+
+/** Byte offsets of each line's start in `bytes`, lines counted by `\n`. */
+function lineStarts(bytes: Buffer): number[] {
+  const starts = [0];
+  for (let i = bytes.indexOf(0x0a); i >= 0; i = bytes.indexOf(0x0a, i + 1)) starts.push(i + 1);
+  return starts;
+}
+
+/**
+ * The text of `def`'s own bytes on each span: the definition's byte extent intersected with
+ * the span's lines, so a neighbour sharing a line contributes nothing.
+ */
+function definitionSegments(
+  bytes: Buffer,
+  def: IndexedSymbol,
+  spans: Array<[number, number]>,
+): string[] {
+  const starts = lineStarts(bytes);
+  return spans.map(([from, to]) => {
+    const lineStart = starts[from - 1] ?? bytes.length;
+    const next = starts[to];
+    const lineEnd = next === undefined ? bytes.length : next - 1;
+    const start = Math.max(lineStart, def.start_byte);
+    const end = Math.min(lineEnd, def.end_byte);
+    return end > start ? bytes.subarray(start, end).toString("utf8") : "";
+  });
+}
+
+const INDEX_FILE_SCRIPT = fileURLToPath(new URL("../code-index/index-file.js", import.meta.url));
+/** A parse in the child is bounded well inside the subprocess default. */
+const INDEX_FILE_TIMEOUT_MS = 60_000;
+const MAX_BLOB_BYTES = 256 * 1024 * 1024;
+
+/** A file's definitions at a commit, as the sidecar holds them. */
+export interface Definitions {
+  blobSha: string;
+  lang: string;
+  partial: boolean;
+  symbols: IndexedSymbol[];
+}
+
+/**
+ * The file's definitions at `commit` from the sidecar, or why the index cannot speak for the
+ * file: `tree` (git cannot list it), `file-absent`, a tree entry's skip reason, `unreadable`
+ * (the blob could not be indexed), the sidecar's own `unavailable` reason, `too-large` or
+ * `not-utf8`. Synchronous, because add_evidence runs inside callers' transactions: a blob
+ * not yet in the sidecar is parsed by `code-index/index-file.js` in a child process, and its
+ * rows are read back here.
+ */
+export function readDefinitions(
+  ctx: ServerContext,
+  index: CodeIndex,
+  commit: string,
+  filePath: string,
+): Definitions | { unavailable: string } {
+  const workspace = ctx.project.workspacePath as string;
+  const entry = entryAt(workspace, commit, filePath);
+  if (entry === null) return { unavailable: "tree" };
+  if (entry === undefined) return { unavailable: "file-absent" };
+  if (entry.skip_reason || !entry.lang) {
+    return { unavailable: entry.skip_reason ?? "unsupported-language" };
+  }
+  let lookup = index.blob(entry.blob_sha, entry.lang);
+  if (lookup.state === "ok" && !lookup.indexed) {
+    const child = spawnSync(
+      process.execPath,
+      [INDEX_FILE_SCRIPT, ctx.project.storagePath, workspace, commit, filePath],
+      { stdio: "ignore", timeout: INDEX_FILE_TIMEOUT_MS, killSignal: "SIGKILL" },
+    );
+    if (child.status !== 0) return { unavailable: "unreadable" };
+    lookup = index.blob(entry.blob_sha, entry.lang);
+  }
+  if (lookup.state !== "ok") return { unavailable: lookup.reason };
+  if (!lookup.indexed) return { unavailable: "unreadable" };
+  if (lookup.blob.status !== "ok" && lookup.blob.status !== "parse-partial") {
+    return { unavailable: lookup.blob.status };
+  }
+  return {
+    blobSha: entry.blob_sha,
+    lang: entry.lang,
+    partial: lookup.blob.status === "parse-partial",
+    symbols: lookup.symbols,
+  };
+}
+
+/**
+ * Resolve a citation's `symbol` against the code index (PLAN §4.4), or return it unanchored
+ * when the index cannot speak for the file. `lineRange` is the normal form
+ * `requireEvidenceCitation` returned. Refusals are thrown.
+ */
+export function resolveEvidenceAnchor(
+  ctx: ServerContext,
+  commit: string,
+  filePath: string,
+  symbol: string | null,
+  lineRange: string | null,
+  excerpt: string | null,
+): ResolvedCitation {
+  const unanchored = (reason: string | null): ResolvedCitation => ({
+    symbol,
+    lineRange,
+    anchor: null,
+    unanchoredReason: symbol === null ? null : reason,
+  });
+  if (symbol === null) return unanchored(null);
+  if (!anchorsCitation(filePath, symbol)) {
+    return unanchored(codeIndexEnabled() ? "unsupported-language" : "index-off");
+  }
+  const index = indexOrUnavailable(ctx);
+  if (!index) return unanchored("index-off");
+  if ("unavailable" in index) return unanchored(index.unavailable);
+  const found = readDefinitions(ctx, index, commit, filePath);
+  if ("unavailable" in found) return unanchored(found.unavailable);
+
+  const spans = lineRange === null ? null : lineSpans(lineRange);
+  const within = (s: IndexedSymbol) =>
+    spans === null || spans.every(([from, to]) => from >= s.doc_start_line && to <= s.end_line);
+  const named = matching(found.symbols, symbol);
+  if (named.length === 0) {
+    // D4: refused even in a file that parsed in part. A definition whose syntax is broken is
+    // not listed there, so the refusal says so and points to citing it without symbol.
+    throw symbolNotFound(
+      symbol,
+      filePath,
+      commit,
+      nearestIds(found.symbols, symbol),
+      found.partial,
+    );
+  }
+  let def: IndexedSymbol;
+  if (named.length === 1) {
+    def = named[0] as IndexedSymbol;
+    if (!within(def)) throw rangeOutside(lineRange as string, def, filePath, commit);
+  } else {
+    const inside = spans === null ? [] : named.filter(within);
+    if (inside.length !== 1) throw symbolAmbiguous(symbol, filePath, commit, named);
+    def = inside[0] as IndexedSymbol;
+  }
+
+  const blob = spawnSync("git", ["cat-file", "blob", found.blobSha], {
+    cwd: ctx.project.workspacePath,
+    maxBuffer: MAX_BLOB_BYTES,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (blob.error || blob.status !== 0) return unanchored("unreadable");
+  const bytes = blob.stdout as Buffer;
+  const span = bytes.subarray(def.start_byte, def.end_byte);
+  if (createHash("sha256").update(span).digest("hex") !== def.span_sha256) {
+    return unanchored("span-mismatch");
+  }
+  if (excerpt !== null) {
+    const cited = spans ?? [[def.doc_start_line, def.end_line] as [number, number]];
+    const missing = excerptMiss(definitionSegments(bytes, def, cited), excerpt);
+    if (missing !== null) throw excerptOutside(missing, def, lineRange, filePath, commit);
+  }
+  return {
+    symbol: def.symbol_id,
+    lineRange: lineRange ?? lineRangeOf(def),
+    anchor: {
+      blob_sha: found.blobSha,
+      lang: found.lang,
+      symbol_id: def.symbol_id,
+      kind: def.kind,
+      def_start_line: def.doc_start_line,
+      def_end_line: def.end_line,
+      span_sha256: def.span_sha256,
+      extractor_id: index.extractorId,
+      range_source: lineRange === null ? "filled" : "cited",
+    },
+    unanchoredReason: null,
+  };
+}
+
+/** Write an evidence row's anchor; the caller holds the transaction that wrote the row. */
+export function insertEvidenceAnchor(db: DB, evidenceId: number, anchor: EvidenceAnchor): void {
+  db.prepare(
+    `INSERT INTO evidence_anchors
+       (evidence_id, blob_sha, lang, symbol_id, kind, def_start_line, def_end_line,
+        span_sha256, extractor_id, range_source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    evidenceId,
+    anchor.blob_sha,
+    anchor.lang,
+    anchor.symbol_id,
+    anchor.kind,
+    anchor.def_start_line,
+    anchor.def_end_line,
+    anchor.span_sha256,
+    anchor.extractor_id,
+    anchor.range_source,
+  );
+  requireEvidenceAnchor(db, evidenceId);
+}
 
 const DISP_ROLES = ["supports", "contradicts", "linchpin", "compensating"] as const;
 const FIND_ROLES = [
@@ -26,7 +329,7 @@ export const evidenceTools: ToolDefinition[] = [
   {
     name: "add_evidence",
     description:
-      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. file_path must exist at ref_sha. line_range is N, N-M or a comma-separated list, inside the file at ref_sha. excerpt must appear in those lines (whitespace ignored; '...' marks an elision). Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
+      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. file_path must exist at ref_sha. line_range is N, N-M or a comma-separated list, inside the file at ref_sha. excerpt must appear in those lines (whitespace ignored; '...' marks an elision). With the code index on and a file in a language it parses, symbol must name a definition at ref_sha (a symbol_id, a qualified name, or a bare name naming one definition; read_symbol's evidence_args gives the location fields): the row stores the canonical symbol_id and is anchored to the definition, every span of line_range must lie inside the definition's citeable span, excerpt must be the definition's own text, and an omitted line_range is filled with the span. A symbol naming several definitions needs a line_range inside exactly one; a symbol naming none is refused with the nearest symbol_ids, and a free-text label belongs in note. Without a symbol, in another language, or with the index off, the row is written unanchored; when a symbol was given and no anchor written, the answer says anchored: false and anchor_reason (unsupported-language, index-off, not-utf8, too-large, grammar-unreadable, file-absent or another reason the index cannot read the file), since the symbol was not checked. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
     inputSchema: {
       type: "object",
       properties: {
@@ -62,13 +365,41 @@ export const evidenceTools: ToolDefinition[] = [
       );
       const note = optString(args, "note");
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
-      const info = ctx.db
-        .prepare(
-          `INSERT INTO evidence (file_path, symbol, line_range, ref_sha, kind, excerpt, note, session_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(filePath, symbol, lineRange, refSha, kind, excerpt, note, sessionId);
-      return ok({ id: info.lastInsertRowid });
+      const insert = (resolved: ResolvedCitation) =>
+        ctx.db.transaction(() => {
+          const info = ctx.db
+            .prepare(
+              `INSERT INTO evidence (file_path, symbol, line_range, ref_sha, kind, excerpt, note, session_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            )
+            .run(
+              filePath,
+              resolved.symbol,
+              resolved.lineRange,
+              refSha,
+              kind,
+              excerpt,
+              note,
+              sessionId,
+            );
+          const id = Number(info.lastInsertRowid);
+          if (!resolved.anchor) {
+            return ok(
+              resolved.unanchoredReason === null
+                ? { id }
+                : { id, anchored: false, anchor_reason: resolved.unanchoredReason },
+            );
+          }
+          insertEvidenceAnchor(ctx.db, id, resolved.anchor);
+          return ok({
+            id,
+            symbol: resolved.symbol,
+            line_range: resolved.lineRange,
+            anchored: true,
+            range_source: resolved.anchor.range_source,
+          });
+        })();
+      return insert(resolveEvidenceAnchor(ctx, refSha, filePath, symbol, lineRange, excerpt));
     },
   },
   {
