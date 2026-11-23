@@ -8,7 +8,8 @@ This file is the place to record such work. `dev/roadmap.json` (rendered to
 [ROADMAP.md](ROADMAP.md)) holds the initiatives, and all 27 are implemented. The Pecia ledger in
 `.pecia/` was an experiment from September. Nothing has been written to it since 2026-09-22, its CI
 gate was removed on 2026-11-06, and the current Pecia CLI rejects it (`E013`, a pre-hash-chain
-log). Its open defects are listed under [Older defects](#older-defects-from-the-pecia-ledger) so
+log). The ledger was deleted on 2026-11-23, before a fresh self-survey; it is in git history
+before that date. Its open defects are listed under [Older defects](#older-defects-from-the-pecia-ledger) so
 they are not lost.
 
 Each item says what to change, why, and how to tell it is done. "Measured" means counted in a

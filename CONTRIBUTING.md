@@ -205,17 +205,16 @@ Work that is agreed or proposed but not scheduled goes in
 [`BACKLOG.md`](BACKLOG.md): what to change, why, and how to tell it is done.
 Initiatives live in [`dev/roadmap.json`](dev/roadmap.json); a lane's own
 deferrals are recorded in its `design/<name>/decisions.md` and summarized in
-the backlog. A confirmed defect in the self-conspectus is recorded there as a
-finding; add a backlog line when it needs scheduling.
+the backlog.
 
 From 3 to 22 September 2026 confirmed findings were also projected into a Pecia
 ledger (`.pecia/`) by `dev/amanuensis-defects-to-pecia.mjs`, resolved back by
 `dev/pecia-resolve-finding.mjs`. That was an experiment and has stopped: nothing
 has been written to the ledger since, its CI job was removed on 2026-11-06, and
 the current Pecia CLI rejects the ledger's pre-hash-chain log (`E013`). Its open
-defects are copied into the backlog. The scripts and
-`dev/test-amanuensis-pecia-defects.mjs` remain for the record; do not add to the
-ledger.
+defects are copied into the backlog. The ledger and its write gate
+(`dev/hooks/pre-commit`) were deleted on 2026-11-23 and remain in git history;
+the scripts and `dev/test-amanuensis-pecia-defects.mjs` remain for the record.
 
 ## Auto-generated tool inventory
 

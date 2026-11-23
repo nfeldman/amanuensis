@@ -103,13 +103,6 @@ written by the model that read the code, bound to that revision and its evidence
 marked as ageing when the cited files change. No gate checks that an explanation is
 true: it orients a reader, while claims remain the home of individually checkable rules.
 
-## See it work
-
-[Browse the conspectus Amanuensis built for itself](https://nfeldman.github.io/amanuensis/):
-a human-readable map that opens each part of the architecture with what it is for and how
-it works, followed by the evidence, findings, seams, contradictions, and open questions
-behind this repository.
-
 ## Work from the memory
 
 Once a conspectus exists, ask your agent:
