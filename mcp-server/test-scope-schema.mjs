@@ -13,9 +13,12 @@
 //     migrated store;
 //   - a valid row of any of them is refused, or a row outside §2.1's values
 //     (an action, a category, a source, a mode; an empty owner_words; a
-//     gitignore exclusion carrying a rule id, or a user or meta one without) is
+//     gitignore exclusion carrying a rule id, or a user or meta one without;
+//     an inventory row without a revision, file, range or excerpt) is
 //     accepted;
-//   - an UPDATE or DELETE on any of the five succeeds, or changes the row;
+//   - an UPDATE or DELETE on any of the five succeeds, or changes the row,
+//     or an INSERT OR REPLACE over an existing row (by id, by primary key or
+//     by rowid) succeeds;
 //   - contracts/append-only-tables.txt lacks a three-column row for one of
 //     them, names a trigger schema.sql does not declare on that table, or its
 //     header count disagrees with its rows;
@@ -458,6 +461,11 @@ function valueChecks(label, path) {
         ["an inventory row for no sorting row", "INSERT INTO scope_inventory (sorting_id, file_path, line_range, excerpt, ref_sha) VALUES (99999, 'a', '1-1', 'e', 'abc1234')"],
         ["an inventory row without an excerpt", `INSERT INTO scope_inventory (sorting_id, file_path, line_range, ref_sha) VALUES (${ids.sorting}, 'a', '1-1', 'abc1234')`],
         ["an inventory row without a line range", `INSERT INTO scope_inventory (sorting_id, file_path, excerpt, ref_sha) VALUES (${ids.sorting}, 'a', 'e', 'abc1234')`],
+        ["an inventory row without a revision", `INSERT INTO scope_inventory (sorting_id, file_path, line_range, excerpt) VALUES (${ids.sorting}, 'a', '1-1', 'e')`],
+        ["an inventory row with a null revision", `INSERT INTO scope_inventory (sorting_id, file_path, line_range, excerpt, ref_sha) VALUES (${ids.sorting}, 'a', '1-1', 'e', NULL)`],
+        ["an inventory row without a file", `INSERT INTO scope_inventory (sorting_id, line_range, excerpt, ref_sha) VALUES (${ids.sorting}, '1-1', 'e', 'abc1234')`],
+        ["a sorting row without a pattern", "INSERT INTO scope_sorting (category, description) VALUES ('meta', 'd')"],
+        ["an exclusion without a file", `INSERT INTO scope_exclusions (reconciliation_id, source, rule_id) VALUES (${ids.recon}, 'gitignore', NULL)`],
         ["a source other than gitignore, user or meta", `INSERT INTO scope_exclusions (reconciliation_id, file_path, source, rule_id) VALUES (${ids.recon}, 'q', 'git', NULL)`],
         ["a gitignore exclusion carrying a rule id", `INSERT INTO scope_exclusions (reconciliation_id, file_path, source, rule_id) VALUES (${ids.recon}, 'q', 'gitignore', ${ids.rule})`],
         ["a user exclusion without a rule id", `INSERT INTO scope_exclusions (reconciliation_id, file_path, source, rule_id) VALUES (${ids.recon}, 'q', 'user', NULL)`],
@@ -491,9 +499,24 @@ function valueChecks(label, path) {
         ["UPDATE scope_mode_changes SET mode = 'sorted' WHERE id = ?", ids.mode],
         ["DELETE FROM scope_mode_changes WHERE id = ?", ids.mode],
         ["UPDATE scope_reconciliations SET scope_digest = 'forged' WHERE id = ?", ids.recon],
+        // A REPLACE deletes the row it collides with without firing a delete
+        // trigger (recursive_triggers is off), so each table also refuses an
+        // insert that would replace an existing identity.
+        ["INSERT OR REPLACE INTO scope_rules (id, pattern, action, reason, owner_words) VALUES (?, 'y/', 'include', 'r', 'w')", ids.rule],
+        ["REPLACE INTO scope_sorting (id, pattern, category, description) VALUES (?, 'y/', 'product', 'd')", ids.sorting],
+        [
+          "INSERT OR REPLACE INTO scope_inventory (rowid, sorting_id, file_path, line_range, excerpt, ref_sha) VALUES ((SELECT min(rowid) FROM scope_inventory), ?, 'forged', '9-9', 'forged', 'abc1234')",
+          ids.sorting,
+        ],
+        ["INSERT OR REPLACE INTO scope_exclusions (reconciliation_id, file_path, source, rule_id) VALUES (?, 'design/spec.md', 'gitignore', NULL)", ids.recon],
+        [
+          "INSERT OR REPLACE INTO scope_exclusions (rowid, reconciliation_id, file_path, source, rule_id) VALUES ((SELECT min(rowid) FROM scope_exclusions), ?, 'forged/path', 'gitignore', NULL)",
+          ids.recon,
+        ],
+        ["INSERT OR REPLACE INTO scope_mode_changes (id, mode, reason) VALUES (?, 'sorted', 'forged')", ids.mode],
       ];
       for (const [sql, id] of attempts) {
-        if (raises(db, sql, [id]) === null) allowed.push(sql.split(" WHERE")[0]);
+        if (raises(db, sql, [id]) === null) allowed.push(sql.split(/ WHERE| VALUES/)[0]);
       }
       const changed = rowsUnchanged(db, before);
       const wrong = [];
