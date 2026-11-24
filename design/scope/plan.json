@@ -425,8 +425,8 @@
       "attempts": 1,
       "start_sha": "a7a8e44fdb10d7a73044bc8f657283588f25ea18",
       "red_sha": "b9eacf0b87876321513d3741ec255c8bd0bcd8b4",
-      "green_sha": "0999c20ed7b92219080473ab6bf04904ee6f2b90",
-      "verified_by_launcher": false,
+      "green_sha": "07ab7daf5e343c018dff03de77046608d6d60a0d",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "requireSurveyScopeForEvidence (helpers.ts) reads each evidence row's file_path and refuses an excluded one before any write; wired into all 14 files of §2.6's second table. Gaps filled without changing a decision: crosswalk.ts (outside the deliverables) is guarded because the census finds resolve_crosswalk_identity's evidence and its provenance accepts repository-evidence ids, through one function covering five tools; review_evaluation_alternatives is exempt (free-text evidence). Decision premises of kind evidence (decisions.ts) and research.ts repository-evidence refs also carry evidence ids under argument names the census does not search; they are unguarded and worth a reviewer's look. The parity entry lists only four tools in refuses, because naming tools that other references instruct would oblige those references to quote the sentence. No existing assertion changed."
     },
