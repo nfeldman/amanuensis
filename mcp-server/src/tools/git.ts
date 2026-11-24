@@ -406,10 +406,17 @@ export const gitTools: ToolDefinition[] = [
         // the owner excluded is no reason for its inactive row to come back as
         // absent work. Its exclusion is written beside the tree's, so every
         // reader of the resolved set sees the row as inactive; it is not in
-        // the tree, so the survey counts leave it out.
-        const absentPaths = [...new Set(ledgerRows.map((r) => r.file_path))].filter(
-          (path) => !trackedSet.has(path),
-        );
+        // the tree, so the survey counts leave it out. An evidence row's path
+        // is decided the same way, ledgered or not, so an older citation of a
+        // deleted excluded file stays plain text and out of every index.
+        const evidencePaths = (
+          ctx.db.prepare("SELECT DISTINCT file_path FROM evidence").all() as Array<{
+            file_path: string;
+          }>
+        ).map((row) => row.file_path);
+        const absentPaths = [
+          ...new Set([...ledgerRows.map((r) => r.file_path), ...evidencePaths]),
+        ].filter((path) => !trackedSet.has(path));
         const retained = resolveScope({
           rules,
           sorting,
