@@ -197,6 +197,89 @@ with current code behavior creates an open typed contradiction and preserves
 both records. Consumption names the exact changed
 field or why nothing changed; it cannot mutate accepted decision history.
 
+## The survey set
+
+A survey accounts for the **survey set**, not for every path in the repository. The
+survey set is the tree at a revision minus three kinds of excluded path: those the
+repository's own ignore files match at that revision (`gitignore`), those the owner
+excluded (`user`) and those onboarding sorted as `meta`. Every reader that used the
+whole tree as its denominator uses the survey set instead: reconciliation, the ledger,
+the `mapped` and publication checks, the pages, read-back and the completion checker.
+`src/scope.ts` holds the matcher and the resolution; `src/invariants.ts` holds the
+standing checks.
+
+**Precedence.** A pattern is an exact path, a directory prefix ending in `/` or a glob.
+When more than one rule matches a path:
+
+1. The owner's rules win over everything. An include returns the path to the survey
+   set, and between two owner rules the more specific pattern decides, the later rule
+   winning a tie.
+2. Then gitignore: a path the ignore files match is excluded.
+3. Then sorting: the most specific sorting row decides, `meta` excludes and `product`
+   keeps the path in. In `sorted` mode a path no sorting row covers is unsorted. It stays
+   in the survey set and is still owed a ledger row.
+
+**Records.** `set_scope_rule`, `record_scope_sorting` and `get_scope` write and read
+five append-only tables: `scope_rules`, `scope_sorting`, `scope_inventory`,
+`scope_exclusions` and `scope_mode_changes`. A rule is withdrawn by a later row that
+names it in `supersedes`, never edited. A `meta` sorting row carries an inventory of
+cited files, kept in `scope_inventory` apart from evidence so that no page prints it.
+`detect_changes` writes the resolved exclusions in the same transaction as its
+`scope_reconciliations` row, which gains the columns `scope_digest`, `exclusion_digest`,
+`excluded`, `unsorted`, `survey_paths` and `scope_mode`. A reader that re-checks a
+reconciliation recomputes both witness digests, `scope_digest` over the active rules and
+sorting rows and `exclusion_digest` over that reconciliation's exclusions, with the
+formulas restated rather than imported (`scopeDigest` and `exclusionDigest`). Recording
+a rule therefore takes the standing away until `detect_changes` runs again.
+
+**Gitignore at a revision.** The ignore files are read from the commit, not from the
+working tree. `resolveScopeAtRevision` writes them into a scratch repository and runs
+`git check-ignore --no-index` over the tree's paths, so the answer is git's own and a
+property of the revision. The result is cached under the ignore files' blob ids and the
+tree's path set; a git failure fails the reconciliation and names the command.
+
+**Modes.** A store is in `sorted` mode or in `legacy` mode, by its latest
+`scope_mode_changes` row. A store that already had ledger or reconciliation rows when
+this version first opened it is `legacy`, and moves to `sorted` when its first sorting
+row is recorded. In `sorted` mode, publication through `requireCompleteReconciliation`
+is refused while any survey path is unsorted, and the refusal names up to 20 unsorted
+paths. The `mapped` advance keeps its rule: a reconciled store is enough.
+
+**Writes and reads.** `requireSurveyScopeForWrite` refuses a new record that names, or
+rests on the evidence of, an excluded path, and says how to bring the path back: an owner
+include rule. Reads are never refused. `describe_locus` answers an excluded path as
+`excluded` with its source and rule, and the code index filters excluded paths at query
+time unless `include_excluded` is true, because the index is a cache keyed by content.
+A ledger row that predates an exclusion is kept but inactive, reported as
+`excluded_with_rows`, and owes no work. An older record's citation of an excluded path
+prints as plain text, with no link and no index entry.
+
+**Pages.** The pages omit every path the scope leaves out. The overview carries one
+line with a count for each source and the owner's rules by pattern, and never lists the
+paths. A ledger-exempt classification inside the survey set, such as `generated-ignore`,
+keeps its behaviour and still prints.
+
+**Migration.** The new tables come from `schema.sql` on every open. The six
+reconciliation columns come from one numbered migration step, and the first
+`scope_mode_changes` row is seeded after the schema runs. A legacy store changes in one
+way: paths its ignore files match leave the survey set.
+
+**Gates.** Each packet of `design/scope/PLAN.md` has one gate, and CI runs each of them:
+
+- `dev/test-scope-backlog.mjs`
+- `mcp-server/test-scope-schema.mjs`
+- `mcp-server/test-scope-resolve.mjs`
+- `mcp-server/test-scope-tools.mjs`
+- `mcp-server/test-scope-reconcile.mjs`
+- `mcp-server/test-scope-consumers.mjs`
+- `mcp-server/test-scope-write-guard.mjs`
+- `mcp-server/test-scope-attach-guard.mjs`
+- `dev/test-store-fully-surveyed-scope.mjs`
+- `mcp-server/test-scope-standing.mjs`
+- `materializer/test-scope-pages.py`
+- `dev/test-skill-scope.mjs`
+- `dev/test-scope-docs.mjs`
+
 <!-- TOOL-INVENTORY-START -->
 
 _233 tools across 50 groups. Generated from `tools/list` — do not hand-edit._

@@ -3,6 +3,33 @@
 This file summarizes user-visible releases. The [roadmap](ROADMAP.md) and its linked
 receipts carry the executable evidence, exact revisions, and current claim boundaries.
 
+## [Unreleased]
+
+- Add a survey set: the paths a survey has to account for. It is the tree at a
+  revision minus the paths its own ignore files match, the paths the owner
+  excluded and the paths onboarding sorted as meta. An owner include rule brings
+  a path back from the ignore files or from meta, and between two owner rules the
+  more specific pattern decides. Reconciliation, the ledger, the completion
+  checks, the pages and the readers all use the survey set where they used the
+  whole tree.
+- Record the rules through three tools: `set_scope_rule` records an owner's
+  exclude or include with the owner's words, `record_scope_sorting` records a
+  product or meta sorting (a meta row carries an inventory of cited files), and
+  `get_scope` reads the rules, the counts by source and the paths still unsorted.
+- Leave an excluded path out of the record. It gets no ledger row and no evidence,
+  no new record may name it, and it appears on no page except as one count on the
+  overview, which also names the owner's rules. `describe_locus` still answers for
+  it, as `excluded` with its source (gitignore, user or meta) and the rule.
+- Refuse publication while a store in sorted mode has unsorted paths, naming up to
+  20 of them. Recording a rule or a sorting row takes the standing of the last
+  reconciliation away until `detect_changes` runs again.
+- Add Phase 0b to onboarding: it records the git state, any owner rule, then sorts
+  every path, code included, as product or meta before the survey starts.
+- Keep an existing store working. A store that already had ledger rows or a
+  reconciliation opens in legacy mode and changes in one way only: paths its ignore
+  files match leave the survey set, and any ledger row on one is reported as
+  `excluded_with_rows` and kept.
+
 ## [0.2.0-beta.7] - 2026-11-19
 
 - Let a survey correct a claim at the revision it was recorded at:

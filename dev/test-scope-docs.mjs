@@ -181,7 +181,8 @@ check("README.md", () => {
   if (added === null) return "differs from its start in more than one added passage";
   if (added.text.trim() === "") return "adds no sentence to the section";
   const sectionStart = now.indexOf("## Trust is part of the architecture");
-  const sectionEnd = sectionStart + "## Trust is part of the architecture".length + trust.length;
+  const nextHeading = now.indexOf("\n## ", sectionStart + 1);
+  const sectionEnd = nextHeading < 0 ? now.length : nextHeading + 1;
   if (added.at < sectionStart || added.at + added.text.length > sectionEnd)
     return "the added sentence is not inside the 'Trust is part of the architecture' section";
   const sentenceList = sentences(added.text);
@@ -226,7 +227,11 @@ check("HISTORY.md", () => {
   if (!/^## \[0\.2\.0-beta\.7\]/.test(headings[1][0]))
     return "the Unreleased entry is not directly above the newest release, 0.2.0-beta.7";
   const entry = lines.slice(headings[0][1] + 1, headings[1][1]).join("\n");
-  const bullets = entry.split("\n").filter((line) => line.startsWith("- "));
+  // A bullet wraps onto indented lines; each is read as one string.
+  const bullets = entry
+    .split(/\n(?=- )/)
+    .filter((b) => b.startsWith("- "))
+    .map(squash);
   if (bullets.length < 3) return "the Unreleased entry has fewer than three bullets";
   const said = plain(entry);
   const missing = needAll(said, [
@@ -301,7 +306,8 @@ check("mcp-server/DEVELOPMENT.md", () => {
   if (heading < 0) return "has no '## The survey set' section";
   if (marker < 0) return "has lost the tool inventory markers";
   if (heading > marker) return "the survey-set section is inside or after the generated tool inventory";
-  const body = section(dev, "## The survey set");
+  // The generated inventory follows with no level-2 heading of its own; the section ends at its marker.
+  const body = section(dev, "## The survey set").split("<!-- TOOL-INVENTORY-START -->")[0];
   const prose = squash(body);
   const said = plain(body);
 
@@ -358,8 +364,12 @@ check("mcp-server/DEVELOPMENT.md", () => {
   if (!/`sorted`/.test(body) || !/`legacy`/.test(body)) return "does not give the modes `sorted` and `legacy` as code";
 
   // Precedence, in order, as a list: owner rules, then gitignore, then sorting.
-  const lines = body.split("\n");
-  const at = (re) => lines.findIndex((line) => /^\s*\d\.\s/.test(line) && re.test(line.toLowerCase()));
+  // A numbered step wraps onto the lines after it; each step is read as one string.
+  const steps = body
+    .split(/\n(?=\d\.\s)/)
+    .filter((step) => /^\d\.\s/.test(step))
+    .map((step) => squash(step).toLowerCase());
+  const at = (re) => steps.findIndex((step) => re.test(step));
   const owner = at(/owner/);
   const ignore = at(/gitignore/);
   const sorting = at(/sorting/);
@@ -367,7 +377,7 @@ check("mcp-server/DEVELOPMENT.md", () => {
     return "does not list the precedence as numbered steps naming the owner's rules, gitignore and sorting";
   if (!(owner < ignore && ignore < sorting))
     return "lists the precedence out of order: owner's rules, then gitignore, then sorting";
-  if (!/\binclude\b/.test(lines[owner].toLowerCase()) || !/\bspecific/.test(lines[owner].toLowerCase()))
+  if (!/\binclude\b/.test(steps[owner]) || !/\bspecific/.test(steps[owner]))
     return "the owner's step does not say an include returns a path and that the more specific rule decides";
 
   // Numbers: the cap on named unsorted paths is the code's.
