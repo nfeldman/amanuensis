@@ -178,12 +178,21 @@ writeFileSync(
   `[core]\n\thooksPath = ${join(hostile, "hooks")}\n[init]\n\ttemplateDir = ${join(hostile, "template")}\n`,
 );
 process.env.GIT_CONFIG_GLOBAL = join(hostile, "gitconfig");
+// Every git this gate runs, its fixtures' and the server's own (the store's
+// storage commits run in this process), reads no configuration but its
+// repository's: no global or system file. HN1 turns red without this.
+process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+process.env.GIT_CONFIG_NOSYSTEM = "1";
 
 function git(cwd, ...args) {
   const result = spawnSync(
     "git",
-    ["-c", "user.email=sc3@localhost", "-c", "user.name=scope-sc3", "-c", "commit.gpgsign=false", ...args],
-    { cwd, encoding: "utf8" },
+    [
+      "-c", "core.hooksPath=/dev/null",
+      "-c", "user.email=sc3@localhost", "-c", "user.name=scope-sc3", "-c", "commit.gpgsign=false",
+      ...args,
+    ],
+    { cwd, encoding: "utf8", env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" } },
   );
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
   return String(result.stdout ?? "").trim();
@@ -207,7 +216,7 @@ let worlds = 0;
 function world({ reconcile = true, legacy = false } = {}) {
   const ws = join(scratch, `ws-${++worlds}`);
   mkdirSync(ws, { recursive: true });
-  git(ws, "init", "-q", "-b", "main");
+  git(ws, "init", "-q", "--template=", "-b", "main");
   for (const [path, body] of Object.entries(FILES)) {
     mkdirSync(dirname(join(ws, path)), { recursive: true });
     writeFileSync(join(ws, path), body);

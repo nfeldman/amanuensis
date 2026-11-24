@@ -159,8 +159,16 @@ const treeDigestOf = (paths) => sha256([...paths].sort().join(NUL));
 
 // ---------------------------------------------------------------- fixtures
 
+// Fixture git reads no configuration but its own repository's: no global or
+// system file, no hooks, no template.
+const FIXTURE_GIT_ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+
 function git(cwd, ...args) {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  const result = spawnSync("git", ["-c", "core.hooksPath=/dev/null", ...args], {
+    cwd,
+    encoding: "utf8",
+    env: FIXTURE_GIT_ENV,
+  });
   if (result.status !== 0) {
     throw new Error(`git ${args.join(" ")} exited ${result.status}: ${String(result.stderr).trim()}`);
   }
@@ -213,6 +221,11 @@ function main(mods) {
     `[core]\n\thooksPath = ${join(hostile, "hooks")}\n[init]\n\ttemplateDir = ${join(hostile, "template")}\n`,
   );
   process.env.GIT_CONFIG_GLOBAL = join(hostile, "gitconfig");
+  // Every git this gate runs, its fixtures' and the server's own (the store's
+  // storage commits run in this process), reads no configuration but its
+  // repository's: no global or system file. HN1 turns red without this.
+  process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+  process.env.GIT_CONFIG_NOSYSTEM = "1";
 
 
   function workspace(label, files, forced = []) {
