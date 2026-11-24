@@ -534,6 +534,8 @@ async function main(mods) {
     } catch (error) {
       refusal = String(error?.message ?? error);
     }
+    // The rule and sorting row D1 and D2 recorded have ended standing; reconcile again.
+    reconcile(ctx);
     const entry = clauseOf(report(snapshot(ctx), wsA), 2);
     const wrong = [];
     if (refusal === null) wrong.push("the retirement was accepted");
