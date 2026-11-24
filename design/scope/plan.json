@@ -355,14 +355,14 @@
       ],
       "budget_minutes": 180,
       "needs_mcp": false,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "c97e3e843ad8abf199f813d246873b14502a959a",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "3b8a503",
+      "green_sha": 3664672,
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Guard decides live (active rules + sorting + gitignore at the write's revision, else last reconciled, else HEAD); retire_ledger_file now also accepts a present row on an excluded path; log_dispatch and field-note locations are guarded only when they name a file in the tree. Outside the deliverables: scripts/check-refusal-parity.mjs now scans src/helpers.ts (no new derived refusals), and DEVELOPMENT.md's inventory was regenerated; the register's refuses omits add_files_to_scope/add_field_note/add_finding (naming them would oblige nine SC8-owned skill files) and land_review_pass (concise-arrow handler the checker cannot trace); add_finding's fix_location is not guarded (not in §2.6's table)."
     },
     {
       "id": "SC12",
