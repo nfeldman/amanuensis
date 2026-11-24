@@ -1,0 +1,777 @@
+{
+  "version": 1,
+  "branch": "scope",
+  "packets": [
+    {
+      "id": "SC0",
+      "slice": "S1",
+      "title": "Record the plan in BACKLOG.md",
+      "model": null,
+      "claims": [
+        "\u00a73 SC0",
+        "\u00a71"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "BACKLOG.md",
+        "dev/test-scope-backlog.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-scope-backlog.mjs",
+        "command": "node dev/test-scope-backlog.mjs",
+        "marker": "GATE SC0",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC0, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 30,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC1",
+      "slice": "S1",
+      "title": "Schema, migration and mode seeding",
+      "model": "opus",
+      "claims": [
+        "\u00a73 SC1",
+        "\u00a72.1",
+        "\u00a72.9"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/db.ts",
+        "mcp-server/contracts/append-only-tables.txt",
+        "mcp-server/test-scope-schema.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-scope-schema.mjs",
+        "command": "cd mcp-server && npm run build && node test-scope-schema.mjs",
+        "marker": "GATE SC1",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC1, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 150,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC2",
+      "slice": "S1",
+      "title": "Pattern matching and gitignore at a revision",
+      "model": "opus",
+      "claims": [
+        "\u00a73 SC2",
+        "\u00a72.2",
+        "\u00a72.3"
+      ],
+      "depends_on": [
+        "SC1"
+      ],
+      "deliverables": [
+        "mcp-server/src/scope.ts",
+        "mcp-server/test-scope-resolve.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-scope-resolve.mjs",
+        "command": "cd mcp-server && npm run build && node test-scope-resolve.mjs",
+        "marker": "GATE SC2",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-subprocess-timeouts.mjs"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC2, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 180,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC3",
+      "slice": "S2",
+      "title": "set_scope_rule, record_scope_sorting, get_scope",
+      "model": "opus",
+      "claims": [
+        "\u00a73 SC3",
+        "\u00a72.4"
+      ],
+      "depends_on": [
+        "SC2"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/scope.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/DEVELOPMENT.md",
+        "mcp-server/test-scope-tools.mjs",
+        ".claude/skills/amanuensis/references/onboarding.md",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-scope-tools.mjs",
+        "command": "cd mcp-server && npm run build && node test-scope-tools.mjs",
+        "marker": "GATE SC3",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC3, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 150,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC4",
+      "slice": "S2",
+      "title": "Reconciliation core over the survey set",
+      "model": "opus",
+      "claims": [
+        "\u00a73 SC4",
+        "\u00a72.5",
+        "\u00a72.6a"
+      ],
+      "depends_on": [
+        "SC3"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/git.ts",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/tools/materialize.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/test-scope-reconciliation.mjs",
+        "mcp-server/test-scope-reconcile.mjs",
+        ".claude/skills/amanuensis/references/phase-5-packaging.md",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-scope-reconcile.mjs",
+        "command": "cd mcp-server && npm run build && node test-scope-reconcile.mjs",
+        "marker": "GATE SC4",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-consumer-route.mjs",
+        "cd mcp-server && node test-carried-findings.mjs",
+        "cd mcp-server && node test-evidence-anchors.mjs",
+        "cd mcp-server && node test-scope-schema.mjs",
+        "cd mcp-server && node test-scope-tools.mjs"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC4, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 180,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC11",
+      "slice": "S2",
+      "title": "Consumers of inactive rows",
+      "model": "opus",
+      "claims": [
+        "\u00a73 SC11",
+        "\u00a72.6a"
+      ],
+      "depends_on": [
+        "SC4"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/git.ts",
+        "mcp-server/src/tools/stale.ts",
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/src/tools/impact.ts",
+        "mcp-server/src/tools/review.ts",
+        "mcp-server/src/tools/refresh.ts",
+        "mcp-server/test-scope-consumers.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-scope-consumers.mjs",
+        "command": "cd mcp-server && npm run build && node test-scope-consumers.mjs",
+        "marker": "GATE SC11",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-scope-reconcile.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC11, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 180,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC10",
+      "slice": "S3",
+      "title": "Write guard: paths and new evidence",
+      "model": "opus",
+      "claims": [
+        "\u00a73 SC10",
+        "\u00a72.6"
+      ],
+      "depends_on": [
+        "SC11"
+      ],
+      "deliverables": [
+        "mcp-server/src/helpers.ts",
+        "mcp-server/src/tools/files.ts",
+        "mcp-server/src/tools/stale.ts",
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/review-analysis.ts",
+        "mcp-server/src/tools/impact.ts",
+        "mcp-server/src/tools/vocabulary.ts",
+        "mcp-server/src/tools/field-notes.ts",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/carried.ts",
+        "mcp-server/src/tools/dispatch.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/test-scope-write-guard.mjs",
+        ".claude/skills/amanuensis/references/records.md",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-scope-write-guard.mjs",
+        "command": "cd mcp-server && npm run build && node test-scope-write-guard.mjs",
+        "marker": "GATE SC10",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-scope-reconcile.mjs",
+        "cd mcp-server && node test-scope-consumers.mjs",
+        "cd mcp-server && node test-evidence-anchors.mjs",
+        "cd mcp-server && node test-carried-findings.mjs"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC10, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 180,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC12",
+      "slice": "S3",
+      "title": "Write guard: evidence attachments and the census",
+      "model": null,
+      "claims": [
+        "\u00a73 SC12",
+        "\u00a72.6"
+      ],
+      "depends_on": [
+        "SC10"
+      ],
+      "deliverables": [
+        "mcp-server/src/helpers.ts",
+        "mcp-server/src/tools/claims.ts",
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/dispositions.ts",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/stale.ts",
+        "mcp-server/src/tools/explanations.ts",
+        "mcp-server/src/tools/narratives.ts",
+        "mcp-server/src/tools/project-records.ts",
+        "mcp-server/src/tools/diagnosticity.ts",
+        "mcp-server/src/tools/decisions.ts",
+        "mcp-server/src/tools/contradictions.ts",
+        "mcp-server/src/tools/claim-marks.ts",
+        "mcp-server/src/tools/carried.ts",
+        "mcp-server/src/tools/chorusmith-adapter.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/test-scope-attach-guard.mjs",
+        ".claude/skills/amanuensis/references/records.md",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-scope-attach-guard.mjs",
+        "command": "cd mcp-server && npm run build && node test-scope-attach-guard.mjs",
+        "marker": "GATE SC12",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-scope-write-guard.mjs",
+        "cd mcp-server && node test-evidence-anchors.mjs",
+        "cd mcp-server && node test-carried-findings.mjs",
+        "cd mcp-server && node test-explanations.mjs"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC12, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 150,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC5",
+      "slice": "S3",
+      "title": "Completion checker over the survey set",
+      "model": null,
+      "claims": [
+        "\u00a73 SC5",
+        "\u00a72.10",
+        "\u00a72.6a"
+      ],
+      "depends_on": [
+        "SC12"
+      ],
+      "deliverables": [
+        "dev/check-store-fully-surveyed.mjs",
+        "dev/test-store-fully-surveyed-scope.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-store-fully-surveyed-scope.mjs",
+        "command": "cd mcp-server && npm run build && cd .. && node dev/test-store-fully-surveyed-scope.mjs",
+        "marker": "GATE SC5",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node test-carried-findings.mjs"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC5, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 120,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC6",
+      "slice": "S4",
+      "title": "Readers: describe_locus, dashboard, code index, records search",
+      "model": null,
+      "claims": [
+        "\u00a73 SC6",
+        "\u00a72.7",
+        "\u00a72.6a"
+      ],
+      "depends_on": [
+        "SC5"
+      ],
+      "deliverables": [
+        "mcp-server/src/standing.ts",
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/src/vocabulary.ts",
+        "mcp-server/contracts/locus-account.schema.json",
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/src/tools/dashboard.ts",
+        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/src/tools/code-index.ts",
+        "mcp-server/src/code-index/records.ts",
+        "mcp-server/src/cli.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/test-scope-standing.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-scope-standing.mjs",
+        "command": "cd mcp-server && npm run build && node test-scope-standing.mjs",
+        "marker": "GATE SC6",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-locus-standing.mjs",
+        "cd mcp-server && node test-code-index-read.mjs",
+        "cd mcp-server && node test-code-index-search.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check && node scripts/gen-vocabulary.mjs --check-sql"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC6, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 180,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC7",
+      "slice": "S4",
+      "title": "Pages and read-back over the survey set",
+      "model": "opus",
+      "claims": [
+        "\u00a73 SC7",
+        "\u00a72.8",
+        "\u00a72.6a"
+      ],
+      "depends_on": [
+        "SC6"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/amanuensis_materializer/db.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/test-scope-pages.py",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "materializer/test-scope-pages.py",
+        "command": "cd mcp-server && npm run build && cd ../materializer && python3 test-scope-pages.py",
+        "marker": "GATE SC7",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-store-only-coverage-badges.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-store-only-convert-unresolved.py",
+        "node dev/test-store-only-test-views.mjs"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC7, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 180,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC8",
+      "slice": "S5",
+      "title": "Skill: Phase 0b and the routing rows",
+      "model": null,
+      "claims": [
+        "\u00a73 SC8",
+        "\u00a72.11"
+      ],
+      "depends_on": [
+        "SC7"
+      ],
+      "deliverables": [
+        ".claude/skills/amanuensis/SKILL.md",
+        ".claude/skills/amanuensis/references/onboarding.md",
+        ".claude/skills/amanuensis/references/phase-1-scope.md",
+        ".claude/skills/amanuensis/references/notes.md",
+        ".claude/skills/amanuensis/references/refresh.md",
+        "dev/test-skill-scope.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-skill-scope.mjs",
+        "command": "cd mcp-server && npm run build && cd .. && node dev/test-skill-scope.mjs",
+        "marker": "GATE SC8",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "node dev/test-skill-code-index.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC8, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 120,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "SC9",
+      "slice": "S5",
+      "title": "Docs and release notes",
+      "model": null,
+      "claims": [
+        "\u00a73 SC9"
+      ],
+      "depends_on": [
+        "SC8"
+      ],
+      "deliverables": [
+        "README.md",
+        "HISTORY.md",
+        "mcp-server/DEVELOPMENT.md",
+        "dev/test-scope-docs.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-scope-docs.mjs",
+        "command": "node dev/test-scope-docs.mjs",
+        "marker": "GATE SC9",
+        "red_rejects": [
+          "Traceback (most recent call last)",
+          "Cannot find module",
+          "ERR_MODULE_NOT_FOUND"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check"
+      ],
+      "acceptance": [
+        "Every item of PLAN \u00a73 SC9, its deliverables and its gate list, holds, with the design sections its claims name (\u00a70\u2013\u00a72, as revised in \u00a76)."
+      ],
+      "budget_minutes": 60,
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    }
+  ],
+  "slices": [
+    {
+      "id": "S1",
+      "title": "Records and resolution",
+      "packets": [
+        "SC0",
+        "SC1",
+        "SC2"
+      ],
+      "review": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "S2",
+      "title": "Tools and reconciliation",
+      "packets": [
+        "SC3",
+        "SC4",
+        "SC11"
+      ],
+      "review": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "S3",
+      "title": "Write guard and checker",
+      "packets": [
+        "SC10",
+        "SC12",
+        "SC5"
+      ],
+      "review": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "S4",
+      "title": "Readers and pages",
+      "packets": [
+        "SC6",
+        "SC7"
+      ],
+      "review": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "S5",
+      "title": "Skill and docs",
+      "packets": [
+        "SC8",
+        "SC9"
+      ],
+      "review": {
+        "status": "pending"
+      }
+    }
+  ],
+  "completion": {
+    "commands": [
+      "node dev/test-scope-backlog.mjs",
+      "cd mcp-server && npm run build && node test-scope-schema.mjs",
+      "cd mcp-server && npm run build && node test-scope-resolve.mjs",
+      "cd mcp-server && npm run build && node test-scope-tools.mjs",
+      "cd mcp-server && npm run build && node test-scope-reconcile.mjs",
+      "cd mcp-server && npm run build && node test-scope-consumers.mjs",
+      "cd mcp-server && npm run build && node test-scope-write-guard.mjs",
+      "cd mcp-server && npm run build && node test-scope-attach-guard.mjs",
+      "cd mcp-server && npm run build && cd .. && node dev/test-store-fully-surveyed-scope.mjs",
+      "cd mcp-server && npm run build && node test-scope-standing.mjs",
+      "cd mcp-server && npm run build && cd ../materializer && python3 test-scope-pages.py",
+      "cd mcp-server && npm run build && cd .. && node dev/test-skill-scope.mjs",
+      "node dev/test-scope-docs.mjs",
+      "cd mcp-server && npm run build && npx biome check src/",
+      "cd mcp-server && node test-smoke.mjs",
+      "cd mcp-server && node test-refusal-parity.mjs",
+      "cd mcp-server && node test-package-artifact.mjs",
+      "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+      "cd mcp-server && node scripts/gen-tool-inventory.mjs --check"
+    ]
+  },
+  "final_review": {
+    "status": "pending"
+  }
+}
