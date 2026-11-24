@@ -1,5 +1,4 @@
 import {
-  citedSourcePath,
   ok,
   optInt,
   optString,
@@ -7,8 +6,8 @@ import {
   requireInt,
   requireRepairCommit,
   requireString,
+  requireSurveyScopeForCitation,
   requireSurveyScopeForEvidence,
-  requireSurveyScopeForWrite,
   resolveWorkspaceCommit,
   type ServerContext,
   type ToolDefinition,
@@ -357,10 +356,7 @@ export const carriedTools: ToolDefinition[] = [
       // primary files are new citations here: one on an excluded path is refused (§2.6).
       if (Array.isArray(args.primary_files)) {
         args.primary_files.forEach((citation, index) => {
-          const path = citedSourcePath(citation);
-          if (path !== null) {
-            requireSurveyScopeForWrite(ctx, "carry_finding", `primary_files[${index}]`, path);
-          }
+          requireSurveyScopeForCitation(ctx, "carry_finding", `primary_files[${index}]`, citation);
         });
       }
       const archivedStoreId = run.archived_store_id;

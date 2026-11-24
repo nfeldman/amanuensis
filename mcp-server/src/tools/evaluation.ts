@@ -5,6 +5,7 @@ import {
   requireEnum,
   requireInt,
   requireString,
+  requireSurveyScopeForMention,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -655,6 +656,15 @@ function reviewAlternatives(
     rationale: requireString(row, "rationale"),
   }));
   const evidence = strings(args.evidence, "evidence");
+  // Each entry is free text stored with the review; a file it names is guarded (§2.6).
+  evidence.forEach((entry, index) => {
+    requireSurveyScopeForMention(
+      ctx,
+      "review_evaluation_alternatives",
+      `evidence[${index}]`,
+      entry,
+    );
+  });
   const outcome = requireEnum(args, "outcome", [
     "survived",
     "explained-away",

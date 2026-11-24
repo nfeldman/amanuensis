@@ -6,6 +6,7 @@ import {
   requireInt,
   requireString,
   requireSurveyScopeForEvidence,
+  requireSurveyScopeForMention,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
@@ -37,6 +38,8 @@ export const contradictionTools: ToolDefinition[] = [
       // these anyway; surfacing the clearer error here also lets the
       // agent see both missing IDs at once when both are wrong.
       requireExistingIds(ctx.db, "findings", "finding_id", [findingA, findingB], "finding(s)");
+      // A shared location is free text printed on pages; a file it names is guarded (§2.6).
+      requireSurveyScopeForMention(ctx, "add_contradiction", "shared_location", sharedLocation);
       const info = ctx.db
         .prepare(
           `INSERT INTO contradictions (finding_a, finding_b, shared_location, conflict_type, resolution)

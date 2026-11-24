@@ -1,11 +1,10 @@
 import { createHash } from "node:crypto";
 import {
-  citedSourcePath,
   requireEnum,
   requireInt,
   requireString,
+  requireSurveyScopeForCitation,
   requireSurveyScopeForEvidence,
-  requireSurveyScopeForWrite,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -586,15 +585,12 @@ function planRun(args: Record<string, unknown>, ctx: ServerContext): Record<stri
   const snapshotEvidence = (expectedSnapshot.evidence as { records?: unknown } | undefined)
     ?.records;
   for (const record of Array.isArray(snapshotEvidence) ? snapshotEvidence : []) {
-    const path = citedSourcePath((record as { file_path?: unknown } | null)?.file_path);
-    if (path !== null) {
-      requireSurveyScopeForWrite(
-        ctx,
-        "plan_chorusmith_adapter_run",
-        "expected_direct.snapshot.evidence",
-        path,
-      );
-    }
+    requireSurveyScopeForCitation(
+      ctx,
+      "plan_chorusmith_adapter_run",
+      "expected_direct.snapshot.evidence",
+      (record as { file_path?: unknown } | null)?.file_path,
+    );
   }
   const parityPolicy = object(args.parity_policy, "parity_policy");
   const recoveryProbeRequired = parityPolicy.recovery_probe_required === true;

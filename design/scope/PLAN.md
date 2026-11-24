@@ -269,6 +269,13 @@ names a path or carries evidence, and for every `INSERT INTO evidence`.
 | `carried.ts` | `primary_files` on a carried finding's successor |
 | `dispatch.ts` | `file_path` |
 | `decisions.ts` | `draft_decision_revision` `code_changes[].path` and `code` premises |
+| `claims.ts` | a `symbol` claim's `subject_id`, in `add_claim` and `supersede_claim` (final review) |
+| `contradictions.ts`, `diagnosticity.ts` | `shared_location`, free text printed on pages (final review) |
+| `evaluation.ts` | `review_evaluation_alternatives` `evidence[]`, free text stored with the review (final review) |
+
+A path is decided in one spelling (`.` segments, repeated slashes and `..` resolved), and a
+location is read as `fileStanding` reads it, comma-separated, so neither a respelling nor a
+second token passes an exact rule (final review).
 
 **Routes that attach an existing evidence row (SC12).** Each refuses an evidence row whose
 `file_path` is excluded, whether it arrives as `evidence_id` or `evidence_ids`:
@@ -292,6 +299,7 @@ names a path or carries evidence, and for every `INSERT INTO evidence`.
 | `carried.ts` | `evidence_id` (`attach_carried_evidence`) |
 | `chorusmith-adapter.ts` | `evidence_ids`, `evidence` |
 | `crosswalk.ts` | `provenance[].ref` and `resolve_crosswalk_identity` `evidence[].ref` of kind `repository-evidence` |
+| `revalidation.ts` | `score_revalidation_result` `resolution_evidence_id`, also reached through `score_refresh_result` (final review) |
 
 **Exempt, with reasons the SC12 census table carries:**
 - `artifacts.ts` `path` names a store artifact, not a source path.

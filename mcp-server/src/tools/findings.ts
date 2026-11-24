@@ -1,6 +1,5 @@
 import { SqliteError } from "better-sqlite3";
 import {
-  citedSourcePath,
   ok,
   optString,
   optStringArray,
@@ -8,8 +7,8 @@ import {
   requireInt,
   requireRepairCommit,
   requireString,
+  requireSurveyScopeForCitation,
   requireSurveyScopeForEvidence,
-  requireSurveyScopeForWrite,
   requireWorkspaceCitation,
   requireWorkspaceSourcePath,
   resolveWorkspaceCommit,
@@ -174,20 +173,15 @@ export const findingTools: ToolDefinition[] = [
       // write should not spawn a git subprocess first.
       const refSha = resolveWorkspaceCommit(ctx, requestedRefSha);
       (primaryFiles ?? []).forEach((citation, index) => {
-        const path = citedSourcePath(citation);
-        if (path !== null) {
-          requireSurveyScopeForWrite(ctx, "add_finding", `primary_files[${index}]`, path, refSha);
-        }
-      });
-      if (fixLocation !== null) {
-        requireSurveyScopeForWrite(
+        requireSurveyScopeForCitation(
           ctx,
           "add_finding",
-          "fix_location",
-          fixLocationPath(fixLocation),
+          `primary_files[${index}]`,
+          citation,
           refSha,
         );
-      }
+      });
+      requireSurveyScopeForCitation(ctx, "add_finding", "fix_location", fixLocation, refSha);
 
       try {
         ctx.db.transaction(() => {
@@ -285,14 +279,7 @@ export const findingTools: ToolDefinition[] = [
       // concerns-pass depth or deeper. An earlier phase lacks the
       // evidentiary base to re-classify a finding.
       requireSubsystemStatus(ctx.db, row.subsystem_id, "concerns", "update_finding_status");
-      if (fixLocation !== null) {
-        requireSurveyScopeForWrite(
-          ctx,
-          "update_finding_status",
-          "fix_location",
-          fixLocationPath(fixLocation),
-        );
-      }
+      requireSurveyScopeForCitation(ctx, "update_finding_status", "fix_location", fixLocation);
       // Evidence-required-to-overturn: a flip to 'ruled-out' must be backed
       // by new evidence gathered in this session, not a bare reclassification.
       requireOverturnEvidence(ctx.db, findingId, sessionId, row.status, status);

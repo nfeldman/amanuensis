@@ -6,6 +6,7 @@ import {
   requireEnum,
   requireExistingIds,
   requireString,
+  requireSurveyScopeForCitation,
   requireSurveyScopeForEvidence,
   type ServerContext,
   type ToolDefinition,
@@ -241,6 +242,21 @@ function requireEvidence(
   return rows;
 }
 
+/**
+ * A symbol subject names its file, so a claim, or a successor in its key, is a new record
+ * on that path and is refused when the survey set excludes it (§2.6), as its evidence is.
+ */
+function requireSubjectInSurvey(
+  ctx: ServerContext,
+  tool: string,
+  subjectType: string,
+  subjectId: string,
+  revision: string,
+): void {
+  if (subjectType !== "symbol") return;
+  requireSurveyScopeForCitation(ctx, tool, "subject_id", subjectId, revision);
+}
+
 function currentClaim(ctx: ServerContext, claimId: string): ClaimRow {
   const row = ctx.db.prepare("SELECT * FROM claims WHERE claim_id = ?").get(claimId) as
     | ClaimRow
@@ -402,6 +418,7 @@ export const claimTools: ToolDefinition[] = [
       }
       const evidenceIds = requireEvidenceIds(args);
       const evidenceRows = requireEvidence(ctx, "add_claim", evidenceIds, assertedAtSha);
+      requireSubjectInSurvey(ctx, "add_claim", subjectType, subjectId, assertedAtSha);
 
       try {
         ctx.db.transaction(() => {
@@ -675,6 +692,13 @@ export const claimTools: ToolDefinition[] = [
       requireClosingBoundary(ctx, atSha, predecessor.valid_from_sha, "supersession");
       const evidenceIds = requireEvidenceIds(args);
       const evidenceRows = requireEvidence(ctx, "supersede_claim", evidenceIds, atSha);
+      requireSubjectInSurvey(
+        ctx,
+        "supersede_claim",
+        predecessor.subject_type,
+        predecessor.subject_id,
+        atSha,
+      );
       const predecessorEvidence = new Set(
         (
           ctx.db

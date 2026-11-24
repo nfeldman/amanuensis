@@ -7,6 +7,7 @@ import {
   requireInt,
   requireString,
   requireStringArray,
+  requireSurveyScopeForEvidence,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -844,6 +845,10 @@ export const revalidationTools: ToolDefinition[] = [
         }
         const evidence = ctx.db.prepare("SELECT 1 FROM evidence WHERE id = ?").get(evidenceId);
         if (!evidence) throw new ToolError(`unknown resolution evidence: ${evidenceId}`);
+        // Closing an obligation rests on this row, so one on an excluded path cannot (§2.6).
+        requireSurveyScopeForEvidence(ctx, "score_revalidation_result", "resolution_evidence_id", [
+          evidenceId,
+        ]);
         const obligation = ctx.db
           .prepare("SELECT destination_id FROM revalidation_obligations WHERE obligation_id=?")
           .get(attempt.obligation_id) as { destination_id: string };

@@ -1,3 +1,4 @@
+import { posix } from "node:path";
 import { type DB, readScopeMode } from "./db.js";
 import type { ProjectContext } from "./project.js";
 import {
@@ -332,9 +333,12 @@ export type SurveyScopeDecision = PathDecision & {
  */
 export function surveyScopeDecision(
   ctx: ServerContext,
-  path: string,
+  requested: string,
   revision: string | null = null,
 ): SurveyScopeDecision {
+  // One spelling per file: `docs/./guide.md` and `src/../docs/guide.md` are decided as
+  // `docs/guide.md`, so an exact rule is not passed by respelling the path.
+  const path = canonicalScopePath(requested) ?? requested;
   const rules = ctx.db
     .prepare("SELECT id, pattern, action, supersedes, reason FROM scope_rules ORDER BY id")
     .all() as Array<ScopeRuleRow & { reason: string }>;
@@ -474,11 +478,14 @@ export function requireSurveyScopeForEvidence(
 
 /**
  * The guard for an argument that may name a workspace file and need not: a field note's
- * free-text location, or a dispatch record's path, which usually lies in the store. It
- * refuses only when the value names a file in the tree at `revision` (default: the last
- * reconciled revision, else HEAD) that the survey set excludes, so a store path the
- * repository's ignore files happen to match is not mistaken for an excluded source file.
- * Whether it is excluded is decided as every write is, at the last reconciled revision.
+ * free-text location, or a dispatch record's path, which usually lies in the store. Every
+ * path the value names is decided (a location may list several, comma-separated, as
+ * `fileStanding` reads it). An owner rule or a sorting row excludes the path whether or not
+ * the tree holds it, since neither depends on the tree. A gitignore match refuses only a
+ * path in the tree at the last reconciled revision (else `revision`, else HEAD), so a store
+ * path the repository's ignore files happen to match is not mistaken for an excluded source
+ * file. As every write is, it is decided at the last reconciled revision, not at the one the
+ * record cites.
  */
 export function requireSurveyScopeForMention(
   ctx: ServerContext,
@@ -487,32 +494,86 @@ export function requireSurveyScopeForMention(
   value: unknown,
   revision: string | null = null,
 ): void {
-  const path = citedSourcePath(value);
-  const workspace = ctx.project.workspacePath;
-  if (path === null || !workspace) return;
-  const at = revision ?? defaultScopeRevision(ctx);
-  if (at === null) return;
-  if (readSurveyTree(workspace, at, path, (tree) => tree.paths.has(path))) {
-    requireSurveyScopeForWrite(ctx, tool, label, path, at);
+  for (const path of citedSourcePaths(value)) {
+    const decision = surveyScopeDecision(ctx, path, revision);
+    if (decision.in_survey) continue;
+    if (decision.decided_by?.kind !== "rule" && decision.decided_by?.kind !== "sorting") {
+      const workspace = ctx.project.workspacePath;
+      const at = defaultScopeRevision(ctx, revision);
+      if (!workspace || at === null) continue;
+      if (!readSurveyTree(workspace, at, path, (tree) => tree.paths.has(path))) continue;
+    }
+    requireSurveyScopeForWrite(ctx, tool, label, path, revision);
+  }
+}
+
+/**
+ * §2.6's guard for a citation-shaped argument: every workspace path `value` names is
+ * refused when the survey set excludes it (see `citedSourcePaths`).
+ */
+export function requireSurveyScopeForCitation(
+  ctx: ServerContext,
+  tool: string,
+  label: string,
+  value: unknown,
+  revision: string | null = null,
+): void {
+  for (const path of citedSourcePaths(value)) {
+    requireSurveyScopeForWrite(ctx, tool, label, path, revision);
+  }
+}
+
+/**
+ * A workspace path in one spelling: backslashes as slashes, `.` segments and repeated
+ * slashes dropped, `..` resolved lexically. Null when the result leaves the workspace or
+ * names no source path.
+ */
+function canonicalScopePath(value: string): string | null {
+  const slashPath = value.replace(/\\/g, "/").trim();
+  if (slashPath.length === 0 || slashPath.startsWith("/")) return null;
+  const normalized = posix.normalize(slashPath).replace(/\/$/, "");
+  if (normalized === "." || normalized.length === 0) return null;
+  try {
+    return requireWorkspaceSourcePath(normalized);
+  } catch {
+    return null;
   }
 }
 
 /**
  * The path a citation or location names: everything before its first colon, when that is
- * a workspace source path. Null for anything else, which names no path to guard. A space
- * inside the path is kept, since a file name may carry one and the citation grammars that
- * accept it would otherwise let the path past the guard.
+ * a workspace source path, in its canonical spelling. Null for anything else, which names
+ * no path to guard. A space inside the path is kept, since a file name may carry one and the
+ * citation grammars that accept it would otherwise let the path past the guard.
  */
 export function citedSourcePath(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const separator = value.indexOf(":");
   const candidate = (separator === -1 ? value : value.slice(0, separator)).trim();
   if (candidate.length === 0) return null;
-  try {
-    return requireWorkspaceSourcePath(candidate);
-  } catch {
-    return null;
+  return canonicalScopePath(candidate);
+}
+
+/**
+ * Every workspace path a citation or free-text location may name, for the write guard.
+ * The value is read as `fileStanding` reads a location, as comma-separated tokens, and each
+ * token as `citedSourcePath` reads a citation. A token carrying a `#` fragment (`a.md#L3`)
+ * also names the file before it. A guard over these refuses when any one is excluded.
+ */
+export function citedSourcePaths(value: unknown): string[] {
+  if (typeof value !== "string") return [];
+  const paths = new Set<string>();
+  for (const token of value.split(",")) {
+    const path = citedSourcePath(token);
+    if (path === null) continue;
+    paths.add(path);
+    const hash = path.indexOf("#");
+    if (hash > 0) {
+      const base = canonicalScopePath(path.slice(0, hash));
+      if (base !== null) paths.add(base);
+    }
   }
+  return [...paths];
 }
 
 export function requireWorkspaceCitation(

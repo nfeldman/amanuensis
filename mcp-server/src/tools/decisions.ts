@@ -1,11 +1,10 @@
 import { createHash } from "node:crypto";
 import {
-  citedSourcePath,
   optString,
   requireEnum,
   requireString,
+  requireSurveyScopeForCitation,
   requireSurveyScopeForEvidence,
-  requireSurveyScopeForWrite,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -209,22 +208,21 @@ function draft(args: Record<string, unknown>, ctx: ServerContext): Record<string
   // reaches it neither as a code premise, nor a changed path, nor an evidence premise (§2.6).
   premises.forEach((premise, index) => {
     if (premise.kind === "code") {
-      const path = citedSourcePath(premise.ref);
-      if (path !== null) {
-        requireSurveyScopeForWrite(ctx, "draft_decision_revision", `premises[${index}].ref`, path);
-      }
+      requireSurveyScopeForCitation(
+        ctx,
+        "draft_decision_revision",
+        `premises[${index}].ref`,
+        premise.ref,
+      );
     }
   });
   codeChanges.forEach((change, index) => {
-    const path = citedSourcePath(change.path);
-    if (path !== null) {
-      requireSurveyScopeForWrite(
-        ctx,
-        "draft_decision_revision",
-        `code_changes[${index}].path`,
-        path,
-      );
-    }
+    requireSurveyScopeForCitation(
+      ctx,
+      "draft_decision_revision",
+      `code_changes[${index}].path`,
+      change.path,
+    );
   });
   requireSurveyScopeForEvidence(
     ctx,

@@ -8,6 +8,7 @@ import {
   requireString,
   requireStringArray,
   requireSurveyScopeForEvidence,
+  requireSurveyScopeForMention,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
@@ -49,6 +50,12 @@ export const diagnosticityTools: ToolDefinition[] = [
       requireExistingIds(ctx.db, "concerns", "code", concernCodes, "concern(s)");
       requireExistingIds(ctx.db, "evidence", "id", evidenceIds, "evidence");
       requireSurveyScopeForEvidence(ctx, "open_diagnosticity_matrix", "evidence_ids", evidenceIds);
+      requireSurveyScopeForMention(
+        ctx,
+        "open_diagnosticity_matrix",
+        "shared_location",
+        sharedLocation,
+      );
       // better-sqlite3 transactions are synchronous; the closure runs to
       // completion before txn() returns, so its return value is safe.
       const matrixId = ctx.db.transaction((): number => {

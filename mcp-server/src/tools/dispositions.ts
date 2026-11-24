@@ -1,13 +1,12 @@
 import {
-  citedSourcePath,
   ok,
   optBool,
   optIntArray,
   optString,
   requireEnum,
   requireString,
+  requireSurveyScopeForCitation,
   requireSurveyScopeForEvidence,
-  requireSurveyScopeForWrite,
   requireWorkspaceCitation,
   resolveWorkspaceCommit,
   resolveWorkspaceCommits,
@@ -122,10 +121,7 @@ export const dispositionTools: ToolDefinition[] = [
       //
       // Ordered after the session, depth, concern and revision checks above so a
       // caller who got one of those wrong is told that, not told about evidence.
-      const citedPath = citedSourcePath(evidence);
-      if (citedPath !== null) {
-        requireSurveyScopeForWrite(ctx, "set_disposition", "evidence", citedPath, refSha);
-      }
+      requireSurveyScopeForCitation(ctx, "set_disposition", "evidence", evidence, refSha);
       const evidenceIds = optIntArray(args, "evidence_ids");
       if (evidenceIds === null || evidenceIds.length === 0) {
         throw new ToolError(EVIDENCE_IDS_REQUIRED);
