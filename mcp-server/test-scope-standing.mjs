@@ -36,7 +36,8 @@
 //      outside the survey, drops a record that cites both included and excluded evidence,
 //      ignores include_excluded or include_history for the same rule, or filters after the
 //      page is cut so page 1 is short while more hits exist, or history search serves a closed
-//      record on an excluded locus, or a record located at a bare excluded file name (R1-R7);
+//      record on an excluded locus, or a record located at a bare excluded file name, or a
+//      term of a subsystem outside the survey, by default, in history or on a page (R1-R8);
 //   7. outline_file or read_symbol on an excluded path does not answer, or does not carry
 //      `excluded` with its source, or carries it on an included path (O1-O3);
 //   8. a recorded exclusion stops answering `excluded` when git cannot read the workspace, or
@@ -298,6 +299,15 @@ async function main(mods) {
   finding("S01-2", S1, "zebra finding two");
   finding("S01-3", S1, "zebra finding three");
   finding("S02-1", S2, "zebra zebra finding in the outside subsystem");
+  // Terms: two belong to the outside subsystem and rank first, two to S-01 (R8).
+  const term = (name, subsystem, gloss) =>
+    ctx.db
+      .prepare("INSERT INTO vocabulary (term, gloss, subsystem_id, ref_sha) VALUES (?, ?, ?, ?)")
+      .run(name, gloss, subsystem, c0);
+  term("quagga-out-1", S2, "quagga quagga quagga a term of the outside subsystem");
+  term("quagga-out-2", S2, "quagga quagga quagga another term of the outside subsystem");
+  term("quagga-in-1", S1, "quagga a term of the surveyed subsystem");
+  term("quagga-in-2", S1, "quagga another term of the surveyed subsystem");
   for (let n = 1; n <= 5; n++) {
     await call(
       "add_field_note",
@@ -568,6 +578,25 @@ async function main(mods) {
     if (idsOf(plain).length) return `search serves ${show(idsOf(plain))}`;
     const all = await call("search_records", { query: "Makefile", include_excluded: true }, ctx);
     return same(idsOf(all), ["field-note:6"]) ? null : `with include_excluded the hits are ${show(idsOf(all))}`;
+  });
+  await check("R8 a term of a subsystem outside the survey is left out, in history search and before the page is cut", async () => {
+    const inside = ["vocabulary:quagga-in-1", "vocabulary:quagga-in-2"];
+    const outside = ["vocabulary:quagga-out-1", "vocabulary:quagga-out-2"];
+    const wrong = [];
+    const plain = await call("search_records", { query: "quagga" }, ctx);
+    if (!same([...idsOf(plain)].sort(), inside)) wrong.push(`hits are ${show(idsOf(plain))}, want ${show(inside)}`);
+    const history = await call("search_records", { query: "quagga", include_history: true }, ctx);
+    if (!same([...idsOf(history)].sort(), inside)) wrong.push(`history hits are ${show(idsOf(history))}`);
+    const all = await call("search_records", { query: "quagga", include_excluded: true, include_history: true }, ctx);
+    if (!same([...idsOf(all)].sort(), [...inside, ...outside])) wrong.push(`with include_excluded the hits are ${show(idsOf(all))}`);
+    const page = await call("search_records", { query: "quagga", limit: 1 }, ctx);
+    if (idsOf(page).length !== 1 || !inside.includes(idsOf(page)[0]) || page.more !== true) {
+      wrong.push(`page 1 of 1 is ${show(idsOf(page))} with more ${show(page.more)}`);
+    }
+    // The control: with the rule off the outside terms rank first.
+    const control = await call("search_records", { query: "quagga", limit: 2, include_excluded: true }, ctx);
+    if (!same([...idsOf(control)].sort(), outside)) wrong.push(`the control page is ${show(idsOf(control))}, want the outside terms`);
+    return wrong.length ? wrong.join("; ") : null;
   });
   await check("R5 the filter runs before the page is cut: page 1 is full while more hits exist", async () => {
     const r = await call("search_records", { query: "zebra", limit: 2 }, ctx);
