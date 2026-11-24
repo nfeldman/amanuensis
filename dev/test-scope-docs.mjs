@@ -23,6 +23,11 @@
 //     the unsorted-path refusal that names up to 20 paths (the constant in invariants.ts), the
 //     legacy store changing only by gitignore matches leaving the set, and onboarding's
 //     Phase 0b; or an older release entry is changed;
+//   - the README sentence gives excluded paths a label or a place on the pages, or negates the
+//     include; DEVELOPMENT.md has the ignore files read from the working tree, a less specific
+//     owner rule deciding, no later rule winning a tie, or `product` excluding and `meta` keeping;
+//     HISTORY.md's entry has the less specific owner rule deciding; or one of these checks accepts
+//     a sabotage the slice-S5 reviewers wrote;
 //   - a start-commit copy in dev/fixtures/scope-docs/start/ is missing or is not the start
 //     commit's bytes (its sha256 is pinned), so the gate needs no Git history;
 //   - mcp-server/DEVELOPMENT.md has no `## The survey set` section before the generated tool
@@ -158,6 +163,42 @@ const needAll = (haystack, patterns) => {
   return null;
 };
 
+// ---- what a sentence says, not only the words it holds ---------------------------------------
+// Each returns a problem or null. The last check runs each on the sabotages the slice-S5 reviewers
+// wrote, so a predicate that misses one turns the gate red.
+
+/** README's sentence: no label, no page listing, and the include clause is not negated. */
+function readmeClaims(said) {
+  if (/\blabel/.test(said)) return "says excluded paths carry a label, which the owner ruled out";
+  if (/\bevery page\b|\bon (?:the |each |all |every )?pages?\b/.test(said)) return "puts excluded paths on the pages";
+  const include = said.split(/[,;:]/).find((clause) => /\binclude\b/.test(clause)) ?? "";
+  if (/\b(?:not|never|cannot|can't|no)\b/.test(include)) return `negates the owner's include: "${include.trim()}"`;
+  return null;
+}
+
+/** DEVELOPMENT's gitignore paragraph: the ignore files are read from the commit, not the working tree. */
+function ignoreRead(text) {
+  const about = sentences(text).map(plain).filter((s) => /\bignore files\b/.test(s) && /\bread\b/.test(s));
+  if (about.length === 0) return "does not say where the ignore files are read from";
+  if (about.some((s) => /\bread (?:from|in) the working tree\b/.test(s))) return "says the ignore files are read from the working tree";
+  if (!about.some((s) => /\bnot (?:from |in )?the working tree\b/.test(s) && /\b(?:from the commit|at (?:the|a|that) revision)\b/.test(s)))
+    return "does not say the ignore files are read from the commit, not the working tree";
+  return null;
+}
+
+/** DEVELOPMENT's precedence steps: the more specific owner rule decides, the later one a tie; meta excludes, product keeps. */
+function precedenceSays(ownerStep, sortingStep) {
+  if (!/\bmore specific\b/.test(ownerStep) || /\bless specific\b/.test(ownerStep)) return "the owner's step does not say the more specific rule decides";
+  if (!/\blater rule\b/.test(ownerStep)) return "the owner's step does not say the later rule wins a tie";
+  if (!/\bmeta`? excludes\b/.test(sortingStep) || !/\bproduct`? keeps\b/.test(sortingStep)) return "the sorting step does not say `meta` excludes and `product` keeps";
+  if (/\bproduct`? excludes\b|\bmeta`? keeps\b/.test(sortingStep)) return "the sorting step has `product` exclude or `meta` keep";
+  return null;
+}
+
+/** HISTORY's entry: between two owner rules the more specific decides. */
+const historySpecific = (said) =>
+  /\bmore specific\b/.test(said) && !/\bless specific\b/.test(said) ? null : "does not say the more specific owner rule decides";
+
 // ---- the code the docs describe -------------------------------------------------------------
 
 const scopeTools = readText("mcp-server/src/tools/scope.ts");
@@ -223,7 +264,8 @@ check("README.md", () => {
   // Its claims are the plan's: nothing may say excluded paths are listed or labelled.
   if (/\b(?:lists?|labels?|prints?|shows?) (?:each |every )?excluded paths?\b/.test(said))
     return "the sentence says excluded paths are listed, which the owner ruled out";
-  return null;
+  const claims = readmeClaims(said);
+  return claims ? `the added sentence ${claims}` : null;
 });
 
 check("INSTALLATION.md", () => {
@@ -271,6 +313,8 @@ check("HISTORY.md", () => {
     ["that an existing store keeps working", /\bexisting (?:store|stores)\b|\blegacy\b|\bolder stores?\b/],
   ]);
   if (missing) return `the Unreleased entry ${missing}`;
+  const specific = historySpecific(said);
+  if (specific) return `the Unreleased entry ${specific}`;
   for (const tool of TOOLS) {
     if (!entry.includes(`\`${tool}\``)) return `the Unreleased entry does not name \`${tool}\``;
   }
@@ -380,6 +424,8 @@ check("mcp-server/DEVELOPMENT.md", () => {
     ["the pages' omission of excluded paths", /\bpages?\b[^.]*\b(?:omit|absent|leave out|never print)\w*\b|\b(?:omit|absent)\w*\b[^.]*\bpages?\b/],
   ]);
   if (missing) return `the section ${missing}`;
+  const read = ignoreRead(prose);
+  if (read) return `the section ${read}`;
   if (!/`scope_digest`/.test(body) || !/`exclusion_digest`/.test(body))
     return "does not name both witness digests, `scope_digest` and `exclusion_digest`";
   if (!/`sorted`/.test(body) || !/`legacy`/.test(body)) return "does not give the modes `sorted` and `legacy` as code";
@@ -400,6 +446,8 @@ check("mcp-server/DEVELOPMENT.md", () => {
     return "lists the precedence out of order: owner's rules, then gitignore, then sorting";
   if (!/\binclude\b/.test(steps[owner]) || !/\bspecific/.test(steps[owner]))
     return "the owner's step does not say an include returns a path and that the more specific rule decides";
+  const precedence = precedenceSays(steps[owner], steps[sorting]);
+  if (precedence) return precedence;
 
   // Numbers: the cap on named unsorted paths is the code's.
   const named20 = prose.match(/\bup to (\d+)\b[^.]*\bunsorted\b|\bunsorted\b[^.]*\bup to (\d+)\b/);
@@ -440,6 +488,18 @@ check(".github/workflows/test.yml", () => {
   if (!/GATE SC9\b/.test(above)) return "the step has no comment naming GATE SC9 above it";
   if (!/^\s*- name: .+$/.test(lines[sc9 - 1])) return "the run line does not belong to a named step";
   return null;
+});
+
+check("the predicates refuse the sabotages the slice-S5 reviewers wrote", () => {
+  const cases = [
+    ["readmeClaims", readmeClaims, plain("A survey leaves out paths; an excluded path gets no ledger row and no evidence and appears on every page with a label beside a count on the overview, and not even an owner include rule brings any of them back.")],
+    ["ignoreRead", ignoreRead, "The ignore files are read from the working tree, not from the commit. `resolveScopeAtRevision` writes them into a scratch repository."],
+    ["precedenceSays", (t) => precedenceSays("1. the owner's rules win. an include returns the path, and between two owner rules the more specific pattern decides, the later rule winning a tie.", t), "3. then sorting: the most specific sorting row decides, `product` excludes and `meta` keeps the path in."],
+    ["precedenceSays", (t) => precedenceSays(t, "3. then sorting: `meta` excludes and `product` keeps the path in."), "1. the owner's rules win. an include returns the path, and between two owner rules the less specific pattern decides, the later rule winning a tie."],
+    ["historySpecific", historySpecific, plain("An owner include rule brings a path back, and between two owner rules the less specific pattern decides.")],
+  ];
+  const accepted = cases.filter(([, predicate, bad]) => !predicate(bad)).map(([name, , bad]) => `${name} accepts "${bad.slice(0, 80)}"`);
+  return accepted.length ? accepted.join("; ") : null;
 });
 
 if (failures.length > 0) {
