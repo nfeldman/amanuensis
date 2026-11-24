@@ -1636,6 +1636,11 @@ async function main(mods) {
         )
         .run();
       call("set_git_state", { canonical_branch: "main", onboarding_sha: headSha(good) }, good);
+      // A fresh store is in sorted mode, and clause 1 is taken over the survey
+      // set (design/scope/PLAN.md §2.10): a path no sorting row covers is owed.
+      good.db
+        .prepare("INSERT INTO scope_sorting (pattern, category, description) VALUES ('src/', 'product', 'the code')")
+        .run();
       call("detect_changes", { current_sha: headSha(good) }, good);
       const control = clauseOne(good);
       if (control.error) return control.error;

@@ -29,6 +29,14 @@
 // "yes" because it found nothing to check is the zero-denominator green this
 // whole lane exists to remove (VP4).
 //
+// **The denominator is the survey set** (design/scope/PLAN.md §2.10). Clause 1
+// is taken over the tree at R minus the standing reconciliation's
+// `scope_exclusions` rows, and a reconciliation stands only while the
+// `scope_digest` and `exclusion_digest` it recorded equal digests re-derived
+// here from the store's rows. In `sorted` mode a survey path no sorting row
+// covers is an obligation, `unsorted:<path>`. Clauses 2, 3 and 4 skip a
+// subsystem, and a seam, that is outside the survey (§2.6a) and name it.
+//
 // Usage:
 //   node dev/check-store-fully-surveyed.mjs --store <path/to/memory.db>
 //                                           [--workspace <dir>] [--revision <R>]
@@ -180,8 +188,112 @@ function digestOf(parts) {
   return createHash("sha256").update([...parts].sort().join("\u0000")).digest("hex");
 }
 
+const NUL = "\u0000";
+const sha256 = (text) => createHash("sha256").update(text).digest("hex");
+
+/** A rule or sorting row is withdrawn by a later row that supersedes it (§2.1). */
+function activeRows(table, columns) {
+  if (!tableExists(table)) return [];
+  const all = rows(`SELECT id, ${columns}, supersedes FROM ${table} ORDER BY id`) ?? [];
+  const withdrawn = new Set(all.map((row) => row.supersedes).filter((id) => id != null));
+  return all.filter((row) => !withdrawn.has(row.id));
+}
+
 /**
- * Is a reconciliation *standing* at R? §3.3's five conditions, and only a row
+ * §2.5's `scope_digest`, restated: SHA-256 over the active rules and then the
+ * active sorting rows, each as `kind \0 id \0 pattern \0 action-or-category`,
+ * in id order, joined with `\n`.
+ */
+function scopeDigestNow() {
+  return sha256(
+    [
+      ...activeRows("scope_rules", "pattern, action").map((row) =>
+        ["rule", row.id, row.pattern, row.action].join(NUL),
+      ),
+      ...activeRows("scope_sorting", "pattern, category").map((row) =>
+        ["sorting", row.id, row.pattern, row.category].join(NUL),
+      ),
+    ].join("\n"),
+  );
+}
+
+/**
+ * §2.5's `exclusion_digest`, restated: one reconciliation's `scope_exclusions`
+ * rows by path, each as `file_path \0 source \0 rule_id-or-empty`, joined with `\n`.
+ */
+function exclusionDigestOf(exclusions) {
+  return sha256(
+    [...exclusions]
+      .sort((a, b) => (a.file_path < b.file_path ? -1 : a.file_path > b.file_path ? 1 : 0))
+      .map((row) => [row.file_path, row.source, row.rule_id ?? ""].join(NUL))
+      .join("\n"),
+  );
+}
+
+/**
+ * The store's scope mode: its latest `scope_mode_changes` row. A store that
+ * predates survey scope has none, and is `legacy`.
+ */
+function scopeMode() {
+  if (!tableExists("scope_mode_changes")) return "legacy";
+  return (rows("SELECT mode FROM scope_mode_changes ORDER BY id DESC LIMIT 1") ?? [])[0]?.mode ?? "legacy";
+}
+
+/** Whether the store holds a rule or a sorting row, withdrawn or not (§2.9). */
+function hasScopeRows() {
+  return ["scope_rules", "scope_sorting"].some(
+    (table) => tableExists(table) && (rows(`SELECT 1 AS one FROM ${table} LIMIT 1`) ?? []).length > 0,
+  );
+}
+
+/** One reconciliation's `scope_exclusions` rows; none for a store without the table. */
+function exclusionsOf(reconciliationId) {
+  if (!tableExists("scope_exclusions")) return [];
+  return (
+    rows(
+      "SELECT file_path, source, rule_id FROM scope_exclusions WHERE reconciliation_id = ? ORDER BY file_path",
+      reconciliationId,
+    ) ?? []
+  );
+}
+
+/**
+ * Whether `pattern` covers `path` (§2.2), restated: an exact path, a directory
+ * prefix ending in `/`, or a glob where `*` stays inside one segment and `**`
+ * crosses them. Only sorting needs it here, to name a path no row covers.
+ */
+function globRegex(pattern) {
+  const directory = pattern.endsWith("/");
+  const segments = (directory ? pattern.slice(0, -1) : pattern).split("/");
+  const escape = (text) => text.replace(/[\\^$.|?+()[\]{}]/g, "\\$&");
+  let source = "";
+  segments.forEach((segment, index) => {
+    const last = index === segments.length - 1;
+    if (segment === "**") {
+      source += last ? ".+" : "(?:[^/]+/)*";
+      return;
+    }
+    source += segment
+      .split(/\*{2,}/)
+      .map((part) => part.split("*").map(escape).join("[^/]*"))
+      .join(".*");
+    if (!last) source += "/";
+  });
+  return new RegExp(`^${source}${directory ? "/.+" : ""}$`, "s");
+}
+function covers(pattern, path) {
+  if (pattern.includes("*")) return globRegex(pattern).test(path);
+  return pattern.endsWith("/") ? path.startsWith(pattern) : path === pattern;
+}
+
+const LEDGER_CHANGED = "the file ledger has changed since the reconciliation recorded there was taken";
+const SCOPE_RULES_CHANGED = "the scope rules have changed since the reconciliation recorded there was taken";
+const SCOPE_MODE_CHANGED = "the store's scope mode has changed since the reconciliation recorded there was taken";
+const EXCLUSIONS_CHANGED =
+  "the scope_exclusions rows recorded there no longer match the reconciliation's exclusion_digest";
+
+/**
+ * Is a reconciliation *standing* at R? §3.3's five conditions and the two scope digests (§2.5), and only a row
  * meeting all five is one (`the most recent such row`).
  *
  * Clause 1 used to skip this entirely: it took the newest reconciliation row,
@@ -212,44 +324,77 @@ function standingReconciliation(revision) {
     };
   }
   const treeDigest = digestOf(tracked);
-  // Each candidate's ledger digest leaves out the rows on paths that
-  // candidate excluded from the survey set (design/scope/PLAN.md §2.6a).
+  // Each candidate is judged against the store as it is now (§2.5): the scope
+  // digest and the exclusion digest are re-derived from the rows, and the
+  // ledger digest leaves out the rows on paths that candidate excluded from
+  // the survey set (§2.6a).
   const ledger = rows("SELECT file_path, classification FROM file_ledger") ?? [];
-  const ledgerDigestFor = (reconciliationId) => {
-    const excluded = new Set(
-      tableExists("scope_exclusions")
-        ? (rows("SELECT file_path FROM scope_exclusions WHERE reconciliation_id = ?", reconciliationId) ?? []).map(
-            (exclusion) => exclusion.file_path,
-          )
-        : [],
-    );
-    return digestOf(
+  const currentScope = scopeDigestNow();
+  const mode = scopeMode();
+  const scoped = hasScopeRows();
+  const judge = (candidate) => {
+    const exclusions = exclusionsOf(candidate.id);
+    if (candidate.scope_digest == null) {
+      // Taken before survey scope existed: it stands only while the store has
+      // no rules and no sorting rows (§2.9), and it resolved no exclusions.
+      if (scoped) return SCOPE_RULES_CHANGED;
+      if (exclusions.length > 0 || candidate.exclusion_digest != null) return EXCLUSIONS_CHANGED;
+    } else {
+      if (candidate.scope_digest !== currentScope) return SCOPE_RULES_CHANGED;
+      if (candidate.scope_mode !== mode) return SCOPE_MODE_CHANGED;
+      if (candidate.exclusion_digest !== exclusionDigestOf(exclusions)) return EXCLUSIONS_CHANGED;
+    }
+    const excluded = new Set(exclusions.map((exclusion) => exclusion.file_path));
+    const current = digestOf(
       ledger
         .filter((entry) => !excluded.has(entry.file_path))
         .map((entry) => `${entry.file_path}\u0000${entry.classification ?? ""}`),
     );
+    return candidate.ledger_digest === current ? null : LEDGER_CHANGED;
   };
-  const row = (
-    rows(
-      `SELECT * FROM scope_reconciliations
-        WHERE detected_sha = ? AND tree_digest = ?
-        ORDER BY id DESC`,
-      resolved,
-      treeDigest,
-    ) ?? []
-  ).find((candidate) => candidate.ledger_digest === ledgerDigestFor(candidate.id));
+  let failedWhy = null;
+  let row = null;
+  for (const candidate of rows(
+    `SELECT * FROM scope_reconciliations
+      WHERE detected_sha = ? AND tree_digest = ?
+      ORDER BY id DESC`,
+    resolved,
+    treeDigest,
+  ) ?? []) {
+    const failed = judge(candidate);
+    if (failed === null) {
+      row = candidate;
+      break;
+    }
+    failedWhy ??= failed;
+  }
   if (!row) {
     const atSha = rows("SELECT tree_digest FROM scope_reconciliations WHERE detected_sha = ?", resolved) ?? [];
     const why =
       atSha.length === 0
         ? `no reconciliation has been recorded at ${resolved.slice(0, 7)}`
         : atSha.some((candidate) => candidate.tree_digest === treeDigest)
-          ? "the file ledger has changed since the reconciliation recorded there was taken"
+          ? (failedWhy ?? LEDGER_CHANGED)
           : "the reconciliation recorded there was taken over a different tree";
     return { row: null, sha: resolved, why };
   }
-  return { row, sha: resolved, why: null, tracked };
+  const exclusions = exclusionsOf(row.id);
+  const excluded = new Set(exclusions.map((exclusion) => exclusion.file_path));
+  return {
+    row,
+    sha: resolved,
+    why: null,
+    tracked,
+    survey: tracked.filter((path) => !excluded.has(path)),
+    exclusions,
+    mode,
+  };
 }
+
+// The standing reconciliation clause 1 found, kept for the clauses that skip
+// what is outside the survey. Null when none stands: with no reading of what
+// was excluded, nothing is skipped.
+let surveyStanding = null;
 
 {
   const gitState = (rows("SELECT last_checked_sha FROM git_state ORDER BY repo_id LIMIT 1") ?? [])[0];
@@ -262,6 +407,7 @@ function standingReconciliation(revision) {
   const revision = arg("--revision", gitState?.last_checked_sha ?? latest?.detected_sha ?? null);
   const standing = revision ? standingReconciliation(revision) : { row: null, sha: null, why: null };
   const tracked = standing.tracked ?? null;
+  if (standing.row !== null) surveyStanding = standing;
   if (!revision) {
     clause(1, "inventory names R and every tracked path has one destination", {
       satisfied: false,
@@ -274,7 +420,7 @@ function standingReconciliation(revision) {
       satisfied: false,
       considered: 0,
       missing: ["inventory:reconciliation"],
-      note: `the store is not reconciled at ${revision.slice(0, 7)} under §3.3's five conditions: ${standing.why}`,
+      note: `the store is not reconciled at ${revision.slice(0, 7)} under §3.3's conditions and the scope digests: ${standing.why}`,
     });
   } else if (Number(standing.row.unledgered ?? 0) !== 0 || Number(standing.row.absent ?? 0) !== 0) {
     // §3.3a: reconciled is weaker than complete, and only complete licenses
@@ -294,13 +440,16 @@ function standingReconciliation(revision) {
       note: `the tree at ${revision.slice(0, 7)} could not be enumerated in ${workspacePath}; a coverage fraction stamped with R may only be taken over R's own immutable tree`,
     });
   } else {
+    // The survey set: the tree minus this reconciliation's exclusions (§2.10).
+    // A ledger row on an excluded path is inactive, so it is not looked at.
+    const survey = standing.survey;
     const owners = new Map();
     for (const row of rows("SELECT subsystem_id, file_path, classification FROM file_ledger") ?? []) {
       if (!owners.has(row.file_path)) owners.set(row.file_path, []);
       owners.get(row.file_path).push(row);
     }
     const missing = [];
-    for (const path of tracked) {
+    for (const path of survey) {
       const destinations = owners.get(path) ?? [];
       if (destinations.length === 0) missing.push(`file:${path}:assignment`);
       else if (destinations.length > 1) missing.push(`file:${path}:assignment`);
@@ -314,19 +463,60 @@ function standingReconciliation(revision) {
         missing.push(`file:${path}:exclusion-reason`);
       }
     }
+    // In `sorted` mode a survey path no active sorting row covers is still owed
+    // a product or meta decision (§2.2 step 4).
+    if (standing.mode === "sorted") {
+      const sorting = activeRows("scope_sorting", "pattern").map((row) => row.pattern);
+      const covered = (path) =>
+        sorting.some((pattern) => {
+          try {
+            return covers(pattern, path);
+          } catch {
+            return false;
+          }
+        });
+      for (const path of survey) if (!covered(path)) missing.push(`unsorted:${path}`);
+    }
+    const excludedCounts = ["gitignore", "user", "meta"]
+      .map((source) => `${standing.exclusions.filter((row) => row.source === source).length} ${source}`)
+      .join(", ");
     clause(1, "inventory names R and every tracked path has one destination", {
       satisfied: missing.length === 0,
-      considered: tracked.length,
+      considered: survey.length,
       missing,
-      note: `evaluated over the tree at ${revision.slice(0, 7)}, against the standing reconciliation recorded there`,
+      note: `evaluated over the survey set at ${revision.slice(0, 7)}: ${tracked.length} tracked path(s) less ${standing.exclusions.length} excluded (${excludedCounts}), against the standing reconciliation recorded there`,
     });
   }
 }
 
+// --- what is outside the survey (design/scope/PLAN.md §2.6a) ---------------
+
+// A subsystem whose ledger rows are all on excluded paths is outside the
+// survey: it owes no status advance, and clauses 2, 3 and 4 skip it and say
+// so. A subsystem with no ledger rows at all is not outside, since nothing
+// excluded it. With no standing reconciliation there is no reading of the
+// exclusions, so nothing is outside.
+const outsideSubsystems = new Set();
+if (surveyStanding !== null) {
+  const excludedPaths = new Set(surveyStanding.exclusions.map((row) => row.file_path));
+  const owned = new Map();
+  for (const row of rows("SELECT subsystem_id, file_path FROM file_ledger") ?? []) {
+    if (!owned.has(row.subsystem_id)) owned.set(row.subsystem_id, []);
+    owned.get(row.subsystem_id).push(row.file_path);
+  }
+  for (const [id, paths] of owned) {
+    if (paths.length > 0 && paths.every((path) => excludedPaths.has(path))) outsideSubsystems.add(id);
+  }
+}
+/** A seam with an endpoint outside the survey is outside it too. */
+const seamIsOutside = (seam) => outsideSubsystems.has(seam.party_a) || outsideSubsystems.has(seam.party_b);
+
 // --- clause 2: every assigned subsystem is mapped ---------------------------
 
 {
-  const subsystems = rows("SELECT id, status FROM subsystems ORDER BY id") ?? [];
+  const all = rows("SELECT id, status FROM subsystems ORDER BY id") ?? [];
+  const outside = all.filter((row) => outsideSubsystems.has(row.id)).map((row) => row.id);
+  const subsystems = all.filter((row) => !outsideSubsystems.has(row.id));
   const missing = subsystems
     .filter((row) => row.status !== "mapped")
     .map((row) => `subsystem:${row.id}:phase-sequence`);
@@ -334,7 +524,13 @@ function standingReconciliation(revision) {
     satisfied: subsystems.length > 0 && missing.length === 0,
     considered: subsystems.length,
     missing,
-    note: subsystems.length === 0 ? "the store holds no subsystems, so nothing was surveyed" : null,
+    note:
+      all.length === 0
+        ? "the store holds no subsystems, so nothing was surveyed"
+        : subsystems.length === 0
+          ? "every subsystem is outside the survey, so this clause has no denominator"
+          : null,
+    outside_survey: outside,
   });
 }
 
@@ -348,7 +544,9 @@ function standingReconciliation(revision) {
     "out-of-scope",
     "unresolved-competition",
   ]);
-  const subsystems = (rows("SELECT id FROM subsystems ORDER BY id") ?? []).map((row) => row.id);
+  const everySubsystem = (rows("SELECT id FROM subsystems ORDER BY id") ?? []).map((row) => row.id);
+  const outside = everySubsystem.filter((id) => outsideSubsystems.has(id));
+  const subsystems = everySubsystem.filter((id) => !outsideSubsystems.has(id));
   const active = (rows("SELECT code FROM concerns WHERE status = 'active' ORDER BY code") ?? []).map(
     (row) => row.code,
   );
@@ -420,13 +618,16 @@ function standingReconciliation(revision) {
       subsystems.length * active.length === 0
         ? "no subsystem × active-concern pair exists, so this clause has no denominator"
         : null,
+    outside_survey: outside,
   });
 }
 
 // --- clause 4: every declared seam names two mapped endpoints and is assessed
 
 {
-  const seams = rows("SELECT id, party_a, party_b FROM seams ORDER BY id") ?? [];
+  const everySeam = rows("SELECT id, party_a, party_b FROM seams ORDER BY id") ?? [];
+  const outside = everySeam.filter(seamIsOutside).map((seam) => seam.id);
+  const seams = everySeam.filter((seam) => !seamIsOutside(seam));
   const status = new Map(
     (rows("SELECT id, status FROM subsystems") ?? []).map((row) => [row.id, row.status]),
   );
@@ -451,7 +652,13 @@ function standingReconciliation(revision) {
     satisfied: seams.length > 0 && missing.length === 0,
     considered: seams.length,
     missing,
-    note: seams.length === 0 ? "the store declares no seams, so this clause has no denominator" : null,
+    note:
+      everySeam.length === 0
+        ? "the store declares no seams, so this clause has no denominator"
+        : seams.length === 0
+          ? "every seam has an endpoint outside the survey, so this clause has no denominator"
+          : null,
+    outside_survey: outside,
   });
 }
 
@@ -582,6 +789,9 @@ if (asJson) {
       `${mark} clause ${entry.clause}: ${entry.title} (${entry.considered} considered, ${entry.missing.length} unmet)\n`,
     );
     if (entry.note) process.stdout.write(`       ${entry.note}\n`);
+    if ((entry.outside_survey ?? []).length > 0) {
+      process.stdout.write(`       outside the survey, skipped: ${entry.outside_survey.join(", ")}\n`);
+    }
     for (const id of entry.missing.slice(0, 12)) process.stdout.write(`       ${id}\n`);
     if (entry.missing.length > 12) {
       process.stdout.write(`       …and ${entry.missing.length - 12} more\n`);
