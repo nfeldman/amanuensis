@@ -52,8 +52,11 @@ answers about two loci comparable.
 
    When standing is `excluded`, `exclusion.source` says why. When the `source`
    of an `excluded` path is `gitignore`, `user` or `meta`, the survey set
-   leaves the path out on purpose: it has no ledger row and holds no record, so
-   say which source and rule decide it, and do not call it missed. Offer
+   leaves the path out on purpose: it is not surveyed and gets no new ledger row
+   or evidence, so say which source and rule decide it, and do not call it
+   missed. Records made before the path was excluded are kept: its older ledger
+   rows are inactive, and the evidence, claims and findings that cite it stay,
+   printing the path as plain text. Offer
    `set_scope_rule` with `include` only when the owner wants it surveyed, and
    quote the owner's own words that asked for it. When
    the `source` of an `excluded` path is `ledger`, it is a classification
