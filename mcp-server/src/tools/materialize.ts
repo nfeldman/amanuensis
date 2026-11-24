@@ -81,7 +81,11 @@ function currentSha(ctx: ServerContext): string | null {
  * repository's tracked paths at the store's reconciled revision (§1.4). A store
  * that has not reconciled at the revision being published has no denominator,
  * and one whose standing reconciliation reports a nonzero `unledgered` or
- * `absent` has a denominator over a tree nobody finished inventorying.
+ * `absent` has a denominator over a tree nobody finished inventorying. The
+ * denominator is the survey set, not the whole tree (design/scope/PLAN.md
+ * §2.5), and in `sorted` mode a store whose standing reconciliation reports
+ * unsorted survey paths is refused too: until every path is sorted, the survey
+ * set is not settled.
  *
  * Checked here rather than inside the renderer so a refusal leaves the previous
  * `docs/` untouched exactly as a red read-back does (`dev/adr/0005`): nothing is
