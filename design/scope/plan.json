@@ -6,7 +6,7 @@
       "id": "SC0",
       "slice": "S1",
       "title": "Record the plan in BACKLOG.md",
-      "model": null,
+      "model": "sonnet",
       "claims": [
         "§3 SC0",
         "§1"
@@ -33,8 +33,8 @@
       "budget_minutes": 30,
       "needs_mcp": false,
       "status": "ready",
-      "attempts": 1,
-      "start_sha": "c6be723572a788633895795dbbc20bbc645331db",
+      "attempts": 0,
+      "start_sha": "",
       "red_sha": "",
       "green_sha": "",
       "verified_by_launcher": false,
@@ -368,7 +368,7 @@
       "id": "SC12",
       "slice": "S3",
       "title": "Write guard: evidence attachments and the census",
-      "model": null,
+      "model": "sonnet",
       "claims": [
         "§3 SC12",
         "§2.6"
@@ -434,7 +434,7 @@
       "id": "SC5",
       "slice": "S3",
       "title": "Completion checker over the survey set",
-      "model": null,
+      "model": "sonnet",
       "claims": [
         "§3 SC5",
         "§2.10",
@@ -479,7 +479,7 @@
       "id": "SC6",
       "slice": "S4",
       "title": "Readers: describe_locus, dashboard, code index, records search",
-      "model": null,
+      "model": "sonnet",
       "claims": [
         "§3 SC6",
         "§2.7",
@@ -597,7 +597,7 @@
       "id": "SC8",
       "slice": "S5",
       "title": "Skill: Phase 0b and the routing rows",
-      "model": null,
+      "model": "sonnet",
       "claims": [
         "§3 SC8",
         "§2.11"
@@ -646,7 +646,7 @@
       "id": "SC9",
       "slice": "S5",
       "title": "Docs and release notes",
-      "model": null,
+      "model": "sonnet",
       "claims": [
         "§3 SC9"
       ],
