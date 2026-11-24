@@ -22,7 +22,11 @@
 //      control's row is not listed and counted (A0);
 //   4. change impact maps the change on the excluded path to a subsystem, or
 //      opens a gap for it (I1); or the control's change is not mapped (I0), or
-//      an in-scope changed path with no ledger row opens no gap (I2);
+//      an in-scope changed path with no ledger row opens no gap (I2); or a
+//      path added under the excluded prefix since the last reconciliation
+//      opens a gap (I3); or a change on the excluded path reaches a finding or
+//      invalidates a claim made before the rule (I5), while the control's
+//      change does not reach both (I4);
 //   5. review planning makes an inactive row required work, as a stale file or
 //      an unverified file (R1); or the control's rows are not required (R0);
 //   6. a refresh run blocks on drift over the inactive row (F1); or the
@@ -42,12 +46,15 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stableClaimKey } from "./fixtures/claim-key.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SUBSYSTEM = "S-01";
 const CORE = "src/core.ts";
 const SPEC = "design/spec.md";
 const DRAFT = "design/draft.md";
+const CLAIM = "SC11-CL-1";
+const FINDING = "S01-1";
 
 // A crash signature in this gate's output means the run never reached its
 // assertion, so the launcher rejects it as a red proof. Detail quoted from a
@@ -157,12 +164,11 @@ function main(mods) {
   process.env.GIT_CONFIG_GLOBAL = "/dev/null";
   process.env.GIT_CONFIG_NOSYSTEM = "1";
 
-
   /**
    * One arm's store at c1. `excluded`: the owner excludes `design/` after the
    * rows exist. `ledgerSpec`: whether `design/spec.md` has a ledger row at all.
    */
-  function build(label, { excluded, ledgerSpec = true }) {
+  function build(label, { excluded, ledgerSpec = true, records = false }) {
     const ws = join(scratch, `ws-${label}`);
     const write = (name, body) => {
       mkdirSync(dirname(join(ws, name)), { recursive: true });
@@ -203,6 +209,35 @@ function main(mods) {
     }
     call("set_git_state", { canonical_branch: "main", onboarding_sha: c0 }, ctx);
     call("detect_changes", { current_sha: c0 }, ctx);
+    // Records made before the owner's rule: a claim whose evidence is on the
+    // spec, and a finding that names it as a primary file (§2.6a).
+    if (records) {
+      const evidenceId = call(
+        "add_evidence",
+        { file_path: SPEC, symbol: "Spec", line_range: "1-3", ref_sha: c0, kind: "code-verified" },
+        ctx,
+      ).id;
+      call(
+        "add_claim",
+        {
+          claim_id: CLAIM,
+          claim_key: stableClaimKey(SUBSYSTEM, "spec-value", `${SPEC}:Spec`),
+          subject_type: "symbol",
+          subject_id: `${SPEC}:Spec`,
+          statement: "The spec says the value is one.",
+          epistemic_kind: "observation",
+          ref_sha: c0,
+          evidence_ids: [evidenceId],
+        },
+        ctx,
+      );
+      ctx.db
+        .prepare(
+          `INSERT INTO findings (finding_id, subsystem_id, symptom, root_cause, severity, status, primary_files, ref_sha)
+           VALUES (?, ?, 'fixture symptom', 'fixture cause', 'LOW', 'confirmed-bug', ?, ?)`,
+        )
+        .run(FINDING, SUBSYSTEM, JSON.stringify([`${SPEC}:Spec@${c0}`]), c0);
+    }
     if (excluded) {
       call(
         "set_scope_rule",
@@ -344,6 +379,42 @@ function main(mods) {
     const fx = build("unledgered", { excluded: false, ledgerSpec: false });
     const view = impactView("unledgered", fx, "sc11-impact-unledgered");
     return same(view, { subsystems: [], gaps: [`unmapped-file:${SPEC}`] }) ? null : `impact reads ${show(view)}`;
+  });
+
+  // A path added under the excluded prefix after the last reconciliation is
+  // excluded at the revision it appears in: no gap (§2.6a, §2.2).
+  check("I3 change impact opens no gap for a path added under an excluded prefix since the last reconciliation", () => {
+    const fx = build("late", { excluded: true });
+    const added = "design/new.md";
+    mkdirSync(dirname(join(fx.ws, added)), { recursive: true });
+    writeFileSync(join(fx.ws, added), "# New\n\nA later plan.\n");
+    const c2 = commitAll(fx.ws, "add a plan under the excluded prefix");
+    const r = call("predict_change_impact", { base_sha: fx.c1, head_sha: c2, run_id: "sc11-impact-late" }, fx.ctx);
+    const view = {
+      subsystems: (r.mapped_objects ?? []).filter((o) => o.object_type === "subsystem").map((o) => o.object_id),
+      gaps: (r.gaps ?? []).map((o) => o.object_id),
+    };
+    return same(view, { subsystems: [], gaps: [] }) ? null : `impact reads ${show(view)}`;
+  });
+
+  // The records made before the rule: a change to the excluded path reaches
+  // neither the finding nor the claim in the excluded arm; the same change
+  // reaches both in the included arm.
+  const recordsView = (arm, excluded) => {
+    const fx = build(arm, { excluded, records: true });
+    const r = call("predict_change_impact", { base_sha: fx.c0, head_sha: fx.c1, run_id: `sc11-impact-${arm}` }, fx.ctx);
+    return {
+      findings: (r.mapped_objects ?? []).filter((o) => o.object_type === "finding").map((o) => o.object_id),
+      invalidated: (r.invalidated_claims ?? []).map((o) => o.object_id),
+    };
+  };
+  check("I4 control: change impact reaches the in-scope path's finding and invalidates its claim", () => {
+    const view = recordsView("records-included", false);
+    return same(view, { findings: [FINDING], invalidated: [CLAIM] }) ? null : `impact reads ${show(view)}`;
+  });
+  check("I5 change impact neither reaches a finding nor invalidates a claim through an excluded path", () => {
+    const view = recordsView("records-excluded", true);
+    return same(view, { findings: [], invalidated: [] }) ? null : `impact reads ${show(view)}`;
   });
 
   // ------------------------------------------------------------ refresh run
@@ -489,6 +560,8 @@ try {
       await import("./dist/project.js"));
     const names = [
       ["files", "fileTools"],
+      ["claims", "claimTools"],
+      ["evidence", "evidenceTools"],
       ["git", "gitTools"],
       ["impact", "impactTools"],
       ["locus", "locusTools"],
