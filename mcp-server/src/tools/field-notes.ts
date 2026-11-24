@@ -1,10 +1,13 @@
 import {
+  citedSourcePath,
   ok,
   optInt,
   optString,
   requireEnum,
   requireInt,
   requireString,
+  requireSurveyScopeForWrite,
+  resolveWorkspaceCommit,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
@@ -34,6 +37,17 @@ export const fieldNoteTools: ToolDefinition[] = [
       const location = optString(args, "location");
       const refSha = optString(args, "ref_sha");
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
+      // A location is free text; the path it names, if any, is what the guard reads.
+      const locatedPath = citedSourcePath(location);
+      if (locatedPath !== null) {
+        let revision: string | null = null;
+        try {
+          revision = refSha === null ? null : resolveWorkspaceCommit(ctx, refSha);
+        } catch {
+          // An unresolvable ref_sha is stored as given; scope is decided at the default revision.
+        }
+        requireSurveyScopeForWrite(ctx, "add_field_note", "location", locatedPath, revision);
+      }
       const info = ctx.db
         .prepare(
           `INSERT INTO field_notes (category, observation, location, ref_sha, session_id)

@@ -18,6 +18,25 @@ is the one served, and a correction is a new row.
 Prose in a record is prose and lists, at most the size the tool names, with no
 heading or table line. The page owns its headings and tables.
 
+## Paths outside the survey
+
+A path the survey set leaves out, because the repository's ignore files match
+it, the owner excluded it, or onboarding sorted it as meta, gets no new record.
+Every writer that names a path or writes evidence refuses it with its source and
+its rule: `add_files_to_scope`, `update_file_classification`,
+`clear_staleness`, `add_evidence`, `land_review_pass`'s `new_evidence`,
+`apply_change_impact`, `define_term`'s `first_seen`, `add_field_note`'s
+`location`, `add_finding`'s and `carry_finding`'s `primary_files`, and
+`log_dispatch`. The refusal says: An excluded path gets no new record; reads
+still answer for it. Cite the code instead. Bring the path back only when the
+owner asks, with an owner include rule that quotes the owner's words
+([`onboarding.md`](onboarding.md), Phase 0b).
+
+Two writes are allowed on an excluded path. `retire_ledger_file` removes a
+ledger row left on one, which is how a row the reconciliation lists under
+`excluded_with_rows` is cleared. The sorting inventory may cite one, because it
+writes no evidence.
+
 ## Project profile
 
 `record_project_profile(name, ref_sha)` holds the project's name, one line. It

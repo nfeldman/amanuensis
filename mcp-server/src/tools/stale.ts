@@ -5,9 +5,11 @@ import {
   optInt,
   optString,
   requireString,
+  requireSurveyScopeForWrite,
   requireWorkspaceSourcePath,
   resolveWorkspaceCommit,
   type ServerContext,
+  surveyScopeDecision,
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
@@ -261,6 +263,7 @@ export const staleTools: ToolDefinition[] = [
         }
       }
       const refSha = resolveWorkspaceCommit(ctx, requireString(args, "ref_sha"));
+      requireSurveyScopeForWrite(ctx, "clear_staleness", "file_path", filePath, refSha);
       const row = ctx.db
         .prepare(
           "SELECT stale, stale_reason, ref_sha FROM file_ledger WHERE subsystem_id = ? AND file_path = ?",
@@ -315,7 +318,7 @@ export const staleTools: ToolDefinition[] = [
   {
     name: "retire_ledger_file",
     description:
-      "Remove a file ledger row whose file no longer exists in the repository, without discarding the subsystem's dispositions, findings, artifacts, or cross-references. Refuses while the file is still tracked, so this cannot be used to quietly narrow a subsystem's scope.",
+      "Remove a file ledger row whose file no longer exists in the repository, or whose path the survey set excludes (a row detect_changes lists under excluded_with_rows), without discarding the subsystem's dispositions, findings, artifacts, or cross-references. Refuses while the file is still tracked and in the survey set, so this cannot be used to quietly narrow a subsystem's scope.",
     inputSchema: {
       type: "object",
       properties: {
@@ -334,10 +337,12 @@ export const staleTools: ToolDefinition[] = [
         .prepare("SELECT stale_reason FROM file_ledger WHERE subsystem_id = ? AND file_path = ?")
         .get(subsystemId, filePath) as { stale_reason: string | null } | undefined;
       if (!row) return { ok: false, error: `no scoped file: ${subsystemId} / ${filePath}` };
-      if (row.stale_reason !== "absent") {
+      // The one write §2.6 allows on an excluded path: removing the inactive row is
+      // how an excluded_with_rows entry is cleared.
+      if (row.stale_reason !== "absent" && surveyScopeDecision(ctx, filePath).in_survey) {
         return {
           ok: false,
-          error: `${filePath} is not recorded as absent; run detect_changes first, and retire only rows whose file the repository no longer tracks`,
+          error: `${filePath} is not recorded as absent; run detect_changes first, and retire only rows whose file the repository no longer tracks or whose path the survey set excludes`,
         };
       }
       const txn = ctx.db.transaction(() => {

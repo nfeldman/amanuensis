@@ -1222,6 +1222,24 @@
       "references": [
         { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
       ]
+    },
+    {
+      "id": "scope-excluded-write",
+      "note": "New, design/scope/PLAN.md §2.6: a path the survey set excludes gets no new record. Thrown by requireSurveyScopeForWrite at every route of §2.6's first table; retire_ledger_file and the sorting inventory are the exceptions. refuses is true, not exhaustive: add_files_to_scope, add_field_note and add_finding also throw it, and naming them would oblige every reference that instructs them to quote it (SC8 owns most of those files); land_review_pass throws it from land(), which a concise-arrow handler hides from the association check.",
+      "refuses": [
+        "update_file_classification",
+        "clear_staleness",
+        "add_evidence",
+        "apply_change_impact",
+        "define_term",
+        "carry_finding",
+        "log_dispatch"
+      ],
+      "instructs": [],
+      "server": { "file": "src/helpers.ts", "phrase": "An excluded path gets no new record; reads still answer for it." },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/records.md" }
+      ]
     }
   ]
 }

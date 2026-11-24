@@ -6,6 +6,7 @@ import {
   requireInt,
   requireString,
   requireStringArray,
+  requireSurveyScopeForWrite,
   requireWorkspaceSourcePath,
   type ServerContext,
   type ToolDefinition,
@@ -913,8 +914,15 @@ function land(args: Record<string, unknown>, ctx: ServerContext): Record<string,
   // symbol in a language the code index parses is resolved and anchored as
   // add_evidence anchors it (semantic-index PLAN §4.4).
   const anchors = new Map<string, EvidenceAnchor>();
-  for (const row of newEvidence) {
+  for (const [index, row] of newEvidence.entries()) {
     row.ref_sha = resolveCommit(ctx, row.ref_sha);
+    requireSurveyScopeForWrite(
+      ctx,
+      "land_review_pass",
+      `new_evidence[${index}].file_path`,
+      row.file_path,
+      row.ref_sha,
+    );
     row.line_range = requireEvidenceCitation(
       ctx.project.workspacePath as string,
       row.ref_sha,

@@ -3,6 +3,7 @@ import {
   optString,
   requireEnum,
   requireString,
+  requireSurveyScopeForWrite,
   requireWorkspaceSourcePath,
   resolveWorkspaceCommit,
   type ServerContext,
@@ -122,6 +123,15 @@ export const fileTools: ToolDefinition[] = [
       // <current>`, which is empty whenever HEAD is current: the row could never
       // turn stale.
       const refSha = resolveWorkspaceCommit(ctx, requestedRef);
+      normalized.forEach((f, index) => {
+        requireSurveyScopeForWrite(
+          ctx,
+          "add_files_to_scope",
+          `files[${index}].file_path`,
+          f.file_path,
+          refSha,
+        );
+      });
       const stmt = ctx.db.prepare(
         `INSERT INTO file_ledger (subsystem_id, file_path, why_in_scope, classification, ref_sha, examined_at)
          VALUES (?, ?, ?, ?, ?, CASE WHEN ?='examined' THEN datetime('now') ELSE NULL END)
@@ -186,6 +196,7 @@ export const fileTools: ToolDefinition[] = [
       const classification = requireEnum(args, "classification", FILE_CLASSIFICATIONS);
       const requestedRef = optString(args, "ref_sha");
       const refSha = requestedRef === null ? null : resolveWorkspaceCommit(ctx, requestedRef);
+      requireSurveyScopeForWrite(ctx, "update_file_classification", "file_path", filePath, refSha);
       if (refSha !== null) {
         const stale = staleRowsAtOtherCommits(ctx, subsystemId, [filePath], refSha).get(filePath);
         if (stale) {

@@ -5,6 +5,7 @@ import {
   optString,
   parseCitation,
   requireString,
+  requireSurveyScopeForWrite,
   requireWorkspaceCitation,
   resolveWorkspaceCommit,
   type ServerContext,
@@ -57,6 +58,7 @@ function resolveAnchor(ctx: ServerContext, value: string): string {
         `term at a revision where the file it was first seen in is present.`,
     );
   }
+  requireSurveyScopeForWrite(ctx, "define_term", "first_seen", path, resolved);
   return `${path}:${symbol}@${resolved}`;
 }
 

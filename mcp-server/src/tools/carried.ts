@@ -1,4 +1,5 @@
 import {
+  citedSourcePath,
   ok,
   optInt,
   optString,
@@ -6,6 +7,7 @@ import {
   requireInt,
   requireRepairCommit,
   requireString,
+  requireSurveyScopeForWrite,
   resolveWorkspaceCommit,
   type ServerContext,
   type ToolDefinition,
@@ -350,6 +352,16 @@ export const carriedTools: ToolDefinition[] = [
       const primaryFiles = Array.isArray(args.primary_files)
         ? JSON.stringify(args.primary_files)
         : null;
+      // The carried record is this store's successor to the archived finding, so its
+      // primary files are new citations here: one on an excluded path is refused (§2.6).
+      if (Array.isArray(args.primary_files)) {
+        args.primary_files.forEach((citation, index) => {
+          const path = citedSourcePath(citation);
+          if (path !== null) {
+            requireSurveyScopeForWrite(ctx, "carry_finding", `primary_files[${index}]`, path);
+          }
+        });
+      }
       const archivedStoreId = run.archived_store_id;
       if (!archivedStoreId) {
         throw new ToolError(`carry run ${carryRunId} names no archived_store_id`);

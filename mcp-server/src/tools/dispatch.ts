@@ -1,9 +1,11 @@
 import {
+  citedSourcePath,
   ok,
   optString,
   optStringArray,
   requireInt,
   requireString,
+  requireSurveyScopeForWrite,
   type ToolDefinition,
 } from "../helpers.js";
 
@@ -30,6 +32,12 @@ export const dispatchTools: ToolDefinition[] = [
       const role = requireString(args, "role");
       const filePath = requireString(args, "file_path");
       const subsystemId = optString(args, "subsystem_id");
+      // A dispatch record usually lives in the store; one named by a workspace path is
+      // a record about that path, and an excluded one is refused (§2.6).
+      const recordPath = citedSourcePath(filePath);
+      if (recordPath !== null) {
+        requireSurveyScopeForWrite(ctx, "log_dispatch", "file_path", recordPath);
+      }
       ctx.db
         .prepare(
           `INSERT INTO subagent_log (session_id, seq, role, file_path, subsystem_id, status)

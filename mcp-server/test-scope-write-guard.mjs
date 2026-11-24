@@ -644,7 +644,7 @@ function registered() {
   if (!refs.includes("../.claude/skills/amanuensis/references/records.md")) {
     wrong.push(`its references are ${show(refs)}`);
   }
-  for (const tool of ["add_evidence", "land_review_pass", "apply_change_impact", "add_files_to_scope"]) {
+  for (const tool of ["add_evidence", "apply_change_impact", "define_term", "clear_staleness", "carry_finding"]) {
     if (!(entry.refuses ?? []).includes(tool)) wrong.push(`refuses omits ${tool}`);
   }
   const records = join(here, "..", ".claude", "skills", "amanuensis", "references", "records.md");

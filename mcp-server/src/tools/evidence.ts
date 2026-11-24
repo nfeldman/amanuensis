@@ -14,6 +14,7 @@ import {
   requireEvidenceCitation,
   requireInt,
   requireString,
+  requireSurveyScopeForWrite,
   requireWorkspaceSourcePath,
   resolveWorkspaceCommit,
   type ServerContext,
@@ -353,6 +354,7 @@ export const evidenceTools: ToolDefinition[] = [
       // ref_sha as revision-bound, so an unresolvable one would publish a
       // binding the record cannot support (F6/codex).
       const refSha = resolveWorkspaceCommit(ctx, requireString(args, "ref_sha"));
+      requireSurveyScopeForWrite(ctx, "add_evidence", "file_path", filePath, refSha);
       const kind = requireEnum(args, "kind", EVIDENCE_KINDS);
       const symbol = optString(args, "symbol");
       const excerpt = optString(args, "excerpt");

@@ -1,5 +1,6 @@
 import { SqliteError } from "better-sqlite3";
 import {
+  citedSourcePath,
   ok,
   optString,
   optStringArray,
@@ -7,6 +8,7 @@ import {
   requireInt,
   requireRepairCommit,
   requireString,
+  requireSurveyScopeForWrite,
   requireWorkspaceCitation,
   requireWorkspaceSourcePath,
   resolveWorkspaceCommit,
@@ -170,6 +172,12 @@ export const findingTools: ToolDefinition[] = [
       // better told that than told about its revision, and because a refused
       // write should not spawn a git subprocess first.
       const refSha = resolveWorkspaceCommit(ctx, requestedRefSha);
+      (primaryFiles ?? []).forEach((citation, index) => {
+        const path = citedSourcePath(citation);
+        if (path !== null) {
+          requireSurveyScopeForWrite(ctx, "add_finding", `primary_files[${index}]`, path, refSha);
+        }
+      });
 
       try {
         ctx.db.transaction(() => {

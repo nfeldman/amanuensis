@@ -1,5 +1,15 @@
-import type { DB } from "./db.js";
+import { type DB, readScopeMode } from "./db.js";
 import type { ProjectContext } from "./project.js";
+import {
+  decidePath,
+  gitignoredAbsentPaths,
+  gitignoredPaths,
+  listTreeEntries,
+  type PathDecision,
+  type ScopeRuleRow,
+  type ScopeSortingRow,
+  type TreeEntry,
+} from "./scope.js";
 import { spawnSync } from "./subprocess.js";
 
 // The obligation split and the SQL that expresses it are generated from the
@@ -254,6 +264,167 @@ export function requireWorkspaceSourcePath(value: unknown, label = "file_path"):
     throw new ToolError(`${label} points into reserved Amanuensis tool state`);
   }
   return slashPath;
+}
+
+/** A commit's tree and the paths its own ignore files match, per workspace and commit. */
+type SurveyTree = { entries: TreeEntry[]; paths: Set<string>; ignored: Set<string> };
+const SURVEY_TREE_LIMIT = 8;
+const surveyTrees = new Map<string, SurveyTree>();
+
+/**
+ * The tree at `commit` and its gitignore matches. A resolved commit's tree cannot change,
+ * so the answer is kept: a survey writes many records at one revision, and each would
+ * otherwise list the whole tree again.
+ */
+function surveyTree(workspacePath: string, commit: string): SurveyTree {
+  const key = `${workspacePath}\u0000${commit}`;
+  const cached = surveyTrees.get(key);
+  if (cached) return cached;
+  const entries = listTreeEntries(workspacePath, commit);
+  const tree = {
+    entries,
+    paths: new Set(entries.map((entry) => entry.path)),
+    ignored: gitignoredPaths(workspacePath, entries),
+  };
+  if (surveyTrees.size >= SURVEY_TREE_LIMIT) {
+    surveyTrees.delete(surveyTrees.keys().next().value as string);
+  }
+  surveyTrees.set(key, tree);
+  return tree;
+}
+
+/**
+ * The revision a write with no revision of its own is decided at: the last reconciled
+ * revision, else HEAD, as `get_scope` answers. Null when no workspace is bound or it has
+ * no commit, since then there is no tree and no ignore file to read.
+ */
+function defaultScopeRevision(ctx: ServerContext): string | null {
+  const last = ctx.db
+    .prepare("SELECT detected_sha FROM scope_reconciliations ORDER BY id DESC LIMIT 1")
+    .get() as { detected_sha: string } | undefined;
+  if (last) return last.detected_sha;
+  if (!ctx.project.workspacePath) return null;
+  try {
+    return resolveWorkspaceCommit(ctx, "HEAD", "revision");
+  } catch {
+    return null;
+  }
+}
+
+export type SurveyScopeDecision = PathDecision & {
+  /** The revision the repository's ignore files were read at, when they were read. */
+  revision: string | null;
+  /** The deciding owner rule or sorting row, for an excluded path. */
+  pattern: string | null;
+  reason: string | null;
+};
+
+/**
+ * Where `path` stands in the survey set (design/scope/PLAN.md §2.2), under the store's
+ * active rules and sorting rows and the ignore files at `revision` (default: the last
+ * reconciled revision, else HEAD). A path not in the tree there is decided as it would be
+ * if it were. The rules are read live, so a rule recorded since the last reconciliation
+ * already decides.
+ */
+export function surveyScopeDecision(
+  ctx: ServerContext,
+  path: string,
+  revision: string | null = null,
+): SurveyScopeDecision {
+  const rules = ctx.db
+    .prepare("SELECT id, pattern, action, supersedes, reason FROM scope_rules ORDER BY id")
+    .all() as Array<ScopeRuleRow & { reason: string }>;
+  const sorting = ctx.db
+    .prepare("SELECT id, pattern, category, supersedes FROM scope_sorting ORDER BY id")
+    .all() as ScopeSortingRow[];
+  const mode = readScopeMode(ctx.db);
+  const explain = (decision: PathDecision, at: string | null): SurveyScopeDecision => {
+    const by = decision.decided_by;
+    const rule = by?.kind === "rule" ? rules.find((row) => row.id === by.id) : undefined;
+    const row =
+      by?.kind === "sorting" ? sorting.find((candidate) => candidate.id === by.id) : undefined;
+    return {
+      ...decision,
+      revision: at,
+      pattern: rule?.pattern ?? row?.pattern ?? null,
+      reason: rule?.reason ?? null,
+    };
+  };
+  // An owner rule decides before gitignore does (§2.2), so no git is run for it.
+  const unread = decidePath(path, { rules, sorting, mode, ignored: false });
+  if (unread.decided_by?.kind === "rule") return explain(unread, null);
+  const workspace = ctx.project.workspacePath;
+  const at = revision ?? defaultScopeRevision(ctx);
+  if (!workspace || at === null) return explain(unread, null);
+  let ignored: boolean;
+  try {
+    const tree = surveyTree(workspace, at);
+    ignored = tree.paths.has(path)
+      ? tree.ignored.has(path)
+      : gitignoredAbsentPaths(workspace, tree.entries, [path]).has(path);
+  } catch (error) {
+    // §2.3: a git failure is never read as "nothing ignored".
+    throw new ToolError(
+      `the survey scope of ${path} cannot be decided at ${at.slice(0, 12)}: ` +
+        `${(error as Error).message}`,
+      "scope.unreadable",
+    );
+  }
+  return explain(decidePath(path, { rules, sorting, mode, ignored }), at);
+}
+
+/**
+ * §2.6's write guard. A path the survey set excludes gets no new durable record: no ledger
+ * row, no evidence, no anchor and no citation names it, because "excluded" means not
+ * included. This sits apart from `requireWorkspaceSourcePath`, which reads use too, so
+ * reads keep answering for an excluded path (§2.7). The refusal names the source, the
+ * rule and the remedy.
+ */
+export function requireSurveyScopeForWrite(
+  ctx: ServerContext,
+  tool: string,
+  label: string,
+  path: string,
+  revision: string | null = null,
+): void {
+  const decision = surveyScopeDecision(ctx, path, revision);
+  if (decision.in_survey) return;
+  const by = decision.decided_by;
+  let account: string;
+  if (by?.kind === "rule") {
+    account =
+      `source user, owner rule ${by.id} (pattern ${decision.pattern}` +
+      `${decision.reason ? `, reason: ${decision.reason}` : ""})`;
+  } else if (by?.kind === "sorting") {
+    account = `source meta, sorting row ${by.id} (pattern ${decision.pattern}) sorts it as meta`;
+  } else {
+    account =
+      "source gitignore, matched by the repository's own ignore files" +
+      `${decision.revision ? ` at ${decision.revision.slice(0, 12)}` : ""}`;
+  }
+  throw new ToolError(
+    `${tool} refuses: ${label} ${path} is outside the survey set: ${account}. ` +
+      "An excluded path gets no new record; reads still answer for it. If the owner wants " +
+      "it surveyed, record an owner include rule for it with set_scope_rule, quoting the " +
+      "owner's words.",
+    "scope.excluded-write",
+  );
+}
+
+/**
+ * The path a citation or location names: everything before its first colon, when that is
+ * a workspace source path. Null for anything else, which names no path to guard.
+ */
+export function citedSourcePath(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const separator = value.indexOf(":");
+  const candidate = (separator === -1 ? value : value.slice(0, separator)).trim();
+  if (candidate.length === 0 || /\s/.test(candidate)) return null;
+  try {
+    return requireWorkspaceSourcePath(candidate);
+  } catch {
+    return null;
+  }
 }
 
 export function requireWorkspaceCitation(

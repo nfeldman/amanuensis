@@ -370,8 +370,12 @@ function refusalOpening(message) {
 
 function serverSources() {
   const files = [];
-  const invariants = join(ROOT, "src", "invariants.ts");
-  if (existsSync(invariants)) files.push(invariants);
+  // helpers.ts holds the survey-scope write guard (design/scope/PLAN.md §2.6), which a
+  // dozen handlers call; without it here, none of them could be shown to state it.
+  for (const name of ["invariants.ts", "helpers.ts"]) {
+    const path = join(ROOT, "src", name);
+    if (existsSync(path)) files.push(path);
+  }
   const dir = join(ROOT, "src", "tools");
   if (existsSync(dir)) {
     for (const file of readdirSync(dir).filter((name) => name.endsWith(".ts")).sort()) {

@@ -7,6 +7,7 @@ import {
   optString,
   parseCitation,
   requireString,
+  requireSurveyScopeForWrite,
   requireWorkspaceSourcePath,
   type ServerContext,
   type ToolDefinition,
@@ -876,6 +877,15 @@ export const impactTools: ToolDefinition[] = [
             }
             const sourcePath = requireWorkspaceSourcePath(evidencePath);
             const evidenceSha = change.path_after ? run.head_sha : run.base_sha;
+            // A prediction taken before the path left the survey set still
+            // names it; the evidence it would write is a new record (§2.6).
+            requireSurveyScopeForWrite(
+              ctx,
+              "apply_change_impact",
+              `change ${changeStep.id}`,
+              sourcePath,
+              evidenceSha,
+            );
             // A run predicted before the server read git with -z holds quoted
             // names ("caf\303\251.ts"), and normalization can rewrite a legal
             // name (a backslash). Neither names a file, so neither is cited.
