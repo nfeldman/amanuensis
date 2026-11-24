@@ -278,6 +278,10 @@ BEGIN SELECT RAISE(ABORT, 'scope reconciliation cannot be deleted'); END;
 -- owner excluded, and the paths onboarding sorted as meta; the owner's include
 -- rules win over all three. All five tables are append-only: a rule or a
 -- sorting row is withdrawn by a later row that supersedes it, never by an edit.
+-- Each also refuses an insert that would replace a row it holds: an INSERT OR
+-- REPLACE deletes the row it collides with without firing a delete trigger
+-- (recursive_triggers is off), so the update and delete triggers alone would
+-- let a REPLACE rewrite history.
 
 -- The owner's rules. `owner_words` quotes the request that asked for the rule,
 -- so a rule nobody asked for cannot be recorded as if somebody had.
@@ -298,6 +302,10 @@ BEGIN SELECT RAISE(ABORT, 'scope rule is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS scope_rule_cannot_be_deleted
 BEFORE DELETE ON scope_rules FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'scope rule cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS scope_rule_cannot_be_replaced
+BEFORE INSERT ON scope_rules FOR EACH ROW
+WHEN EXISTS (SELECT 1 FROM scope_rules WHERE id = NEW.id)
+BEGIN SELECT RAISE(ABORT, 'scope rule cannot be replaced'); END;
 
 -- Onboarding's sorting of the tree into product and meta, by prefix or path.
 CREATE TABLE IF NOT EXISTS scope_sorting (
@@ -316,6 +324,10 @@ BEGIN SELECT RAISE(ABORT, 'scope sorting is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS scope_sorting_cannot_be_deleted
 BEFORE DELETE ON scope_sorting FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'scope sorting cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS scope_sorting_cannot_be_replaced
+BEFORE INSERT ON scope_sorting FOR EACH ROW
+WHEN EXISTS (SELECT 1 FROM scope_sorting WHERE id = NEW.id)
+BEGIN SELECT RAISE(ABORT, 'scope sorting cannot be replaced'); END;
 
 -- A meta row's cheap inventory: proof the folder was opened. Kept apart from
 -- `evidence` so an inventory citation can never support a claim, and no page
@@ -337,6 +349,10 @@ BEGIN SELECT RAISE(ABORT, 'scope inventory is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS scope_inventory_cannot_be_deleted
 BEFORE DELETE ON scope_inventory FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'scope inventory cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS scope_inventory_cannot_be_replaced
+BEFORE INSERT ON scope_inventory FOR EACH ROW
+WHEN EXISTS (SELECT 1 FROM scope_inventory WHERE rowid = NEW.rowid)
+BEGIN SELECT RAISE(ABORT, 'scope inventory cannot be replaced'); END;
 
 -- The resolved result of one reconciliation: which tracked paths left the
 -- survey set, and what decided it. Written by `detect_changes` in the
@@ -358,6 +374,14 @@ BEGIN SELECT RAISE(ABORT, 'scope exclusion is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS scope_exclusion_cannot_be_deleted
 BEFORE DELETE ON scope_exclusions FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'scope exclusion cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS scope_exclusion_cannot_be_replaced
+BEFORE INSERT ON scope_exclusions FOR EACH ROW
+WHEN EXISTS (
+    SELECT 1 FROM scope_exclusions
+    WHERE rowid = NEW.rowid
+       OR (reconciliation_id = NEW.reconciliation_id AND file_path = NEW.file_path)
+)
+BEGIN SELECT RAISE(ABORT, 'scope exclusion cannot be replaced'); END;
 
 -- The store's mode is its latest row by id: `sorted` (every survey path is
 -- owed a sorting row) or `legacy` (a store surveyed before sorting existed).
@@ -378,6 +402,10 @@ BEGIN SELECT RAISE(ABORT, 'scope mode change is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS scope_mode_change_cannot_be_deleted
 BEFORE DELETE ON scope_mode_changes FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'scope mode change cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS scope_mode_change_cannot_be_replaced
+BEFORE INSERT ON scope_mode_changes FOR EACH ROW
+WHEN EXISTS (SELECT 1 FROM scope_mode_changes WHERE id = NEW.id)
+BEGIN SELECT RAISE(ABORT, 'scope mode change cannot be replaced'); END;
 
 -- Per-owner standing: what a reader is entitled to claim about one file on
 -- the authority of one subsystem's examination of it. One row per file_ledger
