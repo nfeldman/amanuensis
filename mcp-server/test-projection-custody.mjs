@@ -8,6 +8,7 @@ import { openDatabase } from "./dist/db.js";
 import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { gitTools } from "./dist/tools/git.js";
 import { materializeTools } from "./dist/tools/materialize.js";
+import { scopeTools } from "./dist/tools/scope.js";
 
 function assert(value, message) {
   if (!value) throw new Error(message);
@@ -42,7 +43,9 @@ ensureProjectStorage(project, (dbPath) => openDatabase(dbPath).close());
 const storage = project.storagePath;
 const db = openDatabase(project.dbPath);
 const ctx = { project, db, sessionId: "projection-session" };
-const tools = new Map([...materializeTools, ...gitTools].map((tool) => [tool.name, tool]));
+const tools = new Map(
+  [...materializeTools, ...gitTools, ...scopeTools].map((tool) => [tool.name, tool]),
+);
 const call = (name, args = {}) => tools.get(name).handler(args, ctx);
 
 try {
@@ -81,6 +84,9 @@ try {
     `INSERT INTO file_ledger (subsystem_id, file_path, why_in_scope, classification, ref_sha)
      VALUES ('B-01', 'fixture.ts', 'projection custody fixture', 'examined', ?)`,
   ).run(sha);
+  // A fresh store is in sorted mode, where publication also needs every survey
+  // path sorted (design/scope/PLAN.md §2.5).
+  call("record_scope_sorting", { pattern: "fixture.ts", category: "product", description: "the code" });
   call("detect_changes", { current_sha: sha });
 
   const published = call("materialize_docs", { clean_publish: true });
