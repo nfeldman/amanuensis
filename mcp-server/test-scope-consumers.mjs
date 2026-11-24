@@ -170,7 +170,7 @@ function main(mods) {
    * One arm's store at c1. `excluded`: the owner excludes `design/` after the
    * rows exist. `ledgerSpec`: whether `design/spec.md` has a ledger row at all.
    */
-  function build(label, { excluded, ledgerSpec = true, records = false }) {
+  function build(label, { excluded, ledgerSpec = true, records = false, source = "user" }) {
     const ws = join(scratch, `ws-${label}`);
     const write = (name, body) => {
       mkdirSync(dirname(join(ws, name)), { recursive: true });
@@ -206,8 +206,9 @@ function main(mods) {
       files.push({ file_path: SPEC, why_in_scope: "the spec the code follows", classification: "examined" });
     }
     call("add_files_to_scope", { subsystem_id: SUBSYSTEM, ref_sha: c0, files }, ctx);
-    for (const pattern of ["src/", "design/", "README.md"]) {
-      call("record_scope_sorting", { pattern, category: "product", description: `fixture ${pattern}` }, ctx);
+    const sortingIds = {};
+    for (const pattern of ["src/", "design/", "README.md", ".gitignore"]) {
+      sortingIds[pattern] = call("record_scope_sorting", { pattern, category: "product", description: `fixture ${pattern}` }, ctx).id;
     }
     call("set_git_state", { canonical_branch: "main", onboarding_sha: c0 }, ctx);
     call("detect_changes", { current_sha: c0 }, ctx);
@@ -240,7 +241,11 @@ function main(mods) {
         )
         .run(FINDING, SUBSYSTEM, JSON.stringify([`${SPEC}:Spec@${c0}`]), c0);
     }
-    if (excluded) {
+    // The exclusion, from the source asked for: the owner's rule, a meta row
+    // that withdraws the product row over design/, or the repository's own
+    // .gitignore, committed after the rows and before the change.
+    let base = c0;
+    if (excluded && source === "user") {
       call(
         "set_scope_rule",
         {
@@ -251,12 +256,27 @@ function main(mods) {
         },
         ctx,
       );
-      call("detect_changes", { current_sha: c0 }, ctx);
+    } else if (excluded && source === "meta") {
+      call(
+        "record_scope_sorting",
+        {
+          pattern: "design/",
+          category: "meta",
+          description: "plans",
+          supersedes: sortingIds["design/"],
+          inventory: [{ file_path: SPEC, line_range: "1", excerpt: "# Spec" }],
+        },
+        ctx,
+      );
+    } else if (excluded && source === "gitignore") {
+      write(".gitignore", "design/\n");
+      base = commitAll(ws, "ignore design/");
     }
+    if (excluded) call("detect_changes", { current_sha: base }, ctx);
 
     write(SPEC, "# Spec\n\nThe value is two.\n");
     const c1 = commitAll(ws, "change the spec only");
-    return { ctx, ws, c0, c1 };
+    return { ctx, ws, c0: base, c1 };
   }
 
   const specRow = (ctx) =>
@@ -523,6 +543,31 @@ function main(mods) {
     const want = { subsystems: [SUBSYSTEM], seams: [], invalidated: [] };
     return same(view, want) ? null : `impact reads ${show(view)}, want ${show(want)}`;
   });
+
+  // The inactive-row controls hold for every source, not only the owner's rule:
+  // a consumer that treated only `user` exclusions as inactive would leave meta
+  // and gitignored rows creating work (final review, F12/codex).
+  for (const source of ["meta", "gitignore"]) {
+    check(`X1 a ${source} exclusion makes the row inactive for detect_changes, the backlog and change impact`, () => {
+      const fx = build(`source-${source}`, { excluded: true, source });
+      const wrong = [];
+      const r = call("detect_changes", { current_sha: fx.c1 }, fx.ctx);
+      const row = (r.excluded_with_rows ?? []).find((e) => e.file_path === SPEC);
+      if (row?.source !== source) wrong.push(`excluded_with_rows ${show(r.excluded_with_rows)}`);
+      if (!same(r.stale_subsystems, [])) wrong.push(`stale_subsystems ${show(r.stale_subsystems)}`);
+      if (!same(specRow(fx.ctx), { stale: 0, stale_reason: null })) wrong.push(`the inactive row is ${show(specRow(fx.ctx))}`);
+      fx.ctx.db
+        .prepare("UPDATE file_ledger SET stale = 1, stale_reason = 'git-drift' WHERE subsystem_id = ? AND file_path = ?")
+        .run(SUBSYSTEM, SPEC);
+      const rows = call("get_stale_backlog", { limit: 50 }, fx.ctx).map((e) => `${e.subsystem_id}:${e.source_path}`);
+      if (!same(rows, [])) wrong.push(`the backlog is ${show(rows)}`);
+      const impact = call("predict_change_impact", { base_sha: fx.c0, head_sha: fx.c1, run_id: `sc11-impact-${source}` }, fx.ctx);
+      const mapped = (impact.mapped_objects ?? []).filter((o) => o.object_type === "subsystem").map((o) => o.object_id);
+      const gaps = (impact.gaps ?? []).map((o) => o.object_id);
+      if (!same({ mapped, gaps }, { mapped: [], gaps: [] })) wrong.push(`impact reads ${show({ mapped, gaps })}`);
+      return wrong.length ? wrong.join("; ") : null;
+    });
+  }
 
   // ------------------------------------------------------------ refresh run
   const refreshView = (arm) => {
