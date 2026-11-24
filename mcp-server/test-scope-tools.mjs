@@ -39,6 +39,9 @@
 //     `sorted` scope_mode_changes row and say so, set_scope_rule changes the
 //     mode, or a second sorting row appends another; or a sorted store gains
 //     a mode row from a sorting row;
+//   - get_scope with a revision does not read the tree at that revision: its
+//     scope, survey count and path account must differ between two revisions
+//     whose trees differ by one path (G4);
 //   - test-refusal-parity.mjs does not pass, the register has no entry for
 //     the new refusals with onboarding.md as a reference, or
 //     scripts/gen-tool-inventory.mjs --check is not clean, or DEVELOPMENT.md's
@@ -552,6 +555,36 @@ const RULE = (extra = {}) => ({
     scopeOf("src/app.ts");
     const after = ["scope_rules", "scope_sorting", "scope_inventory", "scope_mode_changes", "scope_reconciliations"].map((t) => count(db, t));
     return same(before, after) ? null : `${JSON.stringify(before)} became ${JSON.stringify(after)}`;
+  });
+}
+
+// ------------------------------------------------------------------ get_scope at a named revision
+
+{
+  // Two revisions whose trees differ by one path, reconciled at the first: a
+  // named revision is read at that revision, not at the last reconciliation.
+  const { ctx, ws, head } = world();
+  writeFileSync(join(ws, "src", "late.ts"), citedSource("late"));
+  git(ws, "add", "src/late.ts");
+  git(ws, "commit", "-q", "--no-verify", "-m", "a later path");
+  const later = git(ws, "rev-parse", "HEAD");
+  const at = (revision) => {
+    const scope = call(ctx, "get_scope", { revision, path: "src/late.ts" });
+    return {
+      revision: scope?.scope?.revision,
+      revision_from: scope?.scope?.revision_from,
+      survey_paths: scope?.scope?.survey_paths,
+      in_tree: scope?.path?.in_tree,
+    };
+  };
+
+  check("G4 get_scope with a revision reads the scope at that revision", () => {
+    const got = { seed: at(head), later: at(later) };
+    const want = {
+      seed: { revision: head, revision_from: "requested", survey_paths: 7, in_tree: false },
+      later: { revision: later, revision_from: "requested", survey_paths: 8, in_tree: true },
+    };
+    return same(got, want) ? null : `got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`;
   });
 }
 
