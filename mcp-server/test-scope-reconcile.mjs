@@ -1172,6 +1172,14 @@ function main(mods) {
     return same(got, want) ? null : `records_citing_excluded ${show(r3?.records_citing_excluded)}, want ${show(want)}`;
   });
 
+  // Evidence cited a file under design/ that no ledger row named and the tree
+  // no longer carries: its path is decided as if it were there (E6).
+  ctx3.db
+    .prepare(
+      `INSERT INTO evidence (file_path, symbol, line_range, ref_sha, kind, excerpt, session_id)
+       VALUES ('design/deleted.ts', 'Deleted', '1', ?, 'code-verified', 'x', ?)`,
+    )
+    .run(sha3, ctx3.sessionId);
   rmSync(join(ws3, "design", "gone.ts"));
   rmSync(join(ws3, "src", "old.ts"));
   git(ws3, "add", "-A");
@@ -1196,6 +1204,17 @@ function main(mods) {
     if (!same(mapped, ["src/old.ts"])) wrong.push(`stale_subsystems map ${show(mapped)}, want ["src/old.ts"]`);
     const gaps = ctx3.db.prepare("SELECT file_path FROM scope_gaps WHERE kind = 'absent' ORDER BY file_path").all().map((r) => r.file_path);
     if (!same(gaps, ["src/old.ts"])) wrong.push(`absent scope_gaps ${show(gaps)}`);
+    return wrong.length ? wrong.join("; ") : null;
+  });
+
+  check("E6 an unledgered evidence path absent from the tree keeps its exclusion, outside the tree's counts", () => {
+    const wrong = [];
+    const excluded = row4 ? exclusionsOf(ctx3, row4.id).map((r) => `${r.file_path}:${r.source}`) : [];
+    if (!excluded.includes("design/deleted.ts:user")) wrong.push(`scope_exclusions ${show(excluded)} lack design/deleted.ts`);
+    const tree = git(ws3, "ls-tree", "-r", "--name-only", "HEAD").split("\n").filter(Boolean).length;
+    if (row4?.tracked_paths !== tree) wrong.push(`tracked_paths ${row4?.tracked_paths}, the tree holds ${tree}`);
+    const counted = (row4?.survey_paths ?? 0) + (row4?.excluded ?? 0);
+    if (counted !== tree) wrong.push(`survey_paths ${row4?.survey_paths} + excluded ${row4?.excluded} is ${counted}, not the tree's ${tree}`);
     return wrong.length ? wrong.join("; ") : null;
   });
 
