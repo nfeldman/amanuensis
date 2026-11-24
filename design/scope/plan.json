@@ -35,7 +35,7 @@
       "status": "done",
       "attempts": 1,
       "start_sha": "4bc4223c9e5b258d3a33fefaf28fa30814af5507",
-      "red_sha": 5228412,
+      "red_sha": "5228412",
       "green_sha": "30fb11ca6fffc55fb1f9051917ccf118ef0fd60c",
       "verified_by_launcher": true,
       "blocked_reason": "",
