@@ -222,7 +222,7 @@ jobs:
       # GATE SC1 (design/scope/PLAN.md §3 SC1; §2.1, §2.9). The five survey-scope
       # tables, probe 8's columns and the mode seeding, on a fresh store, the
       # committed legacy and golden stores, and a store built from the schema at
-      # 6a6dc43 read out of history (hence fetch-depth: 0 above).
+      # 6a6dc43, read from its pinned fixture and checked against history.
       - name: Survey-scope schema — the five tables, probe 8, mode seeding, a pre-upgrade reconciliation that keeps standing
         working-directory: mcp-server
         run: node test-scope-schema.mjs
@@ -243,7 +243,7 @@ jobs:
       # the survey set, its exclusions and digests in one transaction, standing,
       # the unsorted publication refusal and excluded ledger rows, over temporary
       # git repositories and stores it creates itself; its legacy arm applies the
-      # schema at 6a6dc43 read out of history (hence fetch-depth: 0 above).
+      # schema at 6a6dc43 from its pinned fixture.
       - name: Survey-scope reconciliation — the survey set, both digests, standing, unsorted publication, inactive ledger rows
         working-directory: mcp-server
         run: node test-scope-reconcile.mjs
