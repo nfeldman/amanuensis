@@ -787,6 +787,7 @@
     ]
   },
   "final_review": {
-    "status": "pending"
+    "status": "reviewed",
+    "reviewed_sha": "36554edaa219718bf2832e92b5bc9034765034c1"
   }
 }

@@ -62,4 +62,4 @@
 - `cd mcp-server && node scripts/check-sql-identifiers.mjs`
 - `cd mcp-server && node scripts/gen-tool-inventory.mjs --check`
 
-Final review: pending
+Final review: reviewed
