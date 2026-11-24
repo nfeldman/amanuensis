@@ -1142,6 +1142,76 @@
         { "file": "../.claude/skills/amanuensis/references/code-index.md" },
         { "file": "../.claude/skills/amanuensis/references/phase-3-concerns.md" }
       ]
+    },
+    {
+      "id": "scope-owner-words-required",
+      "note": "New, design/scope/PLAN.md §2.1, §2.4: a rule nobody asked for cannot be recorded as if somebody had.",
+      "refuses": ["set_scope_rule"],
+      "instructs": [],
+      "server": { "file": "src/tools/scope.ts", "phrase": "quote the owner's own words that asked for it" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
+      "id": "scope-pattern",
+      "note": "New, design/scope/PLAN.md §2.2: a pattern outside the normal form is refused rather than rewritten.",
+      "refuses": ["set_scope_rule", "record_scope_sorting"],
+      "instructs": [],
+      "server": { "file": "src/tools/scope.ts", "phrase": "is not one a scope row can hold" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
+      "id": "scope-inventory-required",
+      "note": "New, design/scope/PLAN.md §2.1, §2.4: the inventory is the proof the folder was opened.",
+      "refuses": ["record_scope_sorting"],
+      "instructs": [],
+      "server": { "file": "src/tools/scope.ts", "phrase": "meta row needs an inventory" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
+      "id": "scope-inventory-outside",
+      "note": "New, design/scope/PLAN.md §2.4.",
+      "refuses": ["record_scope_sorting"],
+      "instructs": [],
+      "server": { "file": "src/tools/scope.ts", "phrase": "which is outside the pattern" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
+      "id": "scope-inventory-citation",
+      "note": "New, design/scope/PLAN.md §2.4.",
+      "refuses": ["record_scope_sorting"],
+      "instructs": [],
+      "server": { "file": "src/tools/scope.ts", "phrase": "needs both a line_range and an excerpt" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
+      "id": "scope-supersedes-unknown",
+      "note": "New, design/scope/PLAN.md §2.1: a withdrawal names a row this store holds.",
+      "refuses": ["set_scope_rule", "record_scope_sorting"],
+      "instructs": [],
+      "server": { "file": "src/tools/scope.ts", "phrase": "get_scope lists the active rows and their ids" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
+      "id": "scope-supersedes-withdrawn",
+      "note": "New, design/scope/PLAN.md §2.1: a row is withdrawn once, so the active rows have one reading.",
+      "refuses": ["set_scope_rule", "record_scope_sorting"],
+      "instructs": [],
+      "server": { "file": "src/tools/scope.ts", "phrase": "is already withdrawn by" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
     }
   ]
 }

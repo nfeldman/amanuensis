@@ -98,6 +98,11 @@ const ADDITIVE_TOOLS = new Set([
   "import_artifact_bodies",
   "record_open_question",
   "rebaseline_operating_envelope",
+  // `scope_rules`, `scope_sorting`, `scope_inventory` and `scope_mode_changes`
+  // are append-only in the same way (design/scope/PLAN.md §2.1); a withdrawal
+  // is a later row that supersedes the first.
+  "set_scope_rule",
+  "record_scope_sorting",
 ]);
 
 // The prefix rule below derives read-only from the `get_`/`list_`/`lookup_`
@@ -173,6 +178,7 @@ import { revalidationTools } from "./tools/revalidation.js";
 import { reviewTools } from "./tools/review.js";
 import { reviewAnalysisTools } from "./tools/review-analysis.js";
 import { reviewSessionTools } from "./tools/review-session.js";
+import { scopeTools } from "./tools/scope.js";
 import { seamTools } from "./tools/seams.js";
 import { staleTools } from "./tools/stale.js";
 import { storageHistoryTools } from "./tools/storage-history.js";
@@ -358,6 +364,7 @@ async function main(): Promise<void> {
     ...subsystemTools,
     ...concernTools,
     ...fileTools,
+    ...scopeTools,
     ...dispositionTools,
     ...findingTools,
     ...fieldNoteTools,

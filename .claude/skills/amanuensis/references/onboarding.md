@@ -32,6 +32,33 @@ categories.
   navigation. If only grep is available, say so: it changes how Phase 2
   reads.
 
+## Phase 0b · What the survey leaves out
+
+The survey set is the tree at a revision minus three kinds of path: those the
+repository's own ignore files match, those the owner excluded, and those
+onboarding sorted as meta. Three tools record and read it.
+
+- `set_scope_rule(pattern, action, reason, owner_words)` records an owner
+  rule, `exclude` or `include`. Call it only when the owner has asked. A rule
+  without `owner_words` is refused: quote the owner's own words that asked for
+  it, and record no rule the owner did not ask for.
+- `record_scope_sorting(pattern, category, description, inventory)` sorts a
+  path or prefix as `product` or `meta`. A meta row needs an inventory: each
+  citation names a file under the row's pattern, and the server refuses one
+  which is outside the pattern. Each citation needs both a line_range and an
+  excerpt, checked against the file at the last reconciled revision as
+  `add_evidence` checks a citation. The inventory is accepted even when the
+  path is already excluded, and it never becomes evidence.
+- Both writers refuse a pattern that is not one a scope row can hold: one
+  with `..`, a leading `/`, or `.amanuensis/`.
+- A row is withdrawn by a later row that names it in `supersedes`. A
+  `supersedes` that names no row is refused, since get_scope lists the active
+  rows and their ids, and so is one naming a row that is already withdrawn by
+  a later one.
+- `get_scope(path)` names the owner rule, sorting row or gitignore match that
+  decides a path, and lists the unsorted paths.
+- Neither writer reconciles. Run `detect_changes` after recording rows.
+
 ## Phase 1 · Repository shape
 
 Explore top-level. Identify languages, build systems, code generation,

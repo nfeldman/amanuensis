@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_230 tools across 49 groups. Generated from `tools/list` — do not hand-edit._
+_233 tools across 50 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -626,6 +626,14 @@ _230 tools across 49 groups. Generated from `tools/list` — do not hand-edit._
 | `export_review_session` | Generate canonical JSON and Markdown under project storage from a furnished review session, with stable item identifiers, record links, expansion pointers, and an immutable publication hash. The export remains derived, never authoritative. |
 | `verify_review_export` | Read the canonical export paths back and independently reconcile state, exact item coverage, and semantic content against the source review session. Label swaps, missing unknowns, path errors, and edited completion custody turn RED. |
 | `record_review_session_evaluation` | Record decision-surface usability as verification minutes, missed constraints over an explicit denominator, and expansion count; satisfaction is optional context and cannot replace the task metrics. |
+
+### `scope` (3)
+
+| Tool | Description |
+|---|---|
+| `set_scope_rule` | Record one of the owner's survey-scope rules: exclude a path from the survey, or include one back from what the repository's ignore files or onboarding's meta sorting leave out. The pattern is an exact path, a directory prefix ending in / (design/ covers everything under it) or a glob (* within one segment, ** across segments). Call this only when the owner has asked, and quote the owner's own words that asked for it in owner_words; a rule without them is refused. The owner's rules win over gitignore and sorting; between two of them the more specific pattern decides, and the later one breaks a tie. A rule is withdrawn by a later rule that names it in supersedes. Returns the paths the rule now decides at the last reconciled revision (the count and up to 50 paths) and a reminder to run detect_changes, since a reconciliation recorded before the rule does not account for it. |
+| `record_scope_sorting` | Record onboarding's sorting of a path, directory prefix or glob as product or meta. Product is code or material relevant to code (tests, fixtures, build, CI, configuration, documentation that ships or describes use), and the survey covers it. Meta is material about the project rather than part of it (plans, specs and reviews of past work, research, recorded evidence, notes), and the survey leaves it out. A meta row needs an inventory: at least one {file_path, line_range, excerpt} citation of a file under its pattern, checked against the last reconciled revision (HEAD before the first reconciliation) as add_evidence checks a citation. Inventory citations are kept apart from evidence: they never support a claim and no page prints them. They are accepted even when the path is already excluded. The most specific sorting row decides a path, and the later one breaks a tie; a row is withdrawn by a later row that names it in supersedes. In a legacy store, the first sorting row moves the store to sorted mode, where a survey path no sorting row covers counts as unsorted. Returns the paths the row now decides at the last reconciled revision and a reminder to run detect_changes. |
+| `get_scope` | Read-only. The store's survey-scope mode (sorted, or legacy for a store surveyed before sorting existed), the active owner rules and sorting rows, the last reconciliation's recorded counts, and the survey set resolved under the active rows at revision (default: the last reconciled revision, else HEAD): its size, the excluded paths by source (gitignore, user, meta) and the unsorted paths (the count and up to 50). With path, names the owner rule, sorting row or gitignore match that decides that path, or says that nothing does. |
 
 ### `seams` (3)
 
