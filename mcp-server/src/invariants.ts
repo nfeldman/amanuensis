@@ -23,6 +23,7 @@ import {
 } from "./helpers.js";
 import {
   activeRows,
+  exclusionDigest,
   matchesPattern,
   type ScopeExclusion,
   type ScopeRuleRow,
@@ -1250,10 +1251,23 @@ export interface ScopeReconciliation {
  * from the survey set (design/scope/PLAN.md §2.6a). An inactive row is kept and
  * reported, never deleted, and carries no obligation; an include rule makes it
  * active again at the next reconciliation.
+ *
+ * The last reconciliation is the latest whose `scope_exclusions` rows still
+ * match its `exclusion_digest` (one taken before survey scope has none), so a
+ * row appended after a reconciliation was taken makes nothing inactive, just
+ * as it takes that reconciliation's standing away. `scope_exclusion_digest` is
+ * registered on every connection by `openDatabase`.
  */
 export const ACTIVE_LEDGER_ROW_SQL = `file_path NOT IN (
   SELECT file_path FROM scope_exclusions
-   WHERE reconciliation_id = (SELECT MAX(id) FROM scope_reconciliations))`;
+   WHERE reconciliation_id = (
+     SELECT r.id FROM scope_reconciliations r
+      WHERE (r.exclusion_digest IS NULL
+             AND NOT EXISTS (SELECT 1 FROM scope_exclusions x WHERE x.reconciliation_id = r.id))
+         OR r.exclusion_digest = scope_exclusion_digest(
+              (SELECT json_group_array(json_array(x.file_path, x.source, x.rule_id))
+                 FROM scope_exclusions x WHERE x.reconciliation_id = r.id))
+      ORDER BY r.id DESC LIMIT 1))`;
 
 /**
  * A path set, as one hash. Sorted so the digest is a statement about the set
@@ -1321,22 +1335,9 @@ export function scopeDigest(db: DB): string {
     .digest("hex");
 }
 
-/**
- * §2.5's `exclusion_digest`: one reconciliation's `scope_exclusions` rows, by
- * path, each as `file_path \0 source \0 rule_id-or-empty`, joined with `\n`. It
- * witnesses the resolved set, so a row added, swapped or re-sourced after the
- * reconciliation was taken no longer matches it.
- */
-export function exclusionDigest(rows: readonly ScopeExclusion[]): string {
-  return createHash("sha256")
-    .update(
-      [...rows]
-        .sort((a, b) => (a.file_path < b.file_path ? -1 : a.file_path > b.file_path ? 1 : 0))
-        .map((row) => [row.file_path, row.source, row.rule_id ?? ""].join(NUL))
-        .join("\n"),
-    )
-    .digest("hex");
-}
+// §2.5's `exclusion_digest` lives in scope.ts, beside the resolution it
+// witnesses, because the store's connection computes it too (db.ts).
+export { exclusionDigest };
 
 /** The `scope_exclusions` rows one reconciliation wrote. */
 export function readScopeExclusions(db: DB, reconciliationId: number): ScopeExclusion[] {

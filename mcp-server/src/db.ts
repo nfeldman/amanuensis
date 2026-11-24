@@ -3,6 +3,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
+import { exclusionDigest, type ScopeSource } from "./scope.js";
 import { SQL_CONSTRAINED_VOCABULARIES, VOCABULARY_SQL_BINDINGS } from "./vocabulary.js";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
@@ -79,7 +80,24 @@ export function openDatabase(dbPath: string): DB {
   requireSchemaObjects(db);
   requireViews(db);
   seedScopeMode(db);
+  registerScopeFunctions(db);
   return db;
+}
+
+/**
+ * `scope_exclusion_digest(rows)`: §2.5's `exclusion_digest` over one
+ * reconciliation's `scope_exclusions` rows, given as SQLite's
+ * `json_group_array(json_array(file_path, source, rule_id))`. It lets
+ * `ACTIVE_LEDGER_ROW_SQL` (invariants.ts) trust only a reconciliation whose
+ * exclusions still match the digest it recorded.
+ */
+function registerScopeFunctions(db: DB): void {
+  db.function("scope_exclusion_digest", { deterministic: true }, (rows: unknown) => {
+    const parsed = JSON.parse(String(rows ?? "[]")) as Array<[string, ScopeSource, number | null]>;
+    return exclusionDigest(
+      parsed.map(([file_path, source, rule_id]) => ({ file_path, source, rule_id })),
+    );
+  });
 }
 
 export type ScopeMode = "sorted" | "legacy";

@@ -301,6 +301,23 @@ export function resolveScope(
   return resolution;
 }
 
+/**
+ * §2.5's `exclusion_digest`: one reconciliation's `scope_exclusions` rows, by
+ * path, each as `file_path \0 source \0 rule_id-or-empty`, joined with `\n`. It
+ * witnesses the resolved set, so a row added, swapped or re-sourced after the
+ * reconciliation was taken no longer matches it.
+ */
+export function exclusionDigest(rows: readonly ScopeExclusion[]): string {
+  return createHash("sha256")
+    .update(
+      [...rows]
+        .sort((a, b) => (a.file_path < b.file_path ? -1 : a.file_path > b.file_path ? 1 : 0))
+        .map((row) => [row.file_path, row.source, row.rule_id ?? ""].join("\u0000"))
+        .join("\n"),
+    )
+    .digest("hex");
+}
+
 // ------------------------------------------------------------------ gitignore at a revision
 
 export type TreeEntry = { mode: string; type: string; object: string; path: string };
