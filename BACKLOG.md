@@ -147,8 +147,8 @@ real run; "read" means found by reading code and not reproduced.
   path gets no ledger row, no evidence and no vocabulary anchor, and appears on no page except as
   a count on the overview. Ledger-exempt classifications inside the survey set (`generated-ignore`
   and the rest) keep today's behaviour and still print. Existing stores keep working: a `legacy`
-  store, one that already had ledger rows, changes in one way only, that gitignore matches leave
-  the survey set and show as `excluded_with_rows` if they were ledgered. There is no tracked
+  store, one that already had ledger or reconciliation rows, changes in one way only, that
+  gitignore matches leave the survey set and show as `excluded_with_rows` if they were ledgered. There is no tracked
   `.amanuensisignore` file; the rules live in the store.
 
   The owner's rule, stated 2026-11-23 and condensed:
