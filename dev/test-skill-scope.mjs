@@ -19,10 +19,12 @@
 //          otherwise 5 spread across the listing) and cited;
 //       6. `record_scope_sorting`, a meta row with its inventory;
 //       7. `detect_changes` again, confirming `unsorted` is 0;
-//     or the Phase 0b text lacks the when-in-doubt rule (sort as product, because a wrong product
-//     costs reading time while a wrong meta hides code, and log the doubt with
+//     with the product bullet holding only product words and the meta bullet only meta words;
+//     or the Phase 0b text lacks the when-in-doubt rule (sort as product, never as meta, because a
+//     wrong product costs reading time while a wrong meta hides code, and log the doubt with
 //     `record_open_question`);
-//   - Phase 7 still calls `set_git_state` as its first bullet, or at all in call form;
+//   - Phase 7 still calls `set_git_state` as its first bullet, or at all: in call form, or a
+//     sentence that has the agent call or run it;
 //   - the tools Phase 0b names are not in the order set_git_state, set_scope_rule, detect_changes,
 //     record_scope_sorting, detect_changes, or one of them is absent from the built server;
 //   - SKILL.md's routing table has no row for "ignore X" / "don't survey X" that calls
@@ -31,10 +33,11 @@
 //     `owner_words` the tool requires;
 //   - phase-1-scope.md does not say a path outside the survey set gets no ledger row,
 //     notes.md does not say what `excluded` with a source (gitignore, user, meta) means when
-//     answering about a locus, or says such a path holds no record where §2.6a keeps the records
-//     made before it was excluded, or refresh.md does not say a new path under a meta prefix
-//     inherits its category while a new path under no rule is unsorted and needs sorting before
-//     publication;
+//     answering about a locus and that it is not missed, or says such a path holds no record where
+//     §2.6a keeps the records made before it was excluded, or refresh.md does not say a new path
+//     under a meta prefix inherits its category, left out and owing no ledger row, while a new
+//     path under no rule is unsorted and needs sorting before publication;
+//   - a text predicate above accepts one of the sabotages the slice-S5 reviewers wrote (T13);
 //   - a refusal sentence an earlier packet added is gone: onboarding.md's Phase 0b writer
 //     refusals, phase-5-packaging.md's "survey path(s) that no sorting row covers", records.md's
 //     excluded-path refusals, or test-refusal-parity.mjs does not pass;
@@ -168,6 +171,49 @@ function numberedItems(text) {
 const toolNames = (text) =>
   [...text.matchAll(/`([a-z]+(?:_[a-z]+)+)(?:\([^`]*\))?`/g)].map((match) => match[1]);
 
+// What a sentence says, not only the words it holds. Each predicate returns a problem or null, and T13
+// runs it on the sabotages the slice-S5 reviewers wrote, so a predicate that misses one turns red.
+
+const PRODUCT_WORDS = [/\bcode\b/, /\btests?\b/, /\bfixtures?\b/, /\bbuild\b/, /\bCI\b/, /\bconfiguration\b/];
+const META_WORDS = [/\bplans?\b/, /\bspecs?\b/, /\breviews?\b/, /\bresearch\b/, /recorded evidence/, /\bnotes\b/];
+
+/** Step 4 defines product and meta in two bullets, each holding its own words and not the other's. */
+function definitionProblem(step) {
+  const product = /- Product is (.*?)(?= - Meta is |$)/.exec(step)?.[1];
+  const meta = /- Meta is (.*?)(?= - Product is |$)/.exec(step)?.[1];
+  if (!product || !meta) return "step 4 has no bullet starting 'Product is' and one starting 'Meta is'";
+  if (/\bmeta\b/i.test(product)) return `the Product bullet speaks of meta: "${product.slice(0, 100)}"`;
+  if (/\bproduct\b/i.test(meta)) return `the Meta bullet speaks of product: "${meta.slice(0, 100)}"`;
+  for (const word of PRODUCT_WORDS) {
+    if (!word.test(product)) return `the Product bullet does not hold ${word.source}`;
+    if (word.test(meta)) return `the Meta bullet holds ${word.source}, a product word`;
+  }
+  for (const word of META_WORDS) {
+    if (!word.test(meta)) return `the Meta bullet does not hold ${word.source}`;
+    if (word.test(product)) return `the Product bullet holds ${word.source}, a meta word`;
+  }
+  return null;
+}
+
+/** The in-doubt sentence sorts as product, never as meta. */
+const inDoubtProblem = (s) =>
+  /\bsort (?:it |them )?as meta\b/i.test(s) || !/\bsort (?:it |them )?as product\b/i.test(s)
+    ? `the in-doubt sentence does not sort as product: "${s.slice(0, 160)}"`
+    : null;
+
+/** A Phase 7 sentence that has the agent call or run set_git_state. */
+const callsSetGitState = (s) =>
+  /set_git_state/.test(s) && /\b(?:call|run|invoke)s?\b/i.test(s) && !/\bPhase 0b\b/.test(s);
+
+/** notes.md must not tell the agent to call an excluded path missed. */
+const callsMissed = (s) => /\bcall it missed\b/i.test(s) && !/\b(?:do not|don't|never)\s+call it missed\b/i.test(s);
+
+/** refresh.md's inherit sentence leaves the path out and owes it nothing. */
+const inheritProblem = (s) =>
+  !/\bleft out of the survey set\b|\bneeds nothing\b/i.test(s) || /\bledger row\b|\bstays? in the survey set\b/i.test(s)
+    ? `the inherit sentence does not leave the path out owing nothing: "${s.slice(0, 160)}"`
+    : null;
+
 // ---------------------------------------------------------------------------------------- text half
 
 const onboarding = readText("references/onboarding.md");
@@ -226,7 +272,8 @@ const STEP_RULES = [
       /\breviews?\b/i.test(s) &&
       /\bresearch\b/i.test(s) &&
       /recorded evidence/i.test(s) &&
-      /\bnotes\b/i.test(s),
+      /\bnotes\b/i.test(s) &&
+      definitionProblem(s) === null,
   ],
   [
     "5 each meta prefix listed, the first lines of a sample opened (every file up to 5, else 5 spread across the listing), cited",
@@ -252,7 +299,9 @@ check("T3 each of the seven steps says what the plan's step says, in order", () 
   if (steps.length !== 7) return "Phase 0b has no seven steps to read";
   const problems = [];
   for (const [index, [label, matches]] of STEP_RULES.entries()) {
-    if (!matches(steps[index].text)) problems.push(`step ${label}: step ${index + 1} reads "${steps[index].text.slice(0, 120)}"`);
+    if (matches(steps[index].text)) continue;
+    const why = index === 3 ? definitionProblem(steps[index].text) : null;
+    problems.push(`step ${label}: ${why ?? `step ${index + 1} reads "${steps[index].text.slice(0, 120)}"`}`);
   }
   return problems.length ? problems.join("; ") : null;
 });
@@ -277,6 +326,8 @@ check("T5 Phase 0b carries the when-in-doubt rule", () => {
     /wrong product costs reading time/.test(inDoubt) &&
     /wrong meta hides code/.test(inDoubt);
   if (!ok) return `the in-doubt sentence reads "${inDoubt.slice(0, 160)}"`;
+  const wrong = inDoubtProblem(inDoubt);
+  if (wrong) return wrong;
   const logged = sentences.find((s) => /`record_open_question`/.test(s) && /\bdoubt\b/i.test(s));
   return logged ? null : "no sentence logs the doubt with `record_open_question`";
 });
@@ -288,7 +339,9 @@ check("T6 Phase 7 no longer calls set_git_state, first or at all", () => {
   const firstBullet = phase7.split("\n").find((line) => /^- /.test(line)) ?? "";
   if (/set_git_state/.test(firstBullet)) return `Phase 7's first bullet is "${firstBullet.slice(0, 100)}"`;
   const call = /\b[Cc]all\s+`set_git_state\(/.test(flat(phase7)) || /`set_git_state\(/.test(phase7);
-  return call ? "Phase 7 still holds a set_git_state call" : null;
+  if (call) return "Phase 7 still holds a set_git_state call";
+  const said = flat(phase7).split(/(?<=[.!?])\s+/).find(callsSetGitState);
+  return said ? `Phase 7 still has the agent call set_git_state: "${said.slice(0, 120)}"` : null;
 });
 
 check("T7 the two routing rows are in SKILL.md's table", () => {
@@ -346,6 +399,8 @@ check("T9 notes.md says what `excluded` with a source means when answering about
   if (!/survey set/i.test(joined)) problems.push("the survey set is not named");
   if (!/no (?:record|ledger row)|not (?:been )?survey|no survey/i.test(joined)) problems.push("it does not say the path holds no record");
   if (!/ledger/.test(joined)) problems.push("it does not set the ledger source (a ledger classification) apart");
+  const missed = about.find(callsMissed);
+  if (missed) problems.push(`it calls an excluded path missed: "${missed.slice(0, 120)}"`);
   // §2.6a keeps what was recorded before the path was excluded, so the path is not record-free.
   const denies = about.find((s) => /\bholds? no records?\b|\bhas no (?:ledger )?(?:rows?|records?)\b/i.test(s));
   if (denies) problems.push(`it says an excluded path holds no record, though §2.6a keeps earlier ones: "${denies.slice(0, 120)}"`);
@@ -360,6 +415,8 @@ check("T10 refresh.md says new paths under a meta prefix inherit and new paths u
   const sentences = flat(text).split(/(?<=[.!?])\s+/);
   const inherit = sentences.find((s) => /\bmeta prefix\b/i.test(s) && /\binherit/i.test(s));
   if (!inherit) return "no sentence says a new path under a meta prefix inherits";
+  const owed = inheritProblem(inherit);
+  if (owed) return owed;
   const unsorted = sentences.find((s) => /under no rule/i.test(s) && /\bunsorted\b/.test(s));
   if (!unsorted) return "no sentence says a new path under no rule is unsorted";
   const joined = `${inherit} ${unsorted} ${sentences.filter((s) => /\bunsorted\b/.test(s)).join(" ")}`;
@@ -385,6 +442,25 @@ check("T11 every refusal sentence an earlier packet added is still there", () =>
     if (text === null) problems.push(`${file} is absent`);
     else if (!flat(text).includes(needle)) problems.push(`${file} lost "${needle}"`);
   }
+  return problems.length ? problems.join("; ") : null;
+});
+
+check("T13 each text predicate refuses the sabotages the slice-S5 reviewers wrote, and accepts the skill", () => {
+  const step4 = (product, meta) =>
+    flat(`Sort every path not yet excluded. - ${product} - ${meta}`);
+  const PRODUCT = "Product is code, or material relevant to code: tests, fixtures, build, CI, configuration, and documentation that ships or describes use.";
+  const META = "Meta is material about the project rather than part of it: plans, specs and reviews of past work, research, recorded evidence, and notes.";
+  const cases = [
+    ["definitionProblem", definitionProblem, step4(PRODUCT.replace("Product is code, or material relevant to code:", "Product is code; sort the following as meta:"), META)],
+    ["definitionProblem", definitionProblem, step4(PRODUCT.replace("Product is", "Meta is"), META.replace("Meta is", "Product is"))],
+    ["inDoubtProblem", inDoubtProblem, "When in doubt, sort as meta, because a wrong product costs reading time while a wrong meta hides code."],
+    ["callsSetGitState", (s) => (callsSetGitState(s) ? "calls" : null), "- Then call `set_git_state` with canonical_branch and onboarding_sha=HEAD."],
+    ["callsMissed", (s) => (callsMissed(s) ? "missed" : null), "Say which source and rule decide it, and call it missed."],
+    ["inheritProblem", inheritProblem, "A new path under a meta prefix inherits that prefix's category, so it stays in the survey set and needs a ledger row."],
+  ];
+  const problems = [];
+  for (const [name, predicate, bad] of cases) if (!predicate(bad)) problems.push(`${name} accepts "${bad.slice(0, 80)}"`);
+  if (definitionProblem(step4(PRODUCT, META))) problems.push(`definitionProblem refuses the plan's own definitions: ${definitionProblem(step4(PRODUCT, META))}`);
   return problems.length ? problems.join("; ") : null;
 });
 
