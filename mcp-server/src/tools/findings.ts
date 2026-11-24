@@ -179,6 +179,15 @@ export const findingTools: ToolDefinition[] = [
           requireSurveyScopeForWrite(ctx, "add_finding", `primary_files[${index}]`, path, refSha);
         }
       });
+      if (fixLocation !== null) {
+        requireSurveyScopeForWrite(
+          ctx,
+          "add_finding",
+          "fix_location",
+          fixLocationPath(fixLocation),
+          refSha,
+        );
+      }
 
       try {
         ctx.db.transaction(() => {
@@ -276,6 +285,14 @@ export const findingTools: ToolDefinition[] = [
       // concerns-pass depth or deeper. An earlier phase lacks the
       // evidentiary base to re-classify a finding.
       requireSubsystemStatus(ctx.db, row.subsystem_id, "concerns", "update_finding_status");
+      if (fixLocation !== null) {
+        requireSurveyScopeForWrite(
+          ctx,
+          "update_finding_status",
+          "fix_location",
+          fixLocationPath(fixLocation),
+        );
+      }
       // Evidence-required-to-overturn: a flip to 'ruled-out' must be backed
       // by new evidence gathered in this session, not a bare reclassification.
       requireOverturnEvidence(ctx.db, findingId, sessionId, row.status, status);

@@ -6,6 +6,7 @@ import {
   requireInt,
   requireString,
   requireStringArray,
+  requireSurveyScopeForEvidence,
   requireSurveyScopeForWrite,
   requireWorkspaceSourcePath,
   type ServerContext,
@@ -942,6 +943,18 @@ function land(args: Record<string, unknown>, ctx: ServerContext): Record<string,
     row.line_range = resolved.lineRange;
     if (resolved.anchor) anchors.set(row.local_key, resolved.anchor);
   }
+  // A judgment may also rest on an existing evidence row, by id; one on an excluded path is
+  // refused before the pass lands, as new evidence is (§2.6).
+  judgments.forEach((item, index) => {
+    if (Array.isArray(item.evidence_ids)) {
+      requireSurveyScopeForEvidence(
+        ctx,
+        "land_review_pass",
+        `judgments[${index}].evidence_ids`,
+        item.evidence_ids as number[],
+      );
+    }
+  });
   const localEvidence = new Map<string, number>();
   const dispatchedInput = parseJson<Record<string, unknown>>(pass.runtime_input_json, {});
   const allowedPacketEvidence = (hypothesisId: string | null): Set<number> => {
@@ -1653,7 +1666,13 @@ export const reviewAnalysisTools: ToolDefinition[] = [
       properties: {
         run_id: { type: "string" },
         pass_id: { type: "string" },
-        judgments: { type: "array", items: { type: "object" } },
+        judgments: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { evidence_ids: { type: "array", items: { type: "integer" } } },
+          },
+        },
         new_evidence: { type: "array", items: { type: "object" } },
         no_findings_reason: { type: "string" },
         coverage: { type: "object" },

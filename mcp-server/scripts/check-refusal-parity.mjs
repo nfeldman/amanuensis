@@ -453,10 +453,13 @@ function reaches(text, phrase, seen, depth) {
   if (saysIt(text, phrase)) return true;
   for (const match of text.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
     const name = match[1];
-    if (seen.has(name)) continue;
+    // `seen` holds the shallowest depth a name was followed at. A name first met deep in
+    // the walk, past the depth limit, is followed again when a shorter path reaches it, or
+    // a handler that calls the guard directly would be cut off by an unrelated chain.
+    if ((seen.get(name) ?? Number.POSITIVE_INFINITY) <= depth + 1) continue;
     const bound = SYMBOLS.get(name);
     if (!bound) continue;
-    seen.add(name);
+    seen.set(name, depth + 1);
     for (const body of bound) if (reaches(body, phrase, seen, depth + 1)) return true;
   }
   return false;
@@ -474,7 +477,7 @@ function statesRefusal(tool, phrase) {
   const definition = TOOL_DEFINITIONS.get(tool);
   if (definition === undefined) return false;
   if (carries(definition.definition, phrase)) return true;
-  return reaches(definition.handler, phrase, new Set(), 0);
+  return reaches(definition.handler, phrase, new Map(), 0);
 }
 
 // ---- assertions 1 and 2: the register against both sides -------------------

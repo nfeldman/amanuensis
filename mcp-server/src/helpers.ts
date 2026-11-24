@@ -499,13 +499,15 @@ export function requireSurveyScopeForMention(
 
 /**
  * The path a citation or location names: everything before its first colon, when that is
- * a workspace source path. Null for anything else, which names no path to guard.
+ * a workspace source path. Null for anything else, which names no path to guard. A space
+ * inside the path is kept, since a file name may carry one and the citation grammars that
+ * accept it would otherwise let the path past the guard.
  */
 export function citedSourcePath(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const separator = value.indexOf(":");
   const candidate = (separator === -1 ? value : value.slice(0, separator)).trim();
-  if (candidate.length === 0 || /\s/.test(candidate)) return null;
+  if (candidate.length === 0) return null;
   try {
     return requireWorkspaceSourcePath(candidate);
   } catch {

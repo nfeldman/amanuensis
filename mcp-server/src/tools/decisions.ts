@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
 import {
+  citedSourcePath,
   optString,
   requireEnum,
   requireString,
   requireSurveyScopeForEvidence,
+  requireSurveyScopeForWrite,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -203,6 +205,33 @@ function draft(args: Record<string, unknown>, ctx: ServerContext): Record<string
   ]);
   const premises = parsePremises(args.premises);
   const codeChanges = objectArray(args.code_changes, "code_changes", ["path", "relationship"], 0);
+  // A revision rests on its premises and names the code it changes, so an excluded path
+  // reaches it neither as a code premise, nor a changed path, nor an evidence premise (§2.6).
+  premises.forEach((premise, index) => {
+    if (premise.kind === "code") {
+      const path = citedSourcePath(premise.ref);
+      if (path !== null) {
+        requireSurveyScopeForWrite(ctx, "draft_decision_revision", `premises[${index}].ref`, path);
+      }
+    }
+  });
+  codeChanges.forEach((change, index) => {
+    const path = citedSourcePath(change.path);
+    if (path !== null) {
+      requireSurveyScopeForWrite(
+        ctx,
+        "draft_decision_revision",
+        `code_changes[${index}].path`,
+        path,
+      );
+    }
+  });
+  requireSurveyScopeForEvidence(
+    ctx,
+    "draft_decision_revision",
+    "premises",
+    premises.filter((premise) => premise.kind === "evidence").map((premise) => Number(premise.ref)),
+  );
   const authorKind = requireEnum(args, "authored_by_kind", AUTHOR_KINDS);
   const payload = {
     revision_id: revisionId,

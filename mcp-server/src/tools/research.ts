@@ -8,6 +8,7 @@ import {
   requireInt,
   requireString,
   requireStringArray,
+  requireSurveyScopeForEvidence,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -329,6 +330,16 @@ function propose(args: Record<string, unknown>, ctx: ServerContext): Record<stri
   const uncertainty = requireString(args, "uncertainty");
   const destination = parseDestination(args, ctx);
   const currentEvidence = requireObjects(args.current_evidence, "current_evidence");
+  // A request admitted on an excluded path's evidence would rest on it (§2.6), whatever
+  // the admission decides, so it is refused before anything is recorded.
+  requireSurveyScopeForEvidence(
+    ctx,
+    "propose_research_request",
+    "current_evidence",
+    currentEvidence
+      .filter((item) => item.kind === "repository-evidence")
+      .map((item) => Number(item.ref)),
+  );
   const neededSourceClasses = uniqueStrings(args.needed_source_classes, "needed_source_classes");
   const disconfirmers = uniqueStrings(args.disconfirmers, "disconfirmers");
   const changedPremiseRefs = uniqueStrings(args.changed_premise_refs ?? [], "changed_premise_refs");
