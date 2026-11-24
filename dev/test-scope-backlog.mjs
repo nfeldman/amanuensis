@@ -19,7 +19,10 @@
 //   - the item states a packet count or id range that disagrees with design/scope/plan.json;
 //   - the item lacks any of F1–F3 as its own one-line list entry, repeats an id, lists any
 //     other F id, leaves an entry without a description, does not mark one decided on
-//     2026-11-23, or lacks its outcome (a keyword from PLAN §1);
+//     2026-11-23, or lacks its outcome: every sentence of that decision in PLAN §1, compared
+//     after case, punctuation and contractions are set aside, or states a reversal of it
+//     (the rules in a tracked file or not in the store; the pages omitting nothing or the
+//     overview carrying no count);
 //   - the item leaves any decision open (waiting, undecided, to be decided).
 // Reads only BACKLOG.md, PLAN.md and plan.json; it touches no store.
 
@@ -40,6 +43,32 @@ const OUTCOME = {
   2: [/pages omit/, /overview/, /\bcount/],
   3: [/prefix/, /single path/, /inherit/],
 };
+// Wording that reverses a decision while keeping its keywords.
+const REVERSAL = {
+  1: [/tracked file/, /\bnot (?:in )?the store\b/],
+  2: [/omit nothing/, /\bno count\b/, /\b(?:list|print|show)s? excluded/],
+  3: [],
+};
+
+// A statement as compared: lower case, contractions spelled out, punctuation and
+// emphasis dropped, whitespace collapsed.
+const plain = (text) =>
+  squash(
+    text
+      .toLowerCase()
+      .replace(/n't\b/g, " not")
+      .replace(/[.,;:()`*"]/g, " "),
+  );
+
+// The sentences of decision Fn as PLAN §1 states it.
+function planDecision(plan, n) {
+  const m = plan.match(new RegExp(`^- \\*\\*F${n}:\\*\\*([\\s\\S]*?)(?=\\n- \\*\\*F|\\n\\s*\\n)`, "m"));
+  if (!m) return null;
+  return squash(m[1])
+    .split(/(?<=\.)\s+/)
+    .map(plain)
+    .filter((sentence) => sentence.length > 0);
+}
 
 const squash = (text) => text.replace(/\s+/g, " ").trim();
 
@@ -101,7 +130,7 @@ function check() {
     [/\*\*survey set\*\*/i, "the term survey set in bold"],
     [/tree at a revision/i, "that the survey set is the tree at a revision"],
     [/\bgitignore\b[\s\S]*\buser\b[\s\S]*\bmeta\b/i, "the three excluded kinds in order: gitignore, user and meta"],
-    [/include rules? win over (?:gitignore and meta|all three)/i, "that the owner's include rules win over gitignore and meta"],
+    [/include rules? win over gitignore and meta/i, "that the owner's include rules win over gitignore and meta"],
     [/between (?:two )?owner rules,? the more specific/i, "that between owner rules the more specific pattern decides"],
     [/whole tree as (?:its|their) denominator[^.]*survey set/i, "that every consumer of the whole tree as a denominator uses the survey set"],
     [/excluded means not included/i, "that excluded means not included"],
@@ -180,6 +209,15 @@ function check() {
     const lower = entry.toLowerCase();
     for (const word of OUTCOME[n]) {
       if (!word.test(lower)) return `F${n} does not carry its outcome (${word.source})`;
+    }
+    const sentences = planDecision(plan, n);
+    if (!sentences?.length) return `PLAN section 1 states no decision for F${n}`;
+    const said = plain(entry);
+    for (const sentence of sentences) {
+      if (!said.includes(sentence)) return `F${n} does not state PLAN's decision "${sentence}"`;
+    }
+    for (const word of REVERSAL[n]) {
+      if (word.test(lower)) return `F${n} reverses its decision (${word.source})`;
     }
   }
 
