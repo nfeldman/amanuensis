@@ -1158,6 +1158,26 @@ function main(mods) {
   ctx3.db
     .prepare("INSERT INTO vocabulary (term, gloss, subsystem_id, first_seen, ref_sha) VALUES ('Unit', 'fixture term', 'B-03', ?, ?)")
     .run(anchored, sha3);
+  // A disposition resting on evidence of the same excluded file, so the
+  // disposition lookup is exercised too (final review, F11/codex).
+  ctx3.db.prepare("INSERT INTO concerns (code, category, origin, status) VALUES ('CC-R2', 'cache', 'seeded', 'active')").run();
+  const r2Evidence = Number(
+    ctx3.db
+      .prepare(
+        `INSERT INTO evidence (file_path, symbol, line_range, ref_sha, kind, excerpt, session_id)
+         VALUES ('design/pkg@v1/spec.ts', 'Unit', '1', ?, 'code-verified', 'x', ?)`,
+      )
+      .run(sha3, ctx3.sessionId).lastInsertRowid,
+  );
+  ctx3.db
+    .prepare(
+      `INSERT INTO dispositions (subsystem_id, concern_code, classification, evidence, evidence_quality, rationale, ref_sha, session_id)
+       VALUES ('B-03', 'CC-R2', 'ruled-out', ?, 'code-verified', 'fixture', ?, ?)`,
+    )
+    .run(anchored, sha3, ctx3.sessionId);
+  ctx3.db
+    .prepare("INSERT INTO disposition_evidence (subsystem_id, concern_code, evidence_id, role) VALUES ('B-03', 'CC-R2', ?, 'supports')")
+    .run(r2Evidence);
   reconcile(ctx3);
   call(
     "set_scope_rule",
@@ -1166,9 +1186,10 @@ function main(mods) {
   );
   const r3 = reconcile(ctx3);
 
-  check("R2 records_citing_excluded finds records anchored at an excluded path that carries an @", () => {
+  check("R2 records_citing_excluded finds records anchored at an excluded path that carries an @, a disposition among them", () => {
     const got = (r3?.records_citing_excluded?.records ?? []).map((r) => `${r.kind}:${r.id}`).sort();
-    const want = ["finding:B03-1", "term:Unit"];
+    const want = ["disposition:B-03/CC-R2", `evidence:${r2Evidence}`, "finding:B03-1", "term:Unit"].sort();
+    if (r3?.records_citing_excluded?.count !== want.length) return `records_citing_excluded counts ${r3?.records_citing_excluded?.count}, want ${want.length}`;
     return same(got, want) ? null : `records_citing_excluded ${show(r3?.records_citing_excluded)}, want ${show(want)}`;
   });
 
