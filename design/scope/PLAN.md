@@ -265,9 +265,10 @@ names a path or carries evidence, and for every `INSERT INTO evidence`.
 | `impact.ts` | the evidence it inserts (`:825`) |
 | `vocabulary.ts` | `define_term` `first_seen` |
 | `field-notes.ts` | `add_field_note` `location` |
-| `findings.ts` | `add_finding` `primary_files` |
+| `findings.ts` | `add_finding` `primary_files`; `fix_location` in `add_finding` and `update_finding_status` |
 | `carried.ts` | `primary_files` on a carried finding's successor |
 | `dispatch.ts` | `file_path` |
+| `decisions.ts` | `draft_decision_revision` `code_changes[].path` and `code` premises |
 
 **Routes that attach an existing evidence row (SC12).** Each refuses an evidence row whose
 `file_path` is excluded, whether it arrives as `evidence_id` or `evidence_ids`:
@@ -283,11 +284,14 @@ names a path or carries evidence, and for every `INSERT INTO evidence`.
 | `narratives.ts` | `evidence_ids` |
 | `project-records.ts` | `evidence_ids`, including runtime boundaries |
 | `diagnosticity.ts` | `evidence_id`, `evidence_ids` |
-| `decisions.ts` | `evidence_id` |
+| `decisions.ts` | `evidence_id`; `draft_decision_revision` `evidence` premises |
+| `research.ts` | `propose_research_request` `current_evidence[].ref` of kind `repository-evidence` |
+| `review-analysis.ts` | `land_review_pass` `judgments[].evidence_ids` |
 | `contradictions.ts` | `evidence_id` |
 | `claim-marks.ts` | `evidence_id` |
 | `carried.ts` | `evidence_id` (`attach_carried_evidence`) |
 | `chorusmith-adapter.ts` | `evidence_ids`, `evidence` |
+| `crosswalk.ts` | `provenance[].ref` and `resolve_crosswalk_identity` `evidence[].ref` of kind `repository-evidence` |
 
 **Exempt, with reasons the SC12 census table carries:**
 - `artifacts.ts` `path` names a store artifact, not a source path.
@@ -304,7 +308,9 @@ names a path or carries evidence, and for every `INSERT INTO evidence`.
 
 The SC12 gate builds a census from the registered tool schemas at run time. It finds every
 property named `file_path`, `location`, `first_seen`, `path`, `paths`, `files`,
-`primary_files`, `evidence_id`, `evidence_ids`, `new_evidence` or `evidence`, at any depth.
+`primary_files`, `evidence_id`, `evidence_ids`, `new_evidence` or `evidence`, at any depth,
+and, since the slice-S3 review, `fix_location`, `premises`, `code_changes` or
+`current_evidence`. Every tool the second table lists has a route in the gate that exercises it.
 Each tool it finds must appear in one of the tables above, so a new tool that isn't listed
 turns the gate red.
 
@@ -312,6 +318,9 @@ Under the guard:
 
 - An excluded path is refused, with its source, its rule and how to bring it back: "an
   owner include rule".
+- Whether a path is excluded is decided at the last reconciled revision, whatever revision
+  the write cites, because that reconciliation recorded the survey set. Only a store with no
+  reconciliation reads the ignore files at the cited revision, else at HEAD.
 - This follows the owner's rule that meta is "not included in any work".
 - One consequence is accepted: a survey can't cite a `design/` spec as evidence while
   `design/` is meta. A record of intended behavior then rests on the code and its comments.
@@ -320,7 +329,8 @@ Reads are never refused: `describe_locus`, `outline_file`, `read_symbol`,
 `get_evidence` and the rest answer for an excluded path (§2.7).
 
 **The one exception among writes:** `retire_ledger_file` accepts an excluded path, so an agent can clear
-`excluded_with_rows`. The sorting inventory doesn't go through these tools at all (§2.1).
+`excluded_with_rows`. It keeps a subsystem's last row on an excluded path, since that row is
+what keeps the subsystem outside the survey (§2.6a). The sorting inventory doesn't go through these tools at all (§2.1).
 
 ### 2.6a Records made before a path was excluded
 
@@ -456,6 +466,8 @@ match. Nothing is deleted. Each kind of record is treated as follows:
     (restated, not imported; see `:172`).
   - It checks `scope_digest`.
   - In `sorted` mode, it adds an obligation `unsorted:<path>`.
+  - An incomplete inventory (unledgered or absent paths) is counted over the same set, and
+    keeps each path's named assignment and sorting obligation.
 - **Clauses 2, 3 and 4** skip a subsystem, and a seam, that is outside the survey
   (§2.6a), and name it in their output.
 - **Clauses 5–7** are unchanged.

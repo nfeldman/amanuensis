@@ -22,20 +22,26 @@ heading or table line. The page owns its headings and tables.
 
 A path the survey set leaves out, because the repository's ignore files match
 it, the owner excluded it, or onboarding sorted it as meta, gets no new record.
-Every writer that names a path or writes evidence refuses it with its source and
-its rule: `add_files_to_scope`, `update_file_classification`,
-`clear_staleness`, `add_evidence`, `land_review_pass`'s `new_evidence`,
-`apply_change_impact`, `define_term`'s `first_seen`, `add_field_note`'s
-`location`, `add_finding`'s and `carry_finding`'s `primary_files`, and
-`log_dispatch`. The refusal says: An excluded path gets no new record; reads
-still answer for it. Cite the code instead. Bring the path back only when the
-owner asks, with an owner include rule that quotes the owner's words
+These writers refuse it with its source and its rule: `add_files_to_scope`,
+`update_file_classification`, `clear_staleness`, `add_evidence`,
+`land_review_pass`'s `new_evidence`, `apply_change_impact`, `define_term`'s
+`first_seen`, `add_finding`'s and `carry_finding`'s `primary_files`, a
+finding's `fix_location`, when it is recorded or changed, and a
+decision revision's `code` premises and `code_changes` paths
+(`draft_decision_revision`). `add_field_note`'s `location` and `log_dispatch`'s
+`file_path` may be free text or a store path, so they refuse only a value that
+names a file in the tree. Whether a path is excluded is decided at the last
+reconciled revision, whatever revision the record cites. The refusal says: An
+excluded path gets no new record; reads still answer for it. It then names the
+remedy, an owner include rule that quotes the owner's words. So cite the code
+instead, and bring the path back only when the owner asks
 ([`onboarding.md`](onboarding.md), Phase 0b).
 
 Two writes are allowed on an excluded path. `retire_ledger_file` removes a
 ledger row left on one, which is how a row the reconciliation lists under
-`excluded_with_rows` is cleared. The sorting inventory may cite one, because it
-writes no evidence.
+`excluded_with_rows` is cleared; it keeps a subsystem's last such row, because
+that row is what keeps the subsystem outside the survey, and the row carries no
+obligation. The sorting inventory may cite one, because it writes no evidence.
 
 A record may not rest on an excluded path's evidence either. An evidence row
 that exists already, because it was recorded before the path was excluded, can't
@@ -44,13 +50,15 @@ superseding one), of dispositions (setting one, and attaching a row to one) and
 of findings (`attach_evidence_to_finding` and `verify_finding_fix`) refuse it,
 as do `clear_staleness`'s `evidence_id`, `record_explanation`,
 `record_narrative`, `record_runtime_boundary`, `attach_carried_evidence`, the
-diagnosticity matrix, decision invalidation, contradiction resolution, claim
-marks, the Chorusmith parity scope and the crosswalk's provenance. It makes no
-difference whether the row arrives as `evidence_id` or in `evidence_ids`. The
-refusal names the evidence row, its path, its source and its rule, and says:
-A record gets no support from an excluded path's evidence; reads still answer
-for it. Cite a reading of the code instead. Bring the path back only when the
-owner asks, with an owner include rule.
+diagnosticity matrix, decision invalidation, a decision revision's `evidence`
+premises, a research request's `current_evidence`, a review judgment's
+`evidence_ids` in `land_review_pass`, contradiction resolution, claim marks, the
+Chorusmith parity scope and the crosswalk's provenance and identity evidence. It
+makes no difference whether the row arrives as `evidence_id` or in
+`evidence_ids`. The refusal names the evidence row, its path, its source and its
+rule, and says: A record gets no support from an excluded path's evidence; reads
+still answer for it. It then names the same remedy, an owner include rule. So
+cite a reading of the code instead.
 
 ## Project profile
 
