@@ -81,14 +81,14 @@
       ],
       "budget_minutes": 150,
       "needs_mcp": false,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "0147506641f302dd7dd79a209a18e728a20686e7",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "64e3c49",
+      "green_sha": "ebbb7c5",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Added readScopeMode(db) to db.ts as the effective-mode reader (latest scope_mode_changes row by id); seeding runs after requireSchemaObjects/requireViews inside an immediate transaction. scope_exclusions has PRIMARY KEY (reconciliation_id, file_path) and CHECK (source='gitignore') = (rule_id IS NULL); the gate checks golden stores in both fixtures/legacy-stores and materializer/fixtures/store-only-golden, and exempts store_identity's first-open mint from its row-unchanged comparison."
     },
     {
       "id": "SC2",
