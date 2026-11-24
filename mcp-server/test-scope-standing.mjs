@@ -26,16 +26,22 @@
 //   4. get_dashboard does not count the excluded paths by source and the unsorted paths,
 //      or counts the inactive ledger rows, or does not report the subsystem and the seam
 //      outside the survey (D1-D3); list_subsystems or describe_locus on a subsystem does not
-//      say which subsystem is outside the survey (D4, D5);
+//      say which subsystem is outside the survey, or describe_locus counts a subsystem's
+//      inactive rows or their evidence (D4-D6);
 //   5. find_symbol returns a definition in an excluded path by default, or leaves it out
-//      with include_excluded: true, or a limited page is short because of it (F1-F3);
+//      with include_excluded: true, or a limited page is short because of it, even past more
+//      excluded rows than its widest window (F1-F4);
 //   6. search_records returns a hit whose subject is an excluded file locus or a subsystem
 //      outside the survey, drops a record that cites both included and excluded evidence,
 //      ignores include_excluded or include_history for the same rule, or filters after the
-//      page is cut so page 1 is short while more hits exist (R1-R5);
+//      page is cut so page 1 is short while more hits exist, or history search serves a closed
+//      record on an excluded locus, or a record located at a bare excluded file name (R1-R7);
 //   7. outline_file or read_symbol on an excluded path does not answer, or does not carry
 //      `excluded` with its source, or carries it on an included path (O1-O3);
-//   8. a server's instructions do not name the new standing source (I1), or this gate is
+//   8. a recorded exclusion stops answering `excluded` when git cannot read the workspace, or
+//      a file and its subsystem disagree about a rule recorded since the last reconciliation
+//      (U1, U2);
+//   9. a server's instructions do not name the new standing source (I1), or this gate is
 //      not registered in CI (CI1).
 //
 // Every fixture is a temporary git repository and a store under a temporary
@@ -132,10 +138,12 @@ const SOURCES = {
   "README.md": "# Fixture\n",
   Makefile: "all:\n\ttrue\n",
   "src/core.ts": "export function includedThing(): number {\n  return 1;\n}\n",
-  "src/other.ts": "export const unledgered = 2;\n",
+  "src/other.ts": "export const unledgered = 2;\nexport const used = includedThing();\n",
   "vendor/lib.ts": "export function vendorThing(): number {\n  return 3;\n}\n",
   "design/spec.md": "# Spec\n\nThe value is one.\n",
-  "design/tool.ts": "export function excludedThing(): number {\n  return 4;\n}\n",
+  // More references in an excluded path than find_symbol's widest window, ahead of the one
+  // included reference in path order (F4).
+  "design/tool.ts": `export function excludedThing(): number {\n  return 4;\n}\n${"includedThing();\n".repeat(5001)}`,
   "notes/log.md": "# Log\n\nA working note.\n",
   "notes/helper.ts": "export function metaThing(): number {\n  return 5;\n}\n",
   "gen/out.ts": "export function ignoredThing(): number {\n  return 6;\n}\n",
@@ -268,6 +276,16 @@ async function main(mods) {
     );
   await addClaim("CL-BOTH", "src/core.ts:includedThing", "zebra marks both included and excluded evidence", [evCore, evSpec]);
   await addClaim("CL-SPEC", "design/spec.md:Spec", "zebra zebra marks a claim about the excluded spec", [evSpec]);
+  // A closed claim on the excluded spec: only history search reaches it (R6).
+  await addClaim("CL-OLD", "design/spec.md:Value", "zebra zebra an invalidated claim about the excluded spec", [evSpec]);
+  const evValue = (
+    await call(
+      "add_evidence",
+      { file_path: "design/spec.md", line_range: "3", ref_sha: c0, kind: "code-verified" },
+      ctx,
+    )
+  ).id;
+  await call("invalidate_claim", { claim_id: "CL-OLD", at_sha: c0, reason: "fixture: closed", evidence_ids: [evValue] }, ctx);
   const finding = (id, subsystem, text) =>
     ctx.db
       .prepare(
@@ -286,6 +304,12 @@ async function main(mods) {
       ctx,
     );
   }
+  // A note located at a bare file name the owner excludes below (R7).
+  await call(
+    "add_field_note",
+    { category: "anomaly", observation: "zebra zebra zebra a note on the Makefile", location: "Makefile" },
+    ctx,
+  );
 
   // The owner's exclusions, after the records; one more owner rule on a bare file name.
   const designRule = (
@@ -452,6 +476,14 @@ async function main(mods) {
     const got = Object.fromEntries(rows.map((row) => [row.id, row.outside_survey]));
     return same(got, { [S1]: false, [S2]: true }) ? null : `outside_survey by subsystem is ${show(got)}`;
   });
+  await check("D6 describe_locus on a subsystem counts only its active ledger rows and their evidence", () => {
+    const got = [S1, S2].map((id) => {
+      const s = (id === S1 ? responses.s1 : responses.s2)?.standing ?? {};
+      return { total: s.ledger?.total, examined: s.ledger?.examined, rows: s.measured?.ledger_rows, evidence: s.measured?.evidence_rows };
+    });
+    const want = [{ total: 3, examined: 1, rows: 3, evidence: 1 }, { total: 0, examined: 0, rows: 0, evidence: 0 }];
+    return same(got, want) ? null : `counts are ${show(got)}, want ${show(want)}`;
+  });
   await check("D5 describe_locus on a subsystem says whether it is outside the survey", () => {
     const got = [responses.s1?.standing?.outside_survey, responses.s2?.standing?.outside_survey];
     return same(got, [false, true]) ? null : `outside_survey is ${show(got)}`;
@@ -487,6 +519,13 @@ async function main(mods) {
     return wrong.length ? wrong.join("; ") : null;
   });
 
+  await check("F4 find_symbol fills a page past more excluded rows than its widest window", async () => {
+    const r = await call("find_symbol", { query: "includedThing", mode: "references", limit: 1 }, ctx);
+    if (r.ok !== true) return `refused: ${show(r.error)}`;
+    const paths = (r.results ?? []).map((x) => x.path);
+    return same(paths, ["src/other.ts"]) ? null : `rows are in ${show(paths)}, want src/other.ts (more ${show(r.more)})`;
+  });
+
   // ------------------------------------------------------------ search_records
   const idsOf = (r) => (r.results ?? []).map((x) => `${x.kind}:${x.id}`);
   const keptHits = ["claim:CL-BOTH", "finding:S01-1", "finding:S01-2", "finding:S01-3"];
@@ -507,7 +546,7 @@ async function main(mods) {
       ...keptHits,
       "claim:CL-SPEC",
       "finding:S02-1",
-      ...[1, 2, 3, 4, 5].map((n) => `field-note:${n}`),
+      ...[1, 2, 3, 4, 5, 6].map((n) => `field-note:${n}`),
     ].sort();
     return same([...got].sort(), want) ? null : `hits are ${show(got.sort())}, want ${show(want)}`;
   });
@@ -515,7 +554,19 @@ async function main(mods) {
     const plain = await call("search_records", { query: "zebra", include_history: true }, ctx);
     if (!same([...idsOf(plain)].sort(), keptHits)) return `hits are ${show(idsOf(plain))}`;
     const all = await call("search_records", { query: "zebra", include_history: true, include_excluded: true }, ctx);
-    return idsOf(all).length === 11 ? null : `with include_excluded the history search returns ${idsOf(all).length} hits, want 11`;
+    return idsOf(all).length === 13 ? null : `with include_excluded the history search returns ${idsOf(all).length} hits, want 13`;
+  });
+  await check("R6 history search leaves out a closed record on an excluded locus unless include_excluded", async () => {
+    const plain = await call("search_records", { query: "invalidated", include_history: true }, ctx);
+    if (idsOf(plain).includes("claim:CL-OLD")) return `history search serves CL-OLD: ${show(idsOf(plain))}`;
+    const all = await call("search_records", { query: "invalidated", include_history: true, include_excluded: true }, ctx);
+    return same(idsOf(all), ["claim:CL-OLD"]) ? null : `with include_excluded the hits are ${show(idsOf(all))}, want CL-OLD`;
+  });
+  await check("R7 a record located at a bare file name the owner excluded is left out unless include_excluded", async () => {
+    const plain = await call("search_records", { query: "Makefile" }, ctx);
+    if (idsOf(plain).length) return `search serves ${show(idsOf(plain))}`;
+    const all = await call("search_records", { query: "Makefile", include_excluded: true }, ctx);
+    return same(idsOf(all), ["field-note:6"]) ? null : `with include_excluded the hits are ${show(idsOf(all))}`;
   });
   await check("R5 the filter runs before the page is cut: page 1 is full while more hits exist", async () => {
     const r = await call("search_records", { query: "zebra", limit: 2 }, ctx);
@@ -563,6 +614,44 @@ async function main(mods) {
     const s = await call("read_symbol", { path: "src/core.ts", symbol: "includedThing" }, ctx);
     if (s.ok !== true || "excluded" in s) wrong.push(`read_symbol src/core.ts: ${show(s.excluded ?? s.error)}`);
     return wrong.length ? wrong.join("; ") : null;
+  });
+
+  // ------------------------------------------- the reconciliation decides standing
+  await check("U1 a recorded exclusion still answers excluded when git cannot read the workspace", async () => {
+    // The same store bound to a workspace that is not there: no git, and no tree read before.
+    const away = { ...ctx, project: { ...ctx.project, workspacePath: join(scratch, "gone") } };
+    const wrong = [];
+    for (const [path, source] of [["notes/log.md", "meta"], ["gen/out.ts", "gitignore"]]) {
+      let r;
+      try {
+        r = await call("describe_locus", { locus: path }, away);
+      } catch (error) {
+        wrong.push(`${path} threw ${String(error?.message ?? error)}`);
+        continue;
+      }
+      if (r.standing?.state !== "excluded" || r.standing?.exclusion?.source !== source) {
+        wrong.push(`${path} answers ${show({ state: r.standing?.state, exclusion: r.standing?.exclusion, owners: r.standing?.owners?.length })}`);
+      }
+    }
+    return wrong.length ? wrong.join("; ") : null;
+  });
+  await check("U2 a file and its subsystem agree on a rule recorded since the last reconciliation", async () => {
+    await call(
+      "set_scope_rule",
+      { pattern: "src/core.ts", action: "exclude", reason: "fixture: late rule", owner_words: "skip src/core.ts" },
+      ctx,
+    );
+    const phase = async (label) => {
+      const file = (await describe("src/core.ts")).standing ?? {};
+      const total = (await describe(S1)).standing?.ledger?.total;
+      const fileExcluded = file.state === "excluded";
+      const counted = total === 3;
+      return fileExcluded === counted ? `${label}: the file answers ${show(file.state)} while ${S1} counts ${show(total)} rows` : null;
+    };
+    const before = await phase("before detect_changes");
+    await call("detect_changes", { current_sha: c0 }, ctx);
+    const after = await phase("after detect_changes");
+    return [before, after].filter(Boolean).join("; ") || null;
   });
 
   // ------------------------------------------------------ instructions and CI
