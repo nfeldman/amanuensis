@@ -30,7 +30,11 @@
 //      (R1);
 //   8. an untouched legacy store loses its standing after the upgrade (L1),
 //      or a legacy store's gitignore matches do not leave the survey set (L2);
-//   9. this gate is not registered in CI (CI1).
+//   9. this gate is not registered in CI (CI1);
+//  11. `records_citing_excluded` misses a finding or a term anchored at an
+//      excluded path that carries an `@` (R2); or a deleted path the owner
+//      excluded loses its exclusion, is reported absent, marked stale or
+//      mapped to its subsystem, while the deleted in-scope control is (E4).
 //  10. a fixture git command reads the machine's configuration: with a planted
 //      global hooks path and template directory, a hook runs (HN1).
 //
@@ -929,6 +933,93 @@ function main(mods) {
       });
     }
   }
+
+  // ============================================ world 3: records and deletions
+  //
+  //   design/pkg@v1/spec.ts  user (rule `design/`)  a finding and a term anchored there
+  //   design/gone.ts         user (rule `design/`)  ledgered, then deleted
+  //   src/a.ts               product                ledgered
+  //   src/old.ts             product                ledgered, then deleted: the control
+  //
+  // A path may carry an `@` (a vendored `pkg@v1`), and a citation's revision is
+  // after its last `@`. A deleted path the owner excluded keeps its inactive
+  // row: deletion is no reason for it to create work again (§2.6a).
+  const ws3 = workspace("records", {
+    "design/pkg@v1/spec.ts": citedSource("spec"),
+    "design/gone.ts": citedSource("gone"),
+    "src/a.ts": citedSource("a"),
+    "src/old.ts": citedSource("old"),
+  });
+  const ctx3 = open(contextFor(ws3, "records"));
+  const sha3 = headSha(ctx3);
+  call("upsert_subsystem", { id: "B-03", name: "B-03 fixture", status: "unmapped" }, ctx3);
+  call("update_subsystem_status", { id: "B-03", status: "scoping" }, ctx3);
+  call(
+    "add_files_to_scope",
+    {
+      subsystem_id: "B-03",
+      ref_sha: sha3,
+      files: ["design/gone.ts", "src/a.ts", "src/old.ts"].map((file_path) => ({
+        file_path,
+        why_in_scope: "fixture",
+        classification: "examined",
+      })),
+    },
+    ctx3,
+  );
+  for (const pattern of ["design/", "src/"]) {
+    call("record_scope_sorting", { pattern, category: "product", description: `fixture ${pattern}` }, ctx3);
+  }
+  const anchored = `design/pkg@v1/spec.ts:Unit@${sha3}`;
+  ctx3.db
+    .prepare(
+      `INSERT INTO findings (finding_id, subsystem_id, symptom, root_cause, severity, status, primary_files, ref_sha)
+       VALUES ('B03-1', 'B-03', 'fixture symptom', 'fixture cause', 'LOW', 'confirmed-bug', ?, ?)`,
+    )
+    .run(JSON.stringify([anchored]), sha3);
+  ctx3.db
+    .prepare("INSERT INTO vocabulary (term, gloss, subsystem_id, first_seen, ref_sha) VALUES ('Unit', 'fixture term', 'B-03', ?, ?)")
+    .run(anchored, sha3);
+  reconcile(ctx3);
+  call(
+    "set_scope_rule",
+    { pattern: "design/", action: "exclude", reason: "plans, not code", owner_words: ownerWords },
+    ctx3,
+  );
+  const r3 = reconcile(ctx3);
+
+  check("R2 records_citing_excluded finds records anchored at an excluded path that carries an @", () => {
+    const got = (r3?.records_citing_excluded?.records ?? []).map((r) => `${r.kind}:${r.id}`).sort();
+    const want = ["finding:B03-1", "term:Unit"];
+    return same(got, want) ? null : `records_citing_excluded ${show(r3?.records_citing_excluded)}, want ${show(want)}`;
+  });
+
+  rmSync(join(ws3, "design", "gone.ts"));
+  rmSync(join(ws3, "src", "old.ts"));
+  git(ws3, "add", "-A");
+  gitCommit(ws3, "delete an excluded path and an in-scope one");
+  const r4 = reconcile(ctx3);
+  const row4 = latestRow(ctx3);
+
+  check("E4 a deleted excluded path keeps its inactive row; the deleted in-scope path is absent (control)", () => {
+    const wrong = [];
+    const absent = (r4?.absent_ledger_paths ?? []).map((r) => r.file_path).sort();
+    if (!same(absent, ["src/old.ts"])) wrong.push(`absent_ledger_paths ${show(absent)}, want ["src/old.ts"]`);
+    if (row4?.absent !== 1) wrong.push(`the row records absent ${row4?.absent}, want 1`);
+    const withRows = (r4?.excluded_with_rows ?? []).map((r) => `${r.file_path}:${r.source}`);
+    if (!withRows.includes("design/gone.ts:user")) wrong.push(`excluded_with_rows ${show(r4?.excluded_with_rows)} lacks design/gone.ts`);
+    const excluded = row4 ? exclusionsOf(ctx3, row4.id).map((r) => `${r.file_path}:${r.source}`) : [];
+    if (!excluded.includes("design/gone.ts:user")) wrong.push(`scope_exclusions ${show(excluded)} lost design/gone.ts`);
+    const gone = ctx3.db.prepare("SELECT stale, stale_reason FROM file_ledger WHERE file_path = 'design/gone.ts'").get();
+    if (!same(gone, { stale: 0, stale_reason: null })) wrong.push(`the inactive row became ${show(gone)}`);
+    const old = ctx3.db.prepare("SELECT stale, stale_reason FROM file_ledger WHERE file_path = 'src/old.ts'").get();
+    if (old?.stale !== 1) wrong.push(`control: the in-scope row is ${show(old)}`);
+    const mapped = (r4?.stale_subsystems ?? []).flatMap((s) => s.changed_files).sort();
+    if (!same(mapped, ["src/old.ts"])) wrong.push(`stale_subsystems map ${show(mapped)}, want ["src/old.ts"]`);
+    const gaps = ctx3.db.prepare("SELECT file_path FROM scope_gaps WHERE kind = 'absent' ORDER BY file_path").all().map((r) => r.file_path);
+    if (!same(gaps, ["src/old.ts"])) wrong.push(`absent scope_gaps ${show(gaps)}`);
+    return wrong.length ? wrong.join("; ") : null;
+  });
 
   check("CI1 this gate runs in CI, in the mcp-server job", () => {
     const workflow = join(here, "..", ".github", "workflows", "test.yml");
