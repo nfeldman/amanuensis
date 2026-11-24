@@ -26,8 +26,9 @@
 //   - the README sentence gives excluded paths a label or a place on the pages, or negates the
 //     include; DEVELOPMENT.md has the ignore files read from the working tree, a less specific
 //     owner rule deciding, no later rule winning a tie, or `product` excluding and `meta` keeping;
-//     HISTORY.md's entry has the less specific owner rule deciding; or one of these checks accepts
-//     a sabotage the slice-S5 reviewers wrote;
+//     HISTORY.md's entry has the less specific owner rule deciding; README or HISTORY names
+//     evidence without denying it to an excluded path; or one of these checks accepts a sabotage
+//     the slice-S5 reviewers or the final review wrote;
 //   - a start-commit copy in dev/fixtures/scope-docs/start/ is missing or is not the start
 //     commit's bytes (its sha256 is pinned), so the gate needs no Git history;
 //   - mcp-server/DEVELOPMENT.md has no `## The survey set` section before the generated tool
@@ -167,8 +168,13 @@ const needAll = (haystack, patterns) => {
 // Each returns a problem or null. The last check runs each on the sabotages the slice-S5 reviewers
 // wrote, so a predicate that misses one turns the gate red.
 
-/** README's sentence: no label, no page listing, and the include clause is not negated. */
+/** An excluded path gets no evidence: the sentence denies it, not only names it. */
+const NO_EVIDENCE = /\b(?:no|nor|without) evidence\b/;
+const GETS_EVIDENCE = /\b(?:does |do )?(?:gets?|has|have|carr(?:y|ies)|keeps?) (?:its |some |an? )?evidence\b/;
+
+/** README's sentence: no label, no page listing, no evidence, and the include clause is not negated. */
 function readmeClaims(said) {
+  if (GETS_EVIDENCE.test(said) || !NO_EVIDENCE.test(said)) return "does not deny that an excluded path gets evidence";
   if (/\blabel/.test(said)) return "says excluded paths carry a label, which the owner ruled out";
   if (/\bevery page\b|\bon (?:the |each |all |every )?pages?\b/.test(said)) return "puts excluded paths on the pages";
   const include = said.split(/[,;:]/).find((clause) => /\binclude\b/.test(clause)) ?? "";
@@ -256,7 +262,7 @@ check("README.md", () => {
     ["the paths the owner excluded", /\bowner\b[^.]*\bexclu/],
     ["the paths sorted as meta", /\bmeta\b/],
     ["that an excluded path gets no ledger row", /\bno ledger row\b|\bledger row\b[^.]*\bnone\b|\bwithout (?:a )?ledger row/],
-    ["that it gets no evidence", /\bevidence\b/],
+    ["that it gets no evidence", NO_EVIDENCE],
     ["that it shows only as a count on the overview", /\bcount\b[^.]*\boverview\b|\boverview\b[^.]*\bcount\b/],
     ["that an owner include brings a path back", /\binclude\b[^.]*\b(?:back|returns?|restores?)\b|\b(?:back|returns?|restores?)\b[^.]*\binclude\b/],
   ]);
@@ -304,7 +310,7 @@ check("HISTORY.md", () => {
     ["that onboarding sorts paths as meta", /\bmeta\b/],
     ["that an owner include wins", /\binclude\b[^.]*\b(?:win|wins|beat|beats|override|overrides|restores?|back)\b/],
     ["that an excluded path has no ledger row", /\bno ledger row\b|\bledger row\b[^.]*\b(?:no|none|never)\b|\bwithout (?:a )?ledger row/],
-    ["that an excluded path has no evidence", /\bevidence\b/],
+    ["that an excluded path has no evidence", NO_EVIDENCE],
     ["that the overview carries a count", /\boverview\b[^.]*\bcount\b|\bcount\b[^.]*\boverview\b/],
     ["that describe_locus answers excluded", /describe_locus[^.]*\bexcluded\b|\bexcluded\b[^.]*describe_locus/],
     ["that the answer names its source", /\bsource\b/],
@@ -493,6 +499,7 @@ check(".github/workflows/test.yml", () => {
 check("the predicates refuse the sabotages the slice-S5 reviewers wrote", () => {
   const cases = [
     ["readmeClaims", readmeClaims, plain("A survey leaves out paths; an excluded path gets no ledger row and no evidence and appears on every page with a label beside a count on the overview, and not even an owner include rule brings any of them back.")],
+    ["readmeClaims", readmeClaims, plain("A survey leaves out paths; an excluded path gets no ledger row and does get evidence and appears only as a count on the overview, and an owner include rule brings any of them back.")],
     ["ignoreRead", ignoreRead, "The ignore files are read from the working tree, not from the commit. `resolveScopeAtRevision` writes them into a scratch repository."],
     ["precedenceSays", (t) => precedenceSays("1. the owner's rules win. an include returns the path, and between two owner rules the more specific pattern decides, the later rule winning a tie.", t), "3. then sorting: the most specific sorting row decides, `product` excludes and `meta` keeps the path in."],
     ["precedenceSays", (t) => precedenceSays(t, "3. then sorting: `meta` excludes and `product` keeps the path in."), "1. the owner's rules win. an include returns the path, and between two owner rules the less specific pattern decides, the later rule winning a tie."],
