@@ -31,6 +31,7 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
+import { scopeExclusion } from "../standing.js";
 
 /** A definition over this many lines of its citeable span is returned cut at this many. */
 const MAX_SOURCE_LINES = 400;
@@ -39,6 +40,8 @@ const NEAREST_SYMBOLS = 5;
 const DOC_LINE_BYTES = 160;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 200;
+/** The widest window `find_symbol` reads while it fills a page past left-out rows. */
+const MAX_FIND_WINDOW = 5000;
 
 const indexes = new Map<string, CodeIndex | null>();
 
@@ -388,8 +391,12 @@ function isRefusal(value: Located | Refusal): value is Refusal {
   return "ok" in value;
 }
 
-/** Fields every response carries about the file, labelled with the extractor generation. */
-function fileFields(located: Located): Record<string, unknown> {
+/**
+ * Fields every response carries about the file, labelled with the extractor generation. A
+ * path the survey set excludes is still read, since reading is not recording
+ * (design/scope/PLAN.md §2.7), and the answer says which rule left it out.
+ */
+function fileFields(located: Located, ctx: ServerContext): Record<string, unknown> {
   const fields: Record<string, unknown> = {
     path: located.path,
     ref_sha: located.commit,
@@ -399,6 +406,8 @@ function fileFields(located: Located): Record<string, unknown> {
     extractor_id: located.index.extractorId,
   };
   if (located.parseErrors > 0) fields.parse_errors = located.parseErrors;
+  const excluded = scopeExclusion(ctx, located.path);
+  if (excluded) fields.excluded = excluded;
   return fields;
 }
 
@@ -446,7 +455,7 @@ export const codeIndexTools: ToolDefinition[] = [
   {
     name: "outline_file",
     description:
-      "The shape of one source file at a revision, from the code index: its definitions as a nested list (symbol_id, kind, lines, signature, first documentation line), its imports, bytes, lines, blob_sha and parse status. No source is returned. Read a definition with read_symbol, or read the whole file; the index adds to reading and never replaces it. ref_sha defaults to the workspace HEAD and is returned resolved. Languages: TypeScript, TSX, JavaScript, Python, Rust, Go, Java, C, C++ and C#; any other file is refused as unsupported-language.",
+      "The shape of one source file at a revision, from the code index: its definitions as a nested list (symbol_id, kind, lines, signature, first documentation line), its imports, bytes, lines, blob_sha and parse status. No source is returned. Read a definition with read_symbol, or read the whole file; the index adds to reading and never replaces it. ref_sha defaults to the workspace HEAD and is returned resolved. A file the survey set leaves out (an owner rule, the repository's ignore files or meta sorting) is still read, and the answer carries excluded: {source, rule_id, pattern, reason}. Languages: TypeScript, TSX, JavaScript, Python, Rust, Go, Java, C, C++ and C#; any other file is refused as unsupported-language.",
     inputSchema: {
       type: "object",
       properties: {
@@ -463,7 +472,7 @@ export const codeIndexTools: ToolDefinition[] = [
       const repeated = repeatedIds(located.symbols);
       return {
         ok: true,
-        ...fileFields(located),
+        ...fileFields(located, ctx),
         bytes: located.bytes,
         lines: located.lines,
         symbols: nest(located.symbols, repeated),
@@ -477,7 +486,7 @@ export const codeIndexTools: ToolDefinition[] = [
   {
     name: "read_symbol",
     description:
-      "One definition's source at a revision, from the code index. symbol is a symbol_id, a qualified name or a bare name. One match returns exactly the citeable span's text (leading documentation included) with start_line and end_line, and evidence_args: the location fields of add_evidence (file_path, symbol, ref_sha, line_range). The agent adds kind, which only it can choose; excerpt and note are optional. Several matches return their candidates with lines and no source; line_range (a candidate's lines, N or N-M) picks one occurrence. No match is refused with the nearest symbol_ids. A definition over 400 lines returns its first 400, its nested definitions, truncated: true and no evidence_args: read the whole file or a nested definition to go on. context_lines adds lines before and after the span without changing the citation. ref_sha defaults to the workspace HEAD.",
+      "One definition's source at a revision, from the code index. symbol is a symbol_id, a qualified name or a bare name. One match returns exactly the citeable span's text (leading documentation included) with start_line and end_line, and evidence_args: the location fields of add_evidence (file_path, symbol, ref_sha, line_range). The agent adds kind, which only it can choose; excerpt and note are optional. Several matches return their candidates with lines and no source; line_range (a candidate's lines, N or N-M) picks one occurrence. No match is refused with the nearest symbol_ids. A definition over 400 lines returns its first 400, its nested definitions, truncated: true and no evidence_args: read the whole file or a nested definition to go on. context_lines adds lines before and after the span without changing the citation. A file the survey set leaves out is still read, and the answer carries excluded: {source, rule_id, pattern, reason}. ref_sha defaults to the workspace HEAD.",
     inputSchema: {
       type: "object",
       properties: {
@@ -518,7 +527,7 @@ export const codeIndexTools: ToolDefinition[] = [
         return {
           ok: true,
           ambiguous: true,
-          ...fileFields(located),
+          ...fileFields(located, ctx),
           candidates: matches.map((m) => entry(m, repeated)),
         };
       }
@@ -536,7 +545,7 @@ export const codeIndexTools: ToolDefinition[] = [
       const truncated = read.definition_end_line !== undefined;
       return {
         ok: true,
-        ...fileFields(located),
+        ...fileFields(located, ctx),
         symbol_id: row.symbol_id,
         kind: row.kind,
         ...(repeated.has(row.symbol_id) ? { occurrence: row.occurrence } : {}),
@@ -565,7 +574,7 @@ export const codeIndexTools: ToolDefinition[] = [
   {
     name: "find_symbol",
     description:
-      'Search the code index at a revision. mode definitions (the default) ranks definitions by BM25 over their names split on case and punctuation, qualified names, signatures and doc comments, so a fragment such as Request finds parseHTTPRequest and a word from a doc comment finds its definition. mode references returns the places where query appears as an identifier: they are matched by name only, never resolved, so a row may be a different thing with the same name, and every row carries match: "name". Rows never carry bodies. A definition row carries path, symbol_id, kind, lines and signature: read it with read_symbol, or read the file; a reference row carries path, name, kind, line and match, and no symbol_id: read the file at that line. kind and path_prefix narrow the rows; when every file under path_prefix is in a language the index does not parse, the empty answer carries status: "unsupported-language". limit defaults to 20. The revision\'s tree is indexed on first use, and partial: true says the index of that tree is incomplete, so a missing row proves nothing; the next call resumes it. ref_sha defaults to the workspace HEAD.',
+      'Search the code index at a revision. mode definitions (the default) ranks definitions by BM25 over their names split on case and punctuation, qualified names, signatures and doc comments, so a fragment such as Request finds parseHTTPRequest and a word from a doc comment finds its definition. mode references returns the places where query appears as an identifier: they are matched by name only, never resolved, so a row may be a different thing with the same name, and every row carries match: "name". Rows never carry bodies. A definition row carries path, symbol_id, kind, lines and signature: read it with read_symbol, or read the file; a reference row carries path, name, kind, line and match, and no symbol_id: read the file at that line. kind and path_prefix narrow the rows; a definition or reference in a path the survey set leaves out (an owner rule, the repository\'s ignore files or meta sorting) is left out unless include_excluded is true, and the page is filled before it is cut; when every file under path_prefix is in a language the index does not parse, the empty answer carries status: "unsupported-language". limit defaults to 20. The revision\'s tree is indexed on first use, and partial: true says the index of that tree is incomplete, so a missing row proves nothing; the next call resumes it. ref_sha defaults to the workspace HEAD.',
     inputSchema: {
       type: "object",
       properties: {
@@ -573,6 +582,7 @@ export const codeIndexTools: ToolDefinition[] = [
         mode: { type: "string", enum: [...FIND_MODES] },
         kind: { type: "string" },
         path_prefix: { type: "string" },
+        include_excluded: { type: "boolean" },
         ref_sha: { type: "string" },
         limit: { type: "integer", minimum: 1, maximum: MAX_LIMIT },
       },
@@ -590,12 +600,40 @@ export const codeIndexTools: ToolDefinition[] = [
       const commit = resolveWorkspaceCommit(ctx, optString(args, "ref_sha") ?? "HEAD");
       const index = indexFor(ctx);
       if (!index) return treeUnavailable(commit, "off");
-      const found = await findSymbols(index, ctx.project.workspacePath as string, commit, query, {
+      const includeExcluded = optBool(args, "include_excluded");
+      const options = {
         mode,
         kind: optString(args, "kind"),
         pathPrefix: optString(args, "path_prefix"),
-        limit,
-      });
+      };
+      const workspace = ctx.project.workspacePath as string;
+      // The survey set is applied to the rows before the page is cut: a page is full while
+      // more in-survey rows exist. When rows are left out the query is repeated with a
+      // wider window until the page fills or the index runs out of rows.
+      const excludedPaths = new Map<string, boolean>();
+      const isExcluded = (path: string): boolean => {
+        let excluded = excludedPaths.get(path);
+        if (excluded === undefined) {
+          excluded = scopeExclusion(ctx, path) !== null;
+          excludedPaths.set(path, excluded);
+        }
+        return excluded;
+      };
+      let window = limit;
+      let found = await findSymbols(index, workspace, commit, query, { ...options, limit: window });
+      while (!includeExcluded && found.state === "ok") {
+        const kept = (found.results as { path: string }[]).filter((row) => !isExcluded(row.path));
+        if (kept.length >= limit || !found.more || window >= MAX_FIND_WINDOW) {
+          found = {
+            ...found,
+            results: kept.slice(0, limit) as typeof found.results,
+            more: found.more || kept.length > limit,
+          };
+          break;
+        }
+        window = Math.min(window * 4, MAX_FIND_WINDOW);
+        found = await findSymbols(index, workspace, commit, query, { ...options, limit: window });
+      }
       if (found.state === "unavailable") return treeUnavailable(commit, found.reason);
       return {
         ok: true,
@@ -614,7 +652,7 @@ export const codeIndexTools: ToolDefinition[] = [
   {
     name: "search_records",
     description:
-      "Full-text search (BM25) over the store's records: claims, narratives, explanations, findings, field notes, open questions and vocabulary. Each hit carries kind, id, subject, status and a snippet of at most 240 bytes; open the record with its own reader. A hit is returned only as that reader returns it: claims as get_claims at the workspace HEAD, so superseded, invalidated and inapplicable claims drop out; narratives as get_narratives, the effective row per section and topic, withdrawn keys excluded; explanations as get_explanations, the newest row whose revision the workspace reaches, below its phase not at all; open questions as get_open_questions, open ones; findings, field notes and vocabulary with their status. include_history: true adds the rows those readers leave out, each with the status that says why. kinds and subject (a subsystem id, or a claim_key prefix) narrow the hits; limit defaults to 20. The index is brought up to date with the store on every call.",
+      "Full-text search (BM25) over the store's records: claims, narratives, explanations, findings, field notes, open questions and vocabulary. Each hit carries kind, id, subject, status and a snippet of at most 240 bytes; open the record with its own reader. A hit is returned only as that reader returns it: claims as get_claims at the workspace HEAD, so superseded, invalidated and inapplicable claims drop out; narratives as get_narratives, the effective row per section and topic, withdrawn keys excluded; explanations as get_explanations, the newest row whose revision the workspace reaches, below its phase not at all; open questions as get_open_questions, open ones; findings, field notes and vocabulary with their status. include_history: true adds the rows those readers leave out, each with the status that says why. A hit is left out only when its subject is itself outside the survey: a file locus on a path the survey set excludes, or a subsystem whose every ledger row is on one; a record that cites both included and excluded evidence is kept, and include_excluded: true restores the left-out hits. The rule is applied before the page is cut, history included. kinds and subject (a subsystem id, or a claim_key prefix) narrow the hits; limit defaults to 20. The index is brought up to date with the store on every call.",
     inputSchema: {
       type: "object",
       properties: {
@@ -622,6 +660,7 @@ export const codeIndexTools: ToolDefinition[] = [
         kinds: { type: "array", items: { type: "string", enum: [...RECORD_KINDS] } },
         subject: { type: "string" },
         include_history: { type: "boolean" },
+        include_excluded: { type: "boolean" },
         limit: { type: "integer", minimum: 1, maximum: MAX_LIMIT },
       },
       required: ["query"],
@@ -641,6 +680,7 @@ export const codeIndexTools: ToolDefinition[] = [
         throw new ToolError(`limit must be from 1 to ${MAX_LIMIT}`, "arg.range");
       }
       const includeHistory = optBool(args, "include_history");
+      const includeExcluded = optBool(args, "include_excluded");
       const head = resolveWorkspaceCommit(ctx, "HEAD");
       const index = indexFor(ctx);
       if (!index) return recordsUnavailable("off");
@@ -649,6 +689,7 @@ export const codeIndexTools: ToolDefinition[] = [
         kinds: kinds as RecordKind[] | null,
         subject: optString(args, "subject"),
         includeHistory,
+        includeExcluded,
         limit,
       });
       if (found.state === "unavailable") return recordsUnavailable(found.reason);

@@ -437,7 +437,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         value: "excluded",
         label: "Excluded",
         meaning:
-          "A ledger row classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason.",
+          "The path is outside the survey set (an owner rule, the repository's ignore files, or meta sorting), or a ledger row inside it classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason.",
         cannot_justify: "any claim about the file's content or behavior",
         authorizes: "the recorded exclusion reason and classification",
       },

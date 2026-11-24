@@ -23,7 +23,12 @@
 // the rows those readers leave out, each with its status.
 import { createHash } from "node:crypto";
 import type Database from "better-sqlite3";
-import { resolveWorkspaceCommits, type ServerContext, type ToolDefinition } from "../helpers.js";
+import {
+  citedSourcePath,
+  resolveWorkspaceCommits,
+  type ServerContext,
+  type ToolDefinition,
+} from "../helpers.js";
 import {
   type ExplanationReading,
   isProjectExplanationEligible,
@@ -33,6 +38,7 @@ import {
   readNarratives,
   readSubsystemStatus,
 } from "../invariants.js";
+import { outsideSurveySubsystems, scopeExclusion } from "../standing.js";
 import { claimTools } from "../tools/claims.js";
 import { findingTools } from "../tools/findings.js";
 import { vocabularyTools } from "../tools/vocabulary.js";
@@ -289,6 +295,8 @@ interface Resolved {
   subject: string | null;
   /** For a claim, its key: a `subject` filter also matches `<subject>/` at its start. */
   claimKey?: string;
+  /** The file locus the record is about (a symbol claim, a field note's location), when it has one. */
+  fileLocus?: string;
   /** For a term, every subsystem it is scoped to, as `list_vocabulary` reads the scope set. */
   scopes?: string[];
 }
@@ -336,12 +344,24 @@ class Readers {
   private async claim(id: string): Promise<Resolved | null> {
     const db = this.ctx.db;
     const row = db
-      .prepare("SELECT claim_key, subject_id, valid_until_sha FROM claims WHERE claim_id = ?")
+      .prepare(
+        "SELECT claim_key, subject_type, subject_id, valid_until_sha FROM claims WHERE claim_id = ?",
+      )
       .get(id) as
-      | { claim_key: string; subject_id: string; valid_until_sha: string | null }
+      | {
+          claim_key: string;
+          subject_type: string;
+          subject_id: string;
+          valid_until_sha: string | null;
+        }
       | undefined;
     if (!row) return null;
-    const base = { subject: row.subject_id, claimKey: row.claim_key };
+    const locus = row.subject_type === "symbol" ? citedSourcePath(row.subject_id) : null;
+    const base = {
+      subject: row.subject_id,
+      claimKey: row.claim_key,
+      ...(locus ? { fileLocus: locus } : {}),
+    };
     const atHead = (await getClaims({ claim_id: id, query_sha: this.head }, this.ctx)) as unknown[];
     if (atHead.length > 0) {
       return {
@@ -469,7 +489,14 @@ class Readers {
       .prepare("SELECT location, follow_up FROM field_notes WHERE id = ?")
       .get(id) as { location: string | null; follow_up: string | null } | undefined;
     if (!row) return null;
-    return { current: true, status: row.follow_up ?? "open", subject: row.location };
+    // A location is free text; it is a file locus only when it reads as a path.
+    const locus = row.location && /[/.]/.test(row.location) ? citedSourcePath(row.location) : null;
+    return {
+      current: true,
+      status: row.follow_up ?? "open",
+      subject: row.location,
+      ...(locus ? { fileLocus: locus } : {}),
+    };
   }
 
   private openQuestion(id: number): Resolved | null {
@@ -499,6 +526,32 @@ class Readers {
   }
 }
 
+/**
+ * design/scope/PLAN.md §2.7: a hit is left out only when its subject is itself outside the
+ * survey, a file locus on an excluded path or a subsystem whose every ledger row is on one.
+ * A record that cites both included and excluded evidence has an included subject and stays.
+ */
+class SurveyReach {
+  private subsystems: Set<string> | null = null;
+  private paths = new Map<string, boolean>();
+
+  constructor(private readonly ctx: ServerContext) {}
+
+  outside(resolved: Resolved): boolean {
+    if (resolved.fileLocus) {
+      let excluded = this.paths.get(resolved.fileLocus);
+      if (excluded === undefined) {
+        excluded = scopeExclusion(this.ctx, resolved.fileLocus) !== null;
+        this.paths.set(resolved.fileLocus, excluded);
+      }
+      return excluded;
+    }
+    if (resolved.subject === null) return false;
+    this.subsystems ??= new Set(outsideSurveySubsystems(this.ctx.db));
+    return this.subsystems.has(resolved.subject);
+  }
+}
+
 // ---------------------------------------------------------------------------------------
 // Searching
 
@@ -507,6 +560,8 @@ export interface RecordSearch {
   kinds: readonly RecordKind[] | null;
   subject: string | null;
   includeHistory: boolean;
+  /** Restore the hits whose subject is outside the survey (§2.7). */
+  includeExcluded?: boolean;
   limit: number;
 }
 
@@ -548,6 +603,7 @@ export async function searchRecords(
   if (!match) return { state: "ok", results: [], more: false };
   const kinds = search.kinds ?? RECORD_KINDS;
   const readers = new Readers(ctx, head);
+  const reach = new SurveyReach(ctx);
   const results: RecordHit[] = [];
   for (let offset = 0; ; offset += SEARCH_BATCH) {
     const batch = index.use(
@@ -573,6 +629,8 @@ export async function searchRecords(
       const resolved = await readers.resolve(hit.kind, hit.key);
       if (!resolved) continue;
       if (!resolved.current && !search.includeHistory) continue;
+      // Before the page is cut: a hit left out never takes a place in it.
+      if (!search.includeExcluded && reach.outside(resolved)) continue;
       if (
         search.subject !== null &&
         resolved.subject !== search.subject &&

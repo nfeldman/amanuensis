@@ -55,8 +55,10 @@ const AGENT_INSTRUCTIONS_BLOCK = [
   "opens with standing — what the record authorizes about that path and what it cannot",
   "justify — and then the account: purpose, structure, known defects, boundaries, and",
   "terms. When standing is `unledgered`, `excluded`, or `scoped-unread`, say so and offer",
-  "a survey rather than reading the file and improvising. `get_attention` lists what is",
-  "unresolved; `get_history` lists what was concluded.",
+  "a survey rather than reading the file and improvising. An `excluded` answer carries an",
+  "`exclusion` with its source: `user`, `gitignore` and `meta` mean the survey leaves the",
+  "path out, and `ledger` means a classification inside the survey. `get_attention` lists",
+  "what is unresolved; `get_history` lists what was concluded.",
   AGENT_INSTRUCTIONS_END,
   "",
 ].join("\n");

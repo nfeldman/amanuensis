@@ -271,6 +271,14 @@ jobs:
       - name: Survey-scope attach guard — no record rests on an excluded path's evidence
         working-directory: mcp-server
         run: node test-scope-attach-guard.mjs
+      # GATE SC6 (design/scope/PLAN.md §3 SC6; §2.7). The readers over the survey
+      # set: describe_locus answers excluded with its source, rule and pattern,
+      # the dashboard and list_subsystems count and name what is outside the
+      # survey, and the code index leaves excluded paths out unless asked. Over
+      # a temporary git repository and store it creates itself.
+      - name: Survey-scope readers — describe_locus, dashboard, subsystems, code index, records search
+        working-directory: mcp-server
+        run: node test-scope-standing.mjs
       # GATE SC5 (design/scope/PLAN.md §3 SC5; §2.10, §2.6a). The completion
       # checker over the survey set: clause 1's denominator, both digests
       # re-derived, the ledger digest without inactive rows, unsorted

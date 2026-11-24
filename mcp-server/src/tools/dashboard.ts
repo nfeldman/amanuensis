@@ -1,4 +1,6 @@
 import { OBLIGATION_BEARING_SQL, optInt, type ToolDefinition } from "../helpers.js";
+import { ACTIVE_LEDGER_ROW_SQL } from "../invariants.js";
+import { outsideSurveySeams, outsideSurveySubsystems, scopeCounts } from "../standing.js";
 // One predicate for one question. The open count was derived here from
 // `findings.status`, and from `finding_state_current` in every lens, so a
 // finding whose resolution event had overtaken its coarse status was open on
@@ -25,7 +27,7 @@ export const dashboardTools: ToolDefinition[] = [
   {
     name: "get_dashboard",
     description:
-      "Return a high-level project overview: project key, canonical branch, SHAs, subsystem counts, open bugs, stale entries, scoped files with how many were examined and how many are still unread candidates, open field notes, unresolved contradictions.",
+      "Return a high-level project overview: project key, canonical branch, SHAs, subsystem counts, open bugs, stale entries, scoped files with how many were examined and how many are still unread candidates, open field notes, unresolved contradictions. The ledger counts are over the survey set: a ledger row on a path the survey leaves out is inactive, counted only as inactive_ledger_rows. excluded_paths counts the paths the last reconciliation left out by source (gitignore, user, meta) and unsorted_paths the survey paths no sorting row covers; unclassified_paths counts unledgered paths over the survey set. outside_survey names the subsystems whose ledger rows are all on excluded paths, and the seams with an endpoint among them; none of them owes survey work.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     handler: (_args, ctx) => {
       // One round-trip: SQLite assembles the per-table counts as
@@ -41,11 +43,12 @@ export const dashboardTools: ToolDefinition[] = [
                   (SELECT COUNT(*) FILTER (WHERE status='mapped')        FROM subsystems)      AS mapped_count,
                   (SELECT COUNT(*)                                       FROM findings)        AS total_findings,
                   (SELECT COUNT(*) FILTER (WHERE ${OPEN_FINDING_SQL}) FROM finding_state_current) AS open_bugs,
-                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger) AS stale_entries,
-                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND NOT (${OBLIGATION_BEARING_SQL})) FROM file_ledger) AS stale_exempt,
-                  (SELECT COUNT(*)                                       FROM file_ledger)     AS scoped_files,
-                  (SELECT COUNT(*) FILTER (WHERE classification='examined') FROM file_ledger)  AS examined_files,
-                  (SELECT COUNT(*) FILTER (WHERE COALESCE(classification, 'candidate')='candidate' AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger) AS unexamined_files,
+                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL}) AS stale_entries,
+                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND NOT (${OBLIGATION_BEARING_SQL})) FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL}) AS stale_exempt,
+                  (SELECT COUNT(*)                                       FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL}) AS scoped_files,
+                  (SELECT COUNT(*)                                       FROM file_ledger WHERE NOT (${ACTIVE_LEDGER_ROW_SQL})) AS inactive_ledger_rows,
+                  (SELECT COUNT(*) FILTER (WHERE classification='examined') FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL})  AS examined_files,
+                  (SELECT COUNT(*) FILTER (WHERE COALESCE(classification, 'candidate')='candidate' AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL}) AS unexamined_files,
                   (SELECT COUNT(*) FILTER (WHERE kind='unledgered')      FROM scope_gaps)      AS unclassified_paths,
                   (SELECT COUNT(*) FILTER (WHERE kind='absent')          FROM scope_gaps)      AS absent_files,
                   (SELECT COUNT(*) FILTER (WHERE follow_up='open')       FROM field_notes)     AS open_field_notes,
@@ -65,6 +68,7 @@ export const dashboardTools: ToolDefinition[] = [
         stale_entries: number;
         stale_exempt: number;
         scoped_files: number;
+        inactive_ledger_rows: number;
         examined_files: number;
         unexamined_files: number;
         unclassified_paths: number;
@@ -81,10 +85,18 @@ export const dashboardTools: ToolDefinition[] = [
       // stale_entries = 0 is only a health claim when something was actually
       // measured. staleness_measured carries the denominator so a caller cannot
       // read an empty ledger as a fresh conspectus (finding B03-2).
+      const scope = scopeCounts(ctx.db);
+      const outsideSubsystems = outsideSurveySubsystems(ctx.db);
       return {
         project_key: ctx.project.projectKey,
         ...row,
         staleness_measured: row.scoped_files > 0,
+        excluded_paths: scope.excluded,
+        unsorted_paths: scope.unsorted,
+        outside_survey: {
+          subsystems: outsideSubsystems,
+          seams: outsideSurveySeams(ctx.db, outsideSubsystems),
+        },
       };
     },
   },

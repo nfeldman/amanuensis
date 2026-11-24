@@ -1246,6 +1246,16 @@ export interface ScopeReconciliation {
   scope_mode: ScopeMode | null;
 }
 
+/** The id of the last reconciliation whose exclusions still match its digest (below), as a scalar subquery. */
+export const SCOPE_RECONCILIATION_ID_SQL = `(
+     SELECT r.id FROM scope_reconciliations r
+      WHERE (r.exclusion_digest IS NULL
+             AND NOT EXISTS (SELECT 1 FROM scope_exclusions x WHERE x.reconciliation_id = r.id))
+         OR r.exclusion_digest = scope_exclusion_digest(
+              (SELECT json_group_array(json_array(x.file_path, x.source, x.rule_id))
+                 FROM scope_exclusions x WHERE x.reconciliation_id = r.id))
+      ORDER BY r.id DESC LIMIT 1)`;
+
 /**
  * A ledger row is active when the last reconciliation did not exclude its path
  * from the survey set (design/scope/PLAN.md §2.6a). An inactive row is kept and
@@ -1260,14 +1270,7 @@ export interface ScopeReconciliation {
  */
 export const ACTIVE_LEDGER_ROW_SQL = `file_path NOT IN (
   SELECT file_path FROM scope_exclusions
-   WHERE reconciliation_id = (
-     SELECT r.id FROM scope_reconciliations r
-      WHERE (r.exclusion_digest IS NULL
-             AND NOT EXISTS (SELECT 1 FROM scope_exclusions x WHERE x.reconciliation_id = r.id))
-         OR r.exclusion_digest = scope_exclusion_digest(
-              (SELECT json_group_array(json_array(x.file_path, x.source, x.rule_id))
-                 FROM scope_exclusions x WHERE x.reconciliation_id = r.id))
-      ORDER BY r.id DESC LIMIT 1))`;
+   WHERE reconciliation_id = ${SCOPE_RECONCILIATION_ID_SQL})`;
 
 /**
  * A path set, as one hash. Sorted so the digest is a statement about the set

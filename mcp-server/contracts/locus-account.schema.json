@@ -126,6 +126,7 @@
             "colon-split",
             "ledgered-path",
             "path-shaped",
+            "excluded-path",
             "bare-term",
             "caller-supplied"
           ]
@@ -317,7 +318,20 @@
         "authorizes": { "type": "string" },
         "cannot_justify": { "type": "string" },
         "reachability_checked": { "type": "boolean" },
-        "authorization_downgraded": { "type": ["string", "null"] }
+        "authorization_downgraded": { "type": ["string", "null"] },
+        "exclusion": { "$ref": "#/$defs/exclusion" }
+      }
+    },
+    "exclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "rule_id", "pattern", "reason"],
+      "properties": {
+        "source": { "enum": ["gitignore", "user", "meta", "ledger"] },
+        "rule_id": { "type": ["integer", "null"] },
+        "pattern": { "type": ["string", "null"] },
+        "reason": { "type": ["string", "null"] },
+        "classification": { "type": "string" }
       }
     },
     "subsystemStanding": {
@@ -325,6 +339,7 @@
       "additionalProperties": false,
       "required": [
         "state",
+        "outside_survey",
         "name",
         "authorizes",
         "cannot_justify",
@@ -338,6 +353,7 @@
       ],
       "properties": {
         "state": { "type": "string" },
+        "outside_survey": { "type": "boolean" },
         "name": { "type": ["string", "null"] },
         "authorizes": { "type": "string" },
         "cannot_justify": { "type": "string" },

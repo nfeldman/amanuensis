@@ -16,8 +16,18 @@
  */
 
 import type { DB } from "./db.js";
-import { requireWorkspaceSourcePath, type ServerContext, ToolError } from "./helpers.js";
-import { STATUS_ORDER, statusRank } from "./invariants.js";
+import {
+  requireWorkspaceSourcePath,
+  type ServerContext,
+  surveyScopeDecision,
+  ToolError,
+} from "./helpers.js";
+import {
+  ACTIVE_LEDGER_ROW_SQL,
+  SCOPE_RECONCILIATION_ID_SQL,
+  STATUS_ORDER,
+  statusRank,
+} from "./invariants.js";
 import { spawnSync } from "./subprocess.js";
 import { type StaleReason, VOCABULARY } from "./vocabulary.js";
 
@@ -29,7 +39,9 @@ export type LocusKind = "file" | "symbol" | "subsystem" | "term";
  * / sh:Info)` is a real term that the colon test alone kinds `symbol` and
  * leaves unreachable. Step 5 precedes step 6 because §2.2's `unledgered` state
  * exists precisely for a path no table names; falling through to `not-defined`
- * would contradict it.
+ * would contradict it. `excluded-path` (design/scope/PLAN.md §2.7) sits between
+ * them: a bare file name the survey set excludes, such as `Makefile`, is a
+ * path the owner ruled on and not a term the vocabulary lacks.
  */
 export const LOCUS_INFERENCE_ORDER = [
   "subsystem-id",
@@ -37,6 +49,7 @@ export const LOCUS_INFERENCE_ORDER = [
   "colon-split",
   "ledgered-path",
   "path-shaped",
+  "excluded-path",
   "bare-term",
 ] as const;
 export type LocusInferenceStep = (typeof LOCUS_INFERENCE_ORDER)[number] | "caller-supplied";
@@ -149,6 +162,20 @@ export interface UnknownEntry {
   [field: string]: unknown;
 }
 
+/**
+ * Why a path is `excluded` (design/scope/PLAN.md §2.7). `source` is one of the three scope
+ * sources, which keep the path off the pages, or `ledger`, a classification inside the survey
+ * set, which still prints. `rule_id` is the owner rule or sorting row that decided; `pattern`
+ * its pattern; `classification` is set only for `ledger`.
+ */
+export interface ExclusionBlock {
+  source: "gitignore" | "user" | "meta" | "ledger";
+  rule_id: number | null;
+  pattern: string | null;
+  reason: string | null;
+  classification?: string;
+}
+
 export interface FileStandingBlock {
   owners: OwnerStanding[];
   state: StandingState;
@@ -160,10 +187,14 @@ export interface FileStandingBlock {
   cannot_justify: string;
   reachability_checked: boolean;
   authorization_downgraded: string | null;
+  /** Present only when `state` is `excluded`. */
+  exclusion?: ExclusionBlock;
 }
 
 export interface SubsystemStandingBlock {
   state: string;
+  /** True when every ledger row of the subsystem is on a path the survey set excludes (§2.6a). */
+  outside_survey: boolean;
   name: string | null;
   authorizes: string;
   cannot_justify: string;
@@ -242,6 +273,108 @@ function subsystemAuthorization(status: string): StandingAuthorization {
     authorizes: value?.authorizes ?? "nothing",
     cannot_justify: value?.cannot_justify ?? "any claim beyond the recorded rows",
   };
+}
+
+// ---------------------------------------------------------------------------
+// design/scope/PLAN.md §2.6a, §2.7 — what the survey set leaves out
+// ---------------------------------------------------------------------------
+
+/**
+ * The scope exclusion that decides `path`, or null when the survey set keeps it. Only the
+ * three scope sources answer here; a ledger classification is read from the ledger. Reads
+ * are never refused (§2.7), so an ignore file git cannot read leaves the path in the
+ * survey set rather than failing the answer.
+ */
+export function scopeExclusion(ctx: ServerContext, path: string): ExclusionBlock | null {
+  let decision: ReturnType<typeof surveyScopeDecision>;
+  try {
+    decision = surveyScopeDecision(ctx, path);
+  } catch {
+    return null;
+  }
+  if (decision.in_survey || decision.source === null) return null;
+  if (decision.source === "user") {
+    return {
+      source: "user",
+      rule_id: decision.rule_id,
+      pattern: decision.pattern,
+      reason: decision.reason,
+    };
+  }
+  if (decision.source === "meta") {
+    const row = ctx.db
+      .prepare("SELECT description FROM scope_sorting WHERE id = ?")
+      .get(decision.rule_id) as { description: string } | undefined;
+    return {
+      source: "meta",
+      rule_id: decision.rule_id,
+      pattern: decision.pattern,
+      reason: row?.description ?? null,
+    };
+  }
+  return {
+    source: "gitignore",
+    rule_id: null,
+    pattern: null,
+    reason: `matched by the repository's own ignore files${
+      decision.revision ? ` at ${decision.revision.slice(0, 12)}` : ""
+    }`,
+  };
+}
+
+/**
+ * Subsystems whose ledger rows are all on excluded paths (§2.6a): they owe no status advance.
+ * A subsystem with no ledger row at all is not outside, since nothing excluded it.
+ */
+export function outsideSurveySubsystems(db: DB): string[] {
+  return (
+    db
+      .prepare(
+        `SELECT s.id FROM subsystems s
+          WHERE EXISTS (SELECT 1 FROM file_ledger l WHERE l.subsystem_id = s.id)
+            AND NOT EXISTS (SELECT 1 FROM file_ledger l
+                             WHERE l.subsystem_id = s.id AND ${ACTIVE_LEDGER_ROW_SQL})
+          ORDER BY s.id`,
+      )
+      .all() as { id: string }[]
+  ).map((row) => row.id);
+}
+
+/** Seams with at least one endpoint outside the survey: outside it too (§2.6a). */
+export function outsideSurveySeams(db: DB, outsideSubsystems: readonly string[]): string[] {
+  if (outsideSubsystems.length === 0) return [];
+  const holder = outsideSubsystems.map(() => "?").join(",");
+  return (
+    db
+      .prepare(
+        `SELECT id FROM seams WHERE party_a IN (${holder}) OR party_b IN (${holder}) ORDER BY id`,
+      )
+      .all(...outsideSubsystems, ...outsideSubsystems) as { id: string }[]
+  ).map((row) => row.id);
+}
+
+/**
+ * The last reconciliation's count of excluded paths by source, and its unsorted paths:
+ * the survey set's size at the reading the store stands on. Zeros before survey scope.
+ */
+export function scopeCounts(db: DB): {
+  excluded: { gitignore: number; user: number; meta: number; total: number };
+  unsorted: number;
+} {
+  const excluded = { gitignore: 0, user: 0, meta: 0, total: 0 };
+  for (const { source, n } of db
+    .prepare(
+      `SELECT source, COUNT(*) AS n FROM scope_exclusions
+        WHERE reconciliation_id = ${SCOPE_RECONCILIATION_ID_SQL} GROUP BY source`,
+    )
+    .all() as { source: "gitignore" | "user" | "meta"; n: number }[]) {
+    excluded[source] = n;
+    excluded.total += n;
+  }
+  const row = db
+    .prepare(`SELECT unsorted FROM scope_reconciliations WHERE id = ${SCOPE_RECONCILIATION_ID_SQL}`)
+    .get() as { unsorted: number | null } | undefined;
+  return { excluded, unsorted: row?.unsorted ?? 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -354,7 +487,12 @@ function asTerm(value: string, step: LocusInferenceStep): ResolvedLocus {
  * A caller may force the kind; the response says so rather than reporting a
  * step that never ran.
  */
-export function resolveLocus(db: DB, value: string, kind?: LocusKind | null): ResolvedLocus {
+export function resolveLocus(
+  db: DB,
+  value: string,
+  kind?: LocusKind | null,
+  ctx?: ServerContext,
+): ResolvedLocus {
   if (kind) {
     if (kind === "symbol") return asSymbol(value, "caller-supplied");
     if (kind === "file") return asFile(value, "caller-supplied");
@@ -372,6 +510,14 @@ export function resolveLocus(db: DB, value: string, kind?: LocusKind | null): Re
   if (pathIsNamedByATable(db, candidate)) return asFile(value, "ledgered-path");
   // 5. path-shaped and named nowhere: `unledgered`, not `not-defined`
   if (pathShaped(candidate)) return asFile(value, "path-shaped");
+  // 5b. a bare name the survey set excludes (`Makefile`): the owner ruled on this path
+  if (ctx && candidate.length > 0 && !/\s/.test(candidate) && scopeExclusion(ctx, candidate)) {
+    try {
+      return asFile(value, "excluded-path");
+    } catch {
+      // not a workspace source path after all: fall through to a term
+    }
+  }
   // 6. otherwise a term the vocabulary does not define
   return asTerm(value, "bare-term");
 }
@@ -839,13 +985,18 @@ function weakestState(states: StandingState[]): StandingState {
 export function fileStanding(ctx: ServerContext, path: string): FileStandingBlock {
   const db = ctx.db;
   const git = gitProbe(ctx);
-  const rows = db
-    .prepare(
-      `SELECT file_path, subsystem_id, subsystem_name, classification, standing_state,
+  // A path the survey set excludes is `excluded` whatever its ledger rows say: the rows are
+  // inactive, so standing reads none of them (§2.6a).
+  const scopeExcluded = scopeExclusion(ctx, path);
+  const rows = scopeExcluded
+    ? []
+    : (db
+        .prepare(
+          `SELECT file_path, subsystem_id, subsystem_name, classification, standing_state,
               authority_ceiling, ref_sha, examined_at, stale, stale_reason
          FROM file_standing WHERE file_path = ? ORDER BY subsystem_id`,
-    )
-    .all(path) as StandingRow[];
+        )
+        .all(path) as StandingRow[]);
 
   const owners: OwnerStanding[] = rows.map((row) => {
     let state = row.standing_state;
@@ -884,7 +1035,9 @@ export function fileStanding(ctx: ServerContext, path: string): FileStandingBloc
   });
 
   let state: StandingState;
-  if (owners.length === 0) {
+  if (scopeExcluded) {
+    state = "excluded";
+  } else if (owners.length === 0) {
     const absentRows = (
       db
         .prepare("SELECT COUNT(*) AS n FROM scope_gaps WHERE file_path = ? AND kind = 'absent'")
@@ -914,6 +1067,7 @@ export function fileStanding(ctx: ServerContext, path: string): FileStandingBloc
   const downgraded = owners.find((owner) => owner.authorization_downgraded) ?? null;
 
   const ownerIds = owners.map((owner) => owner.subsystem_id);
+  const exclusion = scopeExcluded ?? (state === "excluded" ? ledgerExclusion(db, path) : null);
   return {
     owners,
     state,
@@ -926,6 +1080,25 @@ export function fileStanding(ctx: ServerContext, path: string): FileStandingBloc
     reachability_checked:
       owners.length === 0 ? git.available : owners.every((o) => o.reachability_checked),
     authorization_downgraded: downgraded?.authorization_downgraded ?? null,
+    ...(exclusion ? { exclusion } : {}),
+  };
+}
+
+/** A ledger-exempt path inside the survey set: its classification, and the row's own reason. */
+function ledgerExclusion(db: DB, path: string): ExclusionBlock {
+  const rows = db
+    .prepare(
+      `SELECT classification, why_in_scope FROM file_ledger
+        WHERE file_path = ? AND ${ACTIVE_LEDGER_ROW_SQL} ORDER BY subsystem_id`,
+    )
+    .all(path) as { classification: string | null; why_in_scope: string | null }[];
+  const first = rows[0];
+  return {
+    source: "ledger",
+    rule_id: null,
+    pattern: null,
+    reason: first?.why_in_scope ?? null,
+    ...(first?.classification ? { classification: first.classification } : {}),
   };
 }
 
@@ -948,7 +1121,7 @@ export function subsystemStanding(ctx: ServerContext, subsystemId: string): Subs
          SUM(CASE WHEN standing_state = 'excluded' THEN 1 ELSE 0 END) AS excluded,
          SUM(CASE WHEN stale = 1 THEN 1 ELSE 0 END) AS stale,
          COUNT(*) AS total
-       FROM file_standing WHERE subsystem_id = ?`,
+       FROM file_standing WHERE subsystem_id = ? AND ${ACTIVE_LEDGER_ROW_SQL}`,
     )
     .get(subsystemId) as Record<string, number | null>;
   const applicable = (
@@ -993,6 +1166,7 @@ export function subsystemStanding(ctx: ServerContext, subsystemId: string): Subs
   const authorization = subsystemAuthorization(status);
   return {
     state: status,
+    outside_survey: outsideSurveySubsystems(db).includes(subsystemId),
     name: row?.name ?? null,
     authorizes: authorization.authorizes,
     cannot_justify: authorization.cannot_justify,
@@ -1021,7 +1195,8 @@ export function subsystemStanding(ctx: ServerContext, subsystemId: string): Subs
         db
           .prepare(
             `SELECT COUNT(*) AS n FROM evidence
-              WHERE file_path IN (SELECT file_path FROM file_ledger WHERE subsystem_id = ?)`,
+              WHERE file_path IN (SELECT file_path FROM file_ledger
+                                   WHERE subsystem_id = ? AND ${ACTIVE_LEDGER_ROW_SQL})`,
           )
           .get(subsystemId) as { n: number }
       ).n,
@@ -1241,7 +1416,7 @@ export function describeLocusStanding(
   value: string,
   kind?: LocusKind | null,
 ): LocusStanding {
-  const locus = resolveLocus(ctx.db, value, kind ?? null);
+  const locus = resolveLocus(ctx.db, value, kind ?? null, ctx);
   if (locus.kind === "subsystem")
     return { locus, standing: subsystemStanding(ctx, locus.subsystem_id as string) };
   if (locus.kind === "term") return { locus, standing: termStanding(ctx.db, locus.term as string) };

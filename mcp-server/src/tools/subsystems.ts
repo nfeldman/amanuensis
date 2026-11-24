@@ -23,6 +23,7 @@ import {
 // One predicate for one question: the rollup counted `findings.status`
 // while every lens counted `finding_state_current`, so a repaired finding
 // stayed open here after it had closed everywhere else (F9/codex).
+import { outsideSurveySubsystems } from "../standing.js";
 import { OPEN_FINDING_SQL, SUBSYSTEM_STATUSES } from "../vocabulary.js";
 
 // The validator takes the source's list. `STATUS_ORDER` keeps authorship of
@@ -42,7 +43,8 @@ export const subsystemTools: ToolDefinition[] = [
       "Return the registered subsystems (master plan), sorted by survey priority " +
       "(1 = survey first), with unprioritized subsystems falling back to alphabetical. " +
       "Optionally filter by status. Each row includes a finding rollup (confirmed_bugs) " +
-      "for quick dashboarding and the layer / priority the coordinator assigned.",
+      "for quick dashboarding and the layer / priority the coordinator assigned. outside_survey is " +
+      "true for a subsystem whose ledger rows are all on paths the survey leaves out: it owes no survey work.",
     inputSchema: {
       type: "object",
       properties: { status_filter: { type: "string" } },
@@ -64,7 +66,7 @@ export const subsystemTools: ToolDefinition[] = [
          GROUP BY s.id
          ORDER BY CASE WHEN s.priority IS NULL THEN 1 ELSE 0 END, s.priority, s.layer, s.id`;
       const stmt = ctx.db.prepare(sql);
-      return (statusFilter ? stmt.all(statusFilter) : stmt.all()) as Array<{
+      const rows = (statusFilter ? stmt.all(statusFilter) : stmt.all()) as Array<{
         id: string;
         name: string;
         status: string;
@@ -75,6 +77,8 @@ export const subsystemTools: ToolDefinition[] = [
         priority: number | null;
         confirmed_bugs: number;
       }>;
+      const outside = new Set(outsideSurveySubsystems(ctx.db));
+      return rows.map((row) => ({ ...row, outside_survey: outside.has(row.id) }));
     },
   },
   {
