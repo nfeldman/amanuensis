@@ -81,11 +81,12 @@ function escapeRegex(text: string): string {
 }
 
 /**
- * `*` matches within one segment and `**` across segments, as in gitignore:
- * a `**` segment between two others stands for zero or more segments, a
+ * `*` matches within one segment and `**` across segments (§2.2). A `**`
+ * segment between two others stands for zero or more segments, and a
  * trailing `**` matches everything under the directory but not the directory
- * itself, and a `*` run inside a segment is one `*`. A glob ending in `/`
- * covers everything under what it matches.
+ * itself, as in gitignore. Unlike gitignore, a `**` inside a segment
+ * (`docs/**.md`) still crosses segments, since §2.2 gives `**` no exception.
+ * A glob ending in `/` covers everything under what it matches.
  */
 function globSource(body: string): string {
   const segments = body.split("/");
@@ -96,7 +97,10 @@ function globSource(body: string): string {
       source += last ? ".+" : "(?:[^/]+/)*";
       return;
     }
-    source += segment.split(/\*+/).map(escapeRegex).join("[^/]*");
+    source += segment
+      .split(/\*{2,}/)
+      .map((part) => part.split("*").map(escapeRegex).join("[^/]*"))
+      .join(".*");
     if (!last) source += "/";
   });
   return source;
@@ -190,7 +194,7 @@ export type PathDecision = {
   rule_id: number | null;
   /** What decided the path, or null when nothing covers it. */
   decided_by: ScopeDecider | null;
-  /** In `sorted` mode, a path nothing decides: still in the survey set, and still owed a sorting row. */
+  /** In `sorted` mode, a survey path no sorting row covers: still owed a sorting row. */
   unsorted: boolean;
 };
 
@@ -210,8 +214,16 @@ function decide(
   const rule = decider(rules, path);
   if (rule) {
     const decided_by: ScopeDecider = { kind: "rule", id: rule.id, action: rule.action };
+    // An include decides membership, not sorting: with no sorting row over
+    // it, the path is still owed one (§2.2 step 4).
     return rule.action === "include"
-      ? { in_survey: true, source: null, rule_id: null, decided_by, unsorted: false }
+      ? {
+          in_survey: true,
+          source: null,
+          rule_id: null,
+          decided_by,
+          unsorted: mode === "sorted" && decider(sorting, path) === null,
+        }
       : { in_survey: false, source: "user", rule_id: rule.id, decided_by, unsorted: false };
   }
   if (ignored) {
@@ -241,8 +253,8 @@ function decide(
 
 /**
  * §2.2's precedence for one path: the owner's rules, then gitignore, then
- * sorting. A path an owner rule includes is decided by that rule, so it is not
- * unsorted even when no sorting row covers it.
+ * sorting. A path an owner rule includes is decided by that rule, and is still
+ * unsorted in `sorted` mode when no sorting row covers it.
  */
 export function decidePath(path: string, inputs: ScopeInputs & { ignored: boolean }): PathDecision {
   return decide(path, inputs.ignored, prepare(inputs.rules), prepare(inputs.sorting), inputs.mode);
@@ -255,7 +267,7 @@ export type ScopeResolution = {
   survey: string[];
   /** One row per excluded path, sorted by path: the `scope_exclusions` rows. */
   exclusions: ScopeExclusion[];
-  /** Survey paths nothing decides, sorted; empty in `legacy` mode. */
+  /** Survey paths no sorting row covers, sorted; empty in `legacy` mode. */
   unsorted: string[];
   counts: Record<ScopeSource, number>;
 };
@@ -345,7 +357,9 @@ function isIgnoreFile(entry: TreeEntry): boolean {
 /**
  * §2.3's cache key: every ignore file's path with its blob id, so a moved or
  * swapped file changes it, and the digest of the tree's path set, so a commit
- * that adds a path the unchanged rules ignore changes it too.
+ * that adds a path the unchanged rules ignore changes it too. A submodule is
+ * a directory to git, so its path enters the set with a trailing `/`: a file
+ * that becomes a submodule can change what a `dir/` pattern matches.
  */
 function gitignoreCacheKey(
   entries: readonly TreeEntry[],
@@ -354,7 +368,7 @@ function gitignoreCacheKey(
   const pathSet = createHash("sha256")
     .update(
       entries
-        .map((entry) => entry.path)
+        .map((entry) => (entry.type === "commit" ? `${entry.path}/` : entry.path))
         .sort()
         .join("\u0000"),
     )
@@ -403,6 +417,45 @@ function readBlobs(workspacePath: string, ids: readonly string[]): Buffer[] {
   return blobs;
 }
 
+/** How a scratch directory on a case- or normalization-insensitive filesystem names a path. */
+function folded(path: string): string {
+  return path.normalize("NFD").toLowerCase();
+}
+
+/**
+ * Directories that a case- or normalization-insensitive filesystem would merge
+ * with a directory holding an ignore file: git, checking a path under one,
+ * would read the other's `.gitignore`. Refused on every machine, so the survey
+ * set never depends on the filesystem of the machine that asks.
+ */
+function caseCollision(
+  entries: readonly TreeEntry[],
+  ignoreFiles: readonly TreeEntry[],
+): [string, string] | null {
+  const ignoreDirs = new Map<string, string>();
+  for (const entry of ignoreFiles) {
+    const dir = entry.path.slice(0, entry.path.length - ".gitignore".length);
+    const other = ignoreDirs.get(folded(dir));
+    if (other !== undefined && other !== dir) return [other, dir];
+    ignoreDirs.set(folded(dir), dir);
+  }
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    for (
+      let slash = entry.path.indexOf("/");
+      slash >= 0;
+      slash = entry.path.indexOf("/", slash + 1)
+    ) {
+      const dir = entry.path.slice(0, slash + 1);
+      if (seen.has(dir)) continue;
+      seen.add(dir);
+      const other = ignoreDirs.get(folded(dir));
+      if (other !== undefined && other !== dir) return [other, dir];
+    }
+  }
+  return null;
+}
+
 /** Git's environment without the variables that would point it at another repository. */
 function scratchEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
@@ -440,6 +493,12 @@ export function gitignoredPaths(workspacePath: string, entries: readonly TreeEnt
 
   let ignored: string[] = [];
   if (ignoreFiles.length > 0 && entries.length > 0) {
+    const collision = caseCollision(entries, ignoreFiles);
+    if (collision) {
+      throw new ScopeGitError(
+        `cannot read the ignore files at this revision: the directories ${JSON.stringify(collision[0])} and ${JSON.stringify(collision[1])} differ only in case or Unicode normalization, and a case-insensitive filesystem would merge them`,
+      );
+    }
     const blobs = readBlobs(
       workspacePath,
       ignoreFiles.map((entry) => entry.object),
@@ -477,10 +536,12 @@ export function gitignoredPaths(workspacePath: string, entries: readonly TreeEnt
         "--stdin",
         "-z",
       ];
+      // Each path goes in as `./path`, so one starting with `:` is a path and
+      // not pathspec magic; git answers with the same spelling.
       const result = spawnSync("git", args, {
         cwd: scratch,
         env,
-        input: `${entries.map((entry) => entry.path).join("\u0000")}\u0000`,
+        input: `${entries.map((entry) => `./${entry.path}`).join("\u0000")}\u0000`,
         encoding: "utf8",
         maxBuffer: MAX_GIT_OUTPUT,
         stdio: ["pipe", "pipe", "pipe"],
@@ -496,6 +557,7 @@ export function gitignoredPaths(workspacePath: string, entries: readonly TreeEnt
       ignored = String(result.stdout ?? "")
         .split("\u0000")
         .filter((path) => path.length > 0)
+        .map((path) => (path.startsWith("./") ? path.slice(2) : path))
         .sort();
     } finally {
       rmSync(scratch, { recursive: true, force: true });
