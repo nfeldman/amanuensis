@@ -22,8 +22,8 @@ Turns red when:
   6. coverage is not computed over the survey set: the overview's files read,
      the not-yet-surveyed denominator, and the coverage bars (V1, V2, V3); the
      not-yet-surveyed page owes work for a seam or a subsystem outside the
-     survey (N1); an excluded stale row is listed, or an included one is not
-     (S1);
+     survey (N1); an excluded stale row is listed, or an included one is not,
+     or is counted on the staleness map (S1, S2);
   7. the overview's line does not name each source's count and the owner's
      exclude patterns, names a path, or is printed when nothing is excluded
      (W1, W2);
@@ -742,6 +742,16 @@ def run(root: Path) -> None:
         return f"stale.html lists excluded stale rows {listed}" if listed else None
 
     check("S1 the stale page lists an included stale row and no excluded one", stale_listing)
+
+    def staleness_map() -> str | None:
+        text = pages_a["architecture.html"]
+        section = text[text.find("Staleness map"):]
+        bars = re.findall(r'<div class="bar-row">.*?<span class="bar-value">([^<]*)</span>', section, re.S)
+        labels = [plain(m) for m in re.findall(r'<span class="bar-label">(.*?)</span>', section, re.S)]
+        got = list(zip(labels, bars, strict=False))
+        return None if got == [("B-03", "1")] else f"the staleness map draws {got}, want only B-03 with 1 stale row"
+
+    check("S2 the staleness map counts only the stale rows inside the survey set", staleness_map)
 
     def overview_line() -> str | None:
         want = (f"Outside this survey: 1 path ignored by git, 1 the owner excluded (`{OWNER_PATTERN}`),"
