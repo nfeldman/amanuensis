@@ -216,11 +216,11 @@ const FILES = {
 
 let worlds = 0;
 /** A fresh workspace with one commit (build/out.js force-added under an ignored prefix), a store and a session. */
-function world({ reconcile = true, legacy = false } = {}) {
+function world({ reconcile = true, legacy = false, extra = {} } = {}) {
   const ws = join(scratch, `ws-${++worlds}`);
   mkdirSync(ws, { recursive: true });
   git(ws, "init", "-q", "--template=", "-b", "main");
-  for (const [path, body] of Object.entries(FILES)) {
+  for (const [path, body] of Object.entries({ ...FILES, ...extra })) {
     mkdirSync(dirname(join(ws, path)), { recursive: true });
     writeFileSync(join(ws, path), body);
   }
@@ -619,6 +619,35 @@ const RULE = (extra = {}) => ({
 }
 
 // ------------------------------------------------------------------ register, parity and inventory
+
+// ------------------------------------------------------------------ the path cap
+
+// More matching paths than the cap: each count is the whole set, and each list
+// is its first fifty in order (both writers answer through one covers()), so a writer or a listing that drops the cap, or
+// stops sorting, is caught (final review, F10/codex).
+{
+  const BULK = Array.from({ length: 60 }, (_, i) => `bulk/f${String(59 - i).padStart(2, "0")}.txt`);
+  const { ctx } = world({ extra: Object.fromEntries(BULK.map((path) => [path, "bulk\n"])) });
+  const sortedBulk = [...BULK].sort();
+  check("K1 set_scope_rule over 60 paths counts all 60 and lists the first 50 in order", () => {
+    const covers = call(ctx, "set_scope_rule", RULE({ pattern: "bulk/", owner_words: "don't survey bulk/" }))?.covers;
+    const got = { count: covers?.count, paths: covers?.paths };
+    const want = { count: 60, paths: sortedBulk.slice(0, 50) };
+    return same(got, want) ? null : `covers count ${covers?.count}, ${covers?.paths?.length} paths, first ${JSON.stringify(covers?.paths?.slice(0, 2))}`;
+  });
+  const { ctx: unsortedCtx } = world({ extra: Object.fromEntries(BULK.map((path) => [path, "bulk\n"])) });
+  check("K2 get_scope over more than 50 unsorted paths counts all of them and lists the first 50 in order", () => {
+    call(unsortedCtx, "record_scope_sorting", { pattern: "src/", category: "product", description: "code" });
+    call(unsortedCtx, "detect_changes", { current_sha: git(unsortedCtx.project.workspacePath, "rev-parse", "HEAD") });
+    const scope = call(unsortedCtx, "get_scope", {})?.scope;
+    const all = [".gitignore", ...sortedBulk, "docs/guide.md", "docs/other.md", "notes/plan.md", "notes/review.md"].sort();
+    const got = { unsorted: scope?.unsorted, unsorted_paths: scope?.unsorted_paths };
+    const want = { unsorted: all.length, unsorted_paths: all.slice(0, 50) };
+    return same(got, want)
+      ? null
+      : `unsorted ${scope?.unsorted} (want ${all.length}), ${scope?.unsorted_paths?.length} paths, first ${JSON.stringify(scope?.unsorted_paths?.slice(0, 2))}`;
+  });
+}
 
 check("P1 the register names the new refusals at both writers, with onboarding.md as a reference", () => {
   const register = JSON.parse(readFileSync(join(here, "contracts", "refusal-parity.json"), "utf8"));
