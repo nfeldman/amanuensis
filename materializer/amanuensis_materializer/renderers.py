@@ -1635,7 +1635,10 @@ def outside_survey_sentence(conn: sqlite3.Connection) -> str | None:
     if not excluded:
         return None
     counts = {source: sum(1 for r in excluded if r["source"] == source) for source in ("gitignore", "user", "meta")}
-    patterns = owner_exclude_patterns(conn)
+    # The patterns of the rules behind the counted `user` exclusions, so a rule
+    # that excluded nothing (an include of the same pattern overrides it) is not named.
+    deciding = {r["rule_id"] for r in excluded if r["source"] == "user" and r["rule_id"] is not None}
+    patterns = owner_exclude_patterns(conn, deciding)
     owner = f"{counts['user']} the owner excluded" + (
         " (" + ", ".join(f"`{pattern}`" for pattern in patterns) + ")" if patterns else ""
     )

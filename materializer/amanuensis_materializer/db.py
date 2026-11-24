@@ -153,10 +153,15 @@ def scope_mode(conn: sqlite3.Connection) -> str:
     return str(latest["mode"]) if latest else "legacy"
 
 
-def owner_exclude_patterns(conn: sqlite3.Connection) -> list[str]:
-    """The owner's active exclude rules, by pattern, in the order they were recorded."""
+def owner_exclude_patterns(conn: sqlite3.Connection, rule_ids: set[Any] | None = None) -> list[str]:
+    """The owner's active exclude rules, by pattern, in the order they were recorded; only
+    those among `rule_ids` when it is given."""
 
-    return [str(r["pattern"]) for r in _active(conn, "scope_rules", "pattern, action") if r["action"] == "exclude"]
+    return [
+        str(r["pattern"])
+        for r in _active(conn, "scope_rules", "pattern, action")
+        if r["action"] == "exclude" and (rule_ids is None or r["id"] in rule_ids)
+    ]
 
 
 def reconciliation_exclusion_rows(conn: sqlite3.Connection, reconciliation_id: Any) -> list[dict[str, Any]]:

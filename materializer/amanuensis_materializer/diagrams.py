@@ -1481,8 +1481,13 @@ def _flow_marks(conn: sqlite3.Connection, flow_key: str) -> list[dict[str, Any]]
         f" WHERE c.valid_until_sha IS NULL AND c.claim_key LIKE ? ESCAPE '\\'{withdrawn} ORDER BY m.id",
         (f"{_like_escaped(flow_key)}/%",),
     )
+    # A seam outside the survey is drawn on no diagram (design/scope/PLAN.md §2.6a), a
+    # crossing of it on a flow strip included.
+    outside = set(outside_survey_seams(conn))
     marks = []
     for mark in found:
+        if mark["kind"] == "crosses-seam" and str(mark["target"]) in outside:
+            continue
         match = _FLOW_STEP_KEY.match(str(mark["claim_key"]))
         if match and f"{match.group(1)}/flow/{match.group(2)}" == flow_key:
             marks.append({**mark, "step": match.group(3)})
@@ -1508,7 +1513,9 @@ def _stale_citations(conn: sqlite3.Connection, claim_ids: Sequence[str]) -> dict
         " JOIN claims c ON c.claim_id = ce.claim_id JOIN evidence e ON e.id = ce.evidence_id"
         " JOIN file_ledger l ON l.file_path = e.file_path"
         " AND l.subsystem_id = substr(c.claim_key, 1, instr(c.claim_key, '/') - 1)"
-        f" WHERE l.stale = 1 AND ce.claim_id IN ({marks}) ORDER BY e.file_path, l.ref_sha",
+        # An inactive row's stale flag is frozen, not a reading (§2.6a), so it hatches nothing.
+        f" WHERE l.stale = 1 AND {survey_filter(conn, 'l.file_path')} AND ce.claim_id IN ({marks})"
+        " ORDER BY e.file_path, l.ref_sha",
         tuple(claim_ids),
     ):
         out.setdefault(str(cited["claim_id"]), []).append((str(cited["file_path"]), str(cited["ref_sha"] or "")))
