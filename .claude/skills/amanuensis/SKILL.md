@@ -113,8 +113,8 @@ is read for evidence only — never modified.
 |---|---|
 | (no specific command) | Infer the cold/warm-start scope above and execute it. |
 | "run onboarding" | Walk the 8-phase onboarding autonomously. See `references/onboarding.md`. |
-| "ignore X" / "don't survey X" | Call `set_scope_rule` with `exclude`, the pattern for X, and the owner's words in `owner_words`, then `detect_changes`. Record the rule only because the owner asked, and quote the owner's own words that asked for it. X is left out of the survey set from then on. See Phase 0b in `references/onboarding.md`. |
-| "survey X after all" / "include X" | Call `set_scope_rule` with `include` and the owner's own words in `owner_words`, then `detect_changes`. An include brings X back from gitignore or meta. |
+| "ignore X" / "don't survey X" | Call `set_scope_rule` with `exclude`, the pattern for X, a `reason`, and the owner's words in `owner_words`, then `detect_changes`. Record the rule only because the owner asked, and quote the owner's own words that asked for it. X is left out of the survey set from then on. See Phase 0b in `references/onboarding.md`. |
+| "survey X after all" / "include X" | Call `set_scope_rule` with `include`, the pattern for X, a `reason`, and the owner's own words in `owner_words`, then `detect_changes`. An include brings X back from gitignore or meta. |
 | "survey [id]" / "survey [subsystem]" | Per-subsystem phased survey, autonomous. See `references/subsystem-survey.md` and `references/phase-1-scope.md` through `references/phase-5-packaging.md`. |
 | "resume survey" | Call `list_sessions(state="active")`. If one is open, summarize its last dispatch (`get_dispatch_history`) and re-enter the appropriate phase. |
 | "what have you noticed" / "browse" | See `references/notes.md` — answer conversationally from field notes, vocabulary, and findings. No surveys. |
