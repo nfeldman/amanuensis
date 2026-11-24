@@ -18,15 +18,21 @@ Turns red when:
      finding, has no page, is not headed "Outside this survey", carries a file
      listing, or drops any of the three records; its seam is drawn on a
      diagram, is not listed on its page, or an in-survey seam is no longer
-     drawn (O1, O2, O3);
+     drawn, or it is drawn as a topology edge or a seam-contract block (O1-O4);
   6. coverage is not computed over the survey set: the overview's files read,
-     the not-yet-surveyed denominator, and the coverage bars (V1, V2, V3);
+     the not-yet-surveyed denominator, and the coverage bars (V1, V2, V3); the
+     not-yet-surveyed page owes work for a seam or a subsystem outside the
+     survey (N1); an excluded stale row is listed, or an included one is not
+     (S1);
   7. the overview's line does not name each source's count and the owner's
      exclude patterns, names a path, or is printed when nothing is excluded
      (W1, W2);
   8. read-back is not green on a valid store, or stays green when a
      `scope_exclusions` row is added, swapped or re-sourced, or when a rule
-     changes without a reconciliation (R1–R5);
+     changes without a reconciliation, or when a reconciliation without scope
+     columns is read as standing while a rule exists (R1–R6); a digest this
+     package restates orders paths otherwise than the server does, so a
+     non-BMP path breaks it (D1);
   9. a store with no scope tables does not render byte-identical to the
      golden corpus (G1);
  10. this gate is not registered in CI (CI1).
@@ -143,6 +149,7 @@ META = "notes/n.md"
 EXCLUDED = (GITIGNORED, OWNER_EXCLUDED, META)
 EXEMPT_GOLDEN = "golden/out.txt"
 SURVEY = (".gitignore", "src/a.ts", "src/b.ts", EXEMPT_GOLDEN)
+STALE_CONTROL = "src/b.ts"
 
 OWNER_PATTERN = "design/"
 # (id, pattern, action)
@@ -161,10 +168,16 @@ def sha256(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
+def utf16(text: str) -> bytes:
+    """The order the server's JavaScript `<` and `sort()` put strings in: by UTF-16 code units."""
+
+    return text.encode("utf-16-be")
+
+
 def set_digest(parts: list[str]) -> str:
     """§3.2's construction: sorted, NUL-joined, SHA-256."""
 
-    return sha256(NUL.join(sorted(parts)))
+    return sha256(NUL.join(sorted(parts, key=utf16)))
 
 
 def scope_digest(rules: tuple[tuple[Any, ...], ...], sorting: tuple[tuple[Any, ...], ...]) -> str:
@@ -182,7 +195,7 @@ def exclusion_digest(exclusions: tuple[tuple[Any, ...], ...]) -> str:
     """§2.5's `exclusion_digest`, restated."""
 
     return sha256(
-        "\n".join(NUL.join((p, s, "" if r is None else str(r))) for p, s, r in sorted(exclusions))
+        "\n".join(NUL.join((p, s, "" if r is None else str(r))) for p, s, r in sorted(exclusions, key=lambda e: utf16(e[0])))
     )
 
 
@@ -257,8 +270,10 @@ def seed(storage: Path, ws: Path, head: str, world: str) -> None:
     ]
     if world == "B":
         ledger.append((OUTSIDE, OWNER_EXCLUDED, "examined"))
+    # Every excluded row is stale, and so is one included control (S1).
+    stale = (*EXCLUDED, STALE_CONTROL) if world != "C" else ()
     db.executemany("INSERT INTO file_ledger (subsystem_id, file_path, why_in_scope, classification, ref_sha, stale)"
-                   " VALUES (?, ?, 'fixture', ?, ?, 0)", [(s, p, c, head) for s, p, c in ledger])
+                   " VALUES (?, ?, 'fixture', ?, ?, ?)", [(s, p, c, head, int(p in stale)) for s, p, c in ledger])
     x("INSERT INTO scope_gaps (file_path, kind, subsystem_id, detected_sha) VALUES ('.gitignore', 'unledgered', NULL, ?)",
       (head,))
     x("INSERT INTO concerns (code, category, origin, status) VALUES ('CC-1', 'cache', 'seeded', 'active')")
@@ -307,6 +322,11 @@ def seed(storage: Path, ws: Path, head: str, world: str) -> None:
           " 'a term the prototype named', ?, ?)", (OUTSIDE, f"{OWNER_EXCLUDED}:protoSymbol@{head}"))
         seams.append((SEAM_OUTSIDE, "B-01", OUTSIDE, "the prototype queue"))
     db.executemany("INSERT INTO seams (id, party_a, party_b, shared_object) VALUES (?, ?, ?, ?)", seams)
+    if world == "B":
+        # The outside seam records its contract, so a diagram that drew it would draw it whole (O4).
+        x("UPDATE seams SET a_writes='queued plans', a_reads='plan receipts', b_writes='plan receipts',"
+          " b_reads='queued plans' WHERE id=?", (SEAM_OUTSIDE,))
+
 
     if world == "C":
         rules: tuple[tuple[Any, ...], ...] = ((1, "build/", "include"),)
@@ -525,7 +545,7 @@ def tampered(source: Path, docs: Path, root: Path, name: str, sql: str) -> dict[
     shutil.copytree(source, storage)
     shutil.copytree(docs, base / "docs")
     db = sqlite3.connect(storage / "memory.db")
-    for table in ("scope_exclusions", "scope_rules"):
+    for table in ("scope_exclusions", "scope_rules", "scope_reconciliations"):
         for (trigger,) in db.execute("SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name=?", (table,)):
             db.execute(f'DROP TRIGGER IF EXISTS "{trigger}"')
     db.executescript(sql)
@@ -666,6 +686,19 @@ def run(root: Path) -> None:
         return None if SEAM_INSIDE in drawn else f"{SEAM_INSIDE} is drawn on no diagram, so the check cannot see seams"
 
     check("O2 a seam outside the survey is drawn on no diagram, and a seam inside it still is", seams_drawn)
+
+    def seams_drawn_anywhere() -> str | None:
+        spokes = [m.group(0) for t in pages_b.values()
+                  for m in re.finditer(r'<article class="topology-spoke".*?</article>', t, re.S)]
+        problems = [f"{SEAM_OUTSIDE} is a topology edge" for spoke in spokes if SEAM_OUTSIDE in spoke][:1]
+        problems += [f"{rel} draws a {kind} block for it" for rel, t in pages_b.items()
+                     for kind in re.findall(rf'data-diagram="([^"]+)" data-subject="{SEAM_OUTSIDE}"', t)]
+        if not any(SEAM_INSIDE in spoke for spoke in spokes):
+            problems.append(f"{SEAM_INSIDE} is no topology edge, so the check cannot see edges")
+        return "; ".join(problems) if problems else None
+
+    check("O4 a seam outside the survey, with its contract recorded, is no topology edge and no seam-contract block",
+          seams_drawn_anywhere)
     check("O3 the in-survey subsystem lists exactly its rows inside the survey set",
           lambda: (lambda got, want: None if got == want else f"B-01's ledger anchors {got}, want {want}")(
               ledger_anchors(subsystem_page(out_b, "B-01").read_text()),
@@ -690,6 +723,25 @@ def run(root: Path) -> None:
         return f"the coverage bars do not print {missing}" if missing else None
 
     check("V3 the coverage bars are drawn over the survey set", bars)
+
+    def owed_work() -> str | None:
+        text = plain(pages_b["not-yet-surveyed.html"])
+        wanted = ("2 of 2 (seam, side) pairs", "2 of 2 (subsystem, active concern) pairs")
+        problems = [f"does not print {w!r}" for w in wanted if w not in text]
+        owed = text[text.find("Seam sides no one has assessed"):]
+        problems += [f"owes work for {w}" for w in (SEAM_OUTSIDE, OUTSIDE) if w in owed]
+        return f"store B's not-yet-surveyed page {problems}" if problems else None
+
+    check("N1 the not-yet-surveyed page owes nothing for a seam or a subsystem outside the survey", owed_work)
+
+    def stale_listing() -> str | None:
+        text = plain(pages_a["stale.html"])
+        if STALE_CONTROL not in text or "1 of 1 file in scope but not yet read has changed" not in text:
+            return f"stale.html does not list the included stale row {STALE_CONTROL}"
+        listed = [p for p in EXCLUDED if p in pages_a["stale.html"]]
+        return f"stale.html lists excluded stale rows {listed}" if listed else None
+
+    check("S1 the stale page lists an included stale row and no excluded one", stale_listing)
 
     def overview_line() -> str | None:
         want = (f"Outside this survey: 1 path ignored by git, 1 the owner excluded (`{OWNER_PATTERN}`),"
@@ -722,10 +774,53 @@ def run(root: Path) -> None:
         check(f"{label} turns read-back red",
               lambda s=sql, n=name: "read-back stayed green"
               if green(tampered(storage_a, docs_a, root, n, s)) is None else None)
+    # Store C excludes nothing, so with its scope columns cleared its reconciliation reads as one
+    # from before survey scope: it stands only while the store has no rule and no sorting row (§2.9).
+    legacy = ("UPDATE scope_reconciliations SET scope_digest=NULL, exclusion_digest=NULL, excluded=NULL,"
+              " unsorted=NULL, survey_paths=NULL, scope_mode=NULL;")
+    check("R6 a reconciliation without scope columns, on a store with rules, turns read-back red",
+          lambda: "read-back stayed green"
+          if green(tampered(stores["C"][0], stores["C"][1], root, "R6", legacy)) is None else None)
     check("R1 read-back of the untouched copy stays green",
           lambda: green(tampered(storage_a, docs_a, root, "none", "SELECT 1;")))
+    check("D1 the digests read-back restates order paths as the server does, non-BMP paths included", digests_agree)
     check("G1 a store with no scope tables renders byte-identical to the golden corpus", lambda: golden_identical(root))
     _ci()
+
+
+# Paths whose UTF-16 order differs from their code-point order: a private-use character sorts
+# after a surrogate pair by code units and before it by code points.
+NON_BMP = ("x/\ue000.ts", "x/\U00010000.ts", "d/\U0001F600.md", "d/\ufb01.md")
+
+
+def digests_agree() -> str | None:
+    """The server's `exclusionDigest` and `trackedPathDigest`, run from the build, against this package's."""
+
+    sys.path.insert(0, str(ROOT))
+    from amanuensis_materializer import db as mdb  # noqa: PLC0415
+    from amanuensis_materializer import readback  # noqa: PLC0415
+
+    exclusions = [{"file_path": p, "source": "user", "rule_id": 1} for p in NON_BMP]
+    dist = REPO / "mcp-server" / "dist"
+    script = (
+        "const [{exclusionDigest}, {trackedPathDigest}] = await Promise.all(["
+        f"import({json.dumps(str(dist / 'scope.js'))}), import({json.dumps(str(dist / 'invariants.js'))})]);"
+        f"const rows = {json.dumps(exclusions)}; const paths = rows.map((r) => r.file_path);"
+        "console.log(JSON.stringify([exclusionDigest(rows), trackedPathDigest(paths)]));"
+    )
+    proc = subprocess.run(["node", "--input-type=module", "-e", script], capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        return f"the server's digests could not be run: {scrub(proc.stderr.strip()[-200:])}"
+    server_exclusion, server_tree = json.loads(proc.stdout)
+    rows3 = tuple((p, "user", 1) for p in NON_BMP)
+    problems = []
+    if mdb.exclusion_digest(exclusions) != server_exclusion:
+        problems.append("db.exclusion_digest differs from the server's exclusionDigest")
+    if exclusion_digest(rows3) != server_exclusion:
+        problems.append("this gate's restated exclusion_digest differs from the server's")
+    if readback.tracked_path_digest(list(NON_BMP)) != server_tree:
+        problems.append("readback.tracked_path_digest differs from the server's trackedPathDigest")
+    return "; ".join(problems) if problems else None
 
 
 def _ci() -> None:
