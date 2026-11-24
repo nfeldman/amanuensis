@@ -112,7 +112,7 @@ is read for evidence only — never modified.
 | User says... | You do |
 |---|---|
 | (no specific command) | Infer the cold/warm-start scope above and execute it. |
-| "run onboarding" | Walk the 8-phase onboarding autonomously, starting with Phase 0b, which sets the survey set. See `references/onboarding.md`. |
+| "run onboarding" | Walk the 8-phase onboarding autonomously. See `references/onboarding.md`. |
 | "ignore X" / "don't survey X" | Call `set_scope_rule` with `exclude`, the pattern for X, and the owner's words in `owner_words`, then `detect_changes`. Record the rule only because the owner asked, and quote the owner's own words that asked for it. X is left out of the survey set from then on. See Phase 0b in `references/onboarding.md`. |
 | "survey X after all" / "include X" | Call `set_scope_rule` with `include` and the owner's own words in `owner_words`, then `detect_changes`. An include brings X back from gitignore or meta. |
 | "survey [id]" / "survey [subsystem]" | Per-subsystem phased survey, autonomous. See `references/subsystem-survey.md` and `references/phase-1-scope.md` through `references/phase-5-packaging.md`. |
