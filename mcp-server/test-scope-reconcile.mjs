@@ -748,6 +748,84 @@ function main(mods) {
     ),
   );
 
+  // The readers take the survey set from the last reconciliation whose
+  // exclusions verify; standing may not rest on an earlier one over another
+  // set, or a page counts one set and lists another. A later row taken under
+  // other rules, whose own exclusions verify but leave out notes/n.md, is
+  // written into a copy of the store, so the read-back and the checker can
+  // read it too (final review, F3/codex).
+  check("S5 no reading stands on a reconciliation whose survey set the readers do not use", () => {
+    ctx.db.pragma("wal_checkpoint(TRUNCATE)");
+    const copyPath = join(scratch, "sc4-s5.db");
+    rmSync(copyPath, { force: true });
+    ctx.db.exec(`VACUUM INTO '${copyPath.replace(/'/g, "''")}'`);
+    const copy = openDatabase(copyPath);
+    let row2 = null;
+    try {
+      const columns = copy
+        .prepare("PRAGMA table_info(scope_reconciliations)")
+        .all()
+        .map((column) => column.name)
+        .filter((name) => name !== "id");
+      const kept = exclusionsOf({ db: copy }, row1.id).filter((row) => row.file_path !== "notes/n.md");
+      if (kept.length === exclusionsOf({ db: copy }, row1.id).length) return "the fixture excluded no notes/n.md";
+      const values = columns.map((name) =>
+        name === "scope_digest" ? "'f'" : name === "exclusion_digest" ? "@digest" : name,
+      );
+      row2 = Number(
+        copy
+          .prepare(
+            `INSERT INTO scope_reconciliations (${columns.join(", ")})
+             SELECT ${values.join(", ")} FROM scope_reconciliations WHERE id = @id`,
+          )
+          .run({ id: row1.id, digest: exclusionDigestOf(kept) }).lastInsertRowid,
+      );
+      const insert = copy.prepare(
+        "INSERT INTO scope_exclusions (reconciliation_id, file_path, source, rule_id) VALUES (?, ?, ?, ?)",
+      );
+      for (const row of kept) insert.run(row2, row.file_path, row.source, row.rule_id);
+      const server = readReconciliationStanding(copy, ws1, "HEAD");
+      copy.pragma("wal_checkpoint(TRUNCATE)");
+      const wrong = [];
+      if (server.standing) wrong.push(`the server stands on row ${server.standing.id}`);
+      const repo = join(here, "..");
+      const script =
+        "import sqlite3, sys\n" +
+        "from pathlib import Path\n" +
+        "from amanuensis_materializer import readback\n" +
+        "c = sqlite3.connect(sys.argv[1]); c.row_factory = sqlite3.Row\n" +
+        "readback.BOUND_WORKSPACE.set(Path(sys.argv[2]))\n" +
+        "s = readback.reconciliation_standing(c, Path(sys.argv[3]))\n" +
+        "print(s.record['id'] if s.record is not None else 'none: ' + str(s.why))\n";
+      const read = spawnSync("python3", ["-c", script, copyPath, ws1, ctx.project.storagePath], {
+        cwd: join(repo, "materializer"),
+        encoding: "utf8",
+      });
+      const readback = String(read.stdout ?? "").trim();
+      if (read.status !== 0) wrong.push(`the read-back could not run: ${String(read.stderr).trim().split("\n").pop()}`);
+      else if (!readback.startsWith("none")) wrong.push(`the read-back stands on row ${readback}`);
+      const run = spawnSync(
+        process.execPath,
+        [join(repo, "dev", "check-store-fully-surveyed.mjs"), "--store", copyPath, "--workspace", ws1, "--clause", "1", "--json"],
+        { cwd: repo, encoding: "utf8", timeout: 120_000 },
+      );
+      let clause = null;
+      try {
+        clause = (JSON.parse(run.stdout ?? "null")?.clauses ?? []).find((entry) => Number(entry.clause) === 1) ?? null;
+      } catch {
+        clause = null;
+      }
+      if (!clause) wrong.push(`the checker gave no clause 1: ${String(run.stderr).trim().split("\n").pop()}`);
+      else if (clause.evaluable && !(clause.missing ?? []).includes("inventory:reconciliation")) {
+        wrong.push("the checker finds a standing reconciliation");
+      }
+      return wrong.length ? wrong.join("; ") : null;
+    } finally {
+      copy.close();
+      rmSync(copyPath, { force: true });
+    }
+  });
+
   check("M1 mapped is taken with unsorted paths and a candidate row on an excluded path", () => {
     if (!row1 || row1.unsorted === 0) return "the fixture has no unsorted path, so this proves nothing";
     const denied = refusal(() => call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx));

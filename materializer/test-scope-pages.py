@@ -539,7 +539,7 @@ def golden_identical(root: Path) -> str | None:
 # ---------------------------------------------------------------------------
 # Tampering for read-back (R2–R5).
 # ---------------------------------------------------------------------------
-def tampered(source: Path, docs: Path, root: Path, name: str, sql: str) -> dict[str, Any]:
+def tampered(source: Path, docs: Path, root: Path, name: str, sql: str, *extra: str) -> dict[str, Any]:
     base = root / f"tamper-{name}"
     storage = base / "storage"
     shutil.copytree(source, storage)
@@ -551,7 +551,7 @@ def tampered(source: Path, docs: Path, root: Path, name: str, sql: str) -> dict[
     db.executescript(sql)
     db.commit()
     db.close()
-    return publish(storage, base / "docs", "--readback-only")
+    return publish(storage, base / "docs", *(extra or ("--readback-only",)))
 
 
 def main() -> int:
@@ -791,6 +791,17 @@ def run(root: Path) -> None:
     check("R6 a reconciliation without scope columns, on a store with rules, turns read-back red",
           lambda: "read-back stayed green"
           if green(tampered(stores["C"][0], stores["C"][1], root, "R6", legacy)) is None else None)
+    # A render lists the survey set. With the latest reconciliation's exclusions
+    # no longer matching their digest the set is unknown: the render refuses,
+    # rather than fall back to fewer exclusions and print excluded paths
+    # (final review, F10/claude).
+    def unverified_render() -> str | None:
+        summary = tampered(storage_a, docs_a, root, "F10", tampers["R2 an added scope_exclusions row"], "--force-full")
+        if summary.get("ok") or summary.get("_exit") == 0:
+            return f"the render went ahead: exit {summary.get('_exit')}"
+        error = str(summary.get("error") or summary.get("_diagnostic") or "")
+        return None if "exclusion_digest" in error and "detect_changes" in error else f"refused for another reason: {error[:200]}"
+    check("R7 a render over a reconciliation whose exclusions fail their digest is refused", unverified_render)
     check("R1 read-back of the untouched copy stays green",
           lambda: green(tampered(storage_a, docs_a, root, "none", "SELECT 1;")))
     check("D1 the digests read-back restates order paths as the server does, non-BMP paths included", digests_agree)
