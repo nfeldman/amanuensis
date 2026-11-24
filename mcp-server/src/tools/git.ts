@@ -6,6 +6,7 @@ import {
   ok,
   optString,
   optStringArray,
+  parseCitation,
   requireString,
   resolveWorkspaceCommits,
   splitGitPaths,
@@ -17,12 +18,14 @@ import {
 // as a store that reconciles and is never reconciled.
 import { exclusionDigest, ledgerDigest, scopeDigest, trackedPathDigest } from "../invariants.js";
 import {
+  gitignoredAbsentPaths,
   gitignoredPaths,
   listTreeEntries,
   resolveScope,
   ScopeGitError,
   type ScopeRuleRow,
   type ScopeSortingRow,
+  type TreeEntry,
 } from "../scope.js";
 import { execFileSync } from "../subprocess.js";
 // The reconciliation's three outcomes are named by the enum source, not by a
@@ -86,11 +89,6 @@ type CitingRecord = {
   id: string | number;
 };
 
-/** The path a `file:symbol@sha` location names. */
-function locationPath(location: string): string {
-  return location.split("@")[0]?.split(":")[0] ?? location;
-}
-
 /**
  * Records made before a path left the survey set that still rest on it
  * (design/scope/PLAN.md §2.6a): evidence on the path, the claims, dispositions
@@ -143,7 +141,7 @@ function recordsCitingExcluded(db: ServerContext["db"], excluded: ReadonlySet<st
     }
     if (
       Array.isArray(named) &&
-      named.some((entry) => typeof entry === "string" && excluded.has(locationPath(entry)))
+      named.some((entry) => typeof entry === "string" && excluded.has(parseCitation(entry).path))
     ) {
       findings.add(row.finding_id);
     }
@@ -152,7 +150,8 @@ function recordsCitingExcluded(db: ServerContext["db"], excluded: ReadonlySet<st
   for (const row of db
     .prepare("SELECT term, first_seen FROM vocabulary WHERE first_seen IS NOT NULL")
     .all() as Array<{ term: string; first_seen: string }>) {
-    if (excluded.has(locationPath(row.first_seen))) records.push({ kind: "term", id: row.term });
+    if (excluded.has(parseCitation(row.first_seen).path))
+      records.push({ kind: "term", id: row.term });
   }
   records.sort((a, b) =>
     a.kind !== b.kind
@@ -359,10 +358,11 @@ export const gitTools: ToolDefinition[] = [
       // about the commit alone, so they are taken before the transaction; a
       // failure fails the reconciliation and names the command, and is never
       // read as "nothing ignored".
+      let entries: TreeEntry[];
       let trackedPaths: string[];
       let ignored: Set<string>;
       try {
-        const entries = listTreeEntries(ctx.project.workspacePath, currentSha);
+        entries = listTreeEntries(ctx.project.workspacePath, currentSha);
         trackedPaths = entries.map((entry) => entry.path);
         ignored = gitignoredPaths(ctx.project.workspacePath, entries);
       } catch (error) {
@@ -396,12 +396,32 @@ export const gitTools: ToolDefinition[] = [
         const mode = readScopeMode(ctx.db);
         const scope = resolveScope({ rules, sorting, mode, paths: trackedPaths, ignored });
         const surveySet = new Set(scope.survey);
-        const exclusionByPath = new Map(scope.exclusions.map((row) => [row.file_path, row]));
-        const excludedPaths = new Set(exclusionByPath.keys());
 
         const ledgerRows = ctx.db
           .prepare("SELECT subsystem_id, file_path, ref_sha, classification FROM file_ledger")
           .all() as LedgerRow[];
+
+        // A ledger row kept for a path the tree no longer carries is decided
+        // as the path would be if it were still there (§2.6a): deleting a path
+        // the owner excluded is no reason for its inactive row to come back as
+        // absent work. Its exclusion is written beside the tree's, so every
+        // reader of the resolved set sees the row as inactive; it is not in
+        // the tree, so the survey counts leave it out.
+        const absentPaths = [...new Set(ledgerRows.map((r) => r.file_path))].filter(
+          (path) => !trackedSet.has(path),
+        );
+        const retained = resolveScope({
+          rules,
+          sorting,
+          mode,
+          paths: absentPaths,
+          ignored: gitignoredAbsentPaths(ctx.project.workspacePath, entries, absentPaths),
+        });
+        const exclusions = [...scope.exclusions, ...retained.exclusions].sort((a, b) =>
+          a.file_path < b.file_path ? -1 : a.file_path > b.file_path ? 1 : 0,
+        );
+        const exclusionByPath = new Map(exclusions.map((row) => [row.file_path, row]));
+        const excludedPaths = new Set(exclusionByPath.keys());
 
         // Map changed files → affected subsystems. A change to an excluded
         // path maps to nothing: its rows are inactive and create no work
@@ -448,7 +468,9 @@ export const gitTools: ToolDefinition[] = [
           );
 
         const unledgered = scope.survey.filter((p) => !activeLedgerPaths.has(p));
-        const absent = ledgerRows.filter((r) => !trackedSet.has(r.file_path));
+        const absent = ledgerRows.filter(
+          (r) => !trackedSet.has(r.file_path) && !excludedPaths.has(r.file_path),
+        );
         // `exempt` is the third part of the survey set: paths the ledger carries
         // and that carry no survey obligation. Counted over distinct paths,
         // because it is one side of the survey-set intersection §3.2 records and
@@ -597,7 +619,7 @@ export const gitTools: ToolDefinition[] = [
           tree: trackedPathDigest(trackedPaths),
           ledger: ledgerDigest(ctx.db, excludedPaths),
           scope: scopeDigest(ctx.db),
-          exclusion: exclusionDigest(scope.exclusions),
+          exclusion: exclusionDigest(exclusions),
         };
         const written = ctx.db
           .prepare(
@@ -629,7 +651,7 @@ export const gitTools: ToolDefinition[] = [
           `INSERT INTO scope_exclusions (reconciliation_id, file_path, source, rule_id)
            VALUES (?, ?, ?, ?)`,
         );
-        for (const row of scope.exclusions) {
+        for (const row of exclusions) {
           exclude.run(reconciliationId, row.file_path, row.source, row.rule_id);
         }
 
@@ -651,6 +673,19 @@ export const gitTools: ToolDefinition[] = [
           citing: recordsCitingExcluded(ctx.db, excludedPaths),
         };
       });
+      // The ignore files are read once more inside the transaction, for the
+      // deleted paths the ledger still carries; a failure there fails the
+      // reconciliation as one before it does, and writes nothing.
+      let reconciled: ReturnType<typeof reconcileTx.immediate>;
+      try {
+        reconciled = reconcileTx.immediate();
+      } catch (error) {
+        if (!(error instanceof ScopeGitError)) throw error;
+        return {
+          ok: false,
+          error: `${error.message}. Is the workspace a git repo the server can read?`,
+        };
+      }
       const {
         reconciliationId,
         digests,
@@ -667,7 +702,7 @@ export const gitTools: ToolDefinition[] = [
         drifted,
         unverifiable,
         citing,
-      } = reconcileTx.immediate();
+      } = reconciled;
 
       for (const row of absent) {
         if (!bySubsystem.has(row.subsystem_id)) {

@@ -572,6 +572,24 @@ export function gitignoredPaths(workspacePath: string, entries: readonly TreeEnt
   return new Set(ignored);
 }
 
+/**
+ * Which of `paths`, none of them in the tree `entries` lists, the tree's own
+ * ignore files would match. A ledger row kept for a deleted path is decided as
+ * the path would be if it were still there (design/scope/PLAN.md §2.6a). The
+ * paths are not blobs at the revision, so none of them is read as an ignore
+ * file.
+ */
+export function gitignoredAbsentPaths(
+  workspacePath: string,
+  entries: readonly TreeEntry[],
+  paths: readonly string[],
+): Set<string> {
+  if (paths.length === 0) return new Set();
+  const absent = paths.map((path) => ({ mode: "100644", type: "absent", object: "", path }));
+  const ignored = gitignoredPaths(workspacePath, [...entries, ...absent]);
+  return new Set(paths.filter((path) => ignored.has(path)));
+}
+
 /** The survey set at `revision`: its tree, its own ignore files, and the caller's rules and sorting rows. */
 export function resolveScopeAtRevision(
   workspacePath: string,
