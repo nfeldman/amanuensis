@@ -728,8 +728,10 @@
         "SC5"
       ],
       "review": {
-        "status": "pending",
-        "start_sha": "c97e3e843ad8abf199f813d246873b14502a959a"
+        "status": "reviewed",
+        "start_sha": "c97e3e843ad8abf199f813d246873b14502a959a",
+        "reviewed_sha": "d4d236f43547e61174eaa9c6947d9390d5ef4241",
+        "findings": 19
       }
     },
     {

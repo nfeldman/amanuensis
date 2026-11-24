@@ -18,7 +18,7 @@
 | SC4 | Reconciliation core over the survey set | done (1 attempt) | SC3 | `mcp-server/test-scope-reconcile.mjs` | §3 SC4, §2.5, §2.6a |
 | SC11 | Consumers of inactive rows | done (1 attempt) | SC4 | `mcp-server/test-scope-consumers.mjs` | §3 SC11, §2.6a |
 
-## S3 · Write guard and checker (review: pending)
+## S3 · Write guard and checker (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
