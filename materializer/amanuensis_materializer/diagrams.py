@@ -12,7 +12,14 @@ from collections.abc import Callable, Sequence
 from html import escape
 from typing import Any
 
-from .db import row, rows, table_exists
+from .db import (
+    outside_survey_seams,
+    outside_survey_subsystems,
+    row,
+    rows,
+    survey_filter,
+    table_exists,
+)
 from .page import (
     COVERAGE_STATES,
     EMPTY,
@@ -124,9 +131,12 @@ def boundary_relations(conn: sqlite3.Connection) -> dict[str, Any]:
         )
     nodes = [node for layer in layers.values() for node in sorted(layer, key=lambda n: n["id"])]
     known = {node["id"] for node in nodes}
+    # A seam outside the survey is drawn on no diagram (design/scope/PLAN.md §2.6a).
+    outside = set(outside_survey_seams(conn))
     candidates = [
         {"kind": "seam", "label": str(s["id"]), "from": str(s["party_a"]), "to": str(s["party_b"])}
         for s in rows(conn, "SELECT id, party_a, party_b FROM seams ORDER BY id")
+        if str(s["id"]) not in outside
     ] + [
         {"kind": "xref", "label": str(x["relationship"]), "from": str(x["from_id"]), "to": str(x["to_id"])}
         for x in rows(
@@ -498,6 +508,12 @@ def seam_blocks(conn: sqlite3.Connection, caption: str) -> tuple[Block, ...]:
     seams = rows(conn, "SELECT * FROM seams ORDER BY id")
     if not seams:
         return (_sentence("_No seams recorded yet._"),)
+    outside = set(outside_survey_seams(conn))
+    if outside:
+        # Drawn on no diagram, and listed on its subsystem's page (§2.6a).
+        seams = [s for s in seams if str(s["id"]) not in outside]
+        if not seams:
+            return (_sentence(f"_Every recorded seam is outside this survey ({', '.join(sorted(outside))})._"),)
     subs = {r["id"]: r for r in rows(conn, "SELECT id, name FROM subsystems")}
     edges: list[TopologyEdge] = []
     for s in seams:
@@ -544,11 +560,14 @@ def staleness_blocks(conn: sqlite3.Connection) -> tuple[Block, ...]:
     rs = rows(
         conn,
         "SELECT subsystem_id, COUNT(*) AS n FROM file_ledger"
-        " WHERE stale = 1 AND " + _OBLIGATION_BEARING + " GROUP BY subsystem_id ORDER BY n DESC",
+        " WHERE stale = 1 AND " + _OBLIGATION_BEARING + f" AND {survey_filter(conn)}"
+        " GROUP BY subsystem_id ORDER BY n DESC",
     )
     if rs:
         return (StalenessBars(tuple((str(r["subsystem_id"]), float(r["n"])) for r in rs)),)
-    measured = rows(conn, "SELECT COUNT(*) AS n FROM file_ledger WHERE " + _OBLIGATION_BEARING)
+    measured = rows(
+        conn, "SELECT COUNT(*) AS n FROM file_ledger WHERE " + _OBLIGATION_BEARING + f" AND {survey_filter(conn)}"
+    )
     scoped = measured[0]["n"] if measured else 0
     if not scoped:
         return (
@@ -696,13 +715,16 @@ def hot_spot_measures(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     ledger = rows(
         conn,
         "SELECT subsystem_id, COALESCE(classification,'candidate') AS classification,"
-        f" COALESCE(stale,0) AS stale FROM file_ledger WHERE {_OBLIGATION_BEARING}",
+        f" COALESCE(stale,0) AS stale FROM file_ledger WHERE {_OBLIGATION_BEARING} AND {survey_filter(conn)}",
     )
     seams = rows(
         conn,
         "SELECT seam_id, party_a, party_b, assessable FROM seam_assessability"
         " ORDER BY seam_id",
     )
+    # A seam outside the survey owes no assessment (design/scope/PLAN.md §2.6a).
+    outside_seams = set(outside_survey_seams(conn))
+    seams = [seam for seam in seams if str(seam["seam_id"]) not in outside_seams]
     seam_concern_parties = {
         str(d["subsystem_id"])
         for d in rows(
@@ -1096,9 +1118,14 @@ def _depth_qualification(sid: str, status: str) -> str:
 def _latest_reconciliation(conn: sqlite3.Connection) -> dict[str, Any] | None:
     if not table_exists(conn, "scope_reconciliations"):
         return None
+    survey = (
+        "survey_paths"
+        if any(c["name"] == "survey_paths" for c in rows(conn, "PRAGMA table_info(scope_reconciliations)"))
+        else "NULL AS survey_paths"
+    )
     return row(
         conn,
-        "SELECT id, detected_sha, tracked_paths, ledger_rows, unledgered, absent, exempt"
+        f"SELECT id, detected_sha, tracked_paths, ledger_rows, unledgered, absent, exempt, {survey}"
         " FROM scope_reconciliations ORDER BY id DESC LIMIT 1",
     )
 
@@ -1142,8 +1169,14 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
 
     depth_of = {str(r["id"]): str(r["status"] or "unmapped") for r in rows(conn, "SELECT id, status FROM subsystems")}
     standing: dict[str, dict[str, int]] = {}
-    for r in rows(conn, "SELECT subsystem_id, standing_state, COUNT(*) AS n FROM file_standing GROUP BY subsystem_id, standing_state"):
+    for r in rows(
+        conn,
+        "SELECT subsystem_id, standing_state, COUNT(*) AS n FROM file_standing"
+        f" WHERE {survey_filter(conn)} GROUP BY subsystem_id, standing_state",
+    ):
         standing.setdefault(str(r["subsystem_id"]), {})[str(r["standing_state"])] = int(r["n"])
+    if subject and subject in outside_survey_subsystems(conn):
+        return sentence(f"{subject} is outside this survey: every path its ledger names is excluded, so no bar is drawn.")
     if subject and depth_of.get(subject, "unmapped") not in COVERAGE_FROM:
         shown = _DEPTH_LABELS.get(depth_of.get(subject, "unmapped"), depth_of.get(subject, "unmapped"))
         return sentence(f"{subject} is at {shown}, a depth that authorizes no reading of its files, so no bar is drawn.")
@@ -1157,9 +1190,20 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
     read_at = f"Read at revision {sha[:8]}, the latest reconciliation's, and at the ledger as it stands now."
     tracked, ledgered, unledgered = int(recon["tracked_paths"]), int(recon["ledger_rows"]), int(recon["unledgered"])
     absent, exempt = int(recon["absent"]), int(recon["exempt"])
+    # The repository bar is the survey set: the tree less what the reconciliation
+    # excluded (design/scope/PLAN.md §2.8). One taken before survey scope, or one
+    # that excluded nothing, has the whole tree as its survey set.
+    survey = tracked if recon.get("survey_paths") is None else int(recon["survey_paths"])
+    scoped = survey != tracked
+    unit = "paths in the survey set" if scoped else "tracked paths"
     # The ledger's rows for paths gone from the tree are not among the tracked paths it holds.
     reconciliation_line = (
-        f"The repository tracked {_count(tracked, 'path')} at {sha[:8]}; the ledger holds {ledgered - absent} of them"
+        (
+            f"The survey set held {_count(survey, 'path')} at {sha[:8]}, of the {tracked} the repository tracked;"
+            if scoped
+            else f"The repository tracked {_count(tracked, 'path')} at {sha[:8]};"
+        )
+        + f" the ledger holds {ledgered - absent} of them"
         f" and {unledgered} {'has' if unledgered == 1 else 'have'} no ledger row."
         + (
             f" {absent} more ledger {'row names a path' if absent == 1 else 'rows name paths'} no longer in the tree."
@@ -1186,7 +1230,8 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
             _depth_qualification(subject, depth_of[subject]),
         ]
     else:
-        ids = sorted(depth_of)
+        outside = set(outside_survey_subsystems(conn))
+        ids = sorted(sid for sid in depth_of if sid not in outside)
         parked = [sid for sid in ids if depth_of[sid] not in COVERAGE_FROM]
         eligible = [sid for sid in ids if sid not in parked]
         bare = [sid for sid in eligible if not standing.get(sid)]
@@ -1208,6 +1253,11 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
                 f"{len(bare)} of {len(depth_of)} subsystems {'has' if len(bare) == 1 else 'have'} no ledger row, so"
                 f" {'it has' if len(bare) == 1 else 'they have'} no bar ({', '.join(bare)})."
             )
+        if outside:
+            account.append(
+                f"{_count(len(outside), 'subsystem')} {'is' if len(outside) == 1 else 'are'} outside this survey"
+                f" and not drawn ({', '.join(sorted(outside))})."
+            )
         if parked:
             account.append(
                 f"{_count(len(parked), 'subsystem')} at {_DEPTH_LABELS['unmapped']} or {_DEPTH_LABELS['deferred']}"
@@ -1216,9 +1266,9 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
         account.append(reconciliation_line)
         account += [_depth_qualification(sid, depth_of[sid]) for sid in eligible if standing.get(sid)]
         in_tree = ledgered - absent
-        if tracked == in_tree + unledgered and 0 <= exempt <= in_tree:
+        if survey == in_tree + unledgered and 0 <= exempt <= in_tree:
             lane = len(lanes)
-            lanes.append(f"Repository\n{_count(tracked, 'path')}")
+            lanes.append(f"{'Survey set' if scoped else 'Repository'}\n{_count(survey, 'path')}")
             wanted = (
                 ("ledgered", "In the ledger", in_tree - exempt, "accent", "solid"),
                 ("exempt", "In the ledger, exempt from the survey", exempt, "canvas-subtle", "dotted"),
@@ -1228,12 +1278,13 @@ def coverage_bars_model(conn: sqlite3.Connection, subsystem_id: str | None = Non
                 anchor = f"coverage-repository-{key}"
                 if n:
                     nodes.append(DiagramNode(f"coverage:repository:{key}", label, lane, len(nodes), str(n), style, f"#{anchor}", count=n, tone=tone))
-                    items.append((anchor, f"{label} — {n} of {tracked} tracked paths."))
+                    items.append((anchor, f"{label} — {n} of {survey} {unit}."))
                 else:
-                    items.append((anchor, f"{label} — none of the {tracked} tracked paths."))
+                    items.append((anchor, f"{label} — none of the {survey} {unit}."))
         else:
             account.append(
-                f"The reconciliation's counts do not add up ({tracked} tracked; {ledgered} in the ledger, {absent} gone,"
+                f"The reconciliation's counts do not add up ({survey} {'in the survey set' if scoped else 'tracked'};"
+                f" {ledgered} in the ledger, {absent} gone,"
                 f" {exempt} exempt, {unledgered} with no row), so the repository bar is not drawn."
             )
     return Diagram("coverage-bars", subject, title, caption, tuple(lanes), tuple(nodes), (), tuple(account), tuple(items), read_at=read_at)

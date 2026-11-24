@@ -20,7 +20,16 @@ from hashlib import sha1, sha256
 from pathlib import Path
 from typing import Any
 
-from .db import row, rows, table_exists
+from .db import (
+    outside_survey_seams,
+    outside_survey_subsystems,
+    owner_exclude_patterns,
+    row,
+    rows,
+    survey_exclusions,
+    survey_filter,
+    table_exists,
+)
 from .diagrams import (
     BOUNDARY_HEADING,
     RUNTIME_BOUNDARY_ABSENT,
@@ -877,7 +886,7 @@ def ledger_freshness(conn: sqlite3.Connection) -> dict[str, int]:
         " SUM(CASE WHEN COALESCE(classification,'candidate')='candidate' THEN 1 ELSE 0 END)"
         " AS candidate,"
         " COUNT(*) AS scoped_files"
-        " FROM file_ledger",
+        f" FROM file_ledger WHERE {survey_filter(conn)}",
     ) or {}
     return {
         key: int(counted.get(key) or 0)
@@ -1613,6 +1622,32 @@ PUBLICATION_INTEGRITY_LAG = (
 )
 
 
+def outside_survey_sentence(conn: sqlite3.Connection) -> str | None:
+    """The overview's one line on what the survey leaves out, or None when nothing is excluded.
+
+    Counts by source, and the owner's exclude rules by pattern; never a path
+    (design/scope/PLAN.md §2.8, decision F2).
+    """
+
+    excluded = survey_exclusions(conn)
+    if not excluded:
+        return None
+    counts = {source: sum(1 for r in excluded if r["source"] == source) for source in ("gitignore", "user", "meta")}
+    patterns = owner_exclude_patterns(conn)
+    owner = f"{counts['user']} the owner excluded" + (
+        " (" + ", ".join(f"`{pattern}`" for pattern in patterns) + ")" if patterns else ""
+    )
+    return (
+        f"Outside this survey: {_count(counts['gitignore'], 'path')} ignored by git, {owner},"
+        f" {counts['meta']} sorted as meta."
+    )
+
+
+def _outside_survey_line(conn: sqlite3.Connection) -> list[Block]:
+    sentence = outside_survey_sentence(conn)
+    return [] if sentence is None else [_paragraph(sentence)]
+
+
 def render_index(
     conn: sqlite3.Connection,
     storage: Path,
@@ -1666,7 +1701,8 @@ def render_index(
                 conn,
                 "SELECT COUNT(*) AS n FROM (SELECT DISTINCT file_path FROM file_ledger"
                 " WHERE classification='examined' AND file_path NOT IN"
-                " (SELECT file_path FROM scope_gaps WHERE kind='absent'))",
+                " (SELECT file_path FROM scope_gaps WHERE kind='absent')"
+                f" AND {survey_filter(conn)})",
             )
             or {"n": 0}
         )["n"]
@@ -1829,6 +1865,7 @@ def render_index(
             _summary(caption, alignment_pairs),
             _heading(3, "Survey coverage"),
             coverage_summary,
+            *_outside_survey_line(conn),
             _heading(3, "Open engineering work"),
             _summary(caption, work),
             _heading(3, "Publication integrity"),
@@ -2145,7 +2182,8 @@ def render_subsystem(
     files = rows(
         conn,
         "SELECT file_path, why_in_scope, classification, ref_sha, stale, stale_reason"
-        " FROM file_ledger WHERE subsystem_id = ? ORDER BY classification, file_path",
+        f" FROM file_ledger WHERE subsystem_id = ? AND {survey_filter(conn)}"
+        " ORDER BY classification, file_path",
         (sid,),
     )
     dispositions = rows(
@@ -2187,9 +2225,14 @@ def render_subsystem(
     standing = rows(
         conn,
         "SELECT file_path, standing_state, stale FROM file_standing"
-        " WHERE subsystem_id = ? ORDER BY file_path",
+        f" WHERE subsystem_id = ? AND {survey_filter(conn)} ORDER BY file_path",
         (sid,),
     )
+    # A subsystem whose every ledger row is on an excluded path is outside the
+    # survey (design/scope/PLAN.md §2.6a): its page is kept, so its records keep
+    # a home, but it owes no survey work and lists no file.
+    outside = sid in outside_survey_subsystems(conn)
+    outside_seams = set(outside_survey_seams(conn))
 
     # §7.3's Structure section reads claims, and reads them with the same three
     # arms `describe_locus` uses (§3.1's subject and evidence arms, plus §9.1's
@@ -2240,6 +2283,30 @@ def render_subsystem(
             (_paragraph(f"**Status**: {_badge(s['status'])} **Layer**: {s.get('layer') or '—'}"),),
         ),
     ]
+
+    if outside:
+        held_seams = [str(sm["id"]) for sm in seams if str(sm["id"]) in outside_seams]
+        blocks.append(
+            _section(
+                OUTSIDE_SURVEY_HEADING,
+                _paragraph(
+                    "Every path this subsystem's ledger names is outside the survey set, so it"
+                    " owes no survey work and no file of it is listed. Its records are kept here;"
+                    " a citation of an excluded path prints as text."
+                ),
+                *(
+                    [
+                        _paragraph(
+                            "Outside the survey with it: "
+                            + ", ".join(f"seam **{seam}**" for seam in held_seams)
+                            + ". A seam outside the survey owes no assessment and is drawn on no diagram."
+                        )
+                    ]
+                    if held_seams
+                    else []
+                ),
+            )
+        )
 
     # 0. Purpose — only from an effective record, recorded or declined. A page
     #    with neither keeps today's opening: Scope and the no-purpose sentence.
@@ -2402,7 +2469,9 @@ def render_subsystem(
             for sm in seams:
                 other = sm["party_b"] if sm["party_a"] == sid else sm["party_a"]
                 assessable = (
-                    "both parties are `mapped`"
+                    "no: outside the survey"
+                    if str(sm["id"]) in outside_seams
+                    else "both parties are `mapped`"
                     if int(sm["assessable"] or 0)
                     else "not yet: both parties must be `mapped`"
                 )
@@ -2584,11 +2653,12 @@ def render_subsystem(
         record += render_prose(
             ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=reason.strip())
         )
-    record.append(_heading(3, "File ledger"))
-    if files:
-        record += _ledger_blocks(str(sid), files)
-    else:
-        record.append(_paragraph("No file is recorded in this subsystem's ledger."))
+    if not outside:
+        record.append(_heading(3, "File ledger"))
+        if files:
+            record += _ledger_blocks(str(sid), files)
+        else:
+            record.append(_paragraph("No file is recorded in this subsystem's ledger."))
 
     record.append(_heading(3, "Concern review"))
     if dispositions:
@@ -2878,7 +2948,8 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         ) or {"n": 0}
         examined = row(
             conn,
-            "SELECT COUNT(*) AS n FROM file_ledger WHERE classification='examined'",
+            "SELECT COUNT(*) AS n FROM file_ledger WHERE classification='examined'"
+            f" AND {survey_filter(conn)}",
         ) or {"n": 0}
         blocks += _empty_lens_blocks(
             conn,
@@ -2980,9 +3051,11 @@ def _evidence_by_id(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
 
 
 def _ledgered_paths(conn: sqlite3.Connection) -> set[str]:
+    """The paths the Files index lists: ledgered, and inside the survey set (§2.6a)."""
+
     return {
         str(r["file_path"])
-        for r in rows(conn, "SELECT DISTINCT file_path FROM file_ledger")
+        for r in rows(conn, f"SELECT DISTINCT file_path FROM file_ledger WHERE {survey_filter(conn)}")
     }
 
 
@@ -2990,7 +3063,9 @@ def _cited_path(path: str, ledgered: set[str]) -> str:
     """One cited path, linked into the Files index when the ledger names it.
 
     A path the ledger does not carry has no anchor to link to, and inventing
-    one would break the cross-link read-back rather than help the reader.
+    one would break the cross-link read-back rather than help the reader. A
+    path outside the survey set is not listed there either, so a record made
+    before it was excluded cites it as text (design/scope/PLAN.md §2.6a).
     """
 
     if path in ledgered:
@@ -3287,7 +3362,9 @@ def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     if not seams:
         blocks.append(_paragraph("_No seams recorded yet._"))
     else:
-        blocks.extend(seam_contract_model(conn, str(s["id"])) for s in seams)
+        # A seam outside the survey is drawn on no diagram (design/scope/PLAN.md §2.6a).
+        outside = set(outside_survey_seams(conn))
+        blocks.extend(seam_contract_model(conn, str(s["id"])) for s in seams if str(s["id"]) not in outside)
         records: list[Record] = []
         for number, s in enumerate(seams, start=1):
             a = asmap.get(s["id"], {})
@@ -4011,7 +4088,7 @@ def render_stale(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         "SELECT subsystem_id, file_path, why_in_scope,"
         " COALESCE(classification,'candidate') AS classification,"
         " ref_sha, stale, stale_since, stale_reason"
-        " FROM file_ledger ORDER BY subsystem_id, file_path",
+        f" FROM file_ledger WHERE {survey_filter(conn)} ORDER BY subsystem_id, file_path",
     )
     freshness = ledger_freshness(conn)
     names = {
@@ -4702,6 +4779,10 @@ PER_PARTY_PROXY = (
 )
 
 
+#: The heading a subsystem outside the survey is published under (design/scope/PLAN.md §2.6a).
+OUTSIDE_SURVEY_HEADING = "Outside this survey"
+
+
 def file_anchor(file_path: str) -> str:
     """The Files index anchor for one path (§7.4).
 
@@ -4778,7 +4859,7 @@ def render_files(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         conn,
         "SELECT file_path, subsystem_id, subsystem_name, classification,"
         " standing_state, ref_sha, examined_at, stale, stale_reason"
-        " FROM file_standing ORDER BY file_path, subsystem_id",
+        f" FROM file_standing WHERE {survey_filter(conn)} ORDER BY file_path, subsystem_id",
     )
     defects = _open_defects_by_path(conn)
     git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
@@ -4852,9 +4933,11 @@ def _tracked_paths(
     storage: Path,
     standing: ReconciliationStanding | None = None,
 ) -> int | None:
-    """The tracked-path universe at the revision this projection stamps (§3.4).
+    """The survey set's size at the revision this projection stamps (§3.4).
 
-    It reads the **standing reconciliation** and nothing else. It used to
+    It reads the **standing reconciliation** and nothing else: its tracked
+    paths less the ones it excluded from the survey set (design/scope/PLAN.md
+    §2.8), which for a reconciliation that excluded nothing is the tree. It used to
     reconstruct the universe from the ledger it was about to measure —
     unledgered `scope_gaps` rows plus the ledger paths the tree still carried —
     which is GP24 exactly: a denominator that counts what the survey was handed
@@ -4870,7 +4953,7 @@ def _tracked_paths(
 
     if standing is None:
         standing = reconciliation_standing(conn, storage)
-    return standing.tracked_paths
+    return standing.survey_paths
 
 
 def _sentence(fragment: str) -> str:
@@ -4961,7 +5044,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
     unledgered = rows(
         conn,
         "SELECT file_path, detected_sha FROM scope_gaps WHERE kind='unledgered'"
-        " ORDER BY file_path",
+        f" AND {survey_filter(conn)} ORDER BY file_path",
     )
     # Section 1's denominator is the tracked universe at the reconciled
     # revision, and an unreconciled store has none (§3.4). `None` routes into
@@ -4977,7 +5060,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         conn,
         "SELECT subsystem_id, file_path, why_in_scope,"
         " COALESCE(classification,'candidate') AS classification"
-        f" FROM file_ledger WHERE {OBLIGATION_BEARING_SQL}"
+        f" FROM file_ledger WHERE {OBLIGATION_BEARING_SQL} AND {survey_filter(conn)}"
         " ORDER BY subsystem_id, file_path",
     )
     candidates = [r for r in ledger if r["classification"] == "candidate"]
@@ -4987,6 +5070,10 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         "SELECT seam_id, shared_object, party_a, party_b, assessable"
         " FROM seam_assessability ORDER BY seam_id",
     )
+    # A subsystem, or a seam, outside the survey owes no survey work (§2.6a).
+    outside = set(outside_survey_subsystems(conn))
+    outside_seams = set(outside_survey_seams(conn))
+    seams = [seam for seam in seams if str(seam["seam_id"]) not in outside_seams]
     seam_concern_parties = {
         str(d["subsystem_id"])
         for d in rows(
@@ -5004,11 +5091,11 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
 
     blocks: list[Block] = [_paragraph(f"Counted at {_short(checked)} on `{branch}`.")]
 
-    # 1. Unledgered paths, over tracked paths.
+    # 1. Unledgered paths, over the survey set's paths.
     held: list[Block] = _gap_denominator(
         len(unledgered),
         tracked,
-        "tracked paths",
+        "tracked paths" if standing.survey_paths == standing.tracked_paths else "paths in the survey set",
         "are named by no `file_ledger` row in any subsystem. They participate in no"
         " subsystem's scope, so nothing here has been read, excluded, or deferred.",
         reason=None if standing.stands else _sentence(_unmeasured(standing)),
@@ -5128,7 +5215,8 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
 
     # 5. Undispositioned (subsystem, active concern) pairs.
     missing: dict[str, list[str]] = {}
-    for s in subsystems:
+    surveyed = [s for s in subsystems if str(s["id"]) not in outside]
+    for s in surveyed:
         for concern in active_concerns:
             pair = (str(s["id"]), str(concern["code"]))
             if pair not in dispositioned:
@@ -5136,7 +5224,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
     undispositioned = sum(len(codes) for codes in missing.values())
     held = _gap_denominator(
         undispositioned,
-        len(subsystems) * len(active_concerns),
+        len(surveyed) * len(active_concerns),
         "(subsystem, active concern) pairs",
         "carry no disposition. The unit is the pair: a concern dispositioned"
         " somewhere else says nothing about this subsystem, and counting concern"

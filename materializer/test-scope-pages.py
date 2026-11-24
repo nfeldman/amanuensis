@@ -464,6 +464,16 @@ def figures(text: str) -> str:
     return "\n".join(m.group(0) for m in _FIGURE.finditer(text))
 
 
+def ledger_anchor(sid: str, file_path: str) -> str:
+    """§7.4's per-owner ledger entry anchor, recomputed."""
+
+    return "le-" + hashlib.sha1(f"{sid}\x00{file_path}".encode()).hexdigest()[:10]
+
+
+def ledger_anchors(text: str) -> list[str]:
+    return sorted(i for i in parse(text).ids if i.startswith("le-"))
+
+
 def subsystem_page(output: Path, sid: str) -> Path | None:
     found = sorted((output / "subsystems").glob(f"{sid.replace('-', '').lower()}-*.html"))
     return found[0] if found else None
@@ -635,14 +645,15 @@ def run(root: Path) -> None:
         if page is None:
             return "B-02 has no page"
         text = page.read_text()
-        headings = [plain(h) for h in re.findall(r"<h[1-6]\b[^>]*>.*?</h[1-6]>", text, re.S)]
+        headings = [plain(h).lstrip("\u00a7").strip() for h in re.findall(r"<h[1-6]\b[^>]*>.*?</h[1-6]>", text, re.S)]
         if "Outside this survey" not in headings:
             return f"the page is not headed 'Outside this survey': {headings[:8]}"
-        if 'class="record-list' in text and "file-ledger" in text or "le-" in "".join(parse(text).ids):
-            return "the page carries a file listing"
+        if "File ledger" in headings or ledger_anchors(text):
+            return f"the page carries a file listing: {ledger_anchors(text)}"
         body = plain(text)
-        missing = [w for w in ("CL-B02", "The prototype plans name the cache.", "CC-1", "B02-1", SEAM_OUTSIDE)
-                   if w not in body]
+        missing = [w for w in ("The prototype plans name the cache.", "CC-1", "B02-1", SEAM_OUTSIDE) if w not in body]
+        if 'data-record="claim:CL-B02"' not in text:
+            missing.append("the record of claim CL-B02")
         return f"the page drops {missing}" if missing else None
 
     check("O1 a subsystem outside the survey keeps its page, headed 'Outside this survey', with no file listing,"
@@ -655,9 +666,10 @@ def run(root: Path) -> None:
         return None if SEAM_INSIDE in drawn else f"{SEAM_INSIDE} is drawn on no diagram, so the check cannot see seams"
 
     check("O2 a seam outside the survey is drawn on no diagram, and a seam inside it still is", seams_drawn)
-    check("O3 the in-survey subsystem keeps its file listing",
-          lambda: None if "le-" in "".join(parse(subsystem_page(out_b, "B-01").read_text()).ids)
-          else "B-01's page has no ledger entries")
+    check("O3 the in-survey subsystem lists exactly its rows inside the survey set",
+          lambda: (lambda got, want: None if got == want else f"B-01's ledger anchors {got}, want {want}")(
+              ledger_anchors(subsystem_page(out_b, "B-01").read_text()),
+              sorted(ledger_anchor("B-01", p) for p in ("src/a.ts", EXEMPT_GOLDEN))))
 
     def overview_files_read() -> str | None:
         text = plain(pages_a["index.html"])

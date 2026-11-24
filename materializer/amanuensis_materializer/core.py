@@ -34,7 +34,15 @@ from pathlib import Path
 from typing import Any
 
 from . import renderers
-from .db import VIEW_ABSENT_CAUSE, missing_views, open_ro, row, rows
+from .db import (
+    VIEW_ABSENT_CAUSE,
+    missing_views,
+    open_ro,
+    row,
+    rows,
+    survey_exclusions,
+    survey_filter,
+)
 from .html_projection import (
     SEARCH_INDEX_PATH,
     SitePage,
@@ -159,13 +167,18 @@ def _locus_index(conn) -> dict[str, list[dict[str, Any]]]:
 
     A symbol whose file no ledger row names has no Files row to land on, so it
     carries the index page itself rather than an anchor that resolves nowhere.
+
+    A path outside the survey set is in neither half: the Files index does not
+    list it, and an older record's citation of it is not a destination
+    (design/scope/PLAN.md §2.6a, §2.8).
     """
 
+    excluded = {str(r["file_path"]) for r in survey_exclusions(conn)}
     by_path: dict[str, list[dict[str, Any]]] = {}
     for entry in rows(
         conn,
         "SELECT file_path, subsystem_id, standing_state FROM file_standing"
-        " ORDER BY file_path, subsystem_id",
+        f" WHERE {survey_filter(conn)} ORDER BY file_path, subsystem_id",
     ):
         by_path.setdefault(str(entry["file_path"]), []).append(entry)
 
@@ -189,6 +202,8 @@ def _locus_index(conn) -> dict[str, list[dict[str, Any]]]:
         " ORDER BY symbol, file_path",
     ):
         file_path = str(entry["file_path"])
+        if file_path in excluded:
+            continue
         anchor = (
             f"files.html#{renderers.file_anchor(file_path)}"
             if file_path in by_path

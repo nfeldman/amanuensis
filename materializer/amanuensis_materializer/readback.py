@@ -26,7 +26,20 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
-from .db import open_ro, row, rows, table_exists
+from .db import (
+    exclusion_digest,
+    has_scope_rows,
+    open_ro,
+    outside_survey_seams,
+    reconciliation_exclusion_rows,
+    row,
+    rows,
+    scope_digest,
+    scope_mode,
+    survey_exclusions,
+    survey_filter,
+    table_exists,
+)
 from .lint import (
     THESIS_REFUSED,
     THESIS_REFUSED_COMPOSITE,
@@ -848,7 +861,8 @@ def examined_tracked(conn: Any) -> int:
                 conn,
                 "SELECT COUNT(*) AS n FROM (SELECT DISTINCT file_path FROM file_ledger"
                 " WHERE classification='examined' AND file_path NOT IN"
-                " (SELECT file_path FROM scope_gaps WHERE kind='absent'))",
+                " (SELECT file_path FROM scope_gaps WHERE kind='absent')"
+                f" AND {survey_filter(conn)})",
             )
             or {}
         ).get("n")
@@ -930,6 +944,17 @@ WHY_NO_TREE = (
     "the bound workspace cannot enumerate the tree at that revision, so the"
     " reconciliation could not be re-derived"
 )
+# The survey set's two witnesses and the mode it was resolved in
+# (design/scope/PLAN.md §2.5), in the server's words.
+WHY_SCOPE_RULES_CHANGED = (
+    "the scope rules have changed since the reconciliation recorded there was taken"
+)
+WHY_SCOPE_MODE_CHANGED = (
+    "the store's scope mode has changed since the reconciliation recorded there was taken"
+)
+WHY_EXCLUSIONS_CHANGED = (
+    "the scope_exclusions rows recorded there no longer match the reconciliation's exclusion_digest"
+)
 
 
 @dataclass(frozen=True)
@@ -962,12 +987,25 @@ class ReconciliationStanding:
         return None if self.record is None else int(self.record["unledgered"] or 0)
 
     @property
-    def obligation_paths(self) -> int | None:
-        """§1.2's D2: tracked paths minus those an exempting classification frees."""
+    def survey_paths(self) -> int | None:
+        """|survey set| at the reconciled revision: the tree less its exclusions (design/scope/PLAN.md §2.8).
+
+        A reconciliation taken before survey scope recorded none and excluded
+        nothing, so its survey set is the whole tree.
+        """
 
         if self.record is None:
             return None
-        return int(self.record["tracked_paths"] or 0) - int(self.record["exempt"] or 0)
+        survey = self.record.get("survey_paths")
+        return int(self.record["tracked_paths"] or 0) if survey is None else int(survey)
+
+    @property
+    def obligation_paths(self) -> int | None:
+        """§1.2's D2: survey-set paths minus those an exempting classification frees."""
+
+        if self.record is None:
+            return None
+        return int(self.survey_paths or 0) - int(self.record["exempt"] or 0)
 
 
 def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
@@ -999,11 +1037,22 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
     latest_sha = str(latest["detected_sha"]) if latest else None
     if not sha:
         return ReconciliationStanding(sha, None, latest_sha, WHY_NO_REVISION)
+    # The survey set's columns arrived with probe 8; a store last opened before
+    # it has none, and reads as a reconciliation taken before survey scope.
+    scoped_columns = {
+        str(c["name"]) for c in rows(conn, "PRAGMA table_info(scope_reconciliations)")
+    } >= {"scope_digest", "exclusion_digest", "scope_mode", "survey_paths"}
     at_sha = rows(
         conn,
         "SELECT id, detected_sha, tree_digest, ledger_digest, tracked_paths, ledger_rows,"
-        " unledgered, absent, exempt, detected_at FROM scope_reconciliations"
-        " WHERE detected_sha = ? ORDER BY id DESC",
+        " unledgered, absent, exempt, detected_at, "
+        + (
+            "scope_digest, exclusion_digest, scope_mode, survey_paths"
+            if scoped_columns
+            else "NULL AS scope_digest, NULL AS exclusion_digest, NULL AS scope_mode,"
+            " NULL AS survey_paths"
+        )
+        + " FROM scope_reconciliations WHERE detected_sha = ? ORDER BY id DESC",
         (sha,),
     )
     if not at_sha:
@@ -1016,6 +1065,32 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
         candidate["id"]: ledger_digest(conn, reconciliation_exclusions(conn, candidate["id"]))
         for candidate in at_sha
     }
+    # And each candidate is judged against the scope rows as they are now
+    # (design/scope/PLAN.md §2.5): both digests re-derived, the formulas
+    # restated in `db.py`, before its survey set is trusted.
+    current_scope = scope_digest(conn)
+    current_mode = scope_mode(conn)
+    scoped = has_scope_rows(conn)
+
+    def scope_why(candidate: dict[str, Any]) -> str | None:
+        exclusions = reconciliation_exclusion_rows(conn, candidate["id"])
+        if candidate["scope_digest"] is None:
+            # Taken before survey scope: it stands only while the store has no
+            # rules and no sorting rows (§2.9), and it resolved no exclusions.
+            if scoped:
+                return WHY_SCOPE_RULES_CHANGED
+            if exclusions or candidate["exclusion_digest"] is not None:
+                return WHY_EXCLUSIONS_CHANGED
+            return None
+        if str(candidate["scope_digest"]) != current_scope:
+            return WHY_SCOPE_RULES_CHANGED
+        if str(candidate["scope_mode"]) != current_mode:
+            return WHY_SCOPE_MODE_CHANGED
+        if str(candidate["exclusion_digest"]) != exclusion_digest(exclusions):
+            return WHY_EXCLUSIONS_CHANGED
+        return None
+
+    scope_failure = {candidate["id"]: scope_why(candidate) for candidate in at_sha}
     tracked = tree_paths(resolve_workspace(storage), sha)
     if tracked is None:
         # §3.3 is a conjunction of five conditions, and conditions 1 and 4 both
@@ -1028,6 +1103,8 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
         return ReconciliationStanding(sha, None, latest_sha, WHY_NO_TREE)
     expected_tree = tracked_path_digest(tracked)
     for candidate in at_sha:
+        if scope_failure[candidate["id"]] is not None:
+            continue
         if str(candidate["ledger_digest"]) != current_ledger[candidate["id"]]:
             continue
         if str(candidate["tree_digest"]) != expected_tree:
@@ -1037,7 +1114,13 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
     # under the reading and one whose revision was re-pointed both run
     # `detect_changes`, but a reader told only "unreconciled" cannot tell one
     # lost reading from a reading never taken.
-    if any(str(c["ledger_digest"]) == current_ledger[c["id"]] for c in at_sha):
+    scope_whys = [scope_failure[c["id"]] for c in at_sha if scope_failure[c["id"]] is not None]
+    if len(scope_whys) == len(at_sha):
+        return ReconciliationStanding(sha, None, latest_sha, scope_whys[0])
+    if any(
+        scope_failure[c["id"]] is None and str(c["ledger_digest"]) == current_ledger[c["id"]]
+        for c in at_sha
+    ):
         return ReconciliationStanding(sha, None, latest_sha, WHY_OTHER_TREE)
     return ReconciliationStanding(sha, None, latest_sha, WHY_LEDGER_MOVED)
 
@@ -1966,7 +2049,7 @@ class ProjectionVerifier:
             "SELECT subsystem_id, file_path,"
             " COALESCE(classification,'candidate') AS classification"
             f" FROM file_ledger WHERE stale=1 AND {OBLIGATION_BEARING_SQL}"
-            " ORDER BY subsystem_id, file_path",
+            f" AND {survey_filter(conn)} ORDER BY subsystem_id, file_path",
         ):
             subsystem_id = str(ledger_row["subsystem_id"])
             file_path = str(ledger_row["file_path"])
@@ -2088,7 +2171,7 @@ class ProjectionVerifier:
         for ledger_row in rows(
             conn,
             "SELECT DISTINCT file_path FROM file_ledger"
-            f" WHERE {OBLIGATION_BEARING_SQL} ORDER BY file_path",
+            f" WHERE {OBLIGATION_BEARING_SQL} AND {survey_filter(conn)} ORDER BY file_path",
         ):
             file_path = str(ledger_row["file_path"])
             count = indexed.get(file_path, 0)
@@ -2110,12 +2193,25 @@ class ProjectionVerifier:
             for entry in index.get("symbols") or []
             if isinstance(entry, dict)
         }
+        # A path outside the survey set is no destination: neither its ledger
+        # rows nor an older record's citation of it is indexed
+        # (design/scope/PLAN.md §2.6a, §2.8).
+        excluded = {str(r["file_path"]) for r in survey_exclusions(conn)}
+        for file_path in sorted(excluded & (set(indexed) | {p for _y, p in symbols})):
+            mismatches.append(
+                {
+                    "axis": "state",
+                    "object_type": "locus-index-path",
+                    "object_id": file_path,
+                    "detail": "a path outside the survey set is indexed",
+                }
+            )
         if table_exists(conn, "evidence"):
             for cited in rows(
                 conn,
                 "SELECT DISTINCT symbol, file_path FROM evidence"
                 " WHERE symbol IS NOT NULL AND TRIM(symbol) <> ''"
-                " ORDER BY symbol, file_path",
+                f" AND {survey_filter(conn)} ORDER BY symbol, file_path",
             ):
                 pair = (str(cited["symbol"]), str(cited["file_path"]))
                 if pair not in symbols:
@@ -2721,6 +2817,7 @@ class ProjectionVerifier:
         )
 
         models: dict[str, list[tuple[tuple[str, str], Any]]] = {}
+        outside_seams = set(outside_survey_seams(conn))
         if "how-to-read.html" in projection:
             models["how-to-read.html"] = [(("survey-workflow", ""), survey_workflow_model()), (("status-ladder", ""), status_ladder_model())]
         if "files.html" in projection:
@@ -2729,6 +2826,7 @@ class ProjectionVerifier:
             models["seams.html"] = [
                 (("seam-contract", str(seam["id"])), seam_contract_model(conn, str(seam["id"])))
                 for seam in rows(conn, "SELECT id FROM seams ORDER BY id")
+                if str(seam["id"]) not in outside_seams
             ]
         for sub in rows(conn, "SELECT id, name FROM subsystems ORDER BY id"):
             page = subsystem_page(str(sub["id"]), str(sub["name"]))
