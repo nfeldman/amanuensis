@@ -698,8 +698,10 @@
         "SC2"
       ],
       "review": {
-        "status": "pending",
-        "start_sha": "c6be723572a788633895795dbbc20bbc645331db"
+        "status": "reviewed",
+        "start_sha": "c6be723572a788633895795dbbc20bbc645331db",
+        "reviewed_sha": "84f3cf92cb884814a70442d0a715c53f40125472",
+        "findings": 19
       }
     },
     {
