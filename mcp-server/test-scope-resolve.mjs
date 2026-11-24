@@ -203,6 +203,14 @@ const MATCHES = [
   ["docs/**.md", "other/a.md", false],
   ["a**z", "a/b/z", true],
   ["a**z", "b/a/z", false],
+  // A path may carry a newline, which Git tracks; `**` and a directory glob
+  // match across it as across any other character (final review, F9/codex).
+  ["docs/**.md", "docs/a\nb.md", true],
+  ["docs/**", "docs/a\nb", true],
+  ["**/*.md", "a\nb/c.md", true],
+  ["**/fixtures/", "fixtures/a\nb.json", true],
+  ["a**z", "a\n/z", true],
+  ["docs/**.md", "docs/a\nb.mdx", false],
 ];
 check(`P1 the pattern table (${MATCHES.length} rows) matches row for row`, () => {
   const wrong = [];

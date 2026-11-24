@@ -738,6 +738,42 @@ async function main(mods) {
   rmSync(scratch, { recursive: true, force: true });
 }
 
+// The checker restates the server's pattern matcher (§2.10); the two must
+// agree path for path over the matcher's edge cases, a newline inside a path
+// among them, or the checker owes sorting the server does not (final review,
+// F15/codex). The checker is a script, so its two functions are read from it.
+const MATCHER_CORPUS = [
+  ["**/*.md", ["README.md", "a/b/c.md", "a/b/c.mdx", "a\nb/c.md"]],
+  ["docs/**", ["docs/a", "docs/a/b/c", "docs", "docsx/a", "docs/a\nb"]],
+  ["docs/**.md", ["docs/nested/spec.md", "docs/a.md", "docs/a.mdx", "other/a.md", "docs/a\nb.md", "docs/a\nb.mdx"]],
+  ["a/**/b.txt", ["a/b.txt", "a/x/y/b.txt", "c/a/x/b.txt"]],
+  ["**/fixtures/", ["test/fixtures/a.json", "fixtures/a.json", "test/fixtures", "fixtures/a\nb.json"]],
+  ["a**z", ["a/b/z", "b/a/z", "a\n/z"]],
+  ["src/*.ts", ["src/a.ts", "src/a/b.ts", "src/a\nb.ts"]],
+  ["src/", ["src/a.ts", "srcx/a.ts", "src/a\nb.ts"]],
+  ["loose.txt", ["loose.txt", "loose.txtx"]],
+];
+async function matcherAgrees(load) {
+  const scope = await load("dist/scope.js");
+  check("P4 the checker's restated matcher agrees with the server's over the matcher's edge cases", () => {
+    const source = readFileSync(join(here, "check-store-fully-surveyed.mjs"), "utf8");
+    const start = source.indexOf("function globRegex(pattern) {");
+    const end = source.indexOf("\nconst ", source.indexOf("function covers(pattern, path) {"));
+    if (start === -1 || end === -1) return "the checker no longer defines globRegex and covers";
+    const covers = new Function(`${source.slice(start, end)}\nreturn covers;`)();
+    const wrong = [];
+    for (const [raw, paths] of MATCHER_CORPUS) {
+      const pattern = scope.normalizePattern(raw);
+      for (const path of paths) {
+        const server = scope.matchesPattern(pattern, path);
+        const checker = covers(pattern, path);
+        if (server !== checker) wrong.push(`${raw} ~ ${JSON.stringify(path)}: server ${server}, checker ${checker}`);
+      }
+    }
+    return wrong.length ? wrong.join("; ") : null;
+  });
+}
+
 // --------------------------------------------------------------- the driver
 
 try {
@@ -771,6 +807,7 @@ try {
       failures.push("L a tool array could not be read from mcp-server/dist/tools");
     } else {
       await main(mods);
+      await matcherAgrees((relative) => import(pathToFileURL(join(server, relative)).href));
     }
   }
 } catch (error) {
