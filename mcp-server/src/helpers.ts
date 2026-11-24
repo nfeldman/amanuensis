@@ -294,15 +294,19 @@ function surveyTree(workspacePath: string, commit: string): SurveyTree {
 }
 
 /**
- * The revision a write with no revision of its own is decided at: the last reconciled
- * revision, else HEAD, as `get_scope` answers. Null when no workspace is bound or it has
- * no commit, since then there is no tree and no ignore file to read.
+ * The revision a write is decided at: the last reconciled revision, whatever revision the
+ * write cites, because the survey set is the one that reconciliation recorded and a record
+ * cited at another commit still names a path in it. With no reconciliation there is no
+ * recorded set, so the write's own revision stands in (no git process is spent), else HEAD,
+ * as `get_scope` answers. Null when no workspace is bound or it has no commit, since then
+ * there is no tree and no ignore file to read.
  */
-function defaultScopeRevision(ctx: ServerContext): string | null {
+function defaultScopeRevision(ctx: ServerContext, cited: string | null = null): string | null {
   const last = ctx.db
     .prepare("SELECT detected_sha FROM scope_reconciliations ORDER BY id DESC LIMIT 1")
     .get() as { detected_sha: string } | undefined;
   if (last) return last.detected_sha;
+  if (cited !== null) return cited;
   if (!ctx.project.workspacePath) return null;
   try {
     return resolveWorkspaceCommit(ctx, "HEAD", "revision");
@@ -321,10 +325,10 @@ export type SurveyScopeDecision = PathDecision & {
 
 /**
  * Where `path` stands in the survey set (design/scope/PLAN.md §2.2), under the store's
- * active rules and sorting rows and the ignore files at `revision` (default: the last
- * reconciled revision, else HEAD). A path not in the tree there is decided as it would be
- * if it were. The rules are read live, so a rule recorded since the last reconciliation
- * already decides.
+ * active rules and sorting rows and the ignore files at the last reconciled revision. Only
+ * a store with no reconciliation reads them at `revision`, the commit the call cites, else
+ * at HEAD. A path not in the tree there is decided as it would be if it were. The rules are
+ * read live, so a rule recorded since the last reconciliation already decides.
  */
 export function surveyScopeDecision(
   ctx: ServerContext,
@@ -354,7 +358,7 @@ export function surveyScopeDecision(
   const unread = decidePath(path, { rules, sorting, mode, ignored: false });
   if (unread.decided_by?.kind === "rule") return explain(unread, null);
   const workspace = ctx.project.workspacePath;
-  const at = revision ?? defaultScopeRevision(ctx);
+  const at = defaultScopeRevision(ctx, revision);
   if (!workspace || at === null) return explain(unread, null);
   const ignored = readSurveyTree(workspace, at, path, (tree) =>
     tree.paths.has(path)
@@ -430,9 +434,10 @@ function excludedAccount(decision: SurveyScopeDecision): string {
  * excludes. The guard reads each named row's `file_path`, so it holds however the row
  * arrives (`evidence_id`, `evidence_ids`, a snapshot's scope or a provenance entry), and it
  * runs before the call writes anything. An id that names no row is left to the caller's own
- * unknown-id refusal. A path is decided at `revision`, the commit the call is made at when
- * it has resolved one, so no git process is spent finding it; else at the last reconciled
- * revision, else HEAD. It is never decided at the evidence row's own revision.
+ * unknown-id refusal. A path is decided at the last reconciled revision; only a store with
+ * none decides it at `revision`, the commit the call is made at when it has resolved one, so
+ * no git process is spent finding it, else at HEAD. It is never decided at the evidence row's
+ * own revision.
  */
 export function requireSurveyScopeForEvidence(
   ctx: ServerContext,
@@ -473,6 +478,7 @@ export function requireSurveyScopeForEvidence(
  * refuses only when the value names a file in the tree at `revision` (default: the last
  * reconciled revision, else HEAD) that the survey set excludes, so a store path the
  * repository's ignore files happen to match is not mistaken for an excluded source file.
+ * Whether it is excluded is decided as every write is, at the last reconciled revision.
  */
 export function requireSurveyScopeForMention(
   ctx: ServerContext,
