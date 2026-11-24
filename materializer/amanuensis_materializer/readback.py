@@ -39,6 +39,7 @@ from .db import (
     survey_exclusions,
     survey_filter,
     table_exists,
+    utf16_order,
 )
 from .lint import (
     THESIS_REFUSED,
@@ -838,7 +839,7 @@ def set_digest(parts: list[str]) -> str:
     would make every reconciliation this process reads look stale.
     """
 
-    return hashlib.sha256(NUL.join(sorted(parts)).encode()).hexdigest()
+    return hashlib.sha256(NUL.join(sorted(parts, key=utf16_order)).encode()).hexdigest()
 
 
 def tracked_path_digest(paths: list[str]) -> str:

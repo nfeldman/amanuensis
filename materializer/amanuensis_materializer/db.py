@@ -95,13 +95,19 @@ def missing_views(conn: sqlite3.Connection, names: Sequence[str] = REQUIRED_VIEW
 _NUL = "\x00"
 
 
+def utf16_order(text: str) -> bytes:
+    """The key the server's JavaScript `<` and `sort()` order strings by: UTF-16 code units, not code points."""
+
+    return text.encode("utf-16-be")
+
+
 def exclusion_digest(exclusions: Sequence[dict[str, Any]]) -> str:
     """§2.5's `exclusion_digest`: rows by path, each `file_path \\0 source \\0 rule_id-or-empty`, joined with `\\n`."""
 
     return hashlib.sha256(
         "\n".join(
             _NUL.join((str(r["file_path"]), str(r["source"]), "" if r["rule_id"] is None else str(r["rule_id"])))
-            for r in sorted(exclusions, key=lambda r: str(r["file_path"]))
+            for r in sorted(exclusions, key=lambda r: utf16_order(str(r["file_path"])))
         ).encode()
     ).hexdigest()
 
