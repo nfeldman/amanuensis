@@ -212,21 +212,32 @@ function standingReconciliation(revision) {
     };
   }
   const treeDigest = digestOf(tracked);
-  const ledgerDigest = digestOf(
-    (rows("SELECT file_path, classification FROM file_ledger") ?? []).map(
-      (row) => `${row.file_path}\u0000${row.classification ?? ""}`,
-    ),
-  );
+  // Each candidate's ledger digest leaves out the rows on paths that
+  // candidate excluded from the survey set (design/scope/PLAN.md §2.6a).
+  const ledger = rows("SELECT file_path, classification FROM file_ledger") ?? [];
+  const ledgerDigestFor = (reconciliationId) => {
+    const excluded = new Set(
+      tableExists("scope_exclusions")
+        ? (rows("SELECT file_path FROM scope_exclusions WHERE reconciliation_id = ?", reconciliationId) ?? []).map(
+            (exclusion) => exclusion.file_path,
+          )
+        : [],
+    );
+    return digestOf(
+      ledger
+        .filter((entry) => !excluded.has(entry.file_path))
+        .map((entry) => `${entry.file_path}\u0000${entry.classification ?? ""}`),
+    );
+  };
   const row = (
     rows(
       `SELECT * FROM scope_reconciliations
-        WHERE detected_sha = ? AND tree_digest = ? AND ledger_digest = ?
-        ORDER BY id DESC LIMIT 1`,
+        WHERE detected_sha = ? AND tree_digest = ?
+        ORDER BY id DESC`,
       resolved,
       treeDigest,
-      ledgerDigest,
     ) ?? []
-  )[0];
+  ).find((candidate) => candidate.ledger_digest === ledgerDigestFor(candidate.id));
   if (!row) {
     const atSha = rows("SELECT tree_digest FROM scope_reconciliations WHERE detected_sha = ?", resolved) ?? [];
     const why =

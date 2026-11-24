@@ -230,6 +230,12 @@ The checker and the read-back recompute both digests before they trust the set.
 **The tree digest** keeps its meaning: the whole tree. The survey set is the tree minus that
 reconciliation's `scope_exclusions` rows.
 
+**The `ledger_digest` formula** is restated the same way:
+- today's formula, one `file_path \0 classification-or-empty` part per ledger row, sorted
+  and joined with `\0`;
+- leaving out the rows on paths that reconciliation's `scope_exclusions` rows name (§2.6a);
+- so a reader takes it once per candidate reconciliation, with that candidate's exclusions.
+
 **Publication** (`requireCompleteReconciliation`, `invariants.ts:1455`) is also refused, in
 `sorted` mode, while `unsorted > 0`. It names up to 20 unsorted paths.
 
@@ -660,6 +666,8 @@ for SC8 would leave every gate in between red. The files:
     - the survey set excludes the recorded paths;
     - both digests are recomputed, and a tampered exclusion row or a changed rule makes
       clause 1 red with its reason;
+    - the ledger digest leaves out the excluded rows, so a store with an inactive row
+      reconciles;
     - an unsorted path in `sorted` mode is a named obligation;
     - clauses 2, 3 and 4 skip a subsystem, and a seam, that is outside the survey, and name
       them;

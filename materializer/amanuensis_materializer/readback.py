@@ -856,14 +856,35 @@ def examined_tracked(conn: Any) -> int:
     )
 
 
-def ledger_digest(conn: Any) -> str:
-    """§3.2's `ledger_digest`: the ledger the counts were taken against."""
+def ledger_digest(conn: Any, excluded: frozenset[str] = frozenset()) -> str:
+    """§3.2's `ledger_digest`: the ledger the counts were taken against.
+
+    The rows on paths the reconciliation excluded from the survey set are left
+    out (design/scope/PLAN.md §2.6a): they are inactive, and editing one does
+    not move the ledger the counts describe.
+    """
 
     return set_digest(
         [
             f"{r['file_path']}{NUL}{r['classification'] or ''}"
             for r in rows(conn, "SELECT file_path, classification FROM file_ledger")
+            if r["file_path"] not in excluded
         ]
+    )
+
+
+def reconciliation_exclusions(conn: Any, reconciliation_id: Any) -> frozenset[str]:
+    """The paths one reconciliation's `scope_exclusions` rows name; none on a store without them."""
+
+    if not table_exists(conn, "scope_exclusions"):
+        return frozenset()
+    return frozenset(
+        str(r["file_path"])
+        for r in rows(
+            conn,
+            "SELECT file_path FROM scope_exclusions WHERE reconciliation_id = ?",
+            (reconciliation_id,),
+        )
     )
 
 
@@ -989,7 +1010,12 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
         return ReconciliationStanding(
             sha, None, latest_sha, WHY_NONE_AT_ALL if latest_sha is None else WHY_NONE_RECORDED
         )
-    current_ledger = ledger_digest(conn)
+    # Each candidate's ledger digest leaves out the rows that candidate
+    # excluded, so it is taken per candidate.
+    current_ledger = {
+        candidate["id"]: ledger_digest(conn, reconciliation_exclusions(conn, candidate["id"]))
+        for candidate in at_sha
+    }
     tracked = tree_paths(resolve_workspace(storage), sha)
     if tracked is None:
         # §3.3 is a conjunction of five conditions, and conditions 1 and 4 both
@@ -1002,7 +1028,7 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
         return ReconciliationStanding(sha, None, latest_sha, WHY_NO_TREE)
     expected_tree = tracked_path_digest(tracked)
     for candidate in at_sha:
-        if str(candidate["ledger_digest"]) != current_ledger:
+        if str(candidate["ledger_digest"]) != current_ledger[candidate["id"]]:
             continue
         if str(candidate["tree_digest"]) != expected_tree:
             continue
@@ -1011,7 +1037,7 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
     # under the reading and one whose revision was re-pointed both run
     # `detect_changes`, but a reader told only "unreconciled" cannot tell one
     # lost reading from a reading never taken.
-    if any(str(c["ledger_digest"]) == current_ledger for c in at_sha):
+    if any(str(c["ledger_digest"]) == current_ledger[c["id"]] for c in at_sha):
         return ReconciliationStanding(sha, None, latest_sha, WHY_OTHER_TREE)
     return ReconciliationStanding(sha, None, latest_sha, WHY_LEDGER_MOVED)
 
