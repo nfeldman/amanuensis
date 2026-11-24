@@ -280,11 +280,18 @@ function subsystemAuthorization(status: string): StandingAuthorization {
 
 /**
  * The scope exclusion that decides `path`, or null when the survey set keeps it. Only the
- * three scope sources answer here; a ledger classification is read from the ledger. Reads
- * are never refused (§2.7), so an ignore file git cannot read leaves the path in the
- * survey set rather than failing the answer.
+ * three scope sources answer here; a ledger classification is read from the ledger.
+ *
+ * The standing reconciliation decides first, as it does for every reader of the ledger's
+ * active rows (§2.6a): a path it excluded answers from its recorded row, with no git run,
+ * and a ledgered path it kept stays kept until the next reconciliation, so a file and its
+ * subsystem never disagree. Only a path the reconciliation did not decide is resolved
+ * live. Reads are never refused (§2.7), so an ignore file git cannot read leaves such a
+ * path in the survey set rather than failing the answer.
  */
 export function scopeExclusion(ctx: ServerContext, path: string): ExclusionBlock | null {
+  const recorded = recordedScopeExclusion(ctx.db, path);
+  if (recorded !== undefined) return recorded;
   let decision: ReturnType<typeof surveyScopeDecision>;
   try {
     decision = surveyScopeDecision(ctx, path);
@@ -318,6 +325,59 @@ export function scopeExclusion(ctx: ServerContext, path: string): ExclusionBlock
     reason: `matched by the repository's own ignore files${
       decision.revision ? ` at ${decision.revision.slice(0, 12)}` : ""
     }`,
+  };
+}
+
+/**
+ * The standing reconciliation's decision on `path`: its recorded exclusion, null for a
+ * ledgered path it kept, or undefined when it did not decide (no reconciliation stands, or
+ * the path is neither excluded by it nor ledgered).
+ */
+function recordedScopeExclusion(db: DB, path: string): ExclusionBlock | null | undefined {
+  const reconciliation = db
+    .prepare(
+      `SELECT id, detected_sha FROM scope_reconciliations WHERE id = ${SCOPE_RECONCILIATION_ID_SQL}`,
+    )
+    .get() as { id: number; detected_sha: string } | undefined;
+  if (!reconciliation) return undefined;
+  const row = db
+    .prepare(
+      "SELECT source, rule_id FROM scope_exclusions WHERE reconciliation_id = ? AND file_path = ?",
+    )
+    .get(reconciliation.id, path) as
+    | { source: "gitignore" | "user" | "meta"; rule_id: number | null }
+    | undefined;
+  if (!row) {
+    const ledgered = db.prepare("SELECT 1 FROM file_ledger WHERE file_path = ? LIMIT 1").get(path);
+    return ledgered ? null : undefined;
+  }
+  if (row.source === "user") {
+    const rule = db
+      .prepare("SELECT pattern, reason FROM scope_rules WHERE id = ?")
+      .get(row.rule_id) as { pattern: string; reason: string } | undefined;
+    return {
+      source: "user",
+      rule_id: row.rule_id,
+      pattern: rule?.pattern ?? null,
+      reason: rule?.reason ?? null,
+    };
+  }
+  if (row.source === "meta") {
+    const sorting = db
+      .prepare("SELECT pattern, description FROM scope_sorting WHERE id = ?")
+      .get(row.rule_id) as { pattern: string; description: string } | undefined;
+    return {
+      source: "meta",
+      rule_id: row.rule_id,
+      pattern: sorting?.pattern ?? null,
+      reason: sorting?.description ?? null,
+    };
+  }
+  return {
+    source: "gitignore",
+    rule_id: null,
+    pattern: null,
+    reason: `matched by the repository's own ignore files at ${reconciliation.detected_sha.slice(0, 12)}`,
   };
 }
 

@@ -40,8 +40,6 @@ const NEAREST_SYMBOLS = 5;
 const DOC_LINE_BYTES = 160;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 200;
-/** The widest window `find_symbol` reads while it fills a page past left-out rows. */
-const MAX_FIND_WINDOW = 5000;
 
 const indexes = new Map<string, CodeIndex | null>();
 
@@ -607,9 +605,8 @@ export const codeIndexTools: ToolDefinition[] = [
         pathPrefix: optString(args, "path_prefix"),
       };
       const workspace = ctx.project.workspacePath as string;
-      // The survey set is applied to the rows before the page is cut: a page is full while
-      // more in-survey rows exist. When rows are left out the query is repeated with a
-      // wider window until the page fills or the index runs out of rows.
+      // The survey set is applied inside the query, before the page is cut: a page is full
+      // while more in-survey rows exist, however many excluded rows rank ahead of them.
       const excludedPaths = new Map<string, boolean>();
       const isExcluded = (path: string): boolean => {
         let excluded = excludedPaths.get(path);
@@ -619,21 +616,11 @@ export const codeIndexTools: ToolDefinition[] = [
         }
         return excluded;
       };
-      let window = limit;
-      let found = await findSymbols(index, workspace, commit, query, { ...options, limit: window });
-      while (!includeExcluded && found.state === "ok") {
-        const kept = (found.results as { path: string }[]).filter((row) => !isExcluded(row.path));
-        if (kept.length >= limit || !found.more || window >= MAX_FIND_WINDOW) {
-          found = {
-            ...found,
-            results: kept.slice(0, limit) as typeof found.results,
-            more: found.more || kept.length > limit,
-          };
-          break;
-        }
-        window = Math.min(window * 4, MAX_FIND_WINDOW);
-        found = await findSymbols(index, workspace, commit, query, { ...options, limit: window });
-      }
+      const found = await findSymbols(index, workspace, commit, query, {
+        ...options,
+        limit,
+        leaveOut: includeExcluded ? null : isExcluded,
+      });
       if (found.state === "unavailable") return treeUnavailable(commit, found.reason);
       return {
         ok: true,

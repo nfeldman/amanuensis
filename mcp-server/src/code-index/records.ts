@@ -489,8 +489,14 @@ class Readers {
       .prepare("SELECT location, follow_up FROM field_notes WHERE id = ?")
       .get(id) as { location: string | null; follow_up: string | null } | undefined;
     if (!row) return null;
-    // A location is free text; it is a file locus only when it reads as a path.
-    const locus = row.location && /[/.]/.test(row.location) ? citedSourcePath(row.location) : null;
+    // A location is free text; it is a file locus when it reads as a path, or when it is a
+    // bare name the survey set excludes (`Makefile`), as describe_locus resolves one.
+    const location = row.location?.trim() ?? "";
+    const locus = /[/.]/.test(location)
+      ? citedSourcePath(location)
+      : location.length > 0 && !/\s/.test(location) && scopeExclusion(this.ctx, location)
+        ? citedSourcePath(location)
+        : null;
     return {
       current: true,
       status: row.follow_up ?? "open",

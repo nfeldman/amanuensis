@@ -18,7 +18,12 @@ export interface FindOptions {
   kind: string | null;
   pathPrefix: string | null;
   limit: number;
+  /** Paths left out inside the query, before the page is cut (design/scope/PLAN.md §2.7). */
+  leaveOut?: ((path: string) => boolean) | null;
 }
+
+/** The SQL function a query calls to keep a row; every path is kept when nothing is left out. */
+const KEPT_PATH_SQL = "survey_kept(t.path) = 1";
 
 export interface DefinitionHit {
   path: string;
@@ -114,6 +119,7 @@ function definitions(
         WHERE symbols_fts MATCH ?
           AND (? IS NULL OR s.kind = ?)
           AND (? IS NULL OR substr(t.path, 1, length(?)) = ?)
+          AND ${KEPT_PATH_SQL}
         ORDER BY bm25(symbols_fts, ${DEFINITION_WEIGHTS}), t.path, s.ordinal
         LIMIT ?`,
     )
@@ -159,6 +165,7 @@ function references(
         WHERE r.name = ?
           AND (? IS NULL OR r.kind = ?)
           AND (? IS NULL OR substr(t.path, 1, length(?)) = ?)
+          AND ${KEPT_PATH_SQL}
         ORDER BY t.path, r.line, r.ordinal
         LIMIT ?`,
     )
@@ -205,8 +212,10 @@ export async function findSymbols(
   if ("state" in tree) return tree;
   // One read transaction, so the completion marker and the hits come from one snapshot: another
   // process may prune this revision or set the sidecar aside after `ensureTree`'s check.
-  const found = index.use((db) =>
-    db.transaction(() => {
+  const leaveOut = options.leaveOut ?? null;
+  const found = index.use((db) => {
+    db.function("survey_kept", (path: unknown) => (leaveOut?.(String(path)) ? 0 : 1));
+    return db.transaction(() => {
       const complete =
         db.prepare("SELECT 1 FROM trees_complete WHERE rev = ?").get(commit) !== undefined;
       const match = options.mode === "definitions" ? matchQuery(query) : null;
@@ -221,8 +230,8 @@ export async function findSymbols(
         options.pathPrefix !== null &&
         onlyUnsupported(db, commit, options.pathPrefix);
       return { ...hits, unsupported, complete };
-    })(),
-  );
+    })();
+  });
   if ("state" in found) return found;
   const vanished = !tree.partial && !found.complete;
   const reason = vanished
