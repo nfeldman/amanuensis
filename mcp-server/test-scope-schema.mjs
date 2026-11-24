@@ -22,6 +22,9 @@
 //   - contracts/append-only-tables.txt lacks a three-column row for one of
 //     them, names a trigger schema.sql does not declare on that table, or its
 //     header count disagrees with its rows;
+//   - schema.sql's comment above the scope tables says an owner include wins
+//     over all three sources, or does not say it wins over gitignore and meta
+//     with the more specific owner rule deciding (PLAN §0, §2.2);
 //   - the effective mode (readScopeMode) is not the latest scope_mode_changes
 //     row by id;
 //   - the six columns (scope_digest, exclusion_digest, excluded, unsorted,
@@ -633,6 +636,29 @@ check("registry: append-only-tables.txt names each scope table's pair, and schem
   if (!header) wrong.push("the header count is missing");
   else if (Number(header[1]) !== rows.length) wrong.push(`the header says ${header[1]} tables and the file lists ${rows.length}`);
   return wrong.length ? [...new Set(wrong)].join("; ") : null;
+});
+
+check("schema.sql states §0's precedence: an owner include beats gitignore and meta, and the more specific owner rule decides", () => {
+  let schema;
+  try {
+    schema = readFileSync(SCHEMA_PATH, "utf8");
+  } catch {
+    return "schema.sql is unreadable";
+  }
+  const at = schema.indexOf("-- What a survey leaves out");
+  const end = schema.indexOf("CREATE TABLE IF NOT EXISTS scope_rules", at);
+  if (at < 0 || end < 0) return "schema.sql has no comment above scope_rules";
+  const comment = schema
+    .slice(at, end)
+    .split("\n")
+    .map((line) => line.replace(/^--\s?/, ""))
+    .join(" ")
+    .replace(/\s+/g, " ");
+  const wrong = [];
+  if (/over all three/i.test(comment)) wrong.push("it says an include wins over all three sources, user exclusions among them");
+  if (!/include rules win over gitignore and meta/i.test(comment)) wrong.push("it does not say include rules win over gitignore and meta");
+  if (!/between (?:two )?owner rules,? the more specific/i.test(comment)) wrong.push("it does not say the more specific owner rule decides");
+  return wrong.length ? wrong.join("; ") : null;
 });
 
 // ---------------------------- 4. a pre-upgrade store, and its standing
