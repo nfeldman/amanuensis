@@ -415,6 +415,10 @@ export function outsideSurveySeams(db: DB, outsideSubsystems: readonly string[])
 /**
  * The last reconciliation's count of excluded paths by source, and its unsorted paths:
  * the survey set's size at the reading the store stands on. Zeros before survey scope.
+ * Every recorded exclusion is counted, so a ledgered path the tree no longer carries, kept
+ * excluded so its row stays inactive (§2.6a), counts beside the tree's; detect_changes's
+ * `scope.excluded` counts the tree's alone. The reconciliation records which is which only
+ * as the total of the tree's (`excluded`), never by source.
  */
 export function scopeCounts(db: DB): {
   excluded: { gitignore: number; user: number; meta: number; total: number };

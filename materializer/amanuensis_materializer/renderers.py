@@ -1626,7 +1626,9 @@ def outside_survey_sentence(conn: sqlite3.Connection) -> str | None:
     """The overview's one line on what the survey leaves out, or None when nothing is excluded.
 
     Counts by source, and the owner's exclude rules by pattern; never a path
-    (design/scope/PLAN.md §2.8, decision F2).
+    (design/scope/PLAN.md §2.8, decision F2). Every recorded exclusion counts,
+    as `get_dashboard`'s `excluded_paths` does: a ledgered path the tree no
+    longer carries stays excluded so its row stays inactive (§2.6a).
     """
 
     excluded = survey_exclusions(conn)
