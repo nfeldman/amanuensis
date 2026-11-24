@@ -133,8 +133,8 @@
       "attempts": 1,
       "start_sha": "7740bcc616a530c82c9ce0a0758172a3d9de14d6",
       "red_sha": "a6f6fa2",
-      "green_sha": "da70ed2",
-      "verified_by_launcher": false,
+      "green_sha": "07da46e7097d020dc77647c2f84cfc0cc5d01dc9",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Gap filled: a path an owner include decides is not unsorted even with no sorting row (§2.2 ranks owner rules over everything); a leading ./ is normalized away, while .., a leading /, .amanuensis, empty and . segments are refused. Gitignore runs check-ignore in a scratch repo with core.excludesFile=/dev/null and core.ignoreCase=false (so the set does not depend on the asking machine's filesystem); the gate also swaps two .gitignore files (same paths, same blobs) to pin the path half of the cache key. scope.ts is not wired into any tool yet (SC3/SC4)."
     },
