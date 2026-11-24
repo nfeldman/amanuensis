@@ -713,8 +713,10 @@
         "SC11"
       ],
       "review": {
-        "status": "pending",
-        "start_sha": "c40f284b4301f14cd6b5e5d1cd6207e7e2a31f36"
+        "status": "reviewed",
+        "start_sha": "c40f284b4301f14cd6b5e5d1cd6207e7e2a31f36",
+        "reviewed_sha": "c2cd22c189add9512c14660ea5ffaf30ea490577",
+        "findings": 13
       }
     },
     {

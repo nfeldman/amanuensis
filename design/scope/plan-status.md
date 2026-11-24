@@ -10,7 +10,7 @@
 | SC1 | Schema, migration and mode seeding | done (1 attempt) | — | `mcp-server/test-scope-schema.mjs` | §3 SC1, §2.1, §2.9 |
 | SC2 | Pattern matching and gitignore at a revision | done (1 attempt) | SC1 | `mcp-server/test-scope-resolve.mjs` | §3 SC2, §2.2, §2.3 |
 
-## S2 · Tools and reconciliation (review: pending)
+## S2 · Tools and reconciliation (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
