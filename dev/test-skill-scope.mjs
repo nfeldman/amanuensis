@@ -45,6 +45,8 @@
 //         before sorting (exact paths), the golden excluded counts by source (gitignore, user, meta)
 //         and the golden survey-set size;
 //       - the code prefix has no `product` row, or a meta row has no inventory of the sampled files;
+//       - the store is not inside the scratch fixture (an inherited AMANUENSIS_STORAGE_ROOT would
+//         put it in a shared root the cleanup never removes);
 //       - the negative arm, which leaves out `set_git_state`, is not refused by `detect_changes`, or
 //         the refusal does not name `set_git_state`. This is what lets the control turn red.
 // Prints exactly one last line: `GATE SC8 GREEN` (exit 0) or `GATE SC8 RED: <reason>` (exit 1).
@@ -692,6 +694,12 @@ check("C4 the second detect_changes ends with `unsorted` 0 and the golden counts
   const surveyed = ["src/app.ts", "src/util.ts", "tests/app.test.ts", ".gitignore", "package.json"];
   if (scope.survey_paths !== surveyed.length) problems.push(`survey_paths ${scope.survey_paths}, want ${surveyed.length}`);
   return problems.join("; ") || null;
+});
+
+check("C6 the control's store is bound inside its scratch fixture, whatever AMANUENSIS_STORAGE_ROOT says", () => {
+  if (!full || full.error) return full?.error ?? "no control run";
+  const store = join(full.ws, ".amanuensis");
+  return existsSync(join(store, "memory.db")) ? null : `no store at ${store}; the server bound one elsewhere`;
 });
 
 await checkAsync("C5 the negative arm, with no set_git_state, is refused by detect_changes naming set_git_state", async () => {
