@@ -28,6 +28,8 @@
 //   6. a refresh run blocks on drift over the inactive row (F1); or the
 //      control's run does not block on the drift it cannot own (F0);
 //   7. this gate is not registered in CI (CI1).
+//   8. a fixture git command reads the machine's configuration: with a planted
+//      global hooks path and template directory, a hook runs (HN1).
 //
 // Every fixture is a temporary git repository and a store under a temporary
 // AMANUENSIS_STORAGE_ROOT; nothing here reads a real store or the network.
@@ -36,7 +38,7 @@
 //   exit 1  `GATE SC11 RED: <reason>`
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -124,6 +126,24 @@ function main(mods) {
   const scratch = mkdtempSync(join(tmpdir(), "amanuensis-sc11-"));
   process.env.AMANUENSIS_STORAGE_ROOT = join(scratch, "storage");
   const cleanups = [];
+  // The fixture's git must not read the machine's configuration: a global
+  // hooks path or template directory would run something outside this gate.
+  // A hostile global configuration is planted here, so a fixture command that
+  // inherits it fails the gate (HN1).
+  const hostile = join(scratch, "hostile");
+  for (const dir of [join(hostile, "hooks"), join(hostile, "template", "hooks")]) {
+    mkdirSync(dir, { recursive: true });
+    for (const hook of ["pre-commit", "commit-msg", "post-commit"]) {
+      writeFileSync(join(dir, hook), `#!/bin/sh\necho "${hook} ran" >> '${join(hostile, "ran.log")}'\nexit 1\n`);
+      chmodSync(join(dir, hook), 0o755);
+    }
+  }
+  writeFileSync(
+    join(hostile, "gitconfig"),
+    `[core]\n\thooksPath = ${join(hostile, "hooks")}\n[init]\n\ttemplateDir = ${join(hostile, "template")}\n`,
+  );
+  process.env.GIT_CONFIG_GLOBAL = join(hostile, "gitconfig");
+
 
   /**
    * One arm's store at c1. `excluded`: the owner excludes `design/` after the
@@ -435,6 +455,11 @@ function main(mods) {
     return readFileSync(workflow, "utf8").includes("node test-scope-consumers.mjs")
       ? null
       : "the workflow does not run this gate";
+  });
+
+  check("HN1 no hook from the machine's git configuration ran in a fixture", () => {
+    const log = join(hostile, "ran.log");
+    return existsSync(log) ? `hooks ran: ${readFileSync(log, "utf8").trim().split("\n").join(", ")}` : null;
   });
 
   for (const cleanup of cleanups) cleanup();

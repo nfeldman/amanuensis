@@ -43,12 +43,14 @@
 //     the new refusals with onboarding.md as a reference, or
 //     scripts/gen-tool-inventory.mjs --check is not clean, or DEVELOPMENT.md's
 //     inventory does not list the three tools.
+//   - a fixture git command reads the machine's configuration: with a planted
+//     global hooks path and template directory, a hook runs (HN1).
 //
 // Prints exactly one last line: `GATE SC3 GREEN` (exit 0) or
 // `GATE SC3 RED: <reason>` (exit 1).
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -159,6 +161,23 @@ const call = (ctx, name, args) => tools.get(name).handler(args, ctx);
 
 const scratch = mkdtempSync(join(tmpdir(), "amanuensis-sc3-"));
 process.on("exit", () => rmSync(scratch, { recursive: true, force: true }));
+// The fixture's git must not read the machine's configuration: a global
+// hooks path or template directory would run something outside this gate.
+// A hostile global configuration is planted here, so a fixture command that
+// inherits it fails the gate (HN1).
+const hostile = join(scratch, "hostile");
+for (const dir of [join(hostile, "hooks"), join(hostile, "template", "hooks")]) {
+  mkdirSync(dir, { recursive: true });
+  for (const hook of ["pre-commit", "commit-msg", "post-commit"]) {
+    writeFileSync(join(dir, hook), `#!/bin/sh\necho "${hook} ran" >> '${join(hostile, "ran.log")}'\nexit 1\n`);
+    chmodSync(join(dir, hook), 0o755);
+  }
+}
+writeFileSync(
+  join(hostile, "gitconfig"),
+  `[core]\n\thooksPath = ${join(hostile, "hooks")}\n[init]\n\ttemplateDir = ${join(hostile, "template")}\n`,
+);
+process.env.GIT_CONFIG_GLOBAL = join(hostile, "gitconfig");
 
 function git(cwd, ...args) {
   const result = spawnSync(
@@ -588,6 +607,11 @@ check("P3 the tool inventory regenerates with --check clean and lists the three 
   const text = readFileSync(join(here, "DEVELOPMENT.md"), "utf8");
   const missing = ["set_scope_rule", "record_scope_sorting", "get_scope"].filter((name) => !text.includes(`| \`${name}\` |`));
   return missing.length === 0 ? null : `DEVELOPMENT.md does not list ${missing.join(", ")}`;
+});
+
+check("HN1 no hook from the machine's git configuration ran in a fixture", () => {
+  const log = join(hostile, "ran.log");
+  return existsSync(log) ? `hooks ran: ${readFileSync(log, "utf8").trim().split("\n").join(", ")}` : null;
 });
 
 finish();
