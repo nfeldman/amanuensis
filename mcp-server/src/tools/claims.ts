@@ -6,6 +6,7 @@ import {
   requireEnum,
   requireExistingIds,
   requireString,
+  requireSurveyScopeForEvidence,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -217,10 +218,12 @@ function requireClosingBoundary(
 
 function requireEvidence(
   ctx: ServerContext,
+  tool: string,
   evidenceIds: number[],
   authoritySha: string,
 ): EvidenceRow[] {
   requireExistingIds(ctx.db, "evidence", "id", evidenceIds, "evidence id(s)");
+  requireSurveyScopeForEvidence(ctx, tool, "evidence_ids", evidenceIds);
   const placeholders = evidenceIds.map(() => "?").join(",");
   const rows = ctx.db
     .prepare(
@@ -398,7 +401,7 @@ export const claimTools: ToolDefinition[] = [
         );
       }
       const evidenceIds = requireEvidenceIds(args);
-      const evidenceRows = requireEvidence(ctx, evidenceIds, assertedAtSha);
+      const evidenceRows = requireEvidence(ctx, "add_claim", evidenceIds, assertedAtSha);
 
       try {
         ctx.db.transaction(() => {
@@ -595,7 +598,7 @@ export const claimTools: ToolDefinition[] = [
       const atSha = resolveCommit(ctx, requireString(args, "at_sha"));
       requireClosingBoundary(ctx, atSha, claim.valid_from_sha, "invalidation");
       const evidenceIds = requireEvidenceIds(args);
-      requireEvidence(ctx, evidenceIds, atSha);
+      requireEvidence(ctx, "invalidate_claim", evidenceIds, atSha);
       const existing = new Set(
         (
           ctx.db
@@ -671,7 +674,7 @@ export const claimTools: ToolDefinition[] = [
       const atSha = resolveCommit(ctx, requireString(args, "at_sha"));
       requireClosingBoundary(ctx, atSha, predecessor.valid_from_sha, "supersession");
       const evidenceIds = requireEvidenceIds(args);
-      const evidenceRows = requireEvidence(ctx, evidenceIds, atSha);
+      const evidenceRows = requireEvidence(ctx, "supersede_claim", evidenceIds, atSha);
       const predecessorEvidence = new Set(
         (
           ctx.db

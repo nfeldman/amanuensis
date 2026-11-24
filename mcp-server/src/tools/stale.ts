@@ -5,6 +5,7 @@ import {
   optInt,
   optString,
   requireString,
+  requireSurveyScopeForEvidence,
   requireSurveyScopeForWrite,
   requireWorkspaceSourcePath,
   resolveWorkspaceCommit,
@@ -252,6 +253,7 @@ export const staleTools: ToolDefinition[] = [
         throw new ToolError(`reason must be one line of at most ${CLEAR_REASON_CAP} bytes`);
       }
       if (evidenceId !== null) {
+        requireSurveyScopeForEvidence(ctx, "clear_staleness", "evidence_id", [evidenceId]);
         const cited = ctx.db
           .prepare("SELECT file_path FROM evidence WHERE id = ?")
           .get(evidenceId) as { file_path: string } | undefined;

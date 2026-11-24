@@ -5,6 +5,7 @@ import {
   requireExistingIds,
   requireInt,
   requireString,
+  requireSurveyScopeForEvidence,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
@@ -70,6 +71,9 @@ export const contradictionTools: ToolDefinition[] = [
       const evidenceId = args.evidence_id == null ? null : requireInt(args, "evidence_id");
       if (resolution === "scope-distinction" && !scopeNote) {
         return { ok: false, error: "scope-distinction requires scope_note" };
+      }
+      if (evidenceId !== null) {
+        requireSurveyScopeForEvidence(ctx, "resolve_contradiction", "evidence_id", [evidenceId]);
       }
       if (resolution !== "unresolved") {
         if (evidenceId === null) {

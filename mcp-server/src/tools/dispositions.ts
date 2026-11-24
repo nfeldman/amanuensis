@@ -1,10 +1,13 @@
 import {
+  citedSourcePath,
   ok,
   optBool,
   optIntArray,
   optString,
   requireEnum,
   requireString,
+  requireSurveyScopeForEvidence,
+  requireSurveyScopeForWrite,
   requireWorkspaceCitation,
   resolveWorkspaceCommit,
   resolveWorkspaceCommits,
@@ -119,6 +122,10 @@ export const dispositionTools: ToolDefinition[] = [
       //
       // Ordered after the session, depth, concern and revision checks above so a
       // caller who got one of those wrong is told that, not told about evidence.
+      const citedPath = citedSourcePath(evidence);
+      if (citedPath !== null) {
+        requireSurveyScopeForWrite(ctx, "set_disposition", "evidence", citedPath, refSha);
+      }
       const evidenceIds = optIntArray(args, "evidence_ids");
       if (evidenceIds === null || evidenceIds.length === 0) {
         throw new ToolError(EVIDENCE_IDS_REQUIRED);
@@ -137,6 +144,7 @@ export const dispositionTools: ToolDefinition[] = [
           `unknown evidence_id: ${missing.join(", ")} — record the reading with add_evidence first`,
         );
       }
+      requireSurveyScopeForEvidence(ctx, "set_disposition", "evidence_ids", distinctIds);
 
       // One subprocess for the whole set, not one per id: see
       // `resolveWorkspaceCommits`. An unreachable revision refuses the call,

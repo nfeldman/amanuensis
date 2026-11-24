@@ -7,6 +7,7 @@ import {
   requireInt,
   requireRepairCommit,
   requireString,
+  requireSurveyScopeForEvidence,
   requireSurveyScopeForWrite,
   resolveWorkspaceCommit,
   type ServerContext,
@@ -519,6 +520,7 @@ export const carriedTools: ToolDefinition[] = [
         | { id: number }
         | undefined;
       if (!evidence) throw new ToolError(`evidence_id ${evidenceId} names no evidence row`);
+      requireSurveyScopeForEvidence(ctx, "attach_carried_evidence", "evidence_id", [evidenceId]);
       const existing = ctx.db
         .prepare(
           "SELECT role FROM carried_finding_evidence WHERE carried_id = ? AND evidence_id = ?",

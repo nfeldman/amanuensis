@@ -5,6 +5,7 @@ import {
   optString,
   requireEnum,
   requireString,
+  requireSurveyScopeForEvidence,
   resolveWorkspaceCommit,
   type ServerContext,
   type ToolDefinition,
@@ -196,6 +197,7 @@ function citedEvidence(
     .all(...ids) as Array<{ id: number; file_path: string }>;
   if (cited.length !== ids.length)
     throw new ToolError(RECORD_REFUSALS.citesEvidence(subject.section));
+  requireSurveyScopeForEvidence(ctx, "record_narrative", "evidence_ids", ids);
   if (subject.type === "subsystem") {
     const files = [...new Set(cited.map((row) => row.file_path))];
     const inLedger = ctx.db

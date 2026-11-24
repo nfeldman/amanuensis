@@ -2,6 +2,7 @@ import {
   ok,
   optString,
   requireString,
+  requireSurveyScopeForEvidence,
   resolveWorkspaceCommit,
   type ServerContext,
   type ToolDefinition,
@@ -226,6 +227,7 @@ export const claimMarkTools: ToolDefinition[] = [
         | { id: number; ref_sha: string; kind: string; file_path: string }
         | undefined;
       if (!evidence) throw new ToolError(MARK_REFUSALS.noEvidence(evidenceId));
+      requireSurveyScopeForEvidence(ctx, "record_claim_mark", "evidence_id", [evidenceId]);
       // As requireFileAnchoredEvidence reads a flow step: one row, a strong kind and the claim subject's file.
       const path = subjectPath(claim.subject_id);
       if (!FILE_ANCHORED_EVIDENCE.includes(evidence.kind) || evidence.file_path !== path) {

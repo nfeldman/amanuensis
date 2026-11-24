@@ -1240,6 +1240,21 @@
       "references": [
         { "file": "../.claude/skills/amanuensis/references/records.md" }
       ]
+    },
+    {
+      "id": "scope-excluded-attach",
+      "note": "New, design/scope/PLAN.md §2.6, second table: a record may not rest on an evidence row whose file the survey set excludes. Thrown by requireSurveyScopeForEvidence, which reads the row's file_path, so it holds for evidence_id and evidence_ids alike. refuses is true, not exhaustive: the other routes of the table (claims, dispositions, findings, decisions, contradictions, claim marks, diagnosticity, the Chorusmith adapter and the crosswalk) throw it too, and naming them would oblige every reference that instructs them to quote it.",
+      "refuses": [
+        "record_explanation",
+        "record_narrative",
+        "record_runtime_boundary",
+        "attach_carried_evidence"
+      ],
+      "instructs": [],
+      "server": { "file": "src/helpers.ts", "phrase": "A record gets no support from an excluded path's evidence; reads still answer for it." },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/records.md" }
+      ]
     }
   ]
 }

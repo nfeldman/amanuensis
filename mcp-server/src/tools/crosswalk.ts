@@ -6,6 +6,7 @@ import {
   requireEnum,
   requireInt,
   requireString,
+  requireSurveyScopeForEvidence,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -195,6 +196,7 @@ function sourceExists(
 
 function provenance(
   ctx: ServerContext,
+  tool: string,
   value: unknown,
   field = "provenance",
 ): Array<Record<string, unknown>> {
@@ -209,6 +211,9 @@ function provenance(
     seen.add(key);
     if (!sourceExists(ctx, kind === "direct-user" ? "method" : (kind as never), kind, ref)) {
       throw new ToolError(`${field}[${index}] does not resolve: ${key}`);
+    }
+    if (kind === "repository-evidence") {
+      requireSurveyScopeForEvidence(ctx, tool, `${field}[${index}]`, [Number(ref)]);
     }
     return { kind, ref, statement };
   });
@@ -225,11 +230,14 @@ function stageEntity(args: Record<string, unknown>, ctx: ServerContext): Record<
       "crosswalk entity source does not resolve or is incompatible with entity kind",
     );
   }
+  if (sourceKind === "repository-evidence") {
+    requireSurveyScopeForEvidence(ctx, "stage_crosswalk_entity", "source_ref", [Number(sourceRef)]);
+  }
   const label = requireString(args, "label");
   const normalized = normalizedLabel(label);
   const definition = requireString(args, "definition");
   const negativeCriteria = strings(args.negative_criteria, "negative_criteria");
-  const sourceProvenance = provenance(ctx, args.provenance);
+  const sourceProvenance = provenance(ctx, "stage_crosswalk_entity", args.provenance);
   const candidates = ctx.db
     .prepare(
       `SELECT entity_id, entity_kind, label, definition, identity_state, canonical_entity_id
@@ -298,7 +306,7 @@ function resolveIdentity(
     throw new ToolError("identity candidate must come from the normalized-label collision set");
   }
   const resolution = requireEnum(args, "resolution", ["same-as", "distinct"] as const);
-  const evidence = provenance(ctx, args.evidence, "evidence");
+  const evidence = provenance(ctx, "resolve_crosswalk_identity", args.evidence, "evidence");
   const rationale = requireString(args, "rationale");
   if (resolution === "distinct" && JSON.parse(row.negative_criteria_json).length === 0) {
     throw new ToolError("distinct identity requires negative criteria");
@@ -364,7 +372,7 @@ function addProperty(args: Record<string, unknown>, ctx: ServerContext): Record<
   const propertyId = requireString(args, "property_id");
   const propertyKey = requireString(args, "property_key");
   if (args.value === undefined) throw new ToolError("value is required");
-  const sourceProvenance = provenance(ctx, args.provenance);
+  const sourceProvenance = provenance(ctx, "add_crosswalk_property", args.provenance);
   ctx.db
     .prepare(
       `INSERT INTO crosswalk_properties
@@ -398,7 +406,7 @@ function insertRelation(
   const relationType = requireEnum(args, "relation_type", RELATION_TYPES);
   const positiveCriteria = strings(args.positive_criteria, "positive_criteria");
   const negativeCriteria = strings(args.negative_criteria, "negative_criteria");
-  const sourceProvenance = provenance(ctx, args.provenance);
+  const sourceProvenance = provenance(ctx, "add_crosswalk_relation", args.provenance);
   ctx.db
     .prepare(
       `INSERT INTO crosswalk_relations
@@ -431,7 +439,7 @@ function addCounterevidence(
   const relationId = requireString(args, "relation_id");
   relation(ctx, relationId);
   const counterevidenceId = requireString(args, "counterevidence_id");
-  const sourceProvenance = provenance(ctx, args.provenance);
+  const sourceProvenance = provenance(ctx, "add_crosswalk_counterevidence", args.provenance);
   ctx.db
     .prepare(
       `INSERT INTO crosswalk_counterevidence

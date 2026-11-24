@@ -398,26 +398,71 @@ export function requireSurveyScopeForWrite(
 ): void {
   const decision = surveyScopeDecision(ctx, path, revision);
   if (decision.in_survey) return;
-  const by = decision.decided_by;
-  let account: string;
-  if (by?.kind === "rule") {
-    account =
-      `source user, owner rule ${by.id} (pattern ${decision.pattern}` +
-      `${decision.reason ? `, reason: ${decision.reason}` : ""})`;
-  } else if (by?.kind === "sorting") {
-    account = `source meta, sorting row ${by.id} (pattern ${decision.pattern}) sorts it as meta`;
-  } else {
-    account =
-      "source gitignore, matched by the repository's own ignore files" +
-      `${decision.revision ? ` at ${decision.revision.slice(0, 12)}` : ""}`;
-  }
   throw new ToolError(
-    `${tool} refuses: ${label} ${path} is outside the survey set: ${account}. ` +
+    `${tool} refuses: ${label} ${path} is outside the survey set: ${excludedAccount(decision)}. ` +
       "An excluded path gets no new record; reads still answer for it. If the owner wants " +
       "it surveyed, record an owner include rule for it with set_scope_rule, quoting the " +
       "owner's words.",
     "scope.excluded-write",
   );
+}
+
+/** Why a path is outside the survey set: its source, and the rule or ignore files that decided. */
+function excludedAccount(decision: SurveyScopeDecision): string {
+  const by = decision.decided_by;
+  if (by?.kind === "rule") {
+    return (
+      `source user, owner rule ${by.id} (pattern ${decision.pattern}` +
+      `${decision.reason ? `, reason: ${decision.reason}` : ""})`
+    );
+  }
+  if (by?.kind === "sorting") {
+    return `source meta, sorting row ${by.id} (pattern ${decision.pattern}) sorts it as meta`;
+  }
+  return (
+    "source gitignore, matched by the repository's own ignore files" +
+    `${decision.revision ? ` at ${decision.revision.slice(0, 12)}` : ""}`
+  );
+}
+
+/**
+ * §2.6's second table: a record may not rest on an evidence row whose file the survey set
+ * excludes. The guard reads each named row's `file_path`, so it holds however the row
+ * arrives (`evidence_id`, `evidence_ids`, a snapshot's scope or a provenance entry), and it
+ * runs before the call writes anything. An id that names no row is left to the caller's own
+ * unknown-id refusal. The path is decided where the survey set is, at the last reconciled
+ * revision, else HEAD, not at the evidence row's own revision.
+ */
+export function requireSurveyScopeForEvidence(
+  ctx: ServerContext,
+  tool: string,
+  label: string,
+  evidenceIds: Iterable<number | null | undefined>,
+): void {
+  const ids = [...new Set([...evidenceIds].filter((id): id is number => Number.isInteger(id)))];
+  if (ids.length === 0) return;
+  const rows = ctx.db
+    .prepare(
+      `SELECT id, file_path FROM evidence WHERE id IN (${ids.map(() => "?").join(",")}) ORDER BY id`,
+    )
+    .all(...ids) as Array<{ id: number; file_path: string }>;
+  const decided = new Map<string, SurveyScopeDecision>();
+  for (const row of rows) {
+    let decision = decided.get(row.file_path);
+    if (!decision) {
+      decision = surveyScopeDecision(ctx, row.file_path);
+      decided.set(row.file_path, decision);
+    }
+    if (decision.in_survey) continue;
+    throw new ToolError(
+      `${tool} refuses: evidence ${row.id} (${label}) cites ${row.file_path}, which is outside ` +
+        `the survey set: ${excludedAccount(decision)}. ` +
+        "A record gets no support from an excluded path's evidence; reads still answer for it. " +
+        "If the owner wants it surveyed, record an owner include rule for it with " +
+        "set_scope_rule, quoting the owner's words.",
+      "scope.excluded-write",
+    );
+  }
 }
 
 /**

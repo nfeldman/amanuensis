@@ -7,6 +7,7 @@ import {
   requireInt,
   requireString,
   requireStringArray,
+  requireSurveyScopeForEvidence,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
@@ -47,6 +48,7 @@ export const diagnosticityTools: ToolDefinition[] = [
       // list every missing id rather than stopping at the first.
       requireExistingIds(ctx.db, "concerns", "code", concernCodes, "concern(s)");
       requireExistingIds(ctx.db, "evidence", "id", evidenceIds, "evidence");
+      requireSurveyScopeForEvidence(ctx, "open_diagnosticity_matrix", "evidence_ids", evidenceIds);
       // better-sqlite3 transactions are synchronous; the closure runs to
       // completion before txn() returns, so its return value is safe.
       const matrixId = ctx.db.transaction((): number => {
@@ -108,6 +110,9 @@ export const diagnosticityTools: ToolDefinition[] = [
       if (!evidenceOk) {
         return { ok: false, error: `evidence ${evidenceId} is not part of matrix ${matrixId}` };
       }
+      requireSurveyScopeForEvidence(ctx, "record_diagnosticity_verdict", "evidence_id", [
+        evidenceId,
+      ]);
       ctx.db
         .prepare(
           `INSERT INTO diagnosticity_cells (matrix_id, concern_code, evidence_id, verdict, note)

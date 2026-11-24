@@ -8,6 +8,7 @@ import {
   requireInt,
   requireRepairCommit,
   requireString,
+  requireSurveyScopeForEvidence,
   requireSurveyScopeForWrite,
   requireWorkspaceCitation,
   requireWorkspaceSourcePath,
@@ -412,6 +413,7 @@ export const findingTools: ToolDefinition[] = [
       const findingId = requireString(args, "finding_id");
       const evidenceId = requireInt(args, "evidence_id");
       const note = requireString(args, "verification_note");
+      requireSurveyScopeForEvidence(ctx, "verify_finding_fix", "evidence_id", [evidenceId]);
       const current = ctx.db
         .prepare(
           `SELECT f.status, f.subsystem_id, r.resolution_state, r.fix_location, r.fix_sha

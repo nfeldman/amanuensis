@@ -37,6 +37,21 @@ ledger row left on one, which is how a row the reconciliation lists under
 `excluded_with_rows` is cleared. The sorting inventory may cite one, because it
 writes no evidence.
 
+A record may not rest on an excluded path's evidence either. An evidence row
+that exists already, because it was recorded before the path was excluded, can't
+be attached to a new record. The writers of claims (asserting, closing and
+superseding one), of dispositions (setting one, and attaching a row to one) and
+of findings (`attach_evidence_to_finding` and `verify_finding_fix`) refuse it,
+as do `clear_staleness`'s `evidence_id`, `record_explanation`,
+`record_narrative`, `record_runtime_boundary`, `attach_carried_evidence`, the
+diagnosticity matrix, decision invalidation, contradiction resolution, claim
+marks, the Chorusmith parity scope and the crosswalk's provenance. It makes no
+difference whether the row arrives as `evidence_id` or in `evidence_ids`. The
+refusal names the evidence row, its path, its source and its rule, and says:
+A record gets no support from an excluded path's evidence; reads still answer
+for it. Cite a reading of the code instead. Bring the path back only when the
+owner asks, with an owner include rule.
+
 ## Project profile
 
 `record_project_profile(name, ref_sha)` holds the project's name, one line. It

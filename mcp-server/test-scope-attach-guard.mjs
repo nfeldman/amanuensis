@@ -602,6 +602,7 @@ async function main(mods, tools) {
           );
           return { findingId, evidenceId };
         },
+        evidenceOf: (state) => state.evidenceId,
         run: (state) =>
           call("verify_finding_fix", { finding_id: state.findingId, evidence_id: state.evidenceId, verification_note: "green" }, ctx),
       },
@@ -837,7 +838,7 @@ async function main(mods, tools) {
           const wrote = route.table ? fingerprint(route.table) !== before : false;
           if (!refused) return `accepted${wrote ? `, and wrote to ${route.table}` : ""}`;
           if (wrote) return `refused, but wrote to ${route.table} first`;
-          return refusalMisses(route, refused, excluded, ev(excluded.path));
+          return refusalMisses(route, refused, excluded, route.evidenceOf ? route.evidenceOf(state) : ev(excluded.path));
         });
       }
     }
@@ -945,7 +946,7 @@ function registered() {
   if (!refs.includes("../.claude/skills/amanuensis/references/records.md")) {
     wrong.push(`its references are ${show(refs)}`);
   }
-  for (const tool of ["add_claim", "set_disposition", "record_explanation", "attach_carried_evidence"]) {
+  for (const tool of ["record_explanation", "record_narrative", "record_runtime_boundary", "attach_carried_evidence"]) {
     if (!(entry.refuses ?? []).includes(tool)) wrong.push(`refuses omits ${tool}`);
   }
   const records = join(here, "..", ".claude", "skills", "amanuensis", "references", "records.md");

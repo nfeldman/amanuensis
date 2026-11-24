@@ -3,6 +3,7 @@ import {
   optString,
   requireEnum,
   requireString,
+  requireSurveyScopeForEvidence,
   resolveWorkspaceCommit,
   type ServerContext,
   type ToolDefinition,
@@ -116,6 +117,7 @@ function boundaryEvidence(ctx: ServerContext, args: Record<string, unknown>): nu
     .prepare(`SELECT COUNT(*) AS n FROM evidence WHERE id IN (${ids.map(() => "?").join(", ")})`)
     .get(...ids) as { n: number };
   if (found.n !== ids.length) throw new ToolError(BOUNDARY_REFUSALS.citesEvidence());
+  requireSurveyScopeForEvidence(ctx, "record_runtime_boundary", "evidence_ids", ids);
   return ids;
 }
 

@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
 import {
+  citedSourcePath,
   requireEnum,
   requireInt,
   requireString,
+  requireSurveyScopeForEvidence,
+  requireSurveyScopeForWrite,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -481,7 +484,14 @@ function timedSnapshot(ctx: ServerContext, scope: ParityScope): Record<string, u
 }
 
 function captureParity(args: Record<string, unknown>, ctx: ServerContext): Record<string, unknown> {
-  return timedSnapshot(ctx, parseScope(args.parity_scope));
+  const scope = parseScope(args.parity_scope);
+  requireSurveyScopeForEvidence(
+    ctx,
+    "capture_chorusmith_parity_snapshot",
+    "parity_scope.evidence_ids",
+    scope.evidence_ids,
+  );
+  return timedSnapshot(ctx, scope);
 }
 
 function catalog(): Record<string, unknown> {
@@ -567,6 +577,25 @@ function planRun(args: Record<string, unknown>, ctx: ServerContext): Record<stri
   const sourceCommit = resolveCommit(ctx, requireString(args, "source_commit"));
   const expectedDirect = parseExpectedDirect(args.expected_direct);
   const expectedSnapshot = expectedDirect.snapshot as Record<string, unknown>;
+  requireSurveyScopeForEvidence(
+    ctx,
+    "plan_chorusmith_adapter_run",
+    "parity_scope.evidence_ids",
+    parseScope(expectedSnapshot.scope).evidence_ids,
+  );
+  const snapshotEvidence = (expectedSnapshot.evidence as { records?: unknown } | undefined)
+    ?.records;
+  for (const record of Array.isArray(snapshotEvidence) ? snapshotEvidence : []) {
+    const path = citedSourcePath((record as { file_path?: unknown } | null)?.file_path);
+    if (path !== null) {
+      requireSurveyScopeForWrite(
+        ctx,
+        "plan_chorusmith_adapter_run",
+        "expected_direct.snapshot.evidence",
+        path,
+      );
+    }
+  }
   const parityPolicy = object(args.parity_policy, "parity_policy");
   const recoveryProbeRequired = parityPolicy.recovery_probe_required === true;
   const maxVerificationOverheadUs = requireInt(parityPolicy, "max_verification_overhead_us");

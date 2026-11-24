@@ -14,6 +14,7 @@ import {
   requireEvidenceCitation,
   requireInt,
   requireString,
+  requireSurveyScopeForEvidence,
   requireSurveyScopeForWrite,
   requireWorkspaceSourcePath,
   resolveWorkspaceCommit,
@@ -431,6 +432,9 @@ export const evidenceTools: ToolDefinition[] = [
       if (!disp) return { ok: false, error: `no disposition for ${subsystemId}/${concernCode}` };
       const ev = ctx.db.prepare("SELECT 1 FROM evidence WHERE id = ?").get(evidenceId);
       if (!ev) return { ok: false, error: `no evidence ${evidenceId}` };
+      requireSurveyScopeForEvidence(ctx, "attach_evidence_to_disposition", "evidence_id", [
+        evidenceId,
+      ]);
       ctx.db
         .prepare(
           `INSERT INTO disposition_evidence (subsystem_id, concern_code, evidence_id, role)
@@ -464,6 +468,7 @@ export const evidenceTools: ToolDefinition[] = [
       if (!f) return { ok: false, error: `no finding ${findingId}` };
       const ev = ctx.db.prepare("SELECT 1 FROM evidence WHERE id = ?").get(evidenceId);
       if (!ev) return { ok: false, error: `no evidence ${evidenceId}` };
+      requireSurveyScopeForEvidence(ctx, "attach_evidence_to_finding", "evidence_id", [evidenceId]);
       ctx.db
         .prepare(
           `INSERT INTO finding_evidence (finding_id, evidence_id, role)

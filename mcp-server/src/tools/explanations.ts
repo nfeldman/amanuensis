@@ -3,6 +3,7 @@ import {
   optString,
   requireEnum,
   requireString,
+  requireSurveyScopeForEvidence,
   resolveWorkspaceCommit,
   type ServerContext,
   type ToolDefinition,
@@ -283,6 +284,7 @@ export const explanationTools: ToolDefinition[] = [
         )
         .all(...ids) as Array<{ id: number; file_path: string; kind: string }>;
       if (cited.length !== ids.length) throw new ToolError(RECORD_REFUSALS.citesEvidence());
+      requireSurveyScopeForEvidence(ctx, "record_explanation", "evidence_ids", ids);
       if (cited.every((row) => NAME_AND_PATTERN_KINDS.includes(row.kind))) {
         throw new ToolError(RECORD_REFUSALS.namesAndPatterns());
       }

@@ -3,6 +3,7 @@ import {
   optString,
   requireEnum,
   requireString,
+  requireSurveyScopeForEvidence,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -380,6 +381,11 @@ function invalidate(args: Record<string, unknown>, ctx: ServerContext): Record<s
   const impactRunId = optString(args, "impact_run_id");
   if (!(Number.isInteger(evidenceId) || impactRunId)) {
     throw new ToolError("invalidation requires evidence_id or impact_run_id");
+  }
+  if (Number.isInteger(evidenceId)) {
+    requireSurveyScopeForEvidence(ctx, "invalidate_decision_revision", "evidence_id", [
+      evidenceId as number,
+    ]);
   }
   ctx.db.transaction(() => {
     ctx.db
