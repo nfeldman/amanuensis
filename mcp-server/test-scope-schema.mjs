@@ -38,13 +38,16 @@
 //     ledger_digest, does not stand under the pre-upgrade rules, or does not
 //     stand (readReconciliationStanding, the same row) after this server opens
 //     the store.
+//   - a fixture git command reads the machine's configuration: with a
+//     planted global hooks path and template directory whose hooks fail, a
+//     commit fails or a hook runs.
 //
 // Prints exactly one last line: `GATE SC1 GREEN` (exit 0) or
 // `GATE SC1 RED: <reason>` (exit 1).
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -671,6 +674,25 @@ if (oldSchema && freshOpened) {
     });
   });
 
+  // The fixture's git must not read the machine's configuration: a global
+  // hooks path, template directory or signing setting would run or refuse
+  // something outside this gate. A hostile global configuration is planted
+  // here, so a fixture command that inherits it fails the gate.
+  const hostile = join(scratch, "hostile");
+  mkdirSync(join(hostile, "hooks"), { recursive: true });
+  mkdirSync(join(hostile, "template", "hooks"), { recursive: true });
+  for (const dir of [join(hostile, "hooks"), join(hostile, "template", "hooks")]) {
+    for (const hook of ["pre-commit", "commit-msg", "post-commit"]) {
+      writeFileSync(join(dir, hook), `#!/bin/sh\necho "${hook} ran" >> '${join(hostile, "ran.log")}'\nexit 1\n`);
+      chmodSync(join(dir, hook), 0o755);
+    }
+  }
+  writeFileSync(
+    join(hostile, "gitconfig"),
+    `[core]\n\thooksPath = ${join(hostile, "hooks")}\n[init]\n\ttemplateDir = ${join(hostile, "template")}\n`,
+  );
+  process.env.GIT_CONFIG_GLOBAL = join(hostile, "gitconfig");
+
   // The positive standing fixture: a scratch repository with two commits, a
   // store on the pre-upgrade schema, and a reconciliation that stands there.
   const repo = join(scratch, "repo");
@@ -858,5 +880,10 @@ for (const [name, dump] of GOLDEN) {
     });
   });
 }
+
+check("hermetic: no hook from the machine's git configuration ran in a fixture", () => {
+  const log = join(scratch, "hostile", "ran.log");
+  return existsSync(log) ? `hooks ran: ${readFileSync(log, "utf8").trim().split("\n").join(", ")}` : null;
+});
 
 finish();
