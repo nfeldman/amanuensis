@@ -30,7 +30,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| SC6 | Readers: describe_locus, dashboard, code index, records search | ready | SC5 | `mcp-server/test-scope-standing.mjs` | §3 SC6, §2.7, §2.6a |
+| SC6 | Readers: describe_locus, dashboard, code index, records search | ready (1 attempt) | SC5 | `mcp-server/test-scope-standing.mjs` | §3 SC6, §2.7, §2.6a |
 | SC7 | Pages and read-back over the survey set | ready | SC6 | `materializer/test-scope-pages.py` | §3 SC7, §2.8, §2.6a |
 
 ## S5 · Skill and docs (review: pending)
