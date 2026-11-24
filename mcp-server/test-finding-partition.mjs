@@ -194,6 +194,7 @@ try {
     analysis,
     materialize,
     gitModule,
+    scope,
   ] = await Promise.all([
     import("./dist/db.js"),
     import("./dist/project.js"),
@@ -207,6 +208,7 @@ try {
     import("./dist/tools/review-analysis.js"),
     import("./dist/tools/materialize.js"),
     import("./dist/tools/git.js"),
+    import("./dist/tools/scope.js"),
   ]);
   mods = {
     db,
@@ -221,6 +223,7 @@ try {
     analysis,
     materialize,
     gitModule,
+    scope,
   };
 } catch (e) {
   loadError = e && e.message ? e.message : String(e);
@@ -286,6 +289,7 @@ function buildFixture() {
       ...mods.analysis.reviewAnalysisTools,
       ...mods.materialize.materializeTools,
       ...mods.gitModule.gitTools,
+      ...mods.scope.scopeTools,
     ].map((tool) => [tool.name, tool]),
   );
   const call = (name, args = {}) => {
@@ -407,7 +411,10 @@ function buildFixture() {
   // store that has not been reconciled against the repository at the revision it
   // stamps. `src/control.ts` is the workspace's only tracked path and the ledger
   // already carries it, so the reading comes out clean; taken last, after every
-  // ledger write, because the next one would invalidate it.
+  // ledger write, because the next one would invalidate it. A fresh store is in
+  // sorted mode, where publication also needs every survey path sorted
+  // (design/scope/PLAN.md §2.5), so the one path gets a `product` row first.
+  call("record_scope_sorting", { pattern: "src/control.ts", category: "product", description: "the code" });
   call("set_git_state", { canonical_branch: "main", onboarding_sha: base });
   call("detect_changes", { current_sha: head });
 
