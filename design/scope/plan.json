@@ -634,8 +634,8 @@
       "budget_minutes": 120,
       "needs_mcp": false,
       "status": "ready",
-      "attempts": 0,
-      "start_sha": "",
+      "attempts": 1,
+      "start_sha": "1fde8be0ef86fe6c273c47881c34f4966c94e281",
       "red_sha": "",
       "green_sha": "",
       "verified_by_launcher": false,
@@ -756,7 +756,8 @@
         "SC9"
       ],
       "review": {
-        "status": "pending"
+        "status": "pending",
+        "start_sha": "1fde8be0ef86fe6c273c47881c34f4966c94e281"
       }
     }
   ],
