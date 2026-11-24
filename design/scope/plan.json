@@ -243,8 +243,8 @@
       "attempts": 1,
       "start_sha": "f0e615490bde2f71d3f4172617612c2444fa1001",
       "red_sha": "7edd88d",
-      "green_sha": "ee3cd64",
-      "verified_by_launcher": false,
+      "green_sha": "60aceee0c265bcf7561ec89e8b53b4de171f885d",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "detect_changes resolves the survey set and reads scope rows, ledger, counts and all four digests inside one IMMEDIATE transaction; scope_digest uses kind 'rule'/'sorting'; standing also requires the recorded scope_mode to equal the current one (a gap-fill), and the unsorted publication refusal runs after the unledgered/absent one so SR1's A17 keeps its own refusal. Fresh stores are sorted mode, so five publishing fixtures now record a product sorting row before reconciling: test-scope-reconciliation (C1 and the A16/A17 world), test-package-artifact, test-finding-partition, test-projection-custody, test-refresh-recovery; staleness marking and subsystem mapping of excluded rows are left to SC11."
     },
