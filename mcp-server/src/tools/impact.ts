@@ -24,6 +24,7 @@ import {
   type ScopeRuleRow,
   type ScopeSortingRow,
 } from "../scope.js";
+import { outsideSurveySeams, outsideSurveySubsystems } from "../standing.js";
 import { spawnSync } from "../subprocess.js";
 
 const DISCOVERY_MODES = ["explicit-only", "request-if-gap"] as const;
@@ -351,12 +352,26 @@ function computeImpact(
     }
   }
 
-  const xrefs = ctx.db
-    .prepare("SELECT from_id, to_id, relationship FROM xrefs ORDER BY from_id, to_id, relationship")
-    .all() as Array<{ from_id: string; to_id: string; relationship: string }>;
-  const seams = ctx.db
-    .prepare("SELECT id, party_a, party_b FROM seams ORDER BY id")
-    .all() as Array<{ id: string; party_a: string; party_b: string }>;
+  // A subsystem outside the survey, and a seam with an endpoint there, owe no
+  // work (§2.6a), so the traversal neither enters nor crosses them: nothing it
+  // would reach through them is predicted or invalidated.
+  const outsideSubsystems = outsideSurveySubsystems(ctx.db);
+  const outside = new Set(outsideSubsystems);
+  const outsideSeams = new Set(outsideSurveySeams(ctx.db, outsideSubsystems));
+  const xrefs = (
+    ctx.db
+      .prepare(
+        "SELECT from_id, to_id, relationship FROM xrefs ORDER BY from_id, to_id, relationship",
+      )
+      .all() as Array<{ from_id: string; to_id: string; relationship: string }>
+  ).filter((row) => !outside.has(row.from_id) && !outside.has(row.to_id));
+  const seams = (
+    ctx.db.prepare("SELECT id, party_a, party_b FROM seams ORDER BY id").all() as Array<{
+      id: string;
+      party_a: string;
+      party_b: string;
+    }>
+  ).filter((row) => !outsideSeams.has(row.id));
   const adjacency = new Map<
     string,
     Array<{ relation_class: "xref" | "seam"; relation_id: string; other: string }>
@@ -879,13 +894,26 @@ export const impactTools: ToolDefinition[] = [
             const evidenceSha = change.path_after ? run.head_sha : run.base_sha;
             // A prediction taken before the path left the survey set still
             // names it; the evidence it would write is a new record (§2.6).
-            requireSurveyScopeForWrite(
-              ctx,
-              "apply_change_impact",
-              `change ${changeStep.id}`,
-              sourcePath,
-              evidenceSha,
-            );
+            // The run is refused whole, and what repairs it is a new
+            // prediction, which leaves the path out, not an include rule.
+            try {
+              requireSurveyScopeForWrite(
+                ctx,
+                "apply_change_impact",
+                `change ${changeStep.id}`,
+                sourcePath,
+                evidenceSha,
+              );
+            } catch (error) {
+              if (!(error instanceof ToolError)) throw error;
+              throw new ToolError(
+                `${error.message} This run was predicted before the path left the survey set: ` +
+                  "predict the change again with predict_change_impact under a new run_id, " +
+                  "which leaves the path out, and apply that run; a refresh that adopted " +
+                  "this prediction is started again.",
+                error.rule,
+              );
+            }
             // A run predicted before the server read git with -z holds quoted
             // names ("caf\303\251.ts"), and normalization can rewrite a legal
             // name (a backslash). Neither names a file, so neither is cited.
