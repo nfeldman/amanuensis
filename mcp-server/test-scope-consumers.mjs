@@ -16,7 +16,8 @@
 //      or marks the inactive row stale (D1); or the control's change is not
 //      mapped or not marked stale (D0);
 //   2. the stale backlog lists the inactive row (B1), or the control's stale
-//      row is missing from it (B0);
+//      row is missing from it (B0), or an exclusion appended to the latest
+//      reconciliation after it was taken hides that row (B2);
 //   3. `get_attention` lists the inactive row in its stale section, or counts
 //      it in the hot-spot stale, unread or obligation columns (A1); or the
 //      control's row is not listed and counted (A0);
@@ -317,6 +318,30 @@ function main(mods) {
   check("B1 the stale backlog leaves out the inactive row", () => {
     const rows = backlog("excluded");
     return same(rows, []) ? null : `the backlog is ${show(rows)}`;
+  });
+
+  // An exclusion row appended to the latest reconciliation after it was
+  // taken fails that row's exclusion_digest, so standing falls back to an
+  // earlier reconciliation. The consumers must not trust the appended row
+  // either: inactive is decided by the latest reconciliation whose exclusions
+  // verify. Tampered with the triggers lifted, inside a rolled-back
+  // transaction.
+  check("B2 an exclusion appended after the reconciliation does not make an in-scope row inactive", () => {
+    const { db } = arms.included.ctx;
+    const latest = db.prepare("SELECT MAX(id) AS id FROM scope_reconciliations").get().id;
+    db.exec("BEGIN");
+    try {
+      for (const name of ["scope_exclusion_is_immutable", "scope_exclusion_cannot_be_replaced"]) {
+        db.exec(`DROP TRIGGER IF EXISTS ${name}`);
+      }
+      db.prepare(
+        "INSERT INTO scope_exclusions (reconciliation_id, file_path, source, rule_id) VALUES (?, ?, 'gitignore', NULL)",
+      ).run(latest, SPEC);
+      const rows = backlog("included");
+      return same(rows, [`${SUBSYSTEM}:${SPEC}`]) ? null : `the backlog is ${show(rows)}`;
+    } finally {
+      db.exec("ROLLBACK");
+    }
   });
 
   // ---------------------------------------------------------- get_attention
