@@ -27,7 +27,9 @@
 //      control's prediction does not apply (I0);
 //   4. `retire_ledger_file` refuses an excluded path, or leaves its row (X1);
 //   5. `record_scope_sorting` refuses an inventory that cites an excluded path,
-//      by the owner's rule or by an earlier meta row (X2);
+//      by the owner's rule or by an earlier meta row (X2); or `log_dispatch` or
+//      `add_field_note` refuses a path the tree does not carry, such as a store
+//      path the ignore files happen to match (X3);
 //   6. a read refuses an excluded path: `describe_locus`, `outline_file`,
 //      `read_symbol` and `get_evidence` must return a result (R1–R4);
 //   7. a tool §2.6's first table names is not registered (T1);
@@ -572,6 +574,21 @@ async function main(mods) {
           ),
         );
         if (refused) wrong.push(`${pattern}: ${refused}`);
+      }
+      return wrong.length ? wrong.join("; ") : null;
+    });
+
+    // A dispatch record usually lies in the store, and a field note's location
+    // is free text: neither names a source file unless the tree carries it, so
+    // a path the ignore files would match is not refused when it is no file.
+    await check("X3 log_dispatch and add_field_note accept a path the tree does not carry", async () => {
+      const wrong = [];
+      for (const [tool, args] of [
+        ["log_dispatch", { session_id: ctx.sessionId, seq: 900, role: "explore", file_path: "build/prompts/p.md" }],
+        ["add_field_note", { category: "pattern", observation: "free text", location: "build/later.md:1" }],
+      ]) {
+        const { refused } = await attempt(() => call(tool, args, ctx));
+        if (refused) wrong.push(`${tool}: ${refused}`);
       }
       return wrong.length ? wrong.join("; ") : null;
     });

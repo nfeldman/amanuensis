@@ -356,21 +356,30 @@ export function surveyScopeDecision(
   const workspace = ctx.project.workspacePath;
   const at = revision ?? defaultScopeRevision(ctx);
   if (!workspace || at === null) return explain(unread, null);
-  let ignored: boolean;
-  try {
-    const tree = surveyTree(workspace, at);
-    ignored = tree.paths.has(path)
+  const ignored = readSurveyTree(workspace, at, path, (tree) =>
+    tree.paths.has(path)
       ? tree.ignored.has(path)
-      : gitignoredAbsentPaths(workspace, tree.entries, [path]).has(path);
+      : gitignoredAbsentPaths(workspace, tree.entries, [path]).has(path),
+  );
+  return explain(decidePath(path, { rules, sorting, mode, ignored }), at);
+}
+
+/** `read` over the tree at `at`; a git failure is never read as "nothing ignored" (§2.3). */
+function readSurveyTree<T>(
+  workspace: string,
+  at: string,
+  path: string,
+  read: (tree: SurveyTree) => T,
+): T {
+  try {
+    return read(surveyTree(workspace, at));
   } catch (error) {
-    // §2.3: a git failure is never read as "nothing ignored".
     throw new ToolError(
       `the survey scope of ${path} cannot be decided at ${at.slice(0, 12)}: ` +
         `${(error as Error).message}`,
       "scope.unreadable",
     );
   }
-  return explain(decidePath(path, { rules, sorting, mode, ignored }), at);
 }
 
 /**
@@ -409,6 +418,30 @@ export function requireSurveyScopeForWrite(
       "owner's words.",
     "scope.excluded-write",
   );
+}
+
+/**
+ * The guard for an argument that may name a workspace file and need not: a field note's
+ * free-text location, or a dispatch record's path, which usually lies in the store. It
+ * refuses only when the value names a file in the tree at `revision` (default: the last
+ * reconciled revision, else HEAD) that the survey set excludes, so a store path the
+ * repository's ignore files happen to match is not mistaken for an excluded source file.
+ */
+export function requireSurveyScopeForMention(
+  ctx: ServerContext,
+  tool: string,
+  label: string,
+  value: unknown,
+  revision: string | null = null,
+): void {
+  const path = citedSourcePath(value);
+  const workspace = ctx.project.workspacePath;
+  if (path === null || !workspace) return;
+  const at = revision ?? defaultScopeRevision(ctx);
+  if (at === null) return;
+  if (readSurveyTree(workspace, at, path, (tree) => tree.paths.has(path))) {
+    requireSurveyScopeForWrite(ctx, tool, label, path, at);
+  }
 }
 
 /**
