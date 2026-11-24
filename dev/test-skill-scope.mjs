@@ -27,7 +27,8 @@
 //     record_scope_sorting, detect_changes, or one of them is absent from the built server;
 //   - SKILL.md's routing table has no row for "ignore X" / "don't survey X" that calls
 //     `set_scope_rule` with `exclude` and quotes the owner's words, or none for "survey X after
-//     all" that calls it with `include`;
+//     all" that calls it with `include`, or either row leaves out the pattern, `reason` or
+//     `owner_words` the tool requires;
 //   - phase-1-scope.md does not say a path outside the survey set gets no ledger row,
 //     notes.md does not say what `excluded` with a source (gitignore, user, meta) means when
 //     answering about a locus, or says such a path holds no record where §2.6a keeps the records
@@ -306,6 +307,14 @@ check("T7 the two routing rows are in SKILL.md's table", () => {
     const action = cells(include)[1] ?? "";
     if (!(/`set_scope_rule/.test(action) && /`include`/.test(action))) problems.push(`the include row calls "${action.slice(0, 100)}"`);
     if (/`exclude`/.test(action)) problems.push("the include row names exclude");
+  }
+  // set_scope_rule requires pattern, action, reason and owner_words; a row followed literally must send all four.
+  for (const [name, row] of [["exclude", exclude], ["include", include]]) {
+    if (!row) continue;
+    const action = cells(row)[1] ?? "";
+    if (!/`reason`/.test(action)) problems.push(`the ${name} row does not give a \`reason\`, which set_scope_rule requires`);
+    if (!/\bpattern\b/i.test(action)) problems.push(`the ${name} row does not give the pattern`);
+    if (!/`owner_words`/.test(action)) problems.push(`the ${name} row does not name \`owner_words\``);
   }
   return problems.length ? problems.join("; ") : null;
 });
