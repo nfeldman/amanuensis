@@ -35,7 +35,12 @@
 //   7. a tool §2.6's first table names is not registered (T1);
 //   8. the refusal is not registered in contracts/refusal-parity.json with its
 //      sentence in references/records.md (P1);
-//   9. this gate is not registered in CI (CI1).
+//   9. this gate is not registered in CI (CI1);
+//  10. on a second fixture whose `.gitignore` differs at each of three
+//      commits, a write is decided at some revision other than the last
+//      reconciled one: at the revision it cites, or at HEAD (G1–G3); or an
+//      owner include rule over one path under an excluded prefix, or over one
+//      gitignored path, does not let a write and only that path through (G4).
 //
 // Every fixture is a temporary git repository and a store under a temporary
 // AMANUENSIS_STORAGE_ROOT; no git configuration but the fixture's own is read,
@@ -648,6 +653,110 @@ async function main(mods) {
   });
 }
 
+// A second fixture, for the revision a write is decided at. `.gitignore`
+// ignores `old/` at c0, `gen/` at c1 and nothing at c2, which is HEAD; the
+// store reconciles at c1. So `gen/out.js` is excluded and `old/x.js` is not,
+// at every revision a write may cite, and only c1's ignore files say so. The
+// same store carries an owner exclude over `docs/` with an include of
+// `docs/kept.md`, and an include of the gitignored `gen/kept.js`.
+async function revisionFixture(mods) {
+  const { openDatabase, resolveProject, ensureProjectStorage, toolArrays } = mods;
+  const allTools = new Map(toolArrays.flat().map((td) => [td.name, td]));
+  const call = (name, args, ctx) => allTools.get(name).handler(args, ctx);
+  const scratch = mkdtempSync(join(tmpdir(), "amanuensis-sc10-rev-"));
+  const ws = join(scratch, "ws");
+  const write = (name, body) => {
+    mkdirSync(dirname(join(ws, name)), { recursive: true });
+    writeFileSync(join(ws, name), body);
+  };
+  mkdirSync(ws, { recursive: true });
+  git(ws, "init", "-q", "--template=");
+  write("src/a.ts", "export const a = 1;\n");
+  for (const path of ["gen/out.js", "gen/kept.js", "old/x.js"]) write(path, `export const v = "${path}";\n`);
+  write("docs/kept.md", "# Kept\n");
+  write("docs/other.md", "# Other\n");
+  write(".gitignore", "old/\n");
+  git(ws, "add", "-A");
+  git(ws, "add", "-f", "gen/out.js", "gen/kept.js", "old/x.js");
+  const c0 = commit(ws, "ignore old/");
+  write(".gitignore", "gen/\n");
+  git(ws, "add", ".gitignore");
+  const c1 = commit(ws, "ignore gen/");
+  write(".gitignore", "# nothing\n");
+  git(ws, "add", ".gitignore");
+  const c2 = commit(ws, "ignore nothing");
+
+  const project = resolveProject(ws, { selectionSource: "sc10-revision" });
+  ensureProjectStorage(project, (databasePath) => openDatabase(databasePath).close());
+  const ctx = { project, db: openDatabase(project.dbPath), sessionId: null };
+  const evidence = (path, ref) =>
+    call("add_evidence", { file_path: path, line_range: "1", ref_sha: ref, kind: "code-verified" }, ctx);
+  const outcome = async (path, ref) => {
+    try {
+      const result = await evidence(path, ref);
+      return result && result.ok === false ? `refused: ${result.error}` : "accepted";
+    } catch (error) {
+      return `refused: ${error?.message ?? error}`;
+    }
+  };
+  try {
+    ctx.sessionId = call("start_session", { intent: "sc10 write revision" }, ctx).session_id;
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: c0 }, ctx);
+    call("detect_changes", { current_sha: c1 }, ctx);
+    const short = { [c0]: "c0", [c1]: "c1", [c2]: "c2 (HEAD)" };
+    await check("G1 a write citing an earlier or later commit is decided at the reconciled c1: gen/out.js is refused", async () => {
+      const wrong = [];
+      for (const ref of [c0, c1, c2]) {
+        const result = await outcome("gen/out.js", ref);
+        if (!result.startsWith("refused:")) wrong.push(`at ${short[ref]}: ${result}`);
+        else if (!result.includes("source gitignore") || !result.includes(INCLUDE_REMEDY)) {
+          wrong.push(`at ${short[ref]}: ${result}`);
+        }
+      }
+      return wrong.length ? wrong.join("; ") : null;
+    });
+    await check("G2 a path ignored only at the cited c0 is in the survey set at c1, so the write is accepted", async () => {
+      const result = await outcome("old/x.js", c0);
+      return result === "accepted" ? null : `old/x.js at c0: ${result}`;
+    });
+    await check("G3 the decision reads c1's ignore files, not HEAD's", async () => {
+      const result = await outcome("gen/out.js", c2);
+      return result.includes(`at ${c1.slice(0, 12)}`) ? null : `gen/out.js at c2: ${result}`;
+    });
+    const exclude = call(
+      "set_scope_rule",
+      { pattern: "docs/", action: "exclude", reason: "notes", owner_words: "don't survey docs/" },
+      ctx,
+    ).id;
+    for (const pattern of ["docs/kept.md", "gen/kept.js"]) {
+      call(
+        "set_scope_rule",
+        { pattern, action: "include", reason: "the owner wants it", owner_words: `survey ${pattern}` },
+        ctx,
+      );
+    }
+    await check("G4 an owner include lets a write through on its path only, under an exclude and over gitignore", async () => {
+      const wrong = [];
+      for (const path of ["docs/kept.md", "gen/kept.js"]) {
+        const result = await outcome(path, c1);
+        if (result !== "accepted") wrong.push(`${path}: ${result}`);
+      }
+      const sibling = await outcome("docs/other.md", c1);
+      if (!sibling.includes(`owner rule ${exclude}`)) wrong.push(`docs/other.md: ${sibling}`);
+      const ignored = await outcome("gen/out.js", c1);
+      if (!ignored.includes("source gitignore")) wrong.push(`gen/out.js: ${ignored}`);
+      return wrong.length ? wrong.join("; ") : null;
+    });
+  } finally {
+    try {
+      ctx.db.close();
+    } catch {
+      /* already reported */
+    }
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
+
 function registered() {
   const register = join(here, "contracts", "refusal-parity.json");
   if (!existsSync(register)) return "contracts/refusal-parity.json is absent";
@@ -711,6 +820,7 @@ try {
       failures.push("L a tool array could not be read from dist/tools");
     } else {
       await main(mods);
+      await revisionFixture(mods);
     }
   }
   await check("P1 the refusal is registered, with its sentence in references/records.md", registered);
