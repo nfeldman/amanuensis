@@ -742,8 +742,10 @@
         "SC7"
       ],
       "review": {
-        "status": "pending",
-        "start_sha": "363909d161e16f5f02262e134f2f4ab90225d442"
+        "status": "reviewed",
+        "start_sha": "363909d161e16f5f02262e134f2f4ab90225d442",
+        "reviewed_sha": "a6e052973025ded9354feec7516b1a1881706d93",
+        "findings": 17
       }
     },
     {

@@ -26,7 +26,7 @@
 | SC12 | Write guard: evidence attachments and the census | done (1 attempt) | SC10 | `mcp-server/test-scope-attach-guard.mjs` | §3 SC12, §2.6 |
 | SC5 | Completion checker over the survey set | done (1 attempt) | SC12 | `dev/test-store-fully-surveyed-scope.mjs` | §3 SC5, §2.10, §2.6a |
 
-## S4 · Readers and pages (review: pending)
+## S4 · Readers and pages (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
