@@ -23,6 +23,10 @@
 //     after case, punctuation and contractions are set aside, or states a reversal of it
 //     (the rules in a tracked file or not in the store; the pages omitting nothing or the
 //     overview carrying no count);
+//   - the item, outside the owner's quoted rule, contradicts the survey set its opening
+//     paragraph states: excluded paths printed or shown on the pages, excluded paths getting a
+//     ledger row, evidence or a vocabulary anchor, the less specific owner rule deciding, or
+//     gitignore or meta winning over an include (a sentence the final review wrote);
 //   - the item leaves any decision open (waiting, undecided, to be decided).
 // Reads only BACKLOG.md, PLAN.md and plan.json; it touches no store.
 
@@ -49,6 +53,16 @@ const REVERSAL = {
   2: [/omit nothing/, /\bno count\b/, /\b(?:list|print|show)s? excluded/],
   3: [],
 };
+
+// Prose anywhere in the item, outside the owner's quoted rule, that contradicts the survey set
+// it states: excluded paths printed on the pages, given records, or the less specific rule deciding.
+const SCOPE_REVERSAL = [
+  /\b(?:print|list|show|label)(?:s|ed)?\b[^.]*\bexcluded paths?\b[^.]*\b(?:every|each|all|the) pages?\b/,
+  /\bexcluded paths?\b[^.]*\b(?:appears?|printed|listed|shown|labell?ed) on (?:every|each|all|the) pages?\b/,
+  /\bexcluded paths? (?:also |still )?(?:gets?|has|have|keeps?) (?:a |its )?(?:ledger rows?|evidence|vocabulary anchors?)\b/,
+  /\bless specific\b[^.]*\bdecides?\b/,
+  /\b(?:gitignore|meta)\b[^.]*\bwins? over\b[^.]*\binclude/,
+];
 
 // A statement as compared: lower case, contractions spelled out, punctuation and
 // emphasis dropped, whitespace collapsed.
@@ -146,6 +160,11 @@ function check() {
   ];
   for (const [re, what] of scopeNeeds) {
     if (!re.test(scope)) return `the survey-scope opening paragraph does not state ${what}`;
+  }
+  const prose = squash(item.filter((line) => !/^\s*>/.test(line)).join(" ")).toLowerCase();
+  for (const sentence of prose.split(/(?<=\.)\s+/)) {
+    const reversal = SCOPE_REVERSAL.find((re) => re.test(sentence));
+    if (reversal) return `the survey-scope item contradicts the survey set it states: "${sentence.slice(0, 120)}"`;
   }
 
   // The owner's rule, word for word from PLAN §1.
