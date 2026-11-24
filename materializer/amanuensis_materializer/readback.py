@@ -38,6 +38,7 @@ from .db import (
     scope_mode,
     survey_exclusions,
     survey_filter,
+    survey_reconciliation,
     table_exists,
     utf16_order,
 )
@@ -956,6 +957,11 @@ WHY_SCOPE_MODE_CHANGED = (
 WHY_EXCLUSIONS_CHANGED = (
     "the scope_exclusions rows recorded there no longer match the reconciliation's exclusion_digest"
 )
+# The pages list the survey set of the last verified reconciliation; one that
+# stands over another set would publish counts of a set the pages do not show.
+WHY_SURVEY_SET_SUPERSEDED = (
+    "a later reconciliation recorded a different survey set, which the readers use"
+)
 
 
 @dataclass(frozen=True)
@@ -1072,6 +1078,8 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
     current_scope = scope_digest(conn)
     current_mode = scope_mode(conn)
     scoped = has_scope_rows(conn)
+    selected = survey_reconciliation(conn)
+    readers_digest = selected["exclusion_digest"] if selected else None
 
     def scope_why(candidate: dict[str, Any]) -> str | None:
         exclusions = reconciliation_exclusion_rows(conn, candidate["id"])
@@ -1089,6 +1097,8 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
             return WHY_SCOPE_MODE_CHANGED
         if str(candidate["exclusion_digest"]) != exclusion_digest(exclusions):
             return WHY_EXCLUSIONS_CHANGED
+        if selected is None or candidate["exclusion_digest"] != readers_digest:
+            return WHY_SURVEY_SET_SUPERSEDED
         return None
 
     scope_failure = {candidate["id"]: scope_why(candidate) for candidate in at_sha}

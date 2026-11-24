@@ -28,6 +28,7 @@ import uuid
 from pathlib import Path
 
 from amanuensis_materializer import Materializer
+from amanuensis_materializer.db import open_ro, unverified_latest_exclusions
 from amanuensis_materializer.html_projection import cli_render_notice
 from amanuensis_materializer.readback import BOUND_WORKSPACE
 
@@ -193,6 +194,19 @@ def main() -> int:
             )
         )
         return 2
+    # A render lists the survey set; with the latest reconciliation's exclusions
+    # no longer matching their digest the set is unknown, and falling back to an
+    # older set, or to none, would print excluded paths as surveyed. A read-back
+    # writes nothing and reports standing itself, so it is not refused here.
+    if not args.readback_only:
+        conn = open_ro(db_path)
+        try:
+            unverified = unverified_latest_exclusions(conn)
+        finally:
+            conn.close()
+        if unverified is not None:
+            print(json.dumps({"ok": False, "error": f"refusing to render: {unverified}"}))
+            return 2
     recorded = args.recorded_publication
     notice = cli_render_notice(recorded=recorded, verified=not args.no_verify_readback)
     if args.readback_only:

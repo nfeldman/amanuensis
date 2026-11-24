@@ -18,6 +18,7 @@ from .db import (
     row,
     rows,
     survey_filter,
+    survey_reconciliation,
     table_exists,
 )
 from .page import (
@@ -1123,10 +1124,15 @@ def _latest_reconciliation(conn: sqlite3.Connection) -> dict[str, Any] | None:
         if any(c["name"] == "survey_paths" for c in rows(conn, "PRAGMA table_info(scope_reconciliations)"))
         else "NULL AS survey_paths"
     )
+    # The reconciliation whose exclusions the listings read (db.survey_reconciliation), so the
+    # bar's survey set and the pages' are one; the latest when none was taken under scope.
+    selected = survey_reconciliation(conn)
+    where = "WHERE id = ?" if selected else ""
     return row(
         conn,
         f"SELECT id, detected_sha, tracked_paths, ledger_rows, unledgered, absent, exempt, {survey}"
-        " FROM scope_reconciliations ORDER BY id DESC LIMIT 1",
+        f" FROM scope_reconciliations {where} ORDER BY id DESC LIMIT 1",
+        (selected["id"],) if selected else (),
     )
 
 

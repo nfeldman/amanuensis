@@ -1391,6 +1391,8 @@ const SCOPE_MODE_CHANGED =
   "the store's scope mode has changed since the reconciliation recorded there was taken";
 const EXCLUSIONS_CHANGED =
   "the scope_exclusions rows recorded there no longer match the reconciliation's exclusion_digest";
+const SURVEY_SET_SUPERSEDED =
+  "a later reconciliation recorded a different survey set, which the readers use";
 
 function readLastCheckedSha(db: DB): string | null {
   return (
@@ -1509,6 +1511,14 @@ export function readReconciliationStanding(
   const hasScopeRows =
     db.prepare("SELECT 1 FROM scope_rules UNION ALL SELECT 1 FROM scope_sorting LIMIT 1").get() !==
     undefined;
+  // The readers (ACTIVE_LEDGER_ROW_SQL, every count and page) take the survey set from
+  // the last verified reconciliation; a candidate stands only over that same set, so a
+  // standing reading never counts a set the readers do not use.
+  const readers = db
+    .prepare(
+      `SELECT exclusion_digest FROM scope_reconciliations WHERE id = ${SCOPE_RECONCILIATION_ID_SQL}`,
+    )
+    .get() as { exclusion_digest: string | null } | undefined;
   const ledgerDigests = new Map<string, string>();
   const judge = (row: ScopeReconciliation): string | null => {
     const exclusions = readScopeExclusions(db, row.id);
@@ -1521,6 +1531,9 @@ export function readReconciliationStanding(
       if (row.scope_digest !== currentScope) return SCOPE_RULES_CHANGED;
       if (row.scope_mode !== mode) return SCOPE_MODE_CHANGED;
       if (row.exclusion_digest !== exclusionDigest(exclusions)) return EXCLUSIONS_CHANGED;
+      if (readers === undefined || row.exclusion_digest !== readers.exclusion_digest) {
+        return SURVEY_SET_SUPERSEDED;
+      }
     }
     const key = row.exclusion_digest ?? "";
     let current = ledgerDigests.get(key);

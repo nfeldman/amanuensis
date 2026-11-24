@@ -171,19 +171,56 @@ def reconciliation_exclusion_rows(conn: sqlite3.Connection, reconciliation_id: A
     )
 
 
-def survey_exclusions(conn: sqlite3.Connection) -> list[dict[str, Any]]:
-    """The exclusions of the last reconciliation whose rows still match its digest, by path."""
-
+def _reconciliations_newest_first(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     if not table_exists(conn, "scope_exclusions") or not table_exists(conn, "scope_reconciliations"):
         return []
     has_digest = any(c["name"] == "exclusion_digest" for c in rows(conn, "PRAGMA table_info(scope_reconciliations)"))
     digest = "exclusion_digest" if has_digest else "NULL AS exclusion_digest"
-    for recon in rows(conn, f"SELECT id, {digest} FROM scope_reconciliations ORDER BY id DESC"):
-        found = reconciliation_exclusion_rows(conn, recon["id"])
-        recorded = recon["exclusion_digest"]
-        if (recorded is None and not found) or (recorded is not None and recorded == exclusion_digest(found)):
-            return found
-    return []
+    return rows(conn, f"SELECT id, {digest} FROM scope_reconciliations ORDER BY id DESC")
+
+
+def _verified(conn: sqlite3.Connection, recon: dict[str, Any]) -> list[dict[str, Any]] | None:
+    """A reconciliation's exclusion rows when they still match its digest, else None."""
+
+    found = reconciliation_exclusion_rows(conn, recon["id"])
+    recorded = recon["exclusion_digest"]
+    if (recorded is None and not found) or (recorded is not None and recorded == exclusion_digest(found)):
+        return found
+    return None
+
+
+def survey_reconciliation(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    """The reconciliation whose exclusions are the survey set: the last whose rows still match
+    its digest, as the server's `SCOPE_RECONCILIATION_ID_SQL` selects it. Every listing, count
+    and bar reads this one, and read-back's standing must be taken over the same set."""
+
+    for recon in _reconciliations_newest_first(conn):
+        found = _verified(conn, recon)
+        if found is not None:
+            return {**recon, "exclusions": found}
+    return None
+
+
+def survey_exclusions(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """The exclusions of the last reconciliation whose rows still match its digest, by path."""
+
+    selected = survey_reconciliation(conn)
+    return selected["exclusions"] if selected else []
+
+
+def unverified_latest_exclusions(conn: sqlite3.Connection) -> str | None:
+    """Why the latest reconciliation's exclusions cannot be trusted, or None when they can.
+
+    A render over them would fall back to an older set, or to none, and print excluded paths
+    as surveyed; a render refuses instead, and `detect_changes` records a set that matches."""
+
+    latest = next(iter(_reconciliations_newest_first(conn)), None)
+    if latest is None or _verified(conn, latest) is not None:
+        return None
+    return (
+        f"the scope_exclusions rows of reconciliation {latest['id']} no longer match its"
+        " exclusion_digest, so the survey set is unknown; run detect_changes to record it again"
+    )
 
 
 def survey_filter(conn: sqlite3.Connection, column: str = "file_path") -> str:

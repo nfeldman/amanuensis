@@ -291,6 +291,21 @@ const SCOPE_RULES_CHANGED = "the scope rules have changed since the reconciliati
 const SCOPE_MODE_CHANGED = "the store's scope mode has changed since the reconciliation recorded there was taken";
 const EXCLUSIONS_CHANGED =
   "the scope_exclusions rows recorded there no longer match the reconciliation's exclusion_digest";
+const SURVEY_SET_SUPERSEDED = "a later reconciliation recorded a different survey set, which the readers use";
+
+/**
+ * The `exclusion_digest` of the reconciliation the readers take the survey set from: the
+ * last whose `scope_exclusions` rows still match its digest (the server's
+ * `SCOPE_RECONCILIATION_ID_SQL`, restated). Undefined when none does.
+ */
+function readersExclusionDigest() {
+  for (const candidate of rows("SELECT id, exclusion_digest FROM scope_reconciliations ORDER BY id DESC") ?? []) {
+    const exclusions = exclusionsOf(candidate.id);
+    const recorded = candidate.exclusion_digest ?? null;
+    if (recorded === null ? exclusions.length === 0 : recorded === exclusionDigestOf(exclusions)) return recorded;
+  }
+  return undefined;
+}
 
 /**
  * Is a reconciliation *standing* at R? §3.3's five conditions and the two scope digests (§2.5), and only a row
@@ -332,6 +347,7 @@ function standingReconciliation(revision) {
   const currentScope = scopeDigestNow();
   const mode = scopeMode();
   const scoped = hasScopeRows();
+  const readers = readersExclusionDigest();
   const judge = (candidate) => {
     const exclusions = exclusionsOf(candidate.id);
     if (candidate.scope_digest == null) {
@@ -343,6 +359,8 @@ function standingReconciliation(revision) {
       if (candidate.scope_digest !== currentScope) return SCOPE_RULES_CHANGED;
       if (candidate.scope_mode !== mode) return SCOPE_MODE_CHANGED;
       if (candidate.exclusion_digest !== exclusionDigestOf(exclusions)) return EXCLUSIONS_CHANGED;
+      // A candidate stands only over the set the readers use (§2.5).
+      if (readers === undefined || candidate.exclusion_digest !== readers) return SURVEY_SET_SUPERSEDED;
     }
     const excluded = new Set(exclusions.map((exclusion) => exclusion.file_path));
     const current = digestOf(
