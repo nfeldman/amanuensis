@@ -45,8 +45,9 @@
 //
 // Every fixture is a temporary git repository and a store under a temporary
 // AMANUENSIS_STORAGE_ROOT; nothing here reads a real store or the network.
-// The legacy fixture applies the schema at 6a6dc43, read from this
-// repository's history, as test-scope-schema.mjs does.
+// The legacy fixture applies the schema at 6a6dc43 from a checked-in copy,
+// fixtures/scope/schema-6a6dc43.sql, so the gate reads no repository history;
+// where the history is present, the copy must equal it (L6).
 //
 // The digests are restated here, not imported (GP24): a fixture checked by the
 // code under test proves only that the code agrees with itself.
@@ -887,17 +888,26 @@ function main(mods) {
     );
     const project = contextFor(ws3, "legacy");
     const head = git(ws3, "rev-parse", "HEAD");
-    const schema = spawnSync("git", ["show", `${PRE_UPGRADE_SHA}:mcp-server/src/schema.sql`], {
-      cwd: here,
-      encoding: "utf8",
-      maxBuffer: 64 * 1024 * 1024,
-    });
+    // The schema at 6a6dc43 is a checked-in fixture, so the gate reads no
+    // repository history; L6 holds the fixture to that history wherever the
+    // history is present, as it is in CI.
+    const schemaPath = join(here, "fixtures", "scope", `schema-${PRE_UPGRADE_SHA}.sql`);
+    const schema = { stdout: existsSync(schemaPath) ? readFileSync(schemaPath, "utf8") : "" };
     let legacyId = null;
     let ctx3 = null;
+    check("L6 the pre-upgrade schema fixture is the schema at 6a6dc43, where history has it", () => {
+      if (!schema.stdout) return `${schemaPath} is absent or empty`;
+      const history = spawnSync("git", ["show", `${PRE_UPGRADE_SHA}:mcp-server/src/schema.sql`], {
+        cwd: here,
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+        env: FIXTURE_GIT_ENV,
+      });
+      if (history.status !== 0) return null;
+      return history.stdout === schema.stdout ? null : `${schemaPath} differs from git show ${PRE_UPGRADE_SHA}`;
+    });
     check("L0 the pre-upgrade store is built", () => {
-      if (schema.status !== 0 || !schema.stdout) {
-        return `git show ${PRE_UPGRADE_SHA}:mcp-server/src/schema.sql gave nothing (a shallow clone needs fetch-depth: 0)`;
-      }
+      if (!schema.stdout) return `${schemaPath} is absent or empty`;
       rmSync(project.dbPath, { force: true });
       for (const suffix of ["-wal", "-shm"]) rmSync(`${project.dbPath}${suffix}`, { force: true });
       const raw = new Database(project.dbPath);
