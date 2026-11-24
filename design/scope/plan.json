@@ -756,8 +756,10 @@
         "SC9"
       ],
       "review": {
-        "status": "pending",
-        "start_sha": "1fde8be0ef86fe6c273c47881c34f4966c94e281"
+        "status": "reviewed",
+        "start_sha": "1fde8be0ef86fe6c273c47881c34f4966c94e281",
+        "reviewed_sha": "46403430c552d509c41593c1fa4f723e9f6c8310",
+        "findings": 13
       }
     }
   ],
