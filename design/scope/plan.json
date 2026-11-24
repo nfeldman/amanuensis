@@ -36,8 +36,8 @@
       "attempts": 1,
       "start_sha": "4bc4223c9e5b258d3a33fefaf28fa30814af5507",
       "red_sha": 5228412,
-      "green_sha": "17a55de",
-      "verified_by_launcher": false,
+      "green_sha": "30fb11ca6fffc55fb1f9051917ccf118ef0fd60c",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "BACKLOG.md gains one Survey scope item after the code-index item: survey set, owner's rule quoted word for word from PLAN §1, F1-F3 decided 2026-11-23, 13 packets in five slices. Gate checks the quote, packet count and range against PLAN.md and plan.json, and is registered in test.yml beside SI0."
     },
