@@ -588,8 +588,8 @@
       "attempts": 1,
       "start_sha": "d7effefa10479b994e4c948679aa9944aa31b736",
       "red_sha": 5218398,
-      "green_sha": "6ab0421",
-      "verified_by_launcher": false,
+      "green_sha": "48fecc7013ec1aeeab52286b4dadba3bcaac79f5",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Pages filter through db.survey_filter, a TEMP table of the last reconciliation whose exclusions match its exclusion_digest (the server's rule, restated); read-back standing also checks scope_digest, scope_mode and exclusion_digest. Gaps filled: denominators say 'paths in the survey set' only when something is excluded (so golden stores stay byte-identical, no make-golden run); outside seams also leave the hot-spots and not-yet-surveyed seam counts; outside subsystems leave the (subsystem, concern) pairs and get a coverage-bar sentence. No existing assertion changed."
     },
