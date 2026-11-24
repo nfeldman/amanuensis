@@ -135,6 +135,36 @@ real run; "read" means found by reading code and not reproduced.
     `references/code-index.md`; the unsupported-language note says every tool refuses, but
     `find_symbol` answers `ok: true` with a status; and `search_records` calls `subject` a prefix
     when it matches whole segments only.
+- **Survey scope: a survey leaves out what it need not account for.** Planned 2026-11-23. A
+  survey has a **survey set**: the tree at a revision minus three kinds of path: paths the
+  repository's ignore files match at that revision (gitignore), paths the owner excluded (user)
+  and paths onboarding sorted as about the project rather than part of it (meta). The owner's
+  include rules win over gitignore and meta; between owner rules the more specific pattern
+  decides, so an exclude of one file inside an included directory keeps that file out. Every
+  consumer that today uses the whole tree as its denominator (reconciliation, the ledger, the
+  `mapped` and publication checks, the readers, the pages and the completion checker) uses the
+  survey set instead. Excluded means not included, the owner's ruling of 2026-11-06: an excluded
+  path gets no ledger row, no evidence and no vocabulary anchor, and appears on no page except as
+  a count on the overview. Ledger-exempt classifications inside the survey set (`generated-ignore`
+  and the rest) keep today's behaviour and still print. Existing stores keep working: a `legacy`
+  store, one that already had ledger rows, changes in one way only, that gitignore matches leave
+  the survey set and show as `excluded_with_rows` if they were ledgered. There is no tracked
+  `.amanuensisignore` file; the rules live in the store.
+
+  The owner's rule, stated 2026-11-23 and condensed:
+
+  > Anything git ignored, we should ignore by default (user can override as needed); anything
+  > the user says is irrelevant the survey should skip; anything that seems like it isn't code
+  > or relevant to code should be skimmed and categorized as product or meta product/product
+  > adjacent, with the latter being inventoried cheaply to ensure it is what it seems, then not
+  > included in any work until/unless instructed otherwise.
+
+  The plan is [design/scope/PLAN.md](design/scope/PLAN.md): 13 packets, SC0 to SC12, in five
+  slices. It is Part 1 of the self-survey plan; Part 2 surveys the repository with it. Its
+  decisions, approved by the owner on 2026-11-23:
+  - F1 decided 2026-11-23: the rules live in the store, written through tools (`set_scope_rule`, `record_scope_sorting`), not in a file.
+  - F2 decided 2026-11-23: the pages omit excluded paths; the overview carries one line with the count for each source and the owner's rules.
+  - F3 decided 2026-11-23: sorting is by directory prefix where a prefix is uniform and by single path where it is not; new paths under a meta prefix inherit its category.
 
 ## Explanation quality
 

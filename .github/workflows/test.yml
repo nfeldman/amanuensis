@@ -184,6 +184,9 @@ jobs:
       # GATE SI0 (design/semantic-index/PLAN.md §8 SI0). Reads BACKLOG.md and the plan only.
       - name: Code-index backlog — the plan is linked and D1–D6, D10, D12 are listed
         run: node dev/test-code-index-backlog.mjs
+      # GATE SC0 (design/scope/PLAN.md §3 SC0). Reads BACKLOG.md, the plan and plan.json only.
+      - name: Survey-scope backlog — the plan is linked, the owner's rule is quoted and F1–F3 are listed
+        run: node dev/test-scope-backlog.mjs
       # GATE SI9 (design/semantic-index/PLAN.md §5, §8 SI9). Reads the skill text, its committed start-revision copies and the built tool definitions.
       - name: Skill code-index guidance — adds to reading, never forbids whole-file reads (GATE SI9)
         run: node dev/test-skill-code-index.mjs
