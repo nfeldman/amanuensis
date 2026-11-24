@@ -1,0 +1,488 @@
+#!/usr/bin/env node
+// GATE SC11 (design/scope/PLAN.md §3 SC11; §2.6a) — consumers of inactive
+// ledger rows. A ledger row on a path the survey set excludes is kept, and
+// creates no work.
+//
+// One store per arm, built the same way: subsystem S-01 owns `src/core.ts`
+// (examined), `design/spec.md` (examined) and `design/draft.md` (candidate);
+// `README.md` is sorted and never ledgered. In the `excluded` arm the owner
+// excludes `design/` after the rows exist, so both design rows are inactive.
+// Commit c1 then changes `design/spec.md` and nothing else. The `included` arm
+// records no rule, so the same commit lands on an in-scope path: that is the
+// positive control, and every route below must create work there.
+//
+// Turns red when:
+//   1. `detect_changes` maps the change on the excluded path to its subsystem,
+//      or marks the inactive row stale (D1); or the control's change is not
+//      mapped or not marked stale (D0);
+//   2. the stale backlog lists the inactive row (B1), or the control's stale
+//      row is missing from it (B0);
+//   3. `get_attention` lists the inactive row in its stale section, or counts
+//      it in the hot-spot stale, unread or obligation columns (A1); or the
+//      control's row is not listed and counted (A0);
+//   4. change impact maps the change on the excluded path to a subsystem, or
+//      opens a gap for it (I1); or the control's change is not mapped (I0), or
+//      an in-scope changed path with no ledger row opens no gap (I2);
+//   5. review planning makes an inactive row required work, as a stale file or
+//      an unverified file (R1); or the control's rows are not required (R0);
+//   6. a refresh run blocks on drift over the inactive row (F1); or the
+//      control's run does not block on the drift it cannot own (F0);
+//   7. this gate is not registered in CI (CI1).
+//
+// Every fixture is a temporary git repository and a store under a temporary
+// AMANUENSIS_STORAGE_ROOT; nothing here reads a real store or the network.
+//
+//   exit 0  `GATE SC11 GREEN`
+//   exit 1  `GATE SC11 RED: <reason>`
+
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const SUBSYSTEM = "S-01";
+const CORE = "src/core.ts";
+const SPEC = "design/spec.md";
+const DRAFT = "design/draft.md";
+
+// A crash signature in this gate's output means the run never reached its
+// assertion, so the launcher rejects it as a red proof. Detail quoted from a
+// live error is scrubbed rather than trusted.
+const CRASH_SIGNATURES = [
+  "MODULE_NOT_FOUND",
+  "Cannot find module",
+  "ModuleNotFoundError",
+  "SyntaxError",
+  "No such file or directory",
+  "command not found",
+  "ImportError",
+  "ENOENT",
+  "ReferenceError",
+  "is not defined",
+  "TypeError",
+  "is not a function",
+  "Traceback (most recent call last)",
+];
+function scrub(text) {
+  let out = String(text ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  for (const signature of CRASH_SIGNATURES) {
+    const cut = Math.ceil(signature.length / 2);
+    out = out.split(signature).join(`${signature.slice(0, cut)}…${signature.slice(cut)}`);
+  }
+  return out;
+}
+
+const failures = [];
+let checked = 0;
+function check(label, fn) {
+  checked++;
+  try {
+    const detail = fn();
+    if (detail) failures.push(`${label}: ${scrub(detail)}`);
+  } catch (error) {
+    failures.push(`${label}: threw — ${scrub(error?.message ?? error)}`);
+  }
+}
+
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const show = (value) => JSON.stringify(value);
+
+// ---------------------------------------------------------------- fixtures
+
+function git(cwd, ...args) {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(" ")} exited ${result.status}: ${String(result.stderr).trim()}`);
+  }
+  return String(result.stdout ?? "").trim();
+}
+function commitAll(cwd, message) {
+  git(cwd, "add", "-A");
+  git(
+    cwd,
+    "-c", "user.email=sc11@localhost",
+    "-c", "user.name=scope-sc11",
+    "-c", "commit.gpgsign=false",
+    "commit", "-q", "--no-verify", "-m", message,
+  );
+  return git(cwd, "rev-parse", "HEAD");
+}
+
+function main(mods) {
+  const { openDatabase, resolveProject, ensureProjectStorage, toolArrays } = mods;
+  const allTools = new Map(toolArrays.flat().map((td) => [td.name, td]));
+  function call(name, args, ctx) {
+    const td = allTools.get(name);
+    if (!td) throw new Error(`no such tool: ${name}`);
+    return td.handler(args, ctx);
+  }
+
+  const scratch = mkdtempSync(join(tmpdir(), "amanuensis-sc11-"));
+  process.env.AMANUENSIS_STORAGE_ROOT = join(scratch, "storage");
+  const cleanups = [];
+
+  /**
+   * One arm's store at c1. `excluded`: the owner excludes `design/` after the
+   * rows exist. `ledgerSpec`: whether `design/spec.md` has a ledger row at all.
+   */
+  function build(label, { excluded, ledgerSpec = true }) {
+    const ws = join(scratch, `ws-${label}`);
+    const write = (name, body) => {
+      mkdirSync(dirname(join(ws, name)), { recursive: true });
+      writeFileSync(join(ws, name), body);
+    };
+    mkdirSync(ws, { recursive: true });
+    git(ws, "init", "-q", "--template=");
+    write(CORE, "export const value = 1;\n");
+    write(SPEC, "# Spec\n\nThe value is one.\n");
+    write(DRAFT, "# Draft\n\nNot settled.\n");
+    write("README.md", "# Fixture\n");
+    const c0 = commitAll(ws, "seed");
+
+    const project = resolveProject(ws, { selectionSource: `sc11-${label}` });
+    ensureProjectStorage(project, (databasePath) => openDatabase(databasePath).close());
+    const ctx = { project, db: openDatabase(project.dbPath), sessionId: null };
+    cleanups.push(() => {
+      try {
+        ctx.db.close();
+      } catch {
+        /* already reported */
+      }
+    });
+    ctx.sessionId = call("start_session", { intent: `sc11 ${label}` }, ctx).session_id;
+
+    call("upsert_subsystem", { id: SUBSYSTEM, name: "Core", status: "unmapped" }, ctx);
+    call("update_subsystem_status", { id: SUBSYSTEM, status: "scoping" }, ctx);
+    const files = [
+      { file_path: CORE, why_in_scope: "the code", classification: "examined" },
+      { file_path: DRAFT, why_in_scope: "a draft beside the code", classification: "candidate" },
+    ];
+    if (ledgerSpec) {
+      files.push({ file_path: SPEC, why_in_scope: "the spec the code follows", classification: "examined" });
+    }
+    call("add_files_to_scope", { subsystem_id: SUBSYSTEM, ref_sha: c0, files }, ctx);
+    for (const pattern of ["src/", "design/", "README.md"]) {
+      call("record_scope_sorting", { pattern, category: "product", description: `fixture ${pattern}` }, ctx);
+    }
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: c0 }, ctx);
+    call("detect_changes", { current_sha: c0 }, ctx);
+    if (excluded) {
+      call(
+        "set_scope_rule",
+        {
+          pattern: "design/",
+          action: "exclude",
+          reason: "plans, not code",
+          owner_words: "don't survey design/",
+        },
+        ctx,
+      );
+      call("detect_changes", { current_sha: c0 }, ctx);
+    }
+
+    write(SPEC, "# Spec\n\nThe value is two.\n");
+    const c1 = commitAll(ws, "change the spec only");
+    return { ctx, ws, c0, c1 };
+  }
+
+  const specRow = (ctx) =>
+    ctx.db
+      .prepare("SELECT stale, stale_reason FROM file_ledger WHERE subsystem_id = ? AND file_path = ?")
+      .get(SUBSYSTEM, SPEC);
+
+  const arms = {
+    excluded: build("excluded", { excluded: true }),
+    included: build("included", { excluded: false }),
+  };
+
+  // ------------------------------------------------------- detect_changes
+  const detected = {};
+  for (const [arm, fx] of Object.entries(arms)) {
+    detected[arm] = call("detect_changes", { current_sha: fx.c1 }, fx.ctx);
+  }
+
+  check("D0 control: detect_changes maps the in-scope change to its subsystem and marks the row stale", () => {
+    const r = detected.included;
+    const wrong = [];
+    const mapped = (r.stale_subsystems ?? []).map((s) => [s.subsystem_id, [...s.changed_files].sort()]);
+    if (!same(mapped, [[SUBSYSTEM, [SPEC]]])) wrong.push(`stale_subsystems ${show(r.stale_subsystems)}`);
+    const row = specRow(arms.included.ctx);
+    if (!same(row, { stale: 1, stale_reason: "git-drift" })) wrong.push(`the row is ${show(row)}`);
+    if (r.stale_files !== 1) wrong.push(`stale_files is ${show(r.stale_files)}`);
+    return wrong.length ? wrong.join("; ") : null;
+  });
+
+  check("D1 detect_changes neither maps the excluded change nor marks the inactive row stale", () => {
+    const r = detected.excluded;
+    const wrong = [];
+    const excludedRow = (r.excluded_with_rows ?? []).some((e) => e.file_path === SPEC);
+    if (!excludedRow) wrong.push(`the fixture's row is not excluded: ${show(r.excluded_with_rows)}`);
+    if (!same(r.stale_subsystems, [])) wrong.push(`stale_subsystems ${show(r.stale_subsystems)}`);
+    const row = specRow(arms.excluded.ctx);
+    if (!same(row, { stale: 0, stale_reason: null })) wrong.push(`the inactive row is ${show(row)}`);
+    if (r.stale_files !== 0) wrong.push(`stale_files is ${show(r.stale_files)}`);
+    return wrong.length ? wrong.join("; ") : null;
+  });
+
+  // A row marked stale before the owner's rule was recorded keeps its flag:
+  // nothing is deleted or rewritten (§2.6a). Set here so each reader below is
+  // tested on its own, not only through detect_changes declining to mark it.
+  arms.excluded.ctx.db
+    .prepare(
+      `UPDATE file_ledger SET stale = 1, stale_since = datetime('now'), stale_reason = 'git-drift'
+        WHERE subsystem_id = ? AND file_path = ?`,
+    )
+    .run(SUBSYSTEM, SPEC);
+
+  // ----------------------------------------------------------- the backlog
+  const backlog = (arm) =>
+    call("get_stale_backlog", { limit: 50 }, arms[arm].ctx).map((row) => `${row.subsystem_id}:${row.source_path}`);
+
+  check("B0 control: the stale backlog lists the in-scope stale row", () => {
+    const rows = backlog("included");
+    return same(rows, [`${SUBSYSTEM}:${SPEC}`]) ? null : `the backlog is ${show(rows)}`;
+  });
+  check("B1 the stale backlog leaves out the inactive row", () => {
+    const rows = backlog("excluded");
+    return same(rows, []) ? null : `the backlog is ${show(rows)}`;
+  });
+
+  // ---------------------------------------------------------- get_attention
+  const attention = (arm) => call("get_attention", { sections: ["stale", "hot_spots"] }, arms[arm].ctx);
+  const attentionView = (payload) => {
+    const stale = payload?.sections?.stale;
+    const spot = (payload?.sections?.hot_spots?.items ?? []).find((item) => item.subsystem_id === SUBSYSTEM);
+    return {
+      stale_ledger: (stale?.items ?? [])
+        .filter((item) => item.source === "ledger")
+        .map((item) => `${item.subsystem_id}:${item.file_path}`),
+      stale_counts: stale?.counts ?? null,
+      stale_files: spot?.stale_files ?? null,
+      unread: spot?.unread ?? null,
+    };
+  };
+
+  check("A0 control: get_attention lists the in-scope stale row and counts the subsystem's rows", () => {
+    const view = attentionView(attention("included"));
+    const expected = {
+      stale_ledger: [`${SUBSYSTEM}:${SPEC}`],
+      stale_counts: { claim: 0, ledger: 1, drifted_unread: 0, drifted_deferred: 0 },
+      stale_files: 1,
+      unread: { candidate: 1, obligation_bearing: 3 },
+    };
+    return same(view, expected) ? null : `get_attention reads ${show(view)}`;
+  });
+  check("A1 get_attention leaves the inactive rows out of the stale section and the hot-spot counts", () => {
+    const view = attentionView(attention("excluded"));
+    const expected = {
+      stale_ledger: [],
+      stale_counts: { claim: 0, ledger: 0, drifted_unread: 0, drifted_deferred: 0 },
+      stale_files: 0,
+      unread: { candidate: 0, obligation_bearing: 1 },
+    };
+    return same(view, expected) ? null : `get_attention reads ${show(view)}`;
+  });
+
+  // ---------------------------------------------------------- change impact
+  const impactView = (arm, fx, runId) => {
+    const r = call("predict_change_impact", { base_sha: fx.c0, head_sha: fx.c1, run_id: runId }, fx.ctx);
+    return {
+      subsystems: (r.mapped_objects ?? [])
+        .filter((o) => o.object_type === "subsystem")
+        .map((o) => o.object_id)
+        .sort(),
+      gaps: (r.gaps ?? []).map((o) => o.object_id).sort(),
+    };
+  };
+
+  check("I0 control: change impact maps the in-scope change to its subsystem", () => {
+    const view = impactView("included", arms.included, "sc11-impact-included");
+    return same(view, { subsystems: [SUBSYSTEM], gaps: [] }) ? null : `impact reads ${show(view)}`;
+  });
+  check("I1 change impact neither maps the excluded change nor opens a gap for it", () => {
+    const view = impactView("excluded", arms.excluded, "sc11-impact-excluded");
+    return same(view, { subsystems: [], gaps: [] }) ? null : `impact reads ${show(view)}`;
+  });
+  check("I2 control: an in-scope changed path with no ledger row opens a gap", () => {
+    const fx = build("unledgered", { excluded: false, ledgerSpec: false });
+    const view = impactView("unledgered", fx, "sc11-impact-unledgered");
+    return same(view, { subsystems: [], gaps: [`unmapped-file:${SPEC}`] }) ? null : `impact reads ${show(view)}`;
+  });
+
+  // ------------------------------------------------------------ refresh run
+  const refreshView = (arm) => {
+    const fx = arms[arm];
+    const storage = fx.ctx.project.storagePath;
+    const runId = `sc11-refresh-${arm}`;
+    const plan = call(
+      "plan_refresh_run",
+      {
+        run_id: runId,
+        replicate_id: `sc11-replicate-${arm}`,
+        base_sha: fx.c0,
+        head_sha: fx.c1,
+        allowed_sources: ["src"],
+        provider_allowlist: ["fixture-provider"],
+        selected_provider: "fixture-provider",
+        model: "fixture-model",
+        runtime: "fixture-runtime",
+        determinism_mode: "seeded",
+        determinism_seed: 42,
+        relation_discovery: "explicit-only",
+        max_depth: 4,
+        authority_mode: "conspectus-write",
+        allowed_write_prefixes: ["docs"],
+        allowed_side_effects: ["analysis-api-call", "conspectus-write"],
+        auto_dispatch: true,
+        max_concurrency: 1,
+        max_attempts_per_obligation: 2,
+        max_tokens_per_attempt: 1000,
+        max_total_tokens: 3000,
+        max_total_cost_microusd: 3000,
+        planned_tokens_per_attempt: 500,
+        planned_cost_microusd: 500,
+        output_dir: join(storage, "docs"),
+      },
+      fx.ctx,
+    );
+    if (plan?.status === "blocked") return { planned: `blocked: ${show(plan.blocking_reasons)}` };
+    let thrown = null;
+    try {
+      call("execute_refresh_run", { run_id: runId }, fx.ctx);
+    } catch (error) {
+      thrown = String(error?.message ?? error);
+    }
+    const events = fx.ctx.db
+      .prepare("SELECT stage, event_type, idempotency_key, detail_json FROM refresh_stage_events WHERE run_id = ? ORDER BY rowid")
+      .all(runId);
+    const drift = events.find((e) => e.idempotency_key === "unowned-drift");
+    return {
+      thrown,
+      drift: drift ? JSON.parse(drift.detail_json).unowned : null,
+      reached_readback: events.some((e) => e.stage === "readback"),
+    };
+  };
+
+  check("F0 control: a refresh run blocks on drift over the in-scope row it cannot own", () => {
+    const view = refreshView("included");
+    const expected = { thrown: null, drift: [`${SUBSYSTEM}:${SPEC}`], reached_readback: false };
+    return same(view, expected) ? null : `the run reads ${show(view)}`;
+  });
+  check("F1 a refresh run does not block on drift over the inactive row", () => {
+    const view = refreshView("excluded");
+    // The run goes on past the drift check to verification, where this
+    // fixture's unledgered README.md refuses publication: proof it got there.
+    const expected = { thrown: null, drift: null, reached_readback: true };
+    return same(view, expected) ? null : `the run reads ${show(view)}`;
+  });
+
+  // ------------------------------------------------------- review planning
+  // A second commit changes the in-scope code, so S-01 is impacted in both
+  // arms and the review brief reads its ledger rows.
+  const reviewView = (arm) => {
+    const fx = arms[arm];
+    writeFileSync(join(fx.ws, CORE), "export const value = 2;\n");
+    const c2 = commitAll(fx.ws, "change the code");
+    const impactRun = `sc11-review-impact-${arm}`;
+    call("predict_change_impact", { base_sha: fx.c1, head_sha: c2, run_id: impactRun }, fx.ctx);
+    const briefId = `sc11-brief-${arm}`;
+    call(
+      "compile_review_brief",
+      {
+        brief_id: briefId,
+        impact_run_id: impactRun,
+        task: "Review the change to the code.",
+        task_constraints: [
+          {
+            constraint_id: "keep-value",
+            statement: "Keep the exported name.",
+            source_kind: "direct-user",
+            source_ref: "request:sc11",
+          },
+        ],
+        context_profile: "diff-scoped",
+        token_budget: 20_000,
+      },
+      fx.ctx,
+    );
+    return fx.ctx.db
+      .prepare(
+        `SELECT object_type, object_id FROM review_brief_trace
+          WHERE brief_id = ? AND object_type IN ('stale-file', 'unverified-file')
+          ORDER BY object_type, object_id`,
+      )
+      .all(briefId)
+      .map((row) => `${row.object_type}:${row.object_id}`);
+  };
+
+  check("R0 control: review planning requires the impacted subsystem's stale and unverified rows", () => {
+    const items = reviewView("included");
+    const expected = [`stale-file:${SUBSYSTEM}:${SPEC}`, `unverified-file:${SUBSYSTEM}:${DRAFT}`];
+    return same(items, expected) ? null : `the brief requires ${show(items)}`;
+  });
+  check("R1 review planning does not make an inactive row required work", () => {
+    const items = reviewView("excluded");
+    return same(items, []) ? null : `the brief requires ${show(items)}`;
+  });
+
+  check("CI1 this gate runs in CI, in the mcp-server job", () => {
+    const workflow = join(here, "..", ".github", "workflows", "test.yml");
+    if (!existsSync(workflow)) return ".github/workflows/test.yml is absent";
+    return readFileSync(workflow, "utf8").includes("node test-scope-consumers.mjs")
+      ? null
+      : "the workflow does not run this gate";
+  });
+
+  for (const cleanup of cleanups) cleanup();
+  rmSync(scratch, { recursive: true, force: true });
+}
+
+// --------------------------------------------------------------- the driver
+
+try {
+  const mods = {};
+  try {
+    ({ openDatabase: mods.openDatabase } = await import("./dist/db.js"));
+    ({ resolveProject: mods.resolveProject, ensureProjectStorage: mods.ensureProjectStorage } =
+      await import("./dist/project.js"));
+    const names = [
+      ["files", "fileTools"],
+      ["git", "gitTools"],
+      ["impact", "impactTools"],
+      ["locus", "locusTools"],
+      ["project", "projectTools"],
+      ["refresh", "refreshTools"],
+      ["review", "reviewTools"],
+      ["scope", "scopeTools"],
+      ["stale", "staleTools"],
+      ["subsystems", "subsystemTools"],
+    ];
+    mods.toolArrays = await Promise.all(
+      names.map(async ([file, name]) => (await import(`./dist/tools/${file}.js`))[name]),
+    );
+  } catch (error) {
+    failures.push(`L the server build could not be loaded: ${scrub(error?.message ?? error)}`);
+  }
+  if (failures.length === 0) {
+    if (mods.toolArrays.some((tools) => !Array.isArray(tools))) {
+      failures.push("L a tool array could not be read from dist/tools");
+    } else {
+      main(mods);
+    }
+  }
+} catch (error) {
+  failures.push(`X the gate did not finish: ${scrub(error?.message ?? error)}`);
+}
+
+console.log(`  ran  ${checked} assertion(s) against ${join(here, "dist")}`);
+if (failures.length > 0) {
+  for (const failure of failures) console.log(`  FAIL ${failure}`);
+  console.log(`GATE SC11 RED: ${failures.length} of ${checked} assertion(s) failed; first: ${failures[0]}`);
+  process.exit(1);
+}
+console.log("GATE SC11 GREEN");
+process.exit(0);
