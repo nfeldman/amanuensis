@@ -450,10 +450,13 @@ function fixtureRepo(parent, name) {
 
 /** A server over stdio, bound to one workspace; `call(name, args)` resolves to the parsed tool result. */
 function startServer(workspace) {
+  // The store goes in the fixture, where the cleanup removes it, never in a configured shared root.
+  const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+  delete env.AMANUENSIS_STORAGE_ROOT;
   const child = spawn(process.execPath, [join(server, "dist", "index.js"), "--workspace", workspace], {
     cwd: workspace,
     stdio: ["pipe", "pipe", "pipe"],
-    env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" },
+    env,
   });
   let stderr = "";
   child.stderr.on("data", (chunk) => {
