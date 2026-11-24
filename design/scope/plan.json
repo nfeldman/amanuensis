@@ -633,14 +633,14 @@
       ],
       "budget_minutes": 120,
       "needs_mcp": false,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "1fde8be0ef86fe6c273c47881c34f4966c94e281",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "b39555d3774545c93e9518c897e76c3694db1c13",
+      "green_sha": "5a3f50cd78355892a5ecf9c2cc5d57cbde2e231d",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Phase 0b gained its seven-step list (set_git_state moved from Phase 7, which no longer calls it); routing rows, phase-1/notes/refresh sentences added. Each file naming set_scope_rule or record_scope_sorting also quotes one of its refusal phrases because test-refusal-parity derives that; the 'run onboarding' routing row is untouched because SI9 pins it. The control derives its tool order from the skill's steps and drives the built server over stdio; no TypeScript or existing assertion changed."
     },
     {
       "id": "SC9",
