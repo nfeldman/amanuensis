@@ -532,8 +532,8 @@
       "attempts": 1,
       "start_sha": "363909d161e16f5f02262e134f2f4ab90225d442",
       "red_sha": "cd7239f",
-      "green_sha": "22621e4",
-      "verified_by_launcher": false,
+      "green_sha": "28c2ceba875e2dfba2abf16c9c00bdb1b282ff12",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Gap fills: exclusion carries a classification for source ledger; gitignore exclusions have pattern null; meta reason is the sorting description; a bare excluded file name (Makefile) resolves as a file labelled path-shaped (the six-step order test pins LOCUS_INFERENCE_ORDER); standing reads an excluded path's ledger rows as inactive (owners empty). invariants.ts gained SCOPE_RECONCILIATION_ID_SQL (ACTIVE_LEDGER_ROW_SQL unchanged in meaning). Meaning change of excluded reprints how-to-read in the golden corpus (--packet SC6 --recorded, VERSION left at SO25); test-ledger-freshness untouched, but the SO14-SO18 start-tree gates and SO13/SO20/SO22-SO25 corpus-lineage gates now carry that one sentence on the start side (test edits, no assertion removed). vocabulary.py regenerated; DEVELOPMENT.md inventory regenerated."
     },
