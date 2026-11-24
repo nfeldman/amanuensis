@@ -12,8 +12,8 @@
 //     everything which used the whole tree as its denominator uses the survey set; that
 //     excluded means not included (no ledger row, no evidence, no vocabulary anchor, a count
 //     on the overview only); that ledger-exempt classifications inside the set keep today's
-//     behaviour; that a legacy store's only change is gitignore matches leaving the set
-//     (§2.9); that no tracked `.amanuensisignore` file is built (§5);
+//     behaviour; that a legacy store, one that already had ledger or reconciliation rows
+//     (§2.1), changes only in gitignore matches leaving the set (§2.9); that no tracked `.amanuensisignore` file is built (§5);
 //   - the item does not quote the owner's rule as a blockquote that equals the blockquote in
 //     PLAN §1, word for word;
 //   - the item states a packet count or id range that disagrees with design/scope/plan.json;
@@ -140,6 +140,7 @@ function check() {
     [/count on the overview/i, "that an excluded path shows only as a count on the overview"],
     [/ledger-exempt classifications?[^.]*keep/i, "that ledger-exempt classifications inside the survey set keep their behaviour"],
     [/`legacy`[^.]*gitignore[^.]*leave/i, "that a legacy store's only change is gitignore matches leaving the survey set"],
+    [/`legacy` store, one that already had ledger or reconciliation rows/i, "that a legacy store is one that already had ledger or reconciliation rows (§2.1)"],
     [/`excluded_with_rows`/, "that ledgered excluded paths are reported as excluded_with_rows"],
     [/no tracked `\.amanuensisignore`/i, "that no tracked .amanuensisignore file is built"],
   ];
