@@ -254,8 +254,12 @@ function modeRows(db) {
   return db.prepare("SELECT id, mode, reason FROM scope_mode_changes ORDER BY id").all();
 }
 
+// Fixture git reads no configuration but its own repository's: no global or
+// system file, no hooks, no template.
+const FIXTURE_GIT_ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+
 function git(cwd, args, input) {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8", input });
+  const result = spawnSync("git", ["-c", "core.hooksPath=/dev/null", ...args], { cwd, encoding: "utf8", input, env: FIXTURE_GIT_ENV });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
   return result.stdout;
 }
@@ -701,7 +705,7 @@ if (oldSchema && freshOpened) {
   let reconId = null;
   let before = null;
   check("standing: the scratch repository and pre-upgrade store are built", () => {
-    git(scratch, ["init", "-q", "-b", "main", repo]);
+    git(scratch, ["init", "-q", "--template=", "-b", "main", repo]);
     git(repo, ["config", "user.email", "gate@example.invalid"]);
     git(repo, ["config", "user.name", "GATE SC1"]);
     git(repo, ["config", "commit.gpgsign", "false"]);
