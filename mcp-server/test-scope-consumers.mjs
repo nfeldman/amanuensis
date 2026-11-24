@@ -20,7 +20,8 @@
 //      reconciliation after it was taken hides that row (B2);
 //   3. `get_attention` lists the inactive row in its stale section, or counts
 //      it in the hot-spot stale, unread or obligation columns (A1); or the
-//      control's row is not listed and counted (A0);
+//      control's row is not listed and counted (A0); or the open section's
+//      empty state counts the inactive rows as examined or unread (A2);
 //   4. change impact maps the change on the excluded path to a subsystem, or
 //      opens a gap for it (I1); or the control's change is not mapped (I0), or
 //      an in-scope changed path with no ledger row opens no gap (I2); or a
@@ -378,6 +379,20 @@ function main(mods) {
       unread: { candidate: 0, obligation_bearing: 1 },
     };
     return same(view, expected) ? null : `get_attention reads ${show(view)}`;
+  });
+
+  // The open section's empty state counts the active ledger: an inactive row
+  // is neither examined nor still to be read. Neither arm records a finding,
+  // so both answer with the empty state.
+  const openCounts = (arm) => {
+    const statement = String(call("get_attention", { sections: ["open"] }, arms[arm].ctx)?.sections?.open?.statement ?? "");
+    const match = /over (\d+) examined file\(s\).*?; (\d+) file\(s\) are scoped but not yet read/.exec(statement);
+    return match ? { examined: Number(match[1]), unread: Number(match[2]) } : { statement };
+  };
+  check("A2 get_attention's open section counts the active ledger, with the included arm as control", () => {
+    const got = { included: openCounts("included"), excluded: openCounts("excluded") };
+    const want = { included: { examined: 2, unread: 1 }, excluded: { examined: 1, unread: 0 } };
+    return same(got, want) ? null : `the open section reads ${show(got)}, want ${show(want)}`;
   });
 
   // ---------------------------------------------------------- change impact
