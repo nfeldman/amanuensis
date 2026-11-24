@@ -13,6 +13,11 @@ that bias.
 - `survey-session SHA` (every `ref_sha` in this phase uses it). Get
   via `git rev-parse HEAD` on the canonical branch.
 
+A path outside the survey set gets no ledger row: `add_files_to_scope` refuses it
+with its source and its rule. Leave it out of the scope. If the owner wants it
+surveyed, they say so, and you call `set_scope_rule` with `include` and quote the
+owner's own words that asked for it.
+
 Call `get_subsystem_files(subsystem_id)` first. If there are
 pre-existing rows from an earlier session, they were produced at a
 different SHA and may be stale — review them, keep classifications

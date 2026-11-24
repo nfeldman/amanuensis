@@ -210,7 +210,7 @@ const STEP_RULES = [
       /single path|one path|each path/i.test(s) &&
       /code (?:included|too|as well)|including (?:the )?code|code (?:gets|also gets|is sorted)/i.test(s) &&
       /`product` row/.test(s) &&
-      /`meta`|\bmeta\b/.test(s) &&
+      /`meta`|\bmeta\b/i.test(s) &&
       /\bunsorted\b/i.test(s) &&
       /\btests?\b/i.test(s) &&
       /\bfixtures?\b/i.test(s) &&

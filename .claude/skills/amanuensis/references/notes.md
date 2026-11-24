@@ -49,6 +49,16 @@ answers about two loci comparable.
    `unledgered`, `excluded`, or `scoped-unread`, that is the whole
    answer: say so and offer a survey. Do not read the file and
    improvise a reading the record does not carry.
+
+   When standing is `excluded`, `exclusion.source` says why. When the `source`
+   of an `excluded` path is `gitignore`, `user` or `meta`, the survey set
+   leaves the path out on purpose: it has no ledger row and holds no record, so
+   say which source and rule decide it, and do not call it missed. Offer
+   `set_scope_rule` with `include` only when the owner wants it surveyed, and
+   quote the owner's own words that asked for it. When
+   the `source` of an `excluded` path is `ledger`, it is a classification
+   inside the survey set, such as `generated-ignore`, and the answer is that
+   classification and its reason.
 2. **The account**, leading with the most consequential open item
    when one exists: open finding by severity, then awaiting
    verification, then undiscriminated, then decision, then lead. The

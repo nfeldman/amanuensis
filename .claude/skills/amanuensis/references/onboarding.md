@@ -59,6 +59,37 @@ onboarding sorted as meta. Three tools record and read it.
   decides a path, and lists the unsorted paths.
 - Neither writer reconciles. Run `detect_changes` after recording rows.
 
+Run Phase 0b in this order. It comes before Phase 1, so every later phase works on
+the survey set.
+
+1. Call `set_git_state(canonical_branch, onboarding_sha=HEAD,
+   last_checked_sha=HEAD, branch_convention, detected_branches)`. It moved here
+   from Phase 7, because `detect_changes` refuses without it: *"git_state not
+   initialized; call set_git_state first"*.
+2. Record any owner rule the request states with `set_scope_rule`, quoting the
+   owner's words in `owner_words`. If the request states none, record none.
+3. Run `detect_changes(current_sha=<HEAD>)` to see the gitignore matches, the
+   owner's exclusions and the paths still unsorted.
+4. Sort every path not yet excluded, by directory prefix where a prefix is
+   uniform and by single path where it isn't. Every path no row covers counts
+   as unsorted, and the code is sorted too: the code's prefix, such as `src/`,
+   gets a `product` row like any other.
+   - Product is code, or material relevant to code: tests, fixtures, build, CI,
+     configuration, and documentation that ships or describes use.
+   - Meta is material about the project rather than part of it: plans, specs and
+     reviews of past work, research, recorded evidence, and notes.
+5. For each meta prefix, list its files and open the first lines of a sample:
+   every file up to 5, otherwise 5 spread across the listing. Cite each one
+   with its line range and an excerpt.
+6. Record the sorting with `record_scope_sorting`: a `product` row for each
+   product prefix, and a `meta` row for each meta prefix with the citations from
+   step 5 as its `inventory`.
+7. Run `detect_changes` again and confirm `unsorted` is 0. If paths remain,
+   sort them and run it once more.
+
+When in doubt, sort as product, because a wrong product costs reading time while
+a wrong meta hides code. Log the doubt with `record_open_question`.
+
 ## Phase 1 · Repository shape
 
 Explore top-level. Identify languages, build systems, code generation,
@@ -209,8 +240,6 @@ will see the queue at the Phase 7 checkpoint.
 
 ## Phase 7 · Produce the conspectus
 
-- Call `set_git_state(canonical_branch, onboarding_sha=HEAD,
-  last_checked_sha=HEAD, branch_convention, detected_branches)`.
 - Record what Phases 1–6 found. Nothing is written to the storage directory:
   the subsystem, finding, field-note and concern tables already hold the master
   plan, the findings index and the field notes, and the records below hold the

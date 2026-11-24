@@ -47,6 +47,13 @@ Read every part of the result, not just `stale_count`:
   commit; they cannot be verified in place. The status ladder says the
   same thing back: *"an unreachable anchor cannot be verified in
   place"*.
+- `scope.unsorted_paths` — survey paths that no sorting row covers. A new
+  path under a meta prefix inherits that prefix's category, so it is left out
+  of the survey set and needs nothing. A new path under no rule is unsorted:
+  sort it with `record_scope_sorting`, as `product` or as meta (a meta row
+  needs an inventory of the files opened), and run `detect_changes` again before publication. Paths the
+  survey set leaves out are not `unledgered_paths`, and no ledger row is owed
+  for them.
 
 `detect_changes` writes a reconciliation record, and two operations now
 read it rather than take your word. Advancing a subsystem to `mapped`
