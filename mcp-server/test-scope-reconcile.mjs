@@ -24,7 +24,9 @@
 //   6. excluded paths with ledger rows:
 //      - they are deleted, or not reported as `excluded_with_rows` (E1);
 //      - a `candidate` row there blocks `mapped` (M1, with its control M0);
-//      - the ledger digest includes them (E2);
+//      - the ledger digest includes them (E2), or the read-back or the
+//        completion checker restates it with them, so the reconciliation
+//        does not stand there (E5);
 //      - an include rule does not reactivate them (E3);
 //   7. `records_citing_excluded` does not list a claim made before the rule
 //      (R1);
@@ -656,6 +658,47 @@ function main(mods) {
     const reading = standing(ctx);
     if (!reading.standing) return `it does not stand: ${reading.why}`;
     return reading.standing.id === row1?.id ? null : `the standing row is ${reading.standing.id}, not ${row1?.id}`;
+  });
+
+  // The read-back and the completion checker restate the ledger digest (GP24)
+  // and must restate it as written: without the rows on paths the
+  // reconciliation excluded. Otherwise every store with an inactive row reads
+  // as unreconciled on its pages and fails clause 1.
+  check("E5 the read-back and the completion checker find the reconciliation standing despite the inactive row", () => {
+    ctx.db.pragma("wal_checkpoint(TRUNCATE)");
+    const repo = join(here, "..");
+    const wrong = [];
+    const script =
+      "import sqlite3, sys\n" +
+      "from pathlib import Path\n" +
+      "from amanuensis_materializer import readback\n" +
+      "c = sqlite3.connect(sys.argv[1]); c.row_factory = sqlite3.Row\n" +
+      "readback.BOUND_WORKSPACE.set(Path(sys.argv[2]))\n" +
+      "s = readback.reconciliation_standing(c, Path(sys.argv[3]))\n" +
+      "print(s.record['id'] if s.record is not None else 'none: ' + str(s.why))\n";
+    const read = spawnSync("python3", ["-c", script, ctx.project.dbPath, ws1, ctx.project.storagePath], {
+      cwd: join(repo, "materializer"),
+      encoding: "utf8",
+    });
+    const readback = String(read.stdout ?? "").trim();
+    if (read.status !== 0) wrong.push(`the read-back could not run: ${String(read.stderr).trim().split("\n").pop()}`);
+    else if (readback !== String(row1?.id)) wrong.push(`the read-back reads ${readback}, want ${row1?.id}`);
+    const run = spawnSync(
+      process.execPath,
+      [join(repo, "dev", "check-store-fully-surveyed.mjs"), "--store", ctx.project.dbPath, "--workspace", ws1, "--clause", "1", "--json"],
+      { cwd: repo, encoding: "utf8", timeout: 120_000 },
+    );
+    let clause = null;
+    try {
+      clause = (JSON.parse(run.stdout ?? "null")?.clauses ?? []).find((entry) => Number(entry.clause) === 1) ?? null;
+    } catch {
+      clause = null;
+    }
+    if (!clause) wrong.push(`the checker gave no clause 1: ${String(run.stderr).trim().split("\n").pop()}`);
+    else if (!clause.evaluable || (clause.missing ?? []).includes("inventory:reconciliation")) {
+      wrong.push(`the checker finds no standing reconciliation: ${clause.note}`);
+    }
+    return wrong.length ? wrong.join("; ") : null;
   });
 
   /** Tamper with this reconciliation's exclusions with the triggers lifted, inside a rolled-back transaction. */
