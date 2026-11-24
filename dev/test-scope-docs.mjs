@@ -6,20 +6,25 @@
 //
 // Turns red when:
 //   - README.md's "Trust is part of the architecture" section does not carry exactly one new
-//     sentence (a pure insertion into the section, against the file at the packet's start
+//     sentence (a pure insertion into the section, against the section at the packet's start
 //     commit) that says a survey leaves out the paths the repository's ignore files match, the
 //     paths the owner excluded and the paths sorted as meta; that an excluded path gets no
 //     ledger row and no evidence; that it shows on the overview only as a count; and that an
-//     owner include brings a path back. Any other line of README.md differs from the start;
-//   - INSTALLATION.md differs from its start (no command changed, so it gets nothing);
-//   - HISTORY.md has no `## [Unreleased]` entry directly under its introduction and above the
-//     newest release, or the entry is missing any of: the survey set (the tree minus gitignore,
+//     owner include brings a path back. A line added outside that section names the survey
+//     set or a scope tool. The rest of README.md is not this packet's, so later edits to it pass;
+//   - INSTALLATION.md names the survey set, Phase 0b or a scope tool (no command changed, so it
+//     gets nothing);
+//   - HISTORY.md's introduction differs from its start, or the entry directly above the
+//     0.2.0-beta.7 release is not `## [Unreleased]` (or the release cut from it), or that entry
+//     is missing any of: the survey set (the tree minus gitignore,
 //     owner and meta paths), the owner's include winning, the three tools by name (each
 //     registered in src/tools/scope.ts), excluded paths having no ledger row or evidence and
 //     showing only as an overview count, `describe_locus` answering `excluded` with its source,
 //     the unsorted-path refusal that names up to 20 paths (the constant in invariants.ts), the
 //     legacy store changing only by gitignore matches leaving the set, and onboarding's
 //     Phase 0b; or an older release entry is changed;
+//   - a start-commit copy in dev/fixtures/scope-docs/start/ is missing or is not the start
+//     commit's bytes (its sha256 is pinned), so the gate needs no Git history;
 //   - mcp-server/DEVELOPMENT.md has no `## The survey set` section before the generated tool
 //     inventory, or the section: names a `scope_*` table that schema.sql does not create or
 //     omits one of the five new tables or `scope_reconciliations`; names a source file, helper
@@ -32,13 +37,20 @@
 //     after SC8's step, under a comment naming GATE SC9.
 // Prints exactly one last line: `GATE SC9 GREEN` (exit 0) or `GATE SC9 RED: <reason>` (exit 1).
 
-import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const START_SHA = "45a0cf5b4d4ad75ae3c912e46743cfa2dcaf644f";
+// Committed copies of each doc at START_SHA, so the gate needs no Git history; each is pinned to
+// the sha256 of the start revision's blob, so a copy edited to match the tree turns red.
+const START_COPIES = join(root, "dev", "fixtures", "scope-docs", "start");
+const START_SHA256 = {
+  "README.md": "7403573f776376b83bece84d8ab1fda2ef16db1b12537cb5b494645a953df995",
+  "HISTORY.md": "2106cff658ea5c7aad4ee628e05bcd26ba3d2ae6520149848338ddbe9d527c37",
+};
 
 // A quoted failure can carry a crash signature, which would make a red run look like a crash.
 const CRASH_SIGNATURES = [
@@ -83,15 +95,22 @@ function readText(rel) {
   }
 }
 
-/** The file as it was at the packet's start commit, or null when history cannot say. */
+/** The committed copy of a doc at the packet's start commit; null when absent or not that revision's bytes. */
 function baseline(rel) {
-  const run = spawnSync("git", ["show", `${START_SHA}:${rel}`], {
-    cwd: root,
-    encoding: "utf8",
-    maxBuffer: 16 * 1024 * 1024,
-  });
-  return run.status === 0 ? run.stdout : null;
+  let bytes;
+  try {
+    bytes = readFileSync(join(START_COPIES, rel));
+  } catch {
+    return null;
+  }
+  if (createHash("sha256").update(bytes).digest("hex") !== START_SHA256[rel]) return null;
+  return bytes.toString("utf8");
 }
+const NO_BASELINE = (rel) =>
+  `the start revision ${START_SHA.slice(0, 7)} of ${rel} is not at dev/fixtures/scope-docs/start/${rel} with its pinned sha256`;
+
+// What only this packet's docs name: a line elsewhere naming one of these was added for the survey set.
+const SCOPE_WORDS = /\bsurvey set\b|\bset_scope_rule\b|\brecord_scope_sorting\b|\bget_scope\b|\bPhase 0b\b/i;
 
 const squash = (text) => text.replace(/\s+/g, " ").trim();
 const plain = (text) => squash(text.toLowerCase().replace(/[`*]/g, ""));
@@ -176,15 +195,16 @@ check("README.md", () => {
   const trust = section(now, "## Trust is part of the architecture");
   if (trust === null) return "has no 'Trust is part of the architecture' section";
   const before = baseline("README.md");
-  if (before === null) return "the file at the start commit cannot be read to compare against";
-  const added = insertion(before, now);
-  if (added === null) return "differs from its start in more than one added passage";
+  if (before === null) return NO_BASELINE("README.md");
+  const trustBefore = section(before, "## Trust is part of the architecture");
+  if (trustBefore === null) return "the start copy has no 'Trust is part of the architecture' section";
+  const added = insertion(trustBefore, trust);
+  if (added === null) return "the Trust section differs from its start in more than one added passage";
   if (added.text.trim() === "") return "adds no sentence to the section";
-  const sectionStart = now.indexOf("## Trust is part of the architecture");
-  const nextHeading = now.indexOf("\n## ", sectionStart + 1);
-  const sectionEnd = nextHeading < 0 ? now.length : nextHeading + 1;
-  if (added.at < sectionStart || added.at + added.text.length > sectionEnd)
-    return "the added sentence is not inside the 'Trust is part of the architecture' section";
+  // The one sentence is the section's; a line added elsewhere about the survey set is a second.
+  const startLines = new Set(before.split("\n"));
+  const outside = now.replace(trust, "").split("\n").find((line) => !startLines.has(line) && SCOPE_WORDS.test(line));
+  if (outside !== undefined) return `a line outside the Trust section speaks of the survey set: "${scrub(outside)}"`;
   const sentenceList = sentences(added.text);
   if (sentenceList.length !== 1)
     return `adds ${sentenceList.length} sentences where the plan gives it one`;
@@ -209,9 +229,8 @@ check("README.md", () => {
 check("INSTALLATION.md", () => {
   const now = readText("INSTALLATION.md");
   if (now === null) return "INSTALLATION.md is missing";
-  const before = baseline("INSTALLATION.md");
-  if (before === null) return "the file at the start commit cannot be read to compare against";
-  return now === before ? null : "changed, though no command changed (PLAN §3 SC9)";
+  const line = now.split("\n").find((l) => SCOPE_WORDS.test(l));
+  return line === undefined ? null : `speaks of the survey set, though no command changed (PLAN §3 SC9): "${scrub(line)}"`;
 });
 
 // ---- HISTORY.md -----------------------------------------------------------------------------
@@ -221,12 +240,14 @@ check("HISTORY.md", () => {
   if (now === null) return "HISTORY.md is missing";
   const lines = now.split("\n");
   const headings = lines.map((line, i) => [line, i]).filter(([line]) => /^## /.test(line));
-  if (headings.length < 2) return "has fewer than two entries";
-  if (!/^## \[Unreleased\]\s*$/.test(headings[0][0]))
-    return `the first entry is '${scrub(headings[0][0])}', not '## [Unreleased]'`;
-  if (!/^## \[0\.2\.0-beta\.7\]/.test(headings[1][0]))
-    return "the Unreleased entry is not directly above the newest release, 0.2.0-beta.7";
-  const entry = lines.slice(headings[0][1] + 1, headings[1][1]).join("\n");
+  // The entry sits directly above 0.2.0-beta.7: `[Unreleased]` until a release is cut from it.
+  const beta7 = headings.findIndex(([line]) => /^## \[0\.2\.0-beta\.7\]/.test(line));
+  if (beta7 < 0) return "has no 0.2.0-beta.7 entry";
+  if (beta7 === 0) return "has no entry above the 0.2.0-beta.7 release";
+  const [heading, from] = headings[beta7 - 1];
+  if (!/^## \[(?:Unreleased|\d+\.\d+\.\d+[^\]]*)\]/.test(heading))
+    return `the entry above 0.2.0-beta.7 is '${scrub(heading)}', not '## [Unreleased]' or a release`;
+  const entry = lines.slice(from + 1, headings[beta7][1]).join("\n");
   // A bullet wraps onto indented lines; each is read as one string.
   const bullets = entry
     .split(/\n(?=- )/)
@@ -264,12 +285,12 @@ check("HISTORY.md", () => {
     return "the bullet on existing stores does not say that is the only change";
   // Older entries are left as they were.
   const before = baseline("HISTORY.md");
-  if (before === null) return "the file at the start commit cannot be read to compare against";
+  if (before === null) return NO_BASELINE("HISTORY.md");
   const oldFrom = before.indexOf("## [0.2.0-beta.7]");
   if (oldFrom < 0) return "the start commit's HISTORY.md has no 0.2.0-beta.7 entry";
   const nowFrom = now.indexOf("## [0.2.0-beta.7]");
   if (now.slice(nowFrom) !== before.slice(oldFrom)) return "an older release entry was changed";
-  if (now.slice(0, now.indexOf("## [Unreleased]")) !== before.slice(0, oldFrom))
+  if (now.slice(0, now.indexOf("\n## ") + 1) !== before.slice(0, oldFrom))
     return "the introduction changed";
   return null;
 });
