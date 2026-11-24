@@ -26,7 +26,16 @@
 //      denominator, a sorting obligation is invented for it, a rule recorded
 //      after it does not end a legacy reconciliation's standing, or a store with
 //      none of the scope tables makes the checker give up (L1, L2, L3, L4);
-//   7. this gate is not registered in CI (CI1).
+//   7. this gate is not registered in CI (CI1);
+//   8. on a second store, superseded rules and sorting rows are not withdrawn:
+//      a reconciliation over them does not stand, or a superseded sorting row
+//      still covers its paths (P1); a glob sorting row (`**/*.md`) is read with
+//      other semantics than the server's, so the checker's unsorted paths are
+//      not exactly the ones detect_changes reports (P2); an incomplete
+//      inventory is counted over the whole tree, or loses its named assignment
+//      and sorting obligations (P3);
+//   9. retiring the one ledger row that keeps a subsystem outside the survey is
+//      accepted, or the subsystem is owed work again afterwards (O5).
 //
 // Every fixture is a temporary git repository and a store under a temporary
 // AMANUENSIS_STORAGE_ROOT; nothing here reads a real store or the network. The
@@ -516,6 +525,122 @@ async function main(mods) {
     return null;
   });
 
+  // Retiring an outside subsystem's last excluded row would leave it with no
+  // rows, and so owing a phase sequence on paths it cannot record (§2.6a).
+  check("O5 retire_ledger_file refuses B-02's last, excluded row, and B-02 stays outside the survey", () => {
+    let refusal = null;
+    try {
+      call("retire_ledger_file", { subsystem_id: "B-02", file_path: "design/proto.ts" }, ctx);
+    } catch (error) {
+      refusal = String(error?.message ?? error);
+    }
+    const entry = clauseOf(report(snapshot(ctx), wsA), 2);
+    const wrong = [];
+    if (refusal === null) wrong.push("the retirement was accepted");
+    if (!sameList(entry.outside_survey, ["B-02"])) wrong.push(`clause 2 names ${show(entry.outside_survey)} as outside`);
+    if ((entry.missing ?? []).includes("subsystem:B-02:phase-sequence")) wrong.push("clause 2 owes B-02 again");
+    return wrong.length ? wrong.join("; ") : null;
+  });
+
+  // =============================================================== world P
+  //
+  //   docs/api.md, docs/guide.md  sorted product by the glob `**/*.md`
+  //   extra/new.ts                sorted product by `extra/`; ledgered only later
+  //   lib/x.ts                    sorted by `lib/`, which `lib/other/` supersedes: unsorted
+  //   loose.txt                   sorted and ledgered only later
+  //   src/a.ts                    sorted product by `src/`
+  //   tmp/keep.md                 back in the survey: rule `tmp/` is superseded
+  //   tmp/scratch.md              user, by the superseding rule `tmp/scratch.md`
+
+  const wsP = workspace("p", {
+    "docs/api.md": "# API\n",
+    "docs/guide.md": "# Guide\n",
+    "extra/new.ts": "export const fresh = 1;\n",
+    "lib/x.ts": "export const x = 1;\n",
+    "loose.txt": "loose\n",
+    "src/a.ts": "export const a = 1;\n",
+    "tmp/keep.md": "# Keep\n",
+    "tmp/scratch.md": "# Scratch\n",
+  });
+  const ctxP = open(wsP, "world p");
+  call("upsert_subsystem", { id: "P-01", name: "the code", status: "unmapped" }, ctxP);
+  addFiles(ctxP, "P-01", [
+    ["src/a.ts", "examined"],
+    ["docs/api.md", "irrelevant"],
+    ["docs/guide.md", "irrelevant"],
+    ["lib/x.ts", "examined"],
+    ["tmp/keep.md", "irrelevant"],
+  ]);
+  const wideRule = call(
+    "set_scope_rule",
+    { pattern: "tmp/", action: "exclude", reason: "scratch", owner_words: '"skip tmp"' },
+    ctxP,
+  ).id;
+  call(
+    "set_scope_rule",
+    {
+      pattern: "tmp/scratch.md",
+      action: "exclude",
+      reason: "only the scratch file",
+      owner_words: '"only the scratch file, after all"',
+      supersedes: wideRule,
+    },
+    ctxP,
+  );
+  for (const pattern of ["src/", "extra/", "tmp/"]) {
+    call("record_scope_sorting", { pattern, category: "product", description: `fixture ${pattern}` }, ctxP);
+  }
+  call("record_scope_sorting", { pattern: "**/*.md", category: "product", description: "every markdown file" }, ctxP);
+  const libRow = call("record_scope_sorting", { pattern: "lib/", category: "product", description: "the library" }, ctxP).id;
+  call(
+    "record_scope_sorting",
+    { pattern: "lib/other/", category: "product", description: "narrowed", supersedes: libRow },
+    ctxP,
+  );
+  reconcile(ctxP);
+  const snapIncomplete = snapshot(ctxP);
+  addFiles(ctxP, "P-01", [
+    ["extra/new.ts", "examined"],
+    ["loose.txt", "irrelevant"],
+  ]);
+  call("record_scope_sorting", { pattern: "loose.txt", category: "product", description: "a loose file" }, ctxP);
+  const rP = reconcile(ctxP);
+  const snapComplete = snapshot(ctxP);
+  const SURVEY_P = 7;
+
+  check("P1 superseded rows are withdrawn: the reconciliation stands, and lib/x.ts is unsorted once lib/ is superseded", () => {
+    const entry = clauseOf(report(snapComplete, wsP), 1);
+    if (entry.evaluable !== true) return `clause 1 found no standing reconciliation: ${entry.note}`;
+    if (entry.considered !== SURVEY_P) return `considered ${entry.considered}, want ${SURVEY_P}`;
+    return sameList(entry.missing, ["unsorted:lib/x.ts"]) ? null : `owes ${show(entry.missing)}, want unsorted:lib/x.ts`;
+  });
+  check("P2 the glob **/*.md covers docs/ and tmp/keep.md as the server's own pattern does: the unsorted paths agree with detect_changes", () => {
+    const entry = clauseOf(report(snapComplete, wsP), 1);
+    const checkerUnsorted = (entry.missing ?? []).filter((id) => id.startsWith("unsorted:")).map((id) => id.slice(9));
+    const serverUnsorted = rP?.scope?.unsorted_paths;
+    if (!Array.isArray(serverUnsorted)) return `detect_changes reports no unsorted_paths: ${show(rP?.scope)}`;
+    if (!sameList(serverUnsorted, ["lib/x.ts"])) return `detect_changes reports ${show(serverUnsorted)}, want lib/x.ts`;
+    return sameList(checkerUnsorted, serverUnsorted)
+      ? null
+      : `the checker owes unsorted ${show(checkerUnsorted)}, detect_changes ${show(serverUnsorted)}`;
+  });
+  check("P3 an incomplete inventory is counted over the survey set and keeps its named assignment and sorting obligations", () => {
+    const entry = clauseOf(report(snapIncomplete, wsP), 1);
+    if (entry.satisfied === true) return "clause 1 is satisfied with two unledgered paths";
+    if (entry.considered !== SURVEY_P) return `considered ${entry.considered}, want the ${SURVEY_P} of the survey set`;
+    const want = [
+      "inventory:unledgered",
+      "file:extra/new.ts:assignment",
+      "file:loose.txt:assignment",
+      "unsorted:loose.txt",
+      "unsorted:lib/x.ts",
+    ];
+    const lacks = want.filter((id) => !(entry.missing ?? []).includes(id));
+    if (lacks.length > 0) return `owes ${show(entry.missing)}, lacking ${show(lacks)}`;
+    const excluded = (entry.missing ?? []).filter((id) => id.includes("tmp/scratch.md"));
+    return excluded.length ? `names the excluded tmp/scratch.md: ${show(excluded)}` : null;
+  });
+
   // =============================================================== world L
   //
   // A legacy store: a reconciliation taken before survey scope existed, over a
@@ -627,6 +752,7 @@ try {
       ["project", "projectTools"],
       ["scope", "scopeTools"],
       ["seams", "seamTools"],
+      ["stale", "staleTools"],
       ["subsystems", "subsystemTools"],
     ];
     mods.toolArrays = await Promise.all(
