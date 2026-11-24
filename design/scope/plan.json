@@ -293,14 +293,14 @@
       ],
       "budget_minutes": 180,
       "needs_mcp": false,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "72011347d40d39674655f6c5d430638dd584f71b",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "7c99888c2cacd51020aa2a9edaaa0df888ea57b4",
+      "green_sha": "b46fb75802c855a93529ffd504bf9251c70b5bd4",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Every consumer reads 'inactive' from ACTIVE_LEDGER_ROW_SQL (the latest reconciliation's scope_exclusions); detect_changes uses its in-transaction excluded set and neither marks nor clears an inactive row's stale flag, so the flag is kept as it was until an include rule reactivates it. Gaps filled: get_attention's empty-state ledger counts and review's unverified-file read also leave inactive rows out; review's changed_files section (the git diff itself) is unchanged; impact decides a changed path new since the last reconciliation at the next detect_changes. The gate sets the excluded arm's row stale by UPDATE to stand for a row flagged before the rule, so each reader is tested on its own."
     },
     {
       "id": "SC10",
