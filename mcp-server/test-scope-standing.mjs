@@ -27,7 +27,8 @@
 //      or counts the inactive ledger rows, or does not report the subsystem and the seam
 //      outside the survey (D1-D3); list_subsystems or describe_locus on a subsystem does not
 //      say which subsystem is outside the survey, or describe_locus counts a subsystem's
-//      inactive rows or their evidence (D4-D6);
+//      inactive rows or their evidence (D4-D6); get_dashboard's excluded_paths and its
+//      description disagree about a deleted excluded ledgered path (D7);
 //   5. find_symbol returns a definition in an excluded path by default, or leaves it out
 //      with include_excluded: true, or a limited page is short because of it, even past more
 //      excluded rows than its widest window (F1-F4);
@@ -652,6 +653,23 @@ async function main(mods) {
     await call("detect_changes", { current_sha: c0 }, ctx);
     const after = await phase("after detect_changes");
     return [before, after].filter(Boolean).join("; ") || null;
+  });
+
+  await check("D7 get_dashboard counts an excluded ledgered path the tree no longer carries, and says so", async () => {
+    git(ws, "rm", "-q", "design/tool.ts");
+    const c1 = commitAll(ws, "delete an excluded, ledgered path");
+    const reconciled = await call("detect_changes", { current_sha: c1 }, ctx);
+    const counted = (await call("get_dashboard", {}, ctx)).excluded_paths ?? {};
+    const wrong = [];
+    // The tree's own exclusions, and the one kept for the deleted row so it stays inactive.
+    if (counted.user !== (reconciled.scope?.excluded?.user ?? NaN) + 1) {
+      wrong.push(`excluded_paths.user is ${show(counted.user)}, detect_changes counts ${show(reconciled.scope?.excluded?.user)} in the tree`);
+    }
+    const description = allTools.get("get_dashboard")?.description ?? "";
+    if (!/no longer carries/.test(description) || !/scope\.excluded counts the tree's alone/.test(description)) {
+      wrong.push("get_dashboard's description does not say which paths excluded_paths counts");
+    }
+    return wrong.length ? wrong.join("; ") : null;
   });
 
   // ------------------------------------------------------ instructions and CI
