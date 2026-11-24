@@ -422,16 +422,6 @@ let surveyStanding = null;
       missing: ["inventory:reconciliation"],
       note: `the store is not reconciled at ${revision.slice(0, 7)} under §3.3's conditions and the scope digests: ${standing.why}`,
     });
-  } else if (Number(standing.row.unledgered ?? 0) !== 0 || Number(standing.row.absent ?? 0) !== 0) {
-    // §3.3a: reconciled is weaker than complete, and only complete licenses
-    // *fully surveyed*. A store that accurately records 501 unledgered paths is
-    // reconciled and clause 1 is false for it.
-    clause(1, "inventory names R and every tracked path has one destination", {
-      satisfied: false,
-      considered: Number(standing.row.tracked_paths ?? 0),
-      missing: ["inventory:unledgered"],
-      note: `the standing reconciliation at ${standing.sha.slice(0, 7)} reports ${standing.row.unledgered} tracked path(s) with no ledger row and ${standing.row.absent} ledger row(s) the tree no longer carries; every tracked path needs exactly one subsystem assignment or an explicit exclusion with a reason before coverage over that tree is published`,
-    });
   } else if (tracked === null) {
     clause(1, "inventory names R and every tracked path has one destination", {
       satisfied: false,
@@ -442,13 +432,20 @@ let surveyStanding = null;
   } else {
     // The survey set: the tree minus this reconciliation's exclusions (§2.10).
     // A ledger row on an excluded path is inactive, so it is not looked at.
+    // An incomplete inventory is counted over the same set, and keeps each
+    // path's named assignment and sorting obligation (F9/codex, slice S3).
     const survey = standing.survey;
+    // §3.3a: reconciled is weaker than complete, and only complete licenses
+    // *fully surveyed*. A store that accurately records 501 unledgered paths is
+    // reconciled and clause 1 is false for it.
+    const incomplete =
+      Number(standing.row.unledgered ?? 0) !== 0 || Number(standing.row.absent ?? 0) !== 0;
     const owners = new Map();
     for (const row of rows("SELECT subsystem_id, file_path, classification FROM file_ledger") ?? []) {
       if (!owners.has(row.file_path)) owners.set(row.file_path, []);
       owners.get(row.file_path).push(row);
     }
-    const missing = [];
+    const missing = incomplete ? ["inventory:unledgered"] : [];
     for (const path of survey) {
       const destinations = owners.get(path) ?? [];
       if (destinations.length === 0) missing.push(`file:${path}:assignment`);
@@ -480,11 +477,14 @@ let surveyStanding = null;
     const excludedCounts = ["gitignore", "user", "meta"]
       .map((source) => `${standing.exclusions.filter((row) => row.source === source).length} ${source}`)
       .join(", ");
+    const over = `the survey set at ${revision.slice(0, 7)}: ${tracked.length} tracked path(s) less ${standing.exclusions.length} excluded (${excludedCounts})`;
     clause(1, "inventory names R and every tracked path has one destination", {
       satisfied: missing.length === 0,
       considered: survey.length,
       missing,
-      note: `evaluated over the survey set at ${revision.slice(0, 7)}: ${tracked.length} tracked path(s) less ${standing.exclusions.length} excluded (${excludedCounts}), against the standing reconciliation recorded there`,
+      note: incomplete
+        ? `the standing reconciliation at ${standing.sha.slice(0, 7)} reports ${standing.row.unledgered} survey path(s) with no ledger row and ${standing.row.absent} ledger row(s) the tree no longer carries, over ${over}; every survey path needs exactly one subsystem assignment or an explicit exclusion with a reason before coverage over that tree is published`
+        : `evaluated over ${over}, against the standing reconciliation recorded there`,
     });
   }
 }

@@ -320,7 +320,7 @@ export const staleTools: ToolDefinition[] = [
   {
     name: "retire_ledger_file",
     description:
-      "Remove a file ledger row whose file no longer exists in the repository, or whose path the survey set excludes (a row detect_changes lists under excluded_with_rows), without discarding the subsystem's dispositions, findings, artifacts, or cross-references. Refuses while the file is still tracked and in the survey set, so this cannot be used to quietly narrow a subsystem's scope.",
+      "Remove a file ledger row whose file no longer exists in the repository, or whose path the survey set excludes (a row detect_changes lists under excluded_with_rows), without discarding the subsystem's dispositions, findings, artifacts, or cross-references. Refuses while the file is still tracked and in the survey set, so this cannot be used to quietly narrow a subsystem's scope. Also refuses a subsystem's last row when its path is excluded: that row is what keeps the subsystem outside the survey, and it carries no obligation.",
     inputSchema: {
       type: "object",
       properties: {
@@ -341,10 +341,24 @@ export const staleTools: ToolDefinition[] = [
       if (!row) return { ok: false, error: `no scoped file: ${subsystemId} / ${filePath}` };
       // The one write §2.6 allows on an excluded path: removing the inactive row is
       // how an excluded_with_rows entry is cleared.
-      if (row.stale_reason !== "absent" && surveyScopeDecision(ctx, filePath).in_survey) {
+      const excluded =
+        row.stale_reason !== "absent" && !surveyScopeDecision(ctx, filePath).in_survey;
+      if (row.stale_reason !== "absent" && !excluded) {
         return {
           ok: false,
           error: `${filePath} is not recorded as absent; run detect_changes first, and retire only rows whose file the repository no longer tracks or whose path the survey set excludes`,
+        };
+      }
+      // A subsystem whose rows are all excluded is outside the survey and owes no work
+      // (§2.6a). Removing the last of them would leave it with no rows, which reads as a
+      // subsystem nothing excluded, owing a phase sequence on paths it cannot record.
+      const others = ctx.db
+        .prepare("SELECT COUNT(*) AS n FROM file_ledger WHERE subsystem_id = ? AND file_path != ?")
+        .get(subsystemId, filePath) as { n: number };
+      if (excluded && others.n === 0) {
+        return {
+          ok: false,
+          error: `${filePath} is ${subsystemId}'s last ledger row, and its path is outside the survey set; that row is what keeps ${subsystemId} outside the survey, owing no survey work, so it stays. An excluded path's row carries no obligation: leave it in excluded_with_rows`,
         };
       }
       const txn = ctx.db.transaction(() => {
