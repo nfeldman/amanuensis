@@ -37,7 +37,9 @@
 //     §2.6a keeps the records made before it was excluded, or refresh.md does not say a new path
 //     under a meta prefix inherits its category, left out and owing no ledger row, while a new
 //     path under no rule is unsorted and needs sorting before publication;
-//   - a text predicate above accepts one of the sabotages the slice-S5 reviewers wrote (T13);
+//   - step 5 tells the agent not to open or cite the sample, or to skip it;
+//   - a text predicate above accepts one of the sabotages the slice-S5 reviewers or the final
+//     review wrote (T13);
 //   - a refusal sentence an earlier packet added is gone: onboarding.md's Phase 0b writer
 //     refusals, phase-5-packaging.md's "survey path(s) that no sorting row covers", records.md's
 //     excluded-path refusals, or test-refusal-parity.mjs does not pass;
@@ -201,6 +203,13 @@ const inDoubtProblem = (s) =>
     ? `the in-doubt sentence does not sort as product: "${s.slice(0, 160)}"`
     : null;
 
+/** Step 5 has the agent open and cite the sample, never the reverse. */
+const step5Problem = (s) =>
+  !/\bopen the first lines\b/i.test(s) ||
+  /\b(?:do not|don't|never|not)\s+(?:\w+\s+)?(?:open|cite|list)\b|\bwithout (?:opening|citing|listing)\b|\bskip\b/i.test(s)
+    ? `step 5 does not have the agent list, open and cite the sample: "${s.slice(0, 160)}"`
+    : null;
+
 /** A Phase 7 sentence that has the agent call or run set_git_state. */
 const callsSetGitState = (s) =>
   /set_git_state/.test(s) && /\b(?:call|run|invoke)s?\b/i.test(s) && !/\bPhase 0b\b/.test(s);
@@ -283,7 +292,8 @@ const STEP_RULES = [
       /first lines/i.test(s) &&
       /every file up to 5/i.test(s) &&
       /5 spread across the listing/i.test(s) &&
-      /\bcite/i.test(s),
+      /\bcite/i.test(s) &&
+      step5Problem(s) === null,
   ],
   [
     "6 record_scope_sorting, a meta row with its inventory",
@@ -456,10 +466,13 @@ check("T13 each text predicate refuses the sabotages the slice-S5 reviewers wrot
     ["inDoubtProblem", inDoubtProblem, "When in doubt, sort as meta, because a wrong product costs reading time while a wrong meta hides code."],
     ["callsSetGitState", (s) => (callsSetGitState(s) ? "calls" : null), "- Then call `set_git_state` with canonical_branch and onboarding_sha=HEAD."],
     ["callsMissed", (s) => (callsMissed(s) ? "missed" : null), "Say which source and rule decide it, and call it missed."],
+    ["step5Problem", step5Problem, "For each meta prefix, list its files and do not open the first lines of a sample: every file up to 5, otherwise 5 spread across the listing. Cite each one."],
+    ["step5Problem", step5Problem, "For each meta prefix, list its files and open the first lines of a sample: every file up to 5, otherwise 5 spread across the listing. Do not cite them."],
     ["inheritProblem", inheritProblem, "A new path under a meta prefix inherits that prefix's category, so it stays in the survey set and needs a ledger row."],
   ];
   const problems = [];
   for (const [name, predicate, bad] of cases) if (!predicate(bad)) problems.push(`${name} accepts "${bad.slice(0, 80)}"`);
+  if (steps.length === 7 && step5Problem(steps[4].text)) problems.push(`step5Problem refuses the skill's own step 5: ${step5Problem(steps[4].text)}`);
   if (definitionProblem(step4(PRODUCT, META))) problems.push(`definitionProblem refuses the plan's own definitions: ${definitionProblem(step4(PRODUCT, META))}`);
   return problems.length ? problems.join("; ") : null;
 });
