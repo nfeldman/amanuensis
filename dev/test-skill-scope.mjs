@@ -30,7 +30,8 @@
 //     all" that calls it with `include`;
 //   - phase-1-scope.md does not say a path outside the survey set gets no ledger row,
 //     notes.md does not say what `excluded` with a source (gitignore, user, meta) means when
-//     answering about a locus, or refresh.md does not say a new path under a meta prefix
+//     answering about a locus, or says such a path holds no record where §2.6a keeps the records
+//     made before it was excluded, or refresh.md does not say a new path under a meta prefix
 //     inherits its category while a new path under no rule is unsorted and needs sorting before
 //     publication;
 //   - a refusal sentence an earlier packet added is gone: onboarding.md's Phase 0b writer
@@ -334,6 +335,11 @@ check("T9 notes.md says what `excluded` with a source means when answering about
   if (!/survey set/i.test(joined)) problems.push("the survey set is not named");
   if (!/no (?:record|ledger row)|not (?:been )?survey|no survey/i.test(joined)) problems.push("it does not say the path holds no record");
   if (!/ledger/.test(joined)) problems.push("it does not set the ledger source (a ledger classification) apart");
+  // §2.6a keeps what was recorded before the path was excluded, so the path is not record-free.
+  const denies = about.find((s) => /\bholds? no records?\b|\bhas no (?:ledger )?(?:rows?|records?)\b/i.test(s));
+  if (denies) problems.push(`it says an excluded path holds no record, though §2.6a keeps earlier ones: "${denies.slice(0, 120)}"`);
+  if (!sentences.some((s) => /\bbefore\b[^.]*\bexcluded\b[^.]*\b(?:kept|remain|stay)/i.test(s)))
+    problems.push("it does not say records made before the path was excluded are kept");
   return problems.length ? problems.join("; ") : null;
 });
 
