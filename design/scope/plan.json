@@ -180,14 +180,14 @@
       ],
       "budget_minutes": 150,
       "needs_mcp": false,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "c40f284b4301f14cd6b5e5d1cd6207e7e2a31f36",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "be8f5e82c84862f998659ba881834b631b9093f7",
+      "green_sha": "e300abbe517221bf4049b8ec80982be2043ecddb",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Gaps filled: coverage and inventory are taken at the last reconciled revision, else HEAD before any reconciliation; 'covers' lists the paths whose deciding row is the new one (not every pattern match); supersedes must name an existing, not-yet-withdrawn row; both writers need an active session and are in index.ts ADDITIVE_TOOLS. onboarding.md gains a Phase 0b section with the three tools and their seven registered refusal sentences only; SC8 adds the seven steps. get_scope's last_reconciliation.scope is null until SC4 writes the scope columns."
     },
     {
       "id": "SC4",
