@@ -275,7 +275,7 @@ export const materializeTools: ToolDefinition[] = [
   {
     name: "materialize_docs",
     description:
-      "Render synchronized self-contained HTML and Markdown conspectus views inside the bound project storage, returning html_entrypoint as the primary human reading surface, then read both formats back independently on state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth. Refuses before rendering when the store has no standing reconciliation at HEAD, or when the standing one reports tracked paths with no ledger row or ledger rows the tree no longer carries: run detect_changes and assign or exempt every path it reports first.",
+      "Render synchronized self-contained HTML and Markdown conspectus views inside the bound project storage, returning html_entrypoint as the primary human reading surface, then read both formats back independently on state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth. Refuses before rendering when the store has no standing reconciliation at HEAD, or when the standing one reports tracked paths with no ledger row or ledger rows the tree no longer carries: run detect_changes and assign or exempt every path it reports first. In sorted mode it also refuses while the standing reconciliation reports survey paths no sorting row covers: sort them with record_scope_sorting and run detect_changes again.",
     inputSchema: {
       type: "object",
       properties: {

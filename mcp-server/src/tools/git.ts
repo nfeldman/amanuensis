@@ -284,7 +284,7 @@ export const gitTools: ToolDefinition[] = [
   {
     name: "detect_changes",
     description:
-      "Reconcile the file_ledger against the tree at current_sha: mark drifted and absent entries stale, rewrite scope_gaps, update last_checked_sha, and record the reading as one append-only scope_reconciliations row carrying its counts and two witness digests. The advance to 'mapped' and materialize_docs both refuse a store with no standing reconciliation. Requires the target workspace to be a git repo the server can shell out to.",
+      "Reconcile the file_ledger against the survey set at current_sha: the tree minus the paths its own ignore files match, the paths the owner excluded and the paths sorted as meta, with the owner's include rules winning. Mark drifted and absent entries stale, rewrite scope_gaps, update last_checked_sha, and record the reading as one append-only scope_reconciliations row carrying its counts, its witness digests (tree, ledger, scope rules, exclusions) and the excluded paths with their source. The response's scope gives the mode, the survey set's size, the excluded counts by source and the unsorted paths; excluded_with_rows lists ledger rows on excluded paths, which are kept and owe nothing; records_citing_excluded counts the records that still cite an excluded path. The advance to 'mapped' and materialize_docs both refuse a store with no standing reconciliation. Requires the target workspace to be a git repo the server can shell out to.",
     inputSchema: {
       type: "object",
       properties: { current_sha: { type: "string" } },

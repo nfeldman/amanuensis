@@ -164,6 +164,13 @@ async function verifyRelocatedMaterialization(server) {
       ref_sha: head,
       files: [{ file_path: "README.md", classification: "examined" }],
     });
+    // A fresh store is in sorted mode, where publication needs every survey
+    // path sorted (design/scope/PLAN.md §2.5).
+    await call("record_scope_sorting", {
+      pattern: "README.md",
+      category: "product",
+      description: "the fixture's one file",
+    });
     await call("detect_changes", { current_sha: head });
     const info = await call("get_project_info", {});
     const record = join(info.storage_path, "workspace_path");
