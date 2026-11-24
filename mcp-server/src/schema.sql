@@ -249,7 +249,16 @@ CREATE TABLE IF NOT EXISTS scope_reconciliations (
     absent          INTEGER NOT NULL,   -- ledger rows the tree no longer carries
     exempt          INTEGER NOT NULL,   -- tracked and ledgered with an exempting classification
     session_id      TEXT,
-    detected_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+    detected_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+    -- The survey set (design/scope/PLAN.md §2.1, §2.5). Null on a row taken
+    -- before survey scope existed; an existing store gains them by probe 8
+    -- (db.ts), not by this statement.
+    scope_digest     TEXT,              -- SHA-256 over the active scope_rules and scope_sorting rows
+    exclusion_digest TEXT,              -- SHA-256 over this row's own scope_exclusions rows
+    excluded         INTEGER,           -- tracked paths outside the survey set
+    unsorted         INTEGER,           -- survey paths no sorting row covers
+    survey_paths     INTEGER,           -- tracked paths minus excluded
+    scope_mode       TEXT    CHECK (scope_mode IS NULL OR scope_mode IN ('sorted','legacy'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_scope_reconciliations_sha
@@ -263,6 +272,112 @@ BEGIN SELECT RAISE(ABORT, 'scope reconciliation is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS scope_reconciliation_cannot_be_deleted
 BEFORE DELETE ON scope_reconciliations FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'scope reconciliation cannot be deleted'); END;
+
+-- What a survey leaves out (design/scope/PLAN.md §2.1). The survey set is the
+-- tree at a revision minus the paths its ignore files match, the paths the
+-- owner excluded, and the paths onboarding sorted as meta; the owner's include
+-- rules win over all three. All five tables are append-only: a rule or a
+-- sorting row is withdrawn by a later row that supersedes it, never by an edit.
+
+-- The owner's rules. `owner_words` quotes the request that asked for the rule,
+-- so a rule nobody asked for cannot be recorded as if somebody had.
+CREATE TABLE IF NOT EXISTS scope_rules (
+    id          INTEGER PRIMARY KEY,
+    pattern     TEXT    NOT NULL,
+    action      TEXT    NOT NULL CHECK (action IN ('exclude','include')),
+    reason      TEXT    NOT NULL,
+    owner_words TEXT    NOT NULL CHECK (length(trim(owner_words)) > 0),
+    supersedes  INTEGER REFERENCES scope_rules(id),
+    session_id  TEXT,
+    recorded_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TRIGGER IF NOT EXISTS scope_rule_is_immutable
+BEFORE UPDATE ON scope_rules FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope rule is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS scope_rule_cannot_be_deleted
+BEFORE DELETE ON scope_rules FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope rule cannot be deleted'); END;
+
+-- Onboarding's sorting of the tree into product and meta, by prefix or path.
+CREATE TABLE IF NOT EXISTS scope_sorting (
+    id          INTEGER PRIMARY KEY,
+    pattern     TEXT    NOT NULL,
+    category    TEXT    NOT NULL CHECK (category IN ('product','meta')),
+    description TEXT    NOT NULL,       -- one line: what is there
+    supersedes  INTEGER REFERENCES scope_sorting(id),
+    session_id  TEXT,
+    recorded_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TRIGGER IF NOT EXISTS scope_sorting_is_immutable
+BEFORE UPDATE ON scope_sorting FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope sorting is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS scope_sorting_cannot_be_deleted
+BEFORE DELETE ON scope_sorting FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope sorting cannot be deleted'); END;
+
+-- A meta row's cheap inventory: proof the folder was opened. Kept apart from
+-- `evidence` so an inventory citation can never support a claim, and no page
+-- prints it.
+CREATE TABLE IF NOT EXISTS scope_inventory (
+    sorting_id  INTEGER NOT NULL REFERENCES scope_sorting(id),
+    file_path   TEXT    NOT NULL,
+    line_range  TEXT    NOT NULL,
+    excerpt     TEXT    NOT NULL,
+    ref_sha     TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_scope_inventory_sorting
+    ON scope_inventory(sorting_id);
+
+CREATE TRIGGER IF NOT EXISTS scope_inventory_is_immutable
+BEFORE UPDATE ON scope_inventory FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope inventory is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS scope_inventory_cannot_be_deleted
+BEFORE DELETE ON scope_inventory FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope inventory cannot be deleted'); END;
+
+-- The resolved result of one reconciliation: which tracked paths left the
+-- survey set, and what decided it. Written by `detect_changes` in the
+-- transaction that writes its `scope_reconciliations` row, and witnessed by
+-- that row's `exclusion_digest`. `rule_id` names a scope_rules row for `user`
+-- and a scope_sorting row for `meta`; gitignore has no rule row.
+CREATE TABLE IF NOT EXISTS scope_exclusions (
+    reconciliation_id INTEGER NOT NULL REFERENCES scope_reconciliations(id),
+    file_path         TEXT    NOT NULL,
+    source            TEXT    NOT NULL CHECK (source IN ('gitignore','user','meta')),
+    rule_id           INTEGER,
+    CHECK ((source = 'gitignore') = (rule_id IS NULL)),
+    PRIMARY KEY (reconciliation_id, file_path)
+);
+
+CREATE TRIGGER IF NOT EXISTS scope_exclusion_is_immutable
+BEFORE UPDATE ON scope_exclusions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope exclusion is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS scope_exclusion_cannot_be_deleted
+BEFORE DELETE ON scope_exclusions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope exclusion cannot be deleted'); END;
+
+-- The store's mode is its latest row by id: `sorted` (every survey path is
+-- owed a sorting row) or `legacy` (a store surveyed before sorting existed).
+-- The first row is seeded on open (db.ts, seedScopeMode); a legacy store gets
+-- a `sorted` row when its first sorting row is recorded. A table of changes
+-- rather than one settings row, because a settings row cannot be append-only
+-- and also change.
+CREATE TABLE IF NOT EXISTS scope_mode_changes (
+    id          INTEGER PRIMARY KEY,
+    mode        TEXT    NOT NULL CHECK (mode IN ('sorted','legacy')),
+    reason      TEXT    NOT NULL,
+    recorded_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TRIGGER IF NOT EXISTS scope_mode_change_is_immutable
+BEFORE UPDATE ON scope_mode_changes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope mode change is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS scope_mode_change_cannot_be_deleted
+BEFORE DELETE ON scope_mode_changes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope mode change cannot be deleted'); END;
 
 -- Per-owner standing: what a reader is entitled to claim about one file on
 -- the authority of one subsystem's examination of it. One row per file_ledger

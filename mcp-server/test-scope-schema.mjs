@@ -210,6 +210,9 @@ function snapshot(db) {
 function rowsUnchanged(db, before) {
   const wrong = [];
   for (const [table, { columns, rows }] of Object.entries(before)) {
+    // The one row an open may add to an existing table: the store's identity,
+    // minted on the first open after it arrived (db.ts mintStoreIdentity).
+    if (table === "store_identity" && rows.length === 0) continue;
     const have = columnsOf(db, table);
     if (have.length === 0) {
       wrong.push(`${table} is gone`);
@@ -266,6 +269,9 @@ function preUpgradeSchema() {
 function rawStore(name, schemaText, seed) {
   const path = join(scratch, `${name}.db`);
   const db = new Database(path);
+  // better-sqlite3 enforces foreign keys by default, and a dump inserts a
+  // child row before the parent table it names exists.
+  db.pragma("foreign_keys = OFF");
   try {
     db.exec(schemaText);
     if (seed) seed(db);

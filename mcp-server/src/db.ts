@@ -78,7 +78,43 @@ export function openDatabase(dbPath: string): DB {
   mintStoreIdentity(db);
   requireSchemaObjects(db);
   requireViews(db);
+  seedScopeMode(db);
   return db;
+}
+
+export type ScopeMode = "sorted" | "legacy";
+
+/**
+ * Give the store its first survey-scope mode (design/scope/PLAN.md §2.1, §2.9).
+ *
+ * A post-schema step rather than a migration probe: migrations run before
+ * `scope_mode_changes` exists. It runs only while the table is empty, and at
+ * that moment nothing has been written by this version yet, so the rows it
+ * reads are exactly the rows from before the upgrade. A store that already
+ * holds a ledger or a reconciliation was surveyed without sorting and opens as
+ * `legacy`; anything else starts `sorted`. Immediate, so two processes opening
+ * the same new store cannot both seed it.
+ */
+function seedScopeMode(db: DB): void {
+  db.transaction(() => {
+    if (db.prepare("SELECT 1 FROM scope_mode_changes LIMIT 1").get()) return;
+    const surveyed =
+      db.prepare("SELECT 1 FROM file_ledger LIMIT 1").get() !== undefined ||
+      db.prepare("SELECT 1 FROM scope_reconciliations LIMIT 1").get() !== undefined;
+    const [mode, reason]: [ScopeMode, string] = surveyed
+      ? ["legacy", "the store held ledger or reconciliation rows before survey scope existed"]
+      : ["sorted", "the store held no ledger or reconciliation rows when survey scope arrived"];
+    db.prepare("INSERT INTO scope_mode_changes (mode, reason) VALUES (?, ?)").run(mode, reason);
+  }).immediate();
+}
+
+/** The store's effective mode: its latest `scope_mode_changes` row by id. */
+export function readScopeMode(db: DB): ScopeMode {
+  const row = db.prepare("SELECT mode FROM scope_mode_changes ORDER BY id DESC LIMIT 1").get() as
+    | { mode: ScopeMode }
+    | undefined;
+  if (!row) throw new Error("amanuensis-memory: scope_mode_changes is empty; open the store first");
+  return row.mode;
 }
 
 /**
@@ -328,7 +364,30 @@ function runMigrations(db: DB): void {
   // 7. A composition item may verify a stored record (design/store-only/PLAN.md
   // §2.5): the item kind CHECK is widened by a rebuild.
   migrateCompositionRecordKind(db);
+  //
+  // 8. scope_reconciliations gains the survey set's six columns
+  // (design/scope/PLAN.md §2.1, §2.9). Nullable, so every existing row keeps
+  // its values and reads as taken before survey scope; ADD COLUMN fires no
+  // UPDATE trigger. The five scope tables need no entry: schema.sql creates
+  // them, and seedScopeMode gives the store its mode after it has.
+  if (hasTable(db, "scope_reconciliations")) {
+    for (const [column, type] of SCOPE_RECONCILIATION_COLUMNS) {
+      if (!hasColumn(db, "scope_reconciliations", column)) {
+        db.exec(`ALTER TABLE scope_reconciliations ADD COLUMN ${column} ${type}`);
+      }
+    }
+  }
 }
+
+/** Probe 8's columns, as schema.sql declares them. */
+const SCOPE_RECONCILIATION_COLUMNS: readonly [string, string][] = [
+  ["scope_digest", "TEXT"],
+  ["exclusion_digest", "TEXT"],
+  ["excluded", "INTEGER"],
+  ["unsorted", "INTEGER"],
+  ["survey_paths", "INTEGER"],
+  ["scope_mode", "TEXT CHECK (scope_mode IS NULL OR scope_mode IN ('sorted','legacy'))"],
+];
 
 /**
  * Rebuild `explanations` without the CHECK that confined the project to an
