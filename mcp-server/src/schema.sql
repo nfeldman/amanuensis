@@ -275,8 +275,10 @@ BEGIN SELECT RAISE(ABORT, 'scope reconciliation cannot be deleted'); END;
 
 -- What a survey leaves out (design/scope/PLAN.md §2.1). The survey set is the
 -- tree at a revision minus the paths its ignore files match, the paths the
--- owner excluded, and the paths onboarding sorted as meta; the owner's include
--- rules win over all three. All five tables are append-only: a rule or a
+-- owner excluded, and the paths onboarding sorted as meta. The owner's include
+-- rules win over gitignore and meta; between owner rules the more specific
+-- pattern decides, so an exclude inside an included directory keeps that path
+-- out. All five tables are append-only: a rule or a
 -- sorting row is withdrawn by a later row that supersedes it, never by an edit.
 -- Each also refuses an insert that would replace a row it holds: an INSERT OR
 -- REPLACE deletes the row it collides with without firing a delete trigger
