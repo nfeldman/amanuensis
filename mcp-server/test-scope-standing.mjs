@@ -362,7 +362,7 @@ async function main(mods) {
   await check("E5 a bare file name the owner excluded resolves as a file, not an undefined term", () => {
     const r = responses.bare ?? {};
     if (r.locus?.kind !== "file") return `locus is ${show(r.locus)}`;
-    if (r.locus?.kind_inferred_by !== "excluded-path") return `kind_inferred_by is ${show(r.locus?.kind_inferred_by)}`;
+    if (r.locus?.kind_inferred_by !== "path-shaped") return `kind_inferred_by is ${show(r.locus?.kind_inferred_by)}`;
     return r.standing?.state === "excluded" && r.standing?.exclusion?.source === "user" ? null : `standing is ${show(r.standing)}`;
   });
   await check("L1 a ledger-exempt path inside the survey answers excluded with source ledger and its classification", () => {

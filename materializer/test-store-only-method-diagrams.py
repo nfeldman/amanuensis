@@ -495,6 +495,22 @@ _FIGURE_BLOCK = re.compile(
 _EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 
 
+def _carry_excluded_meaning(corpus: Path) -> Path:
+    """The start's corpus with the one sentence the survey-scope lane changed on purpose (SC6):
+    what `excluded` means. Every other byte is still held to what the packet started from."""
+
+    old = "A ledger row classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason."
+    new = (
+        "The path is outside the survey set (an owner rule, the repository's ignore files, or meta sorting), "
+        "or a ledger row inside it classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason."
+    )
+    for page in corpus.rglob("*.html"):
+        text = page.read_text()
+        if old in text:
+            page.write_text(text.replace(old, new))
+    return corpus
+
+
 def start_corpus(into: Path) -> Path | None:
     archive = subprocess.run(["git", "-C", str(REPO), "archive", START_SHA, GOLDEN_REL], capture_output=True)
     if archive.returncode != 0 or not archive.stdout:
@@ -503,7 +519,7 @@ def start_corpus(into: Path) -> Path | None:
     tar.write_bytes(archive.stdout)
     unpacked = subprocess.run(["tar", "-xf", str(tar), "-C", str(into)], capture_output=True)
     corpus = into / GOLDEN_REL
-    return corpus if unpacked.returncode == 0 and corpus.is_dir() else None
+    return _carry_excluded_meaning(corpus) if unpacked.returncode == 0 and corpus.is_dir() else None
 
 
 # SO20's record marks (`data-record`, `data-state`, `data-node`, `data-edge`) are not this

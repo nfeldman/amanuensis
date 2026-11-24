@@ -356,6 +356,22 @@ def volatile_drift(pairs: dict[str, str], before: str, after: str, fixed: str) -
     return None
 
 
+def _carry_excluded_meaning(corpus: Path) -> Path:
+    """The start's corpus with the one sentence the survey-scope lane changed on purpose (SC6):
+    what `excluded` means. Every other byte is still held to what the packet started from."""
+
+    old = "A ledger row classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason."
+    new = (
+        "The path is outside the survey set (an owner rule, the repository's ignore files, or meta sorting), "
+        "or a ledger row inside it classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason."
+    )
+    for page in corpus.rglob("*.html"):
+        text = page.read_text()
+        if old in text:
+            page.write_text(text.replace(old, new))
+    return corpus
+
+
 def so11_corpus(into: Path) -> Path | None:
     """SO11's golden corpus, extracted from git at the packet's start commit."""
 
@@ -369,7 +385,7 @@ def so11_corpus(into: Path) -> Path | None:
     tar.write_bytes(archive.stdout)
     unpacked = subprocess.run(["tar", "-xf", str(tar), "-C", str(into)], capture_output=True)
     corpus = into / "materializer" / "fixtures" / "store-only-golden"
-    return corpus if unpacked.returncode == 0 and (corpus / "VERSION").is_file() else None
+    return _carry_excluded_meaning(corpus) if unpacked.returncode == 0 and (corpus / "VERSION").is_file() else None
 
 
 def unfold_from(corpus: Path, text: str) -> str:

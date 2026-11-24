@@ -474,6 +474,7 @@ def start_tree(into: Path) -> Path | None:
 # The start tree printed a code span inside a link label as its stash placeholder
 # (slice-S3 review F1); the tree before the slice printed `<code>` inside the link.
 # The reference is the start tree with that one repair, each edit applied exactly once,
+# and with the one text the survey-scope lane changed on purpose (SC6: what `excluded` means),
 # so the comparison holds every other byte to what the packet started from.
 START_TREE_REPAIRS: tuple[tuple[str, str, str], ...] = (
     (
@@ -489,6 +490,11 @@ START_TREE_REPAIRS: tuple[tuple[str, str, str], ...] = (
         '        label = "".join(c.value if isinstance(c, Chip) else getattr(c, "text", "") for c in children)\n'
         '        external = href.startswith(("http://", "https://"))\n'
         "        return keep(Link(href, label, external, children if len(parts) > 1 else ()))\n",
+    ),
+    (
+        "vocabulary.py",
+        '"meaning": "A ledger row classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason.",',
+        '"meaning": "The path is outside the survey set (an owner rule, the repository\'s ignore files, or meta sorting), or a ledger row inside it classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason.",',
     ),
     (
         "html_projection.py",

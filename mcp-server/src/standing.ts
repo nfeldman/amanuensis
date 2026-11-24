@@ -39,9 +39,9 @@ export type LocusKind = "file" | "symbol" | "subsystem" | "term";
  * / sh:Info)` is a real term that the colon test alone kinds `symbol` and
  * leaves unreachable. Step 5 precedes step 6 because §2.2's `unledgered` state
  * exists precisely for a path no table names; falling through to `not-defined`
- * would contradict it. `excluded-path` (design/scope/PLAN.md §2.7) sits between
- * them: a bare file name the survey set excludes, such as `Makefile`, is a
- * path the owner ruled on and not a term the vocabulary lacks.
+ * would contradict it. Step 5 also takes a bare file name the survey set
+ * excludes, such as `Makefile` (design/scope/PLAN.md §2.7): a path the owner
+ * ruled on, not a term the vocabulary lacks.
  */
 export const LOCUS_INFERENCE_ORDER = [
   "subsystem-id",
@@ -49,7 +49,6 @@ export const LOCUS_INFERENCE_ORDER = [
   "colon-split",
   "ledgered-path",
   "path-shaped",
-  "excluded-path",
   "bare-term",
 ] as const;
 export type LocusInferenceStep = (typeof LOCUS_INFERENCE_ORDER)[number] | "caller-supplied";
@@ -510,10 +509,10 @@ export function resolveLocus(
   if (pathIsNamedByATable(db, candidate)) return asFile(value, "ledgered-path");
   // 5. path-shaped and named nowhere: `unledgered`, not `not-defined`
   if (pathShaped(candidate)) return asFile(value, "path-shaped");
-  // 5b. a bare name the survey set excludes (`Makefile`): the owner ruled on this path
+  // 5, continued: a bare name the survey set excludes (`Makefile`) is a path the owner ruled on
   if (ctx && candidate.length > 0 && !/\s/.test(candidate) && scopeExclusion(ctx, candidate)) {
     try {
-      return asFile(value, "excluded-path");
+      return asFile(value, "path-shaped");
     } catch {
       // not a workspace source path after all: fall through to a term
     }

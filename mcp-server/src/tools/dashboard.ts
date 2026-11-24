@@ -43,12 +43,11 @@ export const dashboardTools: ToolDefinition[] = [
                   (SELECT COUNT(*) FILTER (WHERE status='mapped')        FROM subsystems)      AS mapped_count,
                   (SELECT COUNT(*)                                       FROM findings)        AS total_findings,
                   (SELECT COUNT(*) FILTER (WHERE ${OPEN_FINDING_SQL}) FROM finding_state_current) AS open_bugs,
-                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL}) AS stale_entries,
-                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND NOT (${OBLIGATION_BEARING_SQL})) FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL}) AS stale_exempt,
-                  (SELECT COUNT(*)                                       FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL}) AS scoped_files,
-                  (SELECT COUNT(*)                                       FROM file_ledger WHERE NOT (${ACTIVE_LEDGER_ROW_SQL})) AS inactive_ledger_rows,
-                  (SELECT COUNT(*) FILTER (WHERE classification='examined') FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL})  AS examined_files,
-                  (SELECT COUNT(*) FILTER (WHERE COALESCE(classification, 'candidate')='candidate' AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL}) AS unexamined_files,
+                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger) AS stale_entries,
+                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND NOT (${OBLIGATION_BEARING_SQL})) FROM file_ledger) AS stale_exempt,
+                  (SELECT COUNT(*)                                       FROM file_ledger) AS scoped_files,
+                  (SELECT COUNT(*) FILTER (WHERE classification='examined') FROM file_ledger)  AS examined_files,
+                  (SELECT COUNT(*) FILTER (WHERE COALESCE(classification, 'candidate')='candidate' AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger) AS unexamined_files,
                   (SELECT COUNT(*) FILTER (WHERE kind='unledgered')      FROM scope_gaps)      AS unclassified_paths,
                   (SELECT COUNT(*) FILTER (WHERE kind='absent')          FROM scope_gaps)      AS absent_files,
                   (SELECT COUNT(*) FILTER (WHERE follow_up='open')       FROM field_notes)     AS open_field_notes,
@@ -68,7 +67,6 @@ export const dashboardTools: ToolDefinition[] = [
         stale_entries: number;
         stale_exempt: number;
         scoped_files: number;
-        inactive_ledger_rows: number;
         examined_files: number;
         unexamined_files: number;
         unclassified_paths: number;
@@ -85,12 +83,36 @@ export const dashboardTools: ToolDefinition[] = [
       // stale_entries = 0 is only a health claim when something was actually
       // measured. staleness_measured carries the denominator so a caller cannot
       // read an empty ledger as a fresh conspectus (finding B03-2).
+      // A ledger row on a path the survey leaves out is inactive (§2.6a): counted once as
+      // inactive_ledger_rows, and taken out of every ledger quantity above.
+      const inactive = ctx.db
+        .prepare(
+          `SELECT COUNT(*) AS rows,
+                  COUNT(*) FILTER (WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}) AS stale_entries,
+                  COUNT(*) FILTER (WHERE stale=1 AND NOT (${OBLIGATION_BEARING_SQL})) AS stale_exempt,
+                  COUNT(*) FILTER (WHERE classification='examined') AS examined_files,
+                  COUNT(*) FILTER (WHERE COALESCE(classification, 'candidate')='candidate' AND ${OBLIGATION_BEARING_SQL}) AS unexamined_files
+             FROM file_ledger WHERE NOT (${ACTIVE_LEDGER_ROW_SQL})`,
+        )
+        .get() as {
+        rows: number;
+        stale_entries: number;
+        stale_exempt: number;
+        examined_files: number;
+        unexamined_files: number;
+      };
+      row.scoped_files -= inactive.rows;
+      row.stale_entries -= inactive.stale_entries;
+      row.stale_exempt -= inactive.stale_exempt;
+      row.examined_files -= inactive.examined_files;
+      row.unexamined_files -= inactive.unexamined_files;
       const scope = scopeCounts(ctx.db);
       const outsideSubsystems = outsideSurveySubsystems(ctx.db);
       return {
         project_key: ctx.project.projectKey,
         ...row,
         staleness_measured: row.scoped_files > 0,
+        inactive_ledger_rows: inactive.rows,
         excluded_paths: scope.excluded,
         unsorted_paths: scope.unsorted,
         outside_survey: {

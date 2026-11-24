@@ -126,7 +126,6 @@
             "colon-split",
             "ledgered-path",
             "path-shaped",
-            "excluded-path",
             "bare-term",
             "caller-supplied"
           ]

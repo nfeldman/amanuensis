@@ -633,7 +633,19 @@ def start_tree(into: Path) -> Path | None:
     if subprocess.run(["tar", "-xf", str(tarball), "-C", str(into)], capture_output=True).returncode != 0:
         return None
     tree = into / "materializer"
-    return tree if (tree / "materialize.py").is_file() else None
+    if not (tree / "materialize.py").is_file():
+        return None
+    # The one text the survey-scope lane changed on purpose (SC6): what `excluded` means.
+    # The reference is the start tree with that sentence, so every other byte is still held.
+    vocabulary = tree / "amanuensis_materializer" / "vocabulary.py"
+    if vocabulary.is_file():
+        vocabulary.write_text(
+            vocabulary.read_text().replace(
+                '"meaning": "A ledger row classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason.",',
+                '"meaning": "The path is outside the survey set (an owner rule, the repository\'s ignore files, or meta sorting), or a ledger row inside it classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason.",',
+            )
+        )
+    return tree
 
 
 def run_start_tree(tree: Path, storage: Path, output: Path) -> bool:
