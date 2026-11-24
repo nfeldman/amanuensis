@@ -267,15 +267,28 @@ function git(cwd, args, input) {
   return result.stdout;
 }
 
-/** The pre-upgrade schema text, out of this repository's history. */
+// The pre-upgrade schema, committed as a fixture and pinned by its SHA-256 so
+// the gate reads no repository history: a shallow clone or an archive runs it
+// the same as a full checkout (final review, F1/claude).
+const PRE_UPGRADE_FIXTURE = join(here, "fixtures", "scope", `schema-${PRE_UPGRADE_SHA}.sql`);
+const PRE_UPGRADE_FIXTURE_SHA256 = "e18f09fb4df820da22f32a4ee08130c4c0796aa7b9724fa4f6a2904d45390e98";
+
+/** The pre-upgrade schema text, from the committed fixture; null when it is absent or altered. */
 function preUpgradeSchema() {
+  if (!existsSync(PRE_UPGRADE_FIXTURE)) return null;
+  const text = readFileSync(PRE_UPGRADE_FIXTURE, "utf8");
+  return createHash("sha256").update(text).digest("hex") === PRE_UPGRADE_FIXTURE_SHA256 ? text : null;
+}
+
+/** The same schema out of this repository's history, when it has that history; null otherwise. */
+function preUpgradeSchemaFromHistory() {
   const result = spawnSync("git", ["show", `${PRE_UPGRADE_SHA}:mcp-server/src/schema.sql`], {
     cwd: here,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
+    env: FIXTURE_GIT_ENV,
   });
-  if (result.status !== 0 || !result.stdout) return null;
-  return result.stdout;
+  return result.status === 0 && result.stdout ? result.stdout : null;
 }
 
 /** A store whose schema is `schemaText`, applied raw, with `seed` run over it. */
@@ -465,6 +478,8 @@ function valueChecks(label, path) {
         ["a rule without owner_words", "INSERT INTO scope_rules (pattern, action, reason) VALUES ('x/', 'exclude', 'r')"],
         ["a rule with empty owner_words", "INSERT INTO scope_rules (pattern, action, reason, owner_words) VALUES ('x/', 'exclude', 'r', '  ')"],
         ["a rule without a pattern", "INSERT INTO scope_rules (action, reason, owner_words) VALUES ('exclude', 'r', 'w')"],
+        ["a rule without a reason", "INSERT INTO scope_rules (pattern, action, owner_words) VALUES ('x/', 'exclude', 'w')"],
+        ["a rule with a null reason", "INSERT INTO scope_rules (pattern, action, reason, owner_words) VALUES ('x/', 'exclude', NULL, 'w')"],
         ["a rule superseding no rule", "INSERT INTO scope_rules (pattern, action, reason, owner_words, supersedes) VALUES ('x/', 'exclude', 'r', 'w', 99999)"],
         ["a category other than product or meta", "INSERT INTO scope_sorting (pattern, category, description) VALUES ('x/', 'other', 'd')"],
         ["a sorting row without a description", "INSERT INTO scope_sorting (pattern, category) VALUES ('x/', 'meta')"],
@@ -664,9 +679,16 @@ check("schema.sql states §0's precedence: an owner include beats gitignore and 
 // ---------------------------- 4. a pre-upgrade store, and its standing
 
 const oldSchema = preUpgradeSchema();
-check(`pre-upgrade: the schema at ${PRE_UPGRADE_SHA} is readable from this repository's history`, () =>
-  oldSchema ? null : `git show ${PRE_UPGRADE_SHA}:mcp-server/src/schema.sql gave nothing (a shallow clone needs fetch-depth: 0)`,
+check(`pre-upgrade: the schema at ${PRE_UPGRADE_SHA} is the committed fixture, unaltered`, () =>
+  oldSchema ? null : `${PRE_UPGRADE_FIXTURE} is absent or its SHA-256 is not ${PRE_UPGRADE_FIXTURE_SHA256}`,
 );
+// Where the history is present, the fixture must be what it says it is.
+const historySchema = preUpgradeSchemaFromHistory();
+if (historySchema !== null) {
+  check(`pre-upgrade: the fixture equals ${PRE_UPGRADE_SHA}:mcp-server/src/schema.sql`, () =>
+    historySchema === oldSchema ? null : "the fixture differs from the schema in this repository's history",
+  );
+}
 
 if (oldSchema && freshOpened) {
   check("pre-upgrade: an empty pre-upgrade store opens as sorted", () => {
