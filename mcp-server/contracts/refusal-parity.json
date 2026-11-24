@@ -127,6 +127,16 @@
       ]
     },
     {
+      "id": "scope-unsorted-publication",
+      "note": "New, design/scope/PLAN.md §2.5. In sorted mode every survey path is owed a sorting row before publication; the advance to mapped does not ask for it.",
+      "refuses": ["materialize_docs"],
+      "instructs": ["record_scope_sorting"],
+      "server": { "file": "src/invariants.ts", "phrase": "survey path(s) that no sorting row covers" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-5-packaging.md" }
+      ]
+    },
+    {
       "id": "ladder-empty-ledger",
       "note": "Existing. Phase 1's own deliverable is what discharges it.",
       "refuses": ["update_subsystem_status"],

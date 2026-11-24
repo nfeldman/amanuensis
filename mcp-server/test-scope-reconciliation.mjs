@@ -971,9 +971,12 @@ function main(mods) {
 
   {
     // A store entitled to publish, that then stops being entitled to. The first
-    // publication is what gives A16 and A17 a previous output to protect.
+    // publication is what gives A16 and A17 a previous output to protect. Its
+    // one path is sorted, so the sorted-mode refusal (design/scope/PLAN.md
+    // §2.5) does not stand in for the one A16 and A17 test.
     const ctx = world("publish-standing", { "a.ts": citedSource("a") });
     climbToAdversarial(ctx, "B-01", "a.ts");
+    call("record_scope_sorting", { pattern: "a.ts", category: "product", description: "the code" }, ctx);
     const docs = join(ctx.project.storagePath, "docs");
     let standing = null;
 
@@ -1065,9 +1068,13 @@ function main(mods) {
 
   {
     // Every tracked path is ledgered, so the standing reconciliation reports
-    // zero unledgered and zero absent: §3.3a's clause-1 store.
+    // zero unledgered and zero absent: §3.3a's clause-1 store. A fresh store is
+    // in `sorted` mode, where publication also needs every survey path sorted
+    // (design/scope/PLAN.md §2.5), so the one path gets a `product` row before
+    // the reconciliation is taken; the control still has to publish for real.
     const ctx = world("control", { "a.ts": citedSource("a") });
     climbToAdversarial(ctx, "B-01", "a.ts");
+    call("record_scope_sorting", { pattern: "a.ts", category: "product", description: "the code" }, ctx);
 
     check("C1 a reconciled, complete store advances to mapped and publishes", () => {
       const result = reconcile(ctx);
@@ -1195,6 +1202,7 @@ try {
       materialize,
       narratives,
       project,
+      scope,
       subsystems,
       vocabulary,
     ] = await Promise.all([
@@ -1209,6 +1217,7 @@ try {
       import("./dist/tools/materialize.js"),
       import("./dist/tools/narratives.js"),
       import("./dist/tools/project.js"),
+      import("./dist/tools/scope.js"),
       import("./dist/tools/subsystems.js"),
       import("./dist/tools/vocabulary.js"),
     ]);
@@ -1224,6 +1233,7 @@ try {
       gitModule.gitTools,
       materialize.materializeTools,
       project.projectTools,
+      scope.scopeTools,
       subsystems.subsystemTools,
       vocabulary.vocabularyTools,
     ];

@@ -1,3 +1,4 @@
+import { readScopeMode } from "../db.js";
 import type { ServerContext } from "../helpers.js";
 import {
   nowIso,
@@ -14,7 +15,15 @@ import {
 // reads it back. Two copies of "the digest of the tracked path set" would
 // disagree the first time either was edited, and the disagreement would present
 // as a store that reconciles and is never reconciled.
-import { ledgerDigest, listTrackedPaths, trackedPathDigest } from "../invariants.js";
+import { exclusionDigest, ledgerDigest, scopeDigest, trackedPathDigest } from "../invariants.js";
+import {
+  gitignoredPaths,
+  listTreeEntries,
+  resolveScope,
+  ScopeGitError,
+  type ScopeRuleRow,
+  type ScopeSortingRow,
+} from "../scope.js";
 import { execFileSync } from "../subprocess.js";
 // The reconciliation's three outcomes are named by the enum source, not by a
 // literal beside each `markStale` call. Typing the writer's argument is what
@@ -65,6 +74,101 @@ function getGit(ctx: ServerContext): {
  * the response's size in the ledger's size.
  */
 const NAMED_DUPLICATE_PATHS = 25;
+
+/** How many unsorted paths and excluded ledger rows one reconciliation lists before only counting. */
+const NAMED_SCOPE_PATHS = 50;
+
+/** How many records citing an excluded path one reconciliation names. */
+const NAMED_CITING_RECORDS = 25;
+
+type CitingRecord = {
+  kind: "claim" | "disposition" | "evidence" | "finding" | "term";
+  id: string | number;
+};
+
+/** The path a `file:symbol@sha` location names. */
+function locationPath(location: string): string {
+  return location.split("@")[0]?.split(":")[0] ?? location;
+}
+
+/**
+ * Records made before a path left the survey set that still rest on it
+ * (design/scope/PLAN.md §2.6a): evidence on the path, the claims, dispositions
+ * and findings that cite that evidence, findings that name it as a primary
+ * file, and vocabulary terms first seen there. Nothing is deleted; the count
+ * and the capped list let the owner see them.
+ */
+function recordsCitingExcluded(db: ServerContext["db"], excluded: ReadonlySet<string>) {
+  if (excluded.size === 0) return { count: 0, records: [] as CitingRecord[] };
+  const paths = JSON.stringify([...excluded]);
+  const evidence = (
+    db
+      .prepare("SELECT id FROM evidence WHERE file_path IN (SELECT value FROM json_each(?))")
+      .all(paths) as Array<{ id: number }>
+  ).map((row) => row.id);
+  const ids = JSON.stringify(evidence);
+  const records: CitingRecord[] = evidence.map((id) => ({ kind: "evidence", id }));
+  for (const row of db
+    .prepare(
+      "SELECT DISTINCT claim_id AS id FROM claim_evidence WHERE evidence_id IN (SELECT value FROM json_each(?))",
+    )
+    .all(ids) as Array<{ id: string }>) {
+    records.push({ kind: "claim", id: row.id });
+  }
+  for (const row of db
+    .prepare(
+      `SELECT DISTINCT subsystem_id || '/' || concern_code AS id FROM disposition_evidence
+        WHERE evidence_id IN (SELECT value FROM json_each(?))`,
+    )
+    .all(ids) as Array<{ id: string }>) {
+    records.push({ kind: "disposition", id: row.id });
+  }
+  const findings = new Set(
+    (
+      db
+        .prepare(
+          "SELECT DISTINCT finding_id AS id FROM finding_evidence WHERE evidence_id IN (SELECT value FROM json_each(?))",
+        )
+        .all(ids) as Array<{ id: string }>
+    ).map((row) => row.id),
+  );
+  for (const row of db
+    .prepare("SELECT finding_id, primary_files FROM findings WHERE primary_files IS NOT NULL")
+    .all() as Array<{ finding_id: string; primary_files: string }>) {
+    let named: unknown;
+    try {
+      named = JSON.parse(row.primary_files);
+    } catch {
+      continue;
+    }
+    if (
+      Array.isArray(named) &&
+      named.some((entry) => typeof entry === "string" && excluded.has(locationPath(entry)))
+    ) {
+      findings.add(row.finding_id);
+    }
+  }
+  for (const id of findings) records.push({ kind: "finding", id });
+  for (const row of db
+    .prepare("SELECT term, first_seen FROM vocabulary WHERE first_seen IS NOT NULL")
+    .all() as Array<{ term: string; first_seen: string }>) {
+    if (excluded.has(locationPath(row.first_seen))) records.push({ kind: "term", id: row.term });
+  }
+  records.sort((a, b) =>
+    a.kind !== b.kind
+      ? a.kind < b.kind
+        ? -1
+        : 1
+      : typeof a.id === "number" && typeof b.id === "number"
+        ? a.id - b.id
+        : String(a.id) < String(b.id)
+          ? -1
+          : String(a.id) > String(b.id)
+            ? 1
+            : 0,
+  );
+  return { count: records.length, records: records.slice(0, NAMED_CITING_RECORDS) };
+}
 
 function carriesObligation(row: { classification: string | null }): boolean {
   const value = (row.classification ??
@@ -226,23 +330,6 @@ export const gitTools: ToolDefinition[] = [
         };
       }
 
-      // Map changed files → affected subsystems.
-      const bySubsystem = new Map<string, { files: Set<string>; commits: number }>();
-      if (changedFiles.length) {
-        const placeholders = changedFiles.map(() => "?").join(",");
-        const rows = ctx.db
-          .prepare(
-            `SELECT subsystem_id, file_path FROM file_ledger WHERE file_path IN (${placeholders})`,
-          )
-          .all(...changedFiles) as { subsystem_id: string; file_path: string }[];
-        for (const r of rows) {
-          if (!bySubsystem.has(r.subsystem_id)) {
-            bySubsystem.set(r.subsystem_id, { files: new Set(), commits: 0 });
-          }
-          bySubsystem.get(r.subsystem_id)?.files.add(r.file_path);
-        }
-      }
-
       // Commit count between SHAs.
       let commitCount = 0;
       try {
@@ -257,130 +344,197 @@ export const gitTools: ToolDefinition[] = [
       }
 
       // Reconcile the ledger against the tree at `currentSha`. Intersecting the
-      // commit diff with existing rows (above) can only ever see files someone
-      // already classified: additions match no row and drop out, and rows whose
-      // file was deleted keep asserting they were examined. Both halves of that
-      // gap are finding B03-1, so the tree itself is the reference here, not the
+      // commit diff with existing rows can only ever see files someone already
+      // classified: additions match no row and drop out, and rows whose file
+      // was deleted keep asserting they were examined. Both halves of that gap
+      // are finding B03-1, so the tree itself is the reference here, not the
       // diff.
       //
       // The tree at the revision, never `git ls-files`. That reads the index —
       // the working tree's staged state, which moves under an unrelated
       // `git add` and does not describe the revision at all, while every count
-      // written below is stamped with it (§3.3).
-      const trackedPaths = listTrackedPaths(ctx.project.workspacePath, currentSha);
-      if (trackedPaths === null) {
+      // written below is stamped with it (§3.3). The ignore files are read at
+      // the same revision (design/scope/PLAN.md §2.3), so the survey set is a
+      // property of the commit as the tree digest is. Both are git's answers
+      // about the commit alone, so they are taken before the transaction; a
+      // failure fails the reconciliation and names the command, and is never
+      // read as "nothing ignored".
+      let trackedPaths: string[];
+      let ignored: Set<string>;
+      try {
+        const entries = listTreeEntries(ctx.project.workspacePath, currentSha);
+        trackedPaths = entries.map((entry) => entry.path);
+        ignored = gitignoredPaths(ctx.project.workspacePath, entries);
+      } catch (error) {
+        if (!(error instanceof ScopeGitError)) throw error;
         return {
           ok: false,
-          error:
-            `git ls-tree -r --name-only ${currentSha} failed. Is the workspace a git repo the ` +
-            `server can read?`,
+          error: `${error.message}. Is the workspace a git repo the server can read?`,
         };
       }
       const trackedSet = new Set(trackedPaths);
-      const ledgerRows = ctx.db
-        .prepare("SELECT subsystem_id, file_path, ref_sha, classification FROM file_ledger")
-        .all() as {
+
+      type LedgerRow = {
         subsystem_id: string;
         file_path: string;
         ref_sha: string | null;
         classification: string | null;
-      }[];
-      const ledgerPaths = new Set(ledgerRows.map((r) => r.file_path));
+      };
 
-      const unledgered = trackedPaths.filter((p) => !ledgerPaths.has(p));
-      const absent = ledgerRows.filter((r) => !trackedSet.has(r.file_path));
-      // `exempt` is the third part of the tracked set: paths the ledger carries
-      // and that carry no survey obligation. Counted over distinct paths,
-      // because it is one side of the tracked-set intersection §3.2 records and
-      // not a count of rows.
-      const exemptPaths = new Set(
-        ledgerRows
-          .filter((row) => trackedSet.has(row.file_path) && !carriesObligation(row))
-          .map((row) => row.file_path),
-      );
-
-      // One path owned by two subsystems is neither unledgered nor absent, so
-      // neither `scope_gaps` kind records it and a reconciliation silent about
-      // it is a reading that did not report its own ambiguity — the AxiomDB
-      // store holds it for 53 of its 187 distinct ledger paths. Reported rather
-      // than refused: which subsystem should own a shared path is a coordinator
-      // judgement, not a server one. The list is capped and the count is kept,
-      // so a wholesale overlap is visible without putting a reconciliation's
-      // response size in the ledger's size.
-      const ownersByPath = new Map<string, string[]>();
-      for (const row of ledgerRows) {
-        const owners = ownersByPath.get(row.file_path);
-        if (owners) owners.push(row.subsystem_id);
-        else ownersByPath.set(row.file_path, [row.subsystem_id]);
-      }
-      const duplicateOwnership = [...ownersByPath.entries()]
-        .filter(([, owners]) => owners.length > 1)
-        .map(([file_path, owners]) => ({ file_path, subsystem_ids: [...owners].sort() }))
-        .sort((a, b) => (a.file_path < b.file_path ? -1 : 1));
-
-      // A ledger row is stale when its content differs from the commit at which
-      // it was examined — a claim about content, not about which paths happen to
-      // appear in the range being inspected. Deciding it from the moving
-      // lastSha..currentSha window cannot self-correct: a file marked stale in
-      // one window and restored in the next stays flagged forever, because
-      // nothing lowers the flag except clear_staleness (finding B03-4).
-      //
-      // Rows are grouped by their examination commit so this costs one git call
-      // per distinct ref_sha rather than one per file.
-      const byRefSha = new Map<string, typeof ledgerRows>();
-      for (const row of ledgerRows) {
-        if (!trackedSet.has(row.file_path) || !row.ref_sha) continue;
-        const group = byRefSha.get(row.ref_sha);
-        if (group) group.push(row);
-        else byRefSha.set(row.ref_sha, [row]);
-      }
-      const drifted: typeof ledgerRows = [];
-      const unverifiable: typeof ledgerRows = [];
-      const fresh: typeof ledgerRows = [];
-      for (const [refSha, rows] of byRefSha) {
-        // A row stored before writers resolved revisions may hold a name such
-        // as HEAD. `git diff HEAD <current>` is empty whenever HEAD is current,
-        // so the row would read fresh however far its file had moved; it is
-        // unverified instead.
-        if (!/^[0-9a-f]{7,40}$/.test(refSha)) {
-          unverifiable.push(...rows);
-          continue;
-        }
-        let changedSinceExamination: Set<string>;
-        try {
-          changedSinceExamination = new Set(
-            splitGitPaths(
-              runGitRaw(ctx.project.workspacePath, [
-                "diff",
-                "--name-only",
-                "-z",
-                refSha,
-                currentSha,
-              ]),
-            ),
-          );
-        } catch {
-          // An examination commit that is no longer reachable cannot be
-          // compared against. Treat those rows as unverified rather than
-          // silently fresh, and say so in the reason.
-          unverifiable.push(...rows);
-          continue;
-        }
-        for (const row of rows) {
-          if (changedSinceExamination.has(row.file_path)) drifted.push(row);
-          else fresh.push(row);
-        }
-      }
-
-      let reconciliationId = 0;
-      let treeDigest = "";
-      let recordedLedgerDigest = "";
+      // Everything read from the store is read inside the transaction that
+      // writes the reading (design/scope/PLAN.md §6.1): the ledger, the scope
+      // rows and every count and digest taken from them. Read before it, a
+      // write landing in between would be counted against a ledger the row
+      // does not describe. IMMEDIATE, so no other writer can interleave.
       const reconcileTx = ctx.db.transaction(() => {
+        const rules = ctx.db
+          .prepare("SELECT id, pattern, action, supersedes FROM scope_rules ORDER BY id")
+          .all() as ScopeRuleRow[];
+        const sorting = ctx.db
+          .prepare("SELECT id, pattern, category, supersedes FROM scope_sorting ORDER BY id")
+          .all() as ScopeSortingRow[];
+        const mode = readScopeMode(ctx.db);
+        const scope = resolveScope({ rules, sorting, mode, paths: trackedPaths, ignored });
+        const surveySet = new Set(scope.survey);
+        const exclusionByPath = new Map(scope.exclusions.map((row) => [row.file_path, row]));
+        const excludedPaths = new Set(exclusionByPath.keys());
+
+        const ledgerRows = ctx.db
+          .prepare("SELECT subsystem_id, file_path, ref_sha, classification FROM file_ledger")
+          .all() as LedgerRow[];
+
+        // Map changed files → affected subsystems.
+        const bySubsystem = new Map<string, { files: Set<string>; commits: number }>();
+        const changed = new Set(changedFiles);
+        for (const r of ledgerRows) {
+          if (!changed.has(r.file_path)) continue;
+          if (!bySubsystem.has(r.subsystem_id)) {
+            bySubsystem.set(r.subsystem_id, { files: new Set(), commits: 0 });
+          }
+          bySubsystem.get(r.subsystem_id)?.files.add(r.file_path);
+        }
+
+        // A ledger row on an excluded path is inactive (§2.6a): reported as
+        // `excluded_with_rows`, never deleted, and owing nothing. It is not a
+        // ledger path the survey set counts, so it neither satisfies nor
+        // creates an `unledgered` gap, and the ledger digest leaves it out.
+        const activeLedgerPaths = new Set(
+          ledgerRows.map((r) => r.file_path).filter((path) => !excludedPaths.has(path)),
+        );
+        const excludedWithRows = ledgerRows
+          .filter((row) => excludedPaths.has(row.file_path))
+          .map((row) => {
+            const exclusion = exclusionByPath.get(row.file_path);
+            return {
+              subsystem_id: row.subsystem_id,
+              file_path: row.file_path,
+              classification: row.classification,
+              source: exclusion?.source ?? null,
+              rule_id: exclusion?.rule_id ?? null,
+            };
+          })
+          .sort((a, b) =>
+            a.file_path !== b.file_path
+              ? a.file_path < b.file_path
+                ? -1
+                : 1
+              : a.subsystem_id < b.subsystem_id
+                ? -1
+                : a.subsystem_id > b.subsystem_id
+                  ? 1
+                  : 0,
+          );
+
+        const unledgered = scope.survey.filter((p) => !activeLedgerPaths.has(p));
+        const absent = ledgerRows.filter((r) => !trackedSet.has(r.file_path));
+        // `exempt` is the third part of the survey set: paths the ledger carries
+        // and that carry no survey obligation. Counted over distinct paths,
+        // because it is one side of the survey-set intersection §3.2 records and
+        // not a count of rows.
+        const exemptPaths = new Set(
+          ledgerRows
+            .filter((row) => surveySet.has(row.file_path) && !carriesObligation(row))
+            .map((row) => row.file_path),
+        );
+
+        // One path owned by two subsystems is neither unledgered nor absent, so
+        // neither `scope_gaps` kind records it and a reconciliation silent about
+        // it is a reading that did not report its own ambiguity — the AxiomDB
+        // store holds it for 53 of its 187 distinct ledger paths. Reported rather
+        // than refused: which subsystem should own a shared path is a coordinator
+        // judgement, not a server one. The list is capped and the count is kept,
+        // so a wholesale overlap is visible without putting a reconciliation's
+        // response size in the ledger's size.
+        const ownersByPath = new Map<string, string[]>();
+        for (const row of ledgerRows) {
+          const owners = ownersByPath.get(row.file_path);
+          if (owners) owners.push(row.subsystem_id);
+          else ownersByPath.set(row.file_path, [row.subsystem_id]);
+        }
+        const duplicateOwnership = [...ownersByPath.entries()]
+          .filter(([, owners]) => owners.length > 1)
+          .map(([file_path, owners]) => ({ file_path, subsystem_ids: [...owners].sort() }))
+          .sort((a, b) => (a.file_path < b.file_path ? -1 : 1));
+
+        // A ledger row is stale when its content differs from the commit at which
+        // it was examined — a claim about content, not about which paths happen to
+        // appear in the range being inspected. Deciding it from the moving
+        // lastSha..currentSha window cannot self-correct: a file marked stale in
+        // one window and restored in the next stays flagged forever, because
+        // nothing lowers the flag except clear_staleness (finding B03-4).
+        //
+        // Rows are grouped by their examination commit so this costs one git call
+        // per distinct ref_sha rather than one per file.
+        const byRefSha = new Map<string, LedgerRow[]>();
+        for (const row of ledgerRows) {
+          if (!trackedSet.has(row.file_path) || !row.ref_sha) continue;
+          const group = byRefSha.get(row.ref_sha);
+          if (group) group.push(row);
+          else byRefSha.set(row.ref_sha, [row]);
+        }
+        const drifted: LedgerRow[] = [];
+        const unverifiable: LedgerRow[] = [];
+        const fresh: LedgerRow[] = [];
+        for (const [refSha, rows] of byRefSha) {
+          // A row stored before writers resolved revisions may hold a name such
+          // as HEAD. `git diff HEAD <current>` is empty whenever HEAD is current,
+          // so the row would read fresh however far its file had moved; it is
+          // unverified instead.
+          if (!/^[0-9a-f]{7,40}$/.test(refSha)) {
+            unverifiable.push(...rows);
+            continue;
+          }
+          let changedSinceExamination: Set<string>;
+          try {
+            changedSinceExamination = new Set(
+              splitGitPaths(
+                runGitRaw(ctx.project.workspacePath, [
+                  "diff",
+                  "--name-only",
+                  "-z",
+                  refSha,
+                  currentSha,
+                ]),
+              ),
+            );
+          } catch {
+            // An examination commit that is no longer reachable cannot be
+            // compared against. Treat those rows as unverified rather than
+            // silently fresh, and say so in the reason.
+            unverifiable.push(...rows);
+            continue;
+          }
+          for (const row of rows) {
+            if (changedSinceExamination.has(row.file_path)) drifted.push(row);
+            else fresh.push(row);
+          }
+        }
+
         const markStale = ctx.db.prepare(
           `UPDATE file_ledger SET stale=1, stale_since=datetime('now'), stale_reason=?
              WHERE subsystem_id=? AND file_path=? AND stale=0`,
         );
-        const mark = (rows: typeof ledgerRows, reason: StaleReason) => {
+        const mark = (rows: LedgerRow[], reason: StaleReason) => {
           for (const row of rows) markStale.run(reason, row.subsystem_id, row.file_path);
         };
         mark(drifted, staleReason("git-drift"));
@@ -425,35 +579,88 @@ export const gitTools: ToolDefinition[] = [
           .run(currentSha);
 
         // The reading itself, one append-only row per invocation, written in the
-        // same transaction as the gap rewrite it describes. A perfectly
-        // reconciled store has zero `scope_gaps` rows, so the presence of a gap
-        // row cannot stand in for the reading: the count zero and the absence of
-        // a reading are different facts (VP4(e), §3.2). The two digests are
-        // taken here rather than above so they describe the ledger this
-        // transaction is committing.
-        treeDigest = trackedPathDigest(trackedPaths);
-        recordedLedgerDigest = ledgerDigest(ctx.db);
+        // same transaction as the gap rewrite it describes and the exclusions it
+        // resolved. A perfectly reconciled store has zero `scope_gaps` rows, so
+        // the presence of a gap row cannot stand in for the reading: the count
+        // zero and the absence of a reading are different facts (VP4(e), §3.2).
+        // The digests are taken here so they describe what this transaction is
+        // committing: the whole tree, the active ledger, the rules and sorting
+        // rows the survey set was resolved under, and the resolved set itself.
+        const digests = {
+          tree: trackedPathDigest(trackedPaths),
+          ledger: ledgerDigest(ctx.db, excludedPaths),
+          scope: scopeDigest(ctx.db),
+          exclusion: exclusionDigest(scope.exclusions),
+        };
         const written = ctx.db
           .prepare(
             `INSERT INTO scope_reconciliations
                (detected_sha, tree_digest, ledger_digest, tracked_paths, ledger_rows,
-                unledgered, absent, exempt, session_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                unledgered, absent, exempt, session_id, scope_digest, exclusion_digest,
+                excluded, unsorted, survey_paths, scope_mode)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(
             currentSha,
-            treeDigest,
-            recordedLedgerDigest,
+            digests.tree,
+            digests.ledger,
             trackedPaths.length,
-            ledgerPaths.size,
+            activeLedgerPaths.size,
             unledgered.length,
             absent.length,
             exemptPaths.size,
             ctx.sessionId,
+            digests.scope,
+            digests.exclusion,
+            scope.exclusions.length,
+            scope.unsorted.length,
+            scope.survey.length,
+            mode,
           );
-        reconciliationId = Number(written.lastInsertRowid);
+        const reconciliationId = Number(written.lastInsertRowid);
+        const exclude = ctx.db.prepare(
+          `INSERT INTO scope_exclusions (reconciliation_id, file_path, source, rule_id)
+           VALUES (?, ?, ?, ?)`,
+        );
+        for (const row of scope.exclusions) {
+          exclude.run(reconciliationId, row.file_path, row.source, row.rule_id);
+        }
+
+        return {
+          reconciliationId,
+          digests,
+          mode,
+          scope,
+          bySubsystem,
+          ledgerRows,
+          activeLedgerPaths,
+          excludedWithRows,
+          unledgered,
+          absent,
+          exemptPaths,
+          duplicateOwnership,
+          drifted,
+          unverifiable,
+          citing: recordsCitingExcluded(ctx.db, excludedPaths),
+        };
       });
-      reconcileTx();
+      const {
+        reconciliationId,
+        digests,
+        mode,
+        scope,
+        bySubsystem,
+        ledgerRows,
+        activeLedgerPaths,
+        excludedWithRows,
+        unledgered,
+        absent,
+        exemptPaths,
+        duplicateOwnership,
+        drifted,
+        unverifiable,
+        citing,
+      } = reconcileTx.immediate();
 
       for (const row of absent) {
         if (!bySubsystem.has(row.subsystem_id)) {
@@ -476,17 +683,31 @@ export const gitTools: ToolDefinition[] = [
         // wrote rather than guessing which of a store's reconciliations it was.
         reconciliation_id: reconciliationId,
         reconciled_at_sha: currentSha,
-        tree_digest: treeDigest,
-        ledger_digest: recordedLedgerDigest,
+        tree_digest: digests.tree,
+        ledger_digest: digests.ledger,
+        scope_digest: digests.scope,
+        exclusion_digest: digests.exclusion,
         // Reconciliation denominators travel with the result so a zero finding
         // is readable as "nothing drifted out of this much" rather than as an
         // unqualified all-clear.
         reconciled_tracked_paths: trackedPaths.length,
         reconciled_ledger_rows: ledgerRows.length,
-        reconciled_ledger_paths: ledgerPaths.size,
+        reconciled_ledger_paths: activeLedgerPaths.size,
         reconciled_exempt_paths: exemptPaths.size,
         duplicate_ownership_count: duplicateOwnership.length,
         duplicate_ownership: duplicateOwnership.slice(0, NAMED_DUPLICATE_PATHS),
+        // The survey set (design/scope/PLAN.md §2.5): the tree minus what its
+        // ignore files, the owner and onboarding's meta sorting leave out.
+        scope: {
+          mode,
+          survey_paths: scope.survey.length,
+          excluded: scope.counts,
+          unsorted: scope.unsorted.length,
+          unsorted_paths: scope.unsorted.slice(0, NAMED_SCOPE_PATHS),
+        },
+        excluded_with_rows_count: excludedWithRows.length,
+        excluded_with_rows: excludedWithRows.slice(0, NAMED_SCOPE_PATHS),
+        records_citing_excluded: citing,
         unledgered_paths: unledgered,
         absent_ledger_paths: absent.map((r) => ({
           subsystem_id: r.subsystem_id,

@@ -11,7 +11,7 @@
 import { createHash } from "node:crypto";
 import { resolve as resolvePath } from "node:path";
 import SqliteDatabase from "better-sqlite3";
-import { canonicalCreateViewSql, type DB } from "./db.js";
+import { canonicalCreateViewSql, type DB, readScopeMode, type ScopeMode } from "./db.js";
 import type { ServerContext } from "./helpers.js";
 import {
   isCitationToken,
@@ -21,6 +21,13 @@ import {
   ToolError,
   workspaceIsBound,
 } from "./helpers.js";
+import {
+  activeRows,
+  matchesPattern,
+  type ScopeExclusion,
+  type ScopeRuleRow,
+  type ScopeSortingRow,
+} from "./scope.js";
 import { spawnSync } from "./subprocess.js";
 import {
   EXPLANATION_SLOTS,
@@ -1004,6 +1011,9 @@ function requireChallengedClaims(db: DB, subsystemId: string): void {
  * examine; the advance names them. `deferred-with-reason` is the honest
  * classification for a file left unread on purpose, and the three exempt
  * classifications remove a file from the obligation altogether.
+ *
+ * A row on a path the last reconciliation excluded from the survey set is
+ * inactive (design/scope/PLAN.md §2.6a): it is kept, and owes nothing.
  */
 function requireExaminedScope(db: DB, subsystemId: string): void {
   const unread = db
@@ -1012,13 +1022,15 @@ function requireExaminedScope(db: DB, subsystemId: string): void {
         WHERE subsystem_id = ?
           AND COALESCE(classification, 'candidate') = 'candidate'
           AND ${OBLIGATION_BEARING_SQL}
+          AND ${ACTIVE_LEDGER_ROW_SQL}
         ORDER BY file_path`,
     )
     .all(subsystemId) as Array<{ file_path: string }>;
   if (unread.length === 0) return;
   const { total } = db
     .prepare(
-      `SELECT COUNT(*) AS total FROM file_ledger WHERE subsystem_id = ? AND ${OBLIGATION_BEARING_SQL}`,
+      `SELECT COUNT(*) AS total FROM file_ledger
+        WHERE subsystem_id = ? AND ${OBLIGATION_BEARING_SQL} AND ${ACTIVE_LEDGER_ROW_SQL}`,
     )
     .get(subsystemId) as { total: number };
   const named = unread
@@ -1224,7 +1236,24 @@ export interface ScopeReconciliation {
   unledgered: number;
   absent: number;
   exempt: number;
+  /** The survey set's columns (design/scope/PLAN.md §2.1); null on a row taken before it. */
+  scope_digest: string | null;
+  exclusion_digest: string | null;
+  excluded: number | null;
+  unsorted: number | null;
+  survey_paths: number | null;
+  scope_mode: ScopeMode | null;
 }
+
+/**
+ * A ledger row is active when the last reconciliation did not exclude its path
+ * from the survey set (design/scope/PLAN.md §2.6a). An inactive row is kept and
+ * reported, never deleted, and carries no obligation; an include rule makes it
+ * active again at the next reconciliation.
+ */
+export const ACTIVE_LEDGER_ROW_SQL = `file_path NOT IN (
+  SELECT file_path FROM scope_exclusions
+   WHERE reconciliation_id = (SELECT MAX(id) FROM scope_reconciliations))`;
 
 /**
  * A path set, as one hash. Sorted so the digest is a statement about the set
@@ -1253,12 +1282,69 @@ export function trackedPathDigest(paths: readonly string[]): string {
  * reconciliation survives; `test-scope-reconciliation.mjs` records that as a
  * false green it cannot exclude.
  */
-export function ledgerDigest(db: DB): string {
+export function ledgerDigest(db: DB, excluded: ReadonlySet<string> = new Set()): string {
   const rows = db.prepare("SELECT file_path, classification FROM file_ledger").all() as Array<{
     file_path: string;
     classification: string | null;
   }>;
-  return digestOf(rows.map((row) => `${row.file_path}${NUL}${row.classification ?? ""}`));
+  return digestOf(
+    rows
+      .filter((row) => !excluded.has(row.file_path))
+      .map((row) => `${row.file_path}${NUL}${row.classification ?? ""}`),
+  );
+}
+
+/**
+ * design/scope/PLAN.md §2.5's `scope_digest`: what the survey set was resolved
+ * under. SHA-256 over the active rows, rules first and then sorting rows, each
+ * as `kind \0 id \0 pattern \0 action-or-category`, by id, joined with `\n`.
+ * The checker and the materializer restate it rather than import it (GP24).
+ */
+export function scopeDigest(db: DB): string {
+  const rules = activeRows(
+    db
+      .prepare("SELECT id, pattern, action, supersedes FROM scope_rules ORDER BY id")
+      .all() as ScopeRuleRow[],
+  );
+  const sorting = activeRows(
+    db
+      .prepare("SELECT id, pattern, category, supersedes FROM scope_sorting ORDER BY id")
+      .all() as ScopeSortingRow[],
+  );
+  return createHash("sha256")
+    .update(
+      [
+        ...rules.map((row) => ["rule", row.id, row.pattern, row.action].join(NUL)),
+        ...sorting.map((row) => ["sorting", row.id, row.pattern, row.category].join(NUL)),
+      ].join("\n"),
+    )
+    .digest("hex");
+}
+
+/**
+ * §2.5's `exclusion_digest`: one reconciliation's `scope_exclusions` rows, by
+ * path, each as `file_path \0 source \0 rule_id-or-empty`, joined with `\n`. It
+ * witnesses the resolved set, so a row added, swapped or re-sourced after the
+ * reconciliation was taken no longer matches it.
+ */
+export function exclusionDigest(rows: readonly ScopeExclusion[]): string {
+  return createHash("sha256")
+    .update(
+      [...rows]
+        .sort((a, b) => (a.file_path < b.file_path ? -1 : a.file_path > b.file_path ? 1 : 0))
+        .map((row) => [row.file_path, row.source, row.rule_id ?? ""].join(NUL))
+        .join("\n"),
+    )
+    .digest("hex");
+}
+
+/** The `scope_exclusions` rows one reconciliation wrote. */
+export function readScopeExclusions(db: DB, reconciliationId: number): ScopeExclusion[] {
+  return db
+    .prepare(
+      "SELECT file_path, source, rule_id FROM scope_exclusions WHERE reconciliation_id = ? ORDER BY file_path",
+    )
+    .all(reconciliationId) as ScopeExclusion[];
 }
 
 /**
@@ -1293,6 +1379,15 @@ export type ReconciliationStanding = {
   latestSha: string | null;
 };
 
+const LEDGER_CHANGED =
+  "the file ledger has changed since the reconciliation recorded there was taken";
+const SCOPE_RULES_CHANGED =
+  "the scope rules have changed since the reconciliation recorded there was taken";
+const SCOPE_MODE_CHANGED =
+  "the store's scope mode has changed since the reconciliation recorded there was taken";
+const EXCLUSIONS_CHANGED =
+  "the scope_exclusions rows recorded there no longer match the reconciliation's exclusion_digest";
+
 function readLastCheckedSha(db: DB): string | null {
   return (
     (
@@ -1317,6 +1412,16 @@ function readLastCheckedSha(db: DB): string | null {
  * reconciliation, and the store reverts to *unreconciled at R* until
  * `detect_changes` runs again. A store that has been edited since it last
  * checked itself against the tree has not checked itself against the tree.
+ *
+ * The survey set adds two more (design/scope/PLAN.md §2.5): the row's
+ * `scope_digest` equals the digest of the active rules and sorting rows now,
+ * so recording a rule takes standing away until `detect_changes` runs again;
+ * and its `exclusion_digest` equals the digest of the `scope_exclusions` rows
+ * that carry its id, so an exclusion added, swapped or re-sourced afterwards is
+ * caught. The ledger digest is compared without the rows that reconciliation
+ * excluded (§2.6a). A row taken before survey scope existed carries no scope
+ * digest, and stands only while the store has no rules and no sorting rows
+ * (§2.9).
  *
  * The standing reconciliation is the most recent row that satisfies all of
  * them, so a forged or superseded row cannot displace a genuine one: it simply
@@ -1365,32 +1470,68 @@ export function readReconciliationStanding(
     };
   }
   const treeDigest = trackedPathDigest(tracked);
-  const currentLedgerDigest = ledgerDigest(db);
-  const row = db
+  const candidates = db
     .prepare(
       `SELECT id, detected_sha, tree_digest, ledger_digest, tracked_paths, ledger_rows,
-              unledgered, absent, exempt
+              unledgered, absent, exempt, scope_digest, exclusion_digest, excluded, unsorted,
+              survey_paths, scope_mode
          FROM scope_reconciliations
-        WHERE detected_sha = ? AND tree_digest = ? AND ledger_digest = ?
-        ORDER BY id DESC LIMIT 1`,
+        WHERE detected_sha = ? AND tree_digest = ?
+        ORDER BY id DESC`,
     )
-    .get(resolved, treeDigest, currentLedgerDigest) as ScopeReconciliation | undefined;
-  if (row) return { standing: row, sha: resolved, why: null, lastCheckedSha, latestSha };
+    .all(resolved, treeDigest) as ScopeReconciliation[];
+  if (candidates.length === 0) {
+    // Name which condition failed, because the repairs read differently: a
+    // store that never reconciled at R and one whose tree moved under the row
+    // both run detect_changes, but a reader told only "unreconciled" cannot
+    // tell a first reading from a lost one.
+    const atSha = db
+      .prepare("SELECT 1 FROM scope_reconciliations WHERE detected_sha = ? LIMIT 1")
+      .get(resolved);
+    return {
+      ...base,
+      sha: resolved,
+      why: atSha
+        ? "the reconciliation recorded there was taken over a different tree"
+        : "no reconciliation has been recorded at that revision",
+    };
+  }
 
-  // No qualifying row. Name which condition failed, because the repairs read
-  // differently: a store that never reconciled at R and one whose ledger moved
-  // under the row both run detect_changes, but a reader told only
-  // "unreconciled" cannot tell a first reading from a lost one.
-  const atSha = db
-    .prepare(
-      "SELECT tree_digest FROM scope_reconciliations WHERE detected_sha = ? ORDER BY id DESC",
-    )
-    .all(resolved) as Array<{ tree_digest: string }>;
-  let why = "no reconciliation has been recorded at that revision";
-  if (atSha.length > 0) {
-    why = atSha.some((candidate) => candidate.tree_digest === treeDigest)
-      ? "the file ledger has changed since the reconciliation recorded there was taken"
-      : "the reconciliation recorded there was taken over a different tree";
+  // Each candidate is judged against the store as it is now. The ledger
+  // digest leaves out the rows that candidate excluded (§2.6a), so it is taken
+  // once per distinct exclusion set, which the verified exclusion digest names.
+  const currentScope = scopeDigest(db);
+  const mode = readScopeMode(db);
+  const hasScopeRows =
+    db.prepare("SELECT 1 FROM scope_rules UNION ALL SELECT 1 FROM scope_sorting LIMIT 1").get() !==
+    undefined;
+  const ledgerDigests = new Map<string, string>();
+  const judge = (row: ScopeReconciliation): string | null => {
+    const exclusions = readScopeExclusions(db, row.id);
+    if (row.scope_digest === null) {
+      // A row taken before survey scope existed stands only while the store
+      // has no rules and no sorting rows (§2.9), and it resolved no exclusions.
+      if (hasScopeRows) return SCOPE_RULES_CHANGED;
+      if (exclusions.length > 0 || row.exclusion_digest !== null) return EXCLUSIONS_CHANGED;
+    } else {
+      if (row.scope_digest !== currentScope) return SCOPE_RULES_CHANGED;
+      if (row.scope_mode !== mode) return SCOPE_MODE_CHANGED;
+      if (row.exclusion_digest !== exclusionDigest(exclusions)) return EXCLUSIONS_CHANGED;
+    }
+    const key = row.exclusion_digest ?? "";
+    let current = ledgerDigests.get(key);
+    if (current === undefined) {
+      current = ledgerDigest(db, new Set(exclusions.map((exclusion) => exclusion.file_path)));
+      ledgerDigests.set(key, current);
+    }
+    return row.ledger_digest === current ? null : LEDGER_CHANGED;
+  };
+  let why: string | null = null;
+  for (const row of candidates) {
+    const failed = judge(row);
+    if (failed === null)
+      return { standing: row, sha: resolved, why: null, lastCheckedSha, latestSha };
+    why ??= failed;
   }
   return { ...base, sha: resolved, why };
 }
@@ -1468,15 +1609,57 @@ export function requireCompleteReconciliation(
       `over an unreconciled ledger is a fraction of itself. Run detect_changes first.`
     );
   }
-  const { unledgered, absent } = reading.standing;
-  if (unledgered === 0 && absent === 0) return null;
+  const { unledgered, absent, unsorted, scope_mode } = reading.standing;
+  if (unledgered !== 0 || absent !== 0) {
+    return (
+      `${operation} refuses: the standing reconciliation at ${reading.sha} reports ${unledgered} ` +
+      `tracked path(s) with no ledger row and ${absent} ledger row(s) the tree no longer carries. ` +
+      `Every tracked path needs exactly one subsystem assignment or an explicit exclusion with a ` +
+      `reason before coverage over that tree is published (ADR-0001, Fully surveyed, clause 1). ` +
+      `detect_changes names every one in unledgered_paths and absent_ledger_paths.`
+    );
+  }
+  // design/scope/PLAN.md §2.5: in sorted mode every survey path is owed a
+  // sorting row before publication. The advance to `mapped` does not ask
+  // this, so a pilot subsystem can be mapped before the sorting is done.
+  if (scope_mode !== "sorted" || (unsorted ?? 0) === 0) return null;
+  const paths = unsortedPaths(db, workspacePath, reading.standing);
+  const named = paths.slice(0, NAMED_UNSORTED).join(", ");
+  const more =
+    (unsorted ?? 0) > NAMED_UNSORTED ? ` and ${(unsorted ?? 0) - NAMED_UNSORTED} more` : "";
   return (
-    `${operation} refuses: the standing reconciliation at ${reading.sha} reports ${unledgered} ` +
-    `tracked path(s) with no ledger row and ${absent} ledger row(s) the tree no longer carries. ` +
-    `Every tracked path needs exactly one subsystem assignment or an explicit exclusion with a ` +
-    `reason before coverage over that tree is published (ADR-0001, Fully surveyed, clause 1). ` +
-    `detect_changes names every one in unledgered_paths and absent_ledger_paths.`
+    `${operation} refuses: the standing reconciliation at ${reading.sha} reports ${unsorted} ` +
+    `survey path(s) that no sorting row covers: ${named}${more}. In sorted mode every survey ` +
+    `path needs a product or meta sorting row before coverage over the survey set is ` +
+    `published. Record them with record_scope_sorting, then run detect_changes again.`
   );
+}
+
+/** How many unsorted paths the publication refusal names before it gives only the count. */
+const NAMED_UNSORTED = 20;
+
+/**
+ * The survey paths of `row` that no active sorting row covers: the tree at its
+ * revision minus its `scope_exclusions` rows. A survey path is either covered
+ * by a `product` row or decided by an owner's include, so a path no sorting row
+ * matches is exactly an unsorted one. The row stands, so the active rows are
+ * the ones it was taken under.
+ */
+function unsortedPaths(db: DB, workspacePath: string, row: ScopeReconciliation): string[] {
+  const tracked = listTrackedPaths(workspacePath, row.detected_sha) ?? [];
+  const excluded = new Set(readScopeExclusions(db, row.id).map((exclusion) => exclusion.file_path));
+  const sorting = activeRows(
+    db
+      .prepare("SELECT id, pattern, category, supersedes FROM scope_sorting ORDER BY id")
+      .all() as ScopeSortingRow[],
+  );
+  return tracked
+    .filter(
+      (path) =>
+        !excluded.has(path) &&
+        !sorting.some((sortingRow) => matchesPattern(sortingRow.pattern, path)),
+    )
+    .sort();
 }
 
 /**

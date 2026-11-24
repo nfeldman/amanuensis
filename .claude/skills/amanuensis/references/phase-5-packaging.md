@@ -119,6 +119,12 @@ coverage published over an unreconciled ledger is a fraction of itself.
 The advance to `mapped` above has already read that reconciliation, so
 this call finds the store reconciled.
 
+In sorted mode it is also refused while the standing reconciliation reports
+*"survey path(s) that no sorting row covers"*. The refusal names up to 20 of
+them. The advance to `mapped` does not ask for sorting, so a subsystem can be
+mapped first. Sort each path with `record_scope_sorting`, as `product` or as
+`meta` with its inventory, then run `detect_changes` again, and publish.
+
 The materializer builds every page from the store's records and reads no
 prose file. The cross-reference resolver re-links every ID across pages. It then publishes the HTML
 pages and reads them back against the store. Treat the returned
