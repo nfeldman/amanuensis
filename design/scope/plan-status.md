@@ -37,7 +37,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| SC8 | Skill: Phase 0b and the routing rows | ready (1 attempt) | SC7 | `dev/test-skill-scope.mjs` | §3 SC8, §2.11 |
+| SC8 | Skill: Phase 0b and the routing rows | done (1 attempt) | SC7 | `dev/test-skill-scope.mjs` | §3 SC8, §2.11 |
 | SC9 | Docs and release notes | ready | SC8 | `dev/test-scope-docs.mjs` | §3 SC9 |
 
 ## Completion
