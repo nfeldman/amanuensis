@@ -897,6 +897,9 @@ async function main(mods) {
       else {
         const miss = refusalMisses("apply_change_impact", refused, EXCLUDED[0]);
         if (miss) wrong.push(miss);
+        // The prediction predates the rule, so predicting again is what
+        // repairs it; an include rule only undoes the owner's decision.
+        if (!refused.includes("predict_change_impact")) wrong.push(`the refusal does not name predict_change_impact: ${refused}`);
       }
       return wrong.length ? wrong.join("; ") : null;
     });

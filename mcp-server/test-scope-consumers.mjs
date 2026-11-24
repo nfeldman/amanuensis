@@ -457,6 +457,73 @@ function main(mods) {
     return same(view, { findings: [], invalidated: [] }) ? null : `impact reads ${show(view)}`;
   });
 
+  // A seam into a subsystem outside the survey is crossed by nothing: a change
+  // to the in-scope code reaches neither the outside subsystem, nor the seam,
+  // nor a claim about either (final review, F5/codex). B-02 owns only the
+  // spec, so the owner's rule puts it outside; the included arm is the control.
+  const outsideSeamView = (arm, excluded) => {
+    const fx = build(arm, { excluded: false, ledgerSpec: false });
+    const ctx = fx.ctx;
+    call("upsert_subsystem", { id: "B-02", name: "Plans", status: "unmapped" }, ctx);
+    call("update_subsystem_status", { id: "B-02", status: "scoping" }, ctx);
+    call(
+      "add_files_to_scope",
+      { subsystem_id: "B-02", ref_sha: fx.c0, files: [{ file_path: SPEC, why_in_scope: "the plan", classification: "examined" }] },
+      ctx,
+    );
+    call("upsert_seam", { id: "SM-OUT", shared_object: "the value", party_a: SUBSYSTEM, party_b: "B-02" }, ctx);
+    const evidenceId = call(
+      "add_evidence",
+      { file_path: SPEC, symbol: "Spec", line_range: "1-3", ref_sha: fx.c0, kind: "code-verified" },
+      ctx,
+    ).id;
+    for (const [claimId, subjectType, subjectId] of [
+      ["C-OUT", "subsystem", "B-02"],
+      ["C-SEAM", "seam", "SM-OUT"],
+    ]) {
+      call(
+        "add_claim",
+        {
+          claim_id: claimId,
+          claim_key: `sc11.${claimId.toLowerCase()}`,
+          subject_type: subjectType,
+          subject_id: subjectId,
+          statement: `The fixture's ${subjectId} holds.`,
+          epistemic_kind: "observation",
+          ref_sha: fx.c0,
+          evidence_ids: [evidenceId],
+        },
+        ctx,
+      );
+    }
+    if (excluded) {
+      call(
+        "set_scope_rule",
+        { pattern: "design/", action: "exclude", reason: "plans, not code", owner_words: "don't survey design/" },
+        ctx,
+      );
+    }
+    call("detect_changes", { current_sha: fx.c1 }, ctx);
+    writeFileSync(join(fx.ws, CORE), "export const value = 3;\n");
+    const c2 = commitAll(fx.ws, "change the code only");
+    const r = call("predict_change_impact", { base_sha: fx.c1, head_sha: c2, run_id: `sc11-impact-${arm}` }, ctx);
+    return {
+      subsystems: (r.mapped_objects ?? []).filter((o) => o.object_type === "subsystem").map((o) => o.object_id).sort(),
+      seams: (r.mapped_objects ?? []).filter((o) => o.object_type === "seam").map((o) => o.object_id).sort(),
+      invalidated: (r.invalidated_claims ?? []).map((o) => o.object_id).sort(),
+    };
+  };
+  check("I6 control: with nothing excluded, a code change crosses the seam to B-02 and its claims", () => {
+    const view = outsideSeamView("seam-included", false);
+    const want = { subsystems: ["B-02", SUBSYSTEM], seams: ["SM-OUT"], invalidated: ["C-OUT", "C-SEAM"] };
+    return same(view, want) ? null : `impact reads ${show(view)}, want ${show(want)}`;
+  });
+  check("I7 change impact crosses no seam into a subsystem outside the survey", () => {
+    const view = outsideSeamView("seam-excluded", true);
+    const want = { subsystems: [SUBSYSTEM], seams: [], invalidated: [] };
+    return same(view, want) ? null : `impact reads ${show(view)}, want ${show(want)}`;
+  });
+
   // ------------------------------------------------------------ refresh run
   const refreshView = (arm) => {
     const fx = arms[arm];
@@ -609,6 +676,7 @@ try {
       ["refresh", "refreshTools"],
       ["review", "reviewTools"],
       ["scope", "scopeTools"],
+      ["seams", "seamTools"],
       ["stale", "staleTools"],
       ["subsystems", "subsystemTools"],
     ];
