@@ -19,9 +19,11 @@
 //      path, or refuses one without naming the evidence row, the argument that
 //      carried it, its path, its source, its rule (the owner rule or sorting row
 //      and its pattern; the ignore files for gitignore) and the remedy, "an
-//      owner include rule" (A1–A24, one per route, each over all three
-//      sources); or the same route refuses, or fails to write, the in-survey
-//      control (A0);
+//      owner include rule" (A1–A24 and A27–A28, one per route, each over all
+//      three sources); or the same route refuses, or fails to write, the
+//      in-survey control (A0). The routes include resolve_crosswalk_identity's
+//      `evidence`, a decision revision's `evidence` premise and a research
+//      request's `current_evidence`;
 //   2. a route refuses an evidence row only when it arrives as `evidence_id`,
 //      or only as `evidence_ids`: both argument shapes have a route here;
 //   3. the census, built at run time from every registered tool's input
@@ -30,8 +32,11 @@
 //      `evidence_id`, `evidence_ids`, `new_evidence`, `evidence`, at any
 //      depth) that is neither guarded nor exempt with its reason (C1); lists a
 //      tool that is not registered (C2); lists a guarded tool this gate has no
-//      route for (C3); or does not turn red when a dummy tool with an
+//      route for (C3, C6); or does not turn red when a dummy tool with an
 //      `evidence_ids` argument is added to its input (C4);
+//   4a. an owner include rule over one path under an excluded prefix does not
+//      let that path's evidence be attached while its sibling stays refused
+//      (A29);
 //   4. a tool the second table names is not registered (T1);
 //   5. the refusal is not registered in contracts/refusal-parity.json with its
 //      sentence in references/records.md (P1);
@@ -57,6 +62,7 @@ const SUBSYSTEM = "S-01";
 const CORE = "src/core.ts";
 const SPEC = "design/spec.md";
 const LOG = "notes/log.md";
+const KEPT = "design/kept.md";
 const BUILT = "build/out.js";
 const INCLUDE_REMEDY = "an owner include rule";
 
@@ -118,6 +124,12 @@ const CENSUS_NAMES = new Set([
   "evidence_ids",
   "new_evidence",
   "evidence",
+  // Beyond §2.6's list, found by the slice-S3 review: arguments that carry an
+  // evidence id or a path under a name of their own.
+  "fix_location",
+  "premises",
+  "code_changes",
+  "current_evidence",
 ]);
 
 /** Where each of a tool's input properties with a census name sits: `a.b[].c`. */
@@ -160,6 +172,7 @@ const LISTED = {
   define_term: { table: "first" },
   add_field_note: { table: "first" },
   add_finding: { table: "first" },
+  update_finding_status: { table: "first" },
   carry_finding: { table: "first" },
   log_dispatch: { table: "first" },
   // second table
@@ -182,6 +195,8 @@ const LISTED = {
   attach_carried_evidence: { table: "second" },
   capture_chorusmith_parity_snapshot: { table: "second" },
   resolve_crosswalk_identity: { table: "second" },
+  draft_decision_revision: { table: "second" },
+  propose_research_request: { table: "second" },
   // the exception among writes, and the exempt tools
   retire_ledger_file: { table: "exempt", reason: "the one write an excluded path accepts: it clears excluded_with_rows" },
   register_artifact: { table: "exempt", reason: "path names a store artifact, not a source path" },
@@ -267,6 +282,7 @@ async function main(mods, tools) {
   write("README.md", "# Fixture\n");
   write(CORE, "export const value = 1;\n");
   write(SPEC, "# Spec\n\nThe value is one.\n");
+  write(KEPT, "# Kept\n");
   write(LOG, "# Log\n\nRead the code first.\n");
   write(BUILT, "export const built = 1;\n");
   git(ws, "add", "-A");
@@ -318,7 +334,7 @@ async function main(mods, tools) {
           )
           .run(path, ref, kind, ctx.sessionId).lastInsertRowid,
       );
-    const PATHS = [CORE, SPEC, LOG, BUILT];
+    const PATHS = [CORE, SPEC, LOG, BUILT, KEPT];
     const EV = Object.fromEntries(PATHS.map((path) => [path, mkEvidence(path)]));
 
     let n = 0;
@@ -799,6 +815,84 @@ async function main(mods, tools) {
             ctx,
           ),
       },
+      {
+        id: "A22", tool: "resolve_crosswalk_identity", label: "evidence", table: "crosswalk_identity_resolutions",
+        // A resolved entity and a pending one under the same label: the collision
+        // the call resolves, with the evidence under test.
+        setup: () => {
+          const label = `collision ${++n}`;
+          const stage = (entityId) =>
+            call(
+              "stage_crosswalk_entity",
+              {
+                entity_id: entityId,
+                entity_kind: "method",
+                source_kind: "direct-user",
+                source_ref: `user:${entityId}`,
+                label,
+                definition: "A fixture method.",
+                negative_criteria: ["is not a fixture"],
+                provenance: [{ kind: "repository-evidence", ref: String(EV[CORE]), statement: "read there" }],
+              },
+              ctx,
+            );
+          const first = fresh("sc12-resolved");
+          const second = fresh("sc12-pending");
+          stage(first);
+          stage(second);
+          return { first, second };
+        },
+        run: ({ first, second }, path) =>
+          call(
+            "resolve_crosswalk_identity",
+            {
+              entity_id: second,
+              candidate_entity_id: first,
+              resolution: "same-as",
+              evidence: [{ kind: "repository-evidence", ref: String(ev(path)), statement: "read there" }],
+              rationale: "the same method",
+            },
+            ctx,
+          ),
+      },
+      {
+        id: "A27", tool: "draft_decision_revision", label: "premises", table: "decision_revisions",
+        run: (_s, path) => {
+          const decisionId = fresh("decision-sc12-premise");
+          return call(
+            "draft_decision_revision",
+            {
+              ...DECISION_DRAFT(decisionId, scopeClaim),
+              premises: [{ premise_id: "p1", kind: "evidence", ref: String(ev(path)), statement: "The value is read." }],
+            },
+            ctx,
+          );
+        },
+      },
+      {
+        id: "A28", tool: "propose_research_request", label: "current_evidence", table: "research_requests",
+        run: (_s, path) =>
+          call(
+            "propose_research_request",
+            {
+              request_id: fresh("sc12-research"),
+              question: `What does the fixture value mean (${n})?`,
+              uncertainty: "the fixture is silent",
+              current_evidence: [{ kind: "repository-evidence", ref: String(ev(path)), statement: "x" }],
+              needed_source_classes: ["vendor documentation"],
+              disconfirmers: ["the value is documented"],
+              budget: { max_sources: 1, max_minutes: 5 },
+              local_evidence_search: {
+                outcome: "exhausted",
+                queries: ["value"],
+                locations: ["src/"],
+                unresolved_reason: "nothing says",
+              },
+              expected_information_value: { decision_sensitivity: 3, uncertainty_reducibility: 3 },
+            },
+            ctx,
+          ),
+      },
     ];
 
     /** What a refusal of `route` on `excluded` must say; the missing parts, or null. */
@@ -867,6 +961,32 @@ async function main(mods, tools) {
       if (before !== after) return "refused, but wrote first";
       return refused.includes(SPEC) ? null : `the refusal does not name ${SPEC}: ${refused}`;
     });
+
+    // An owner include over one path inside the excluded `design/` lets that
+    // path's evidence be attached, while its sibling stays refused.
+    await check(`A29 an owner include over ${KEPT} lets its evidence be attached, and ${SPEC} stays refused`, async () => {
+      call(
+        "set_scope_rule",
+        { pattern: KEPT, action: "include", reason: "the owner wants it", owner_words: `survey ${KEPT}` },
+        ctx,
+      );
+      const wrong = [];
+      const kept = await attempt(() => newClaim([EV[KEPT]]));
+      if (kept.refused) wrong.push(`${KEPT}: ${kept.refused}`);
+      const sibling = await attempt(() => newClaim([EV[SPEC]]));
+      if (!sibling.refused?.includes(`owner rule ${ownerRule}`)) wrong.push(`${SPEC}: ${sibling.refused ?? "accepted"}`);
+      return wrong.length ? wrong.join("; ") : null;
+    });
+
+    // A guarded tool the census finds must have a route here that exercises it,
+    // or a guard missing from it goes unseen.
+    await check("C6 every tool the second table lists has a route in this gate", () => {
+      const routed = new Set(ROUTES.map((route) => route.tool));
+      const missing = Object.entries(LISTED)
+        .filter(([name, entry]) => entry.table === "second" && !routed.has(name))
+        .map(([name]) => name);
+      return missing.length ? `no route for ${missing.join(", ")}` : null;
+    });
   } finally {
     try {
       db.close();
@@ -912,7 +1032,7 @@ async function main(mods, tools) {
     if (before.includes(dummy.name)) return "the dummy is already reported without being added";
     return after.includes(dummy.name) ? null : `the census did not report the dummy (it reports ${show(after)})`;
   });
-  await check("C5 the census reads nested arguments: parity_scope.evidence_ids and inventory[].file_path", () => {
+  await check("C5 the census reads nested arguments: parity_scope.evidence_ids, inventory[].file_path and judgments[].evidence_ids", () => {
     const found = census(tools);
     const wrong = [];
     if (!(found.get("capture_chorusmith_parity_snapshot") ?? []).includes("parity_scope.evidence_ids")) {
@@ -920,6 +1040,9 @@ async function main(mods, tools) {
     }
     if (!(found.get("record_scope_sorting") ?? []).includes("inventory.[].file_path")) {
       wrong.push("record_scope_sorting's inventory[].file_path");
+    }
+    if (!(found.get("land_review_pass") ?? []).includes("judgments.[].evidence_ids")) {
+      wrong.push("land_review_pass's judgments[].evidence_ids");
     }
     return wrong.length ? `the census misses ${wrong.join(", ")}` : null;
   });

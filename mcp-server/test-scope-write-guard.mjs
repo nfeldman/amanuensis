@@ -7,7 +7,8 @@
 // one per source: `design/spec.md` by an owner rule over `design/` (user),
 // `notes/log.md` by a meta sorting row over `notes/` (meta), and the
 // force-added `build/out.js`, which the repository's own `.gitignore` matches
-// (gitignore). `src/core.ts` is in the survey set and is every route's
+// (gitignore). A fourth, `design/my spec.md`, is excluded by the same owner
+// rule and has a space in its name, which a citation may carry. `src/core.ts` is in the survey set and is every route's
 // positive control. Records on the excluded paths that predate the exclusion
 // (ledger rows, an evidence row, a claim and a change-impact prediction) are
 // made first, as a store surveyed before its rules would hold them (§2.6a).
@@ -16,12 +17,16 @@
 //   1. any route of §2.6's first table writes a record on an excluded path, or
 //      refuses one without naming its source, its rule (the owner rule or
 //      sorting row and its pattern; the ignore files for gitignore) and the
-//      remedy, "an owner include rule" (W1–W10, one per route, each over all
-//      three sources); or the same route refuses, or fails to write, the
-//      in-survey control path (W0);
+//      remedy, "an owner include rule" (W1–W13, one per route, each over all
+//      three sources and the spaced name); or the same route refuses, or fails
+//      to write, the in-survey control path (W0). The routes include a
+//      finding's `fix_location`, at creation and at a status update, and a
+//      decision revision's `code_changes[].path` and `code` premise;
 //   2. `land_review_pass` writes an evidence row for `new_evidence` on an
 //      excluded path, or does not refuse it as (1) says (L1); or lands the
-//      in-survey control's new evidence wrongly (L0);
+//      in-survey control's new evidence wrongly (L0); or links a judgment to an
+//      existing evidence row on an excluded path through
+//      `judgments[].evidence_ids`, or lands the pass (L2);
 //   3. change impact writes an evidence row, or invalidates a claim, for a
 //      change on an excluded path predicted before the rule (I1); or the
 //      control's prediction does not apply (I0);
@@ -63,6 +68,7 @@ const SPEC = "design/spec.md";
 const PROTO = "design/proto.ts";
 const LOG = "notes/log.md";
 const BUILT = "build/out.js";
+const SPACED = "design/my spec.md";
 const INCLUDE_REMEDY = "an owner include rule";
 
 // A crash signature in this gate's output means the run never reached its
@@ -159,6 +165,7 @@ async function main(mods) {
   write(PROTO, "export function proto(): number {\n  return 1;\n}\n");
   write(LOG, "# Log\n\nRead the code first.\n");
   write(BUILT, "export const built = 1;\n");
+  write(SPACED, "# My spec\n");
   git(ws, "add", "-A");
   git(ws, "add", "-f", BUILT);
   const c0 = commit(ws, "seed");
@@ -190,7 +197,7 @@ async function main(mods) {
     // Ledger rows on the three excluded paths, as a store surveyed before its
     // rules holds them (§2.6a). Written directly: the guard rightly refuses a
     // new row on a gitignored path.
-    for (const path of [SPEC, LOG, BUILT]) {
+    for (const path of [SPEC, LOG, BUILT, SPACED]) {
       db.prepare(
         `INSERT INTO file_ledger (subsystem_id, file_path, why_in_scope, classification, ref_sha)
          VALUES (?, ?, 'recorded before the exclusion', 'candidate', ?)`,
@@ -257,11 +264,62 @@ async function main(mods) {
       { path: SPEC, source: "user", rule: [`owner rule ${ownerRule}`, "design/"] },
       { path: LOG, source: "meta", rule: [`sorting row ${metaRow}`, "notes/"] },
       { path: BUILT, source: "gitignore", rule: ["ignore files"] },
+      // define_term's first_seen is one citation token, so its grammar refuses
+      // the space before the guard is reached; that refusal writes nothing too.
+      {
+        path: SPACED,
+        source: "user",
+        rule: [`owner rule ${ownerRule}`, "design/"],
+        grammar: { define_term: "is not a citation token" },
+      },
     ];
 
     // add_finding needs the subsystem at 'concerns' (the knowledge-depth
     // contract); the ladder is not under test here.
     db.prepare("UPDATE subsystems SET status = 'concerns' WHERE id = ?").run(SUBSYSTEM);
+    call(
+      "add_finding",
+      {
+        finding_id: "S01-FIX",
+        subsystem_id: SUBSYSTEM,
+        symptom: "a fixture symptom",
+        root_cause: "a fixture cause",
+        severity: "LOW",
+        status: "confirmed-bug",
+        primary_files: [`${CORE}:value@${c0}`],
+        ref_sha: c0,
+        pass_type: "survey",
+      },
+      ctx,
+    );
+    const decisionDraft = (premises, codeChanges) => {
+      const decisionId = `decision-sc10-${++n}`;
+      return call(
+        "draft_decision_revision",
+        {
+          decision_id: decisionId,
+          revision_id: `${decisionId}:r1`,
+          title: "Fixture decision",
+          desire_sources: [
+            { desire_id: "d1", statement: "The fixture needs one.", source_kind: "direct-user", source_ref: "user:sc10" },
+          ],
+          accepted_option: { option_key: "a", summary: "Keep the value." },
+          alternatives: [
+            { option_key: "b", summary: "Drop it.", disposition: "rejected", evidence_ref: "amanuensis://claim/SC10-CL-CORE" },
+          ],
+          constraints: [{ constraint_id: "c1", statement: "Stay small.", source_ref: "user:sc10" }],
+          consequences: [{ consequence_id: "q1", statement: "One more value.", direction: "cost" }],
+          falsifiers: [{ falsifier_id: "f1", condition: "The value moves.", destination: "SC10" }],
+          premises,
+          code_changes: codeChanges,
+          rationale: "A fixture rationale.",
+          authored_by_kind: "model",
+          authored_by: "fixture-model",
+        },
+        ctx,
+      );
+    };
+    const claimPremise = [{ premise_id: "p1", kind: "claim", ref: "SC10-CL-CORE", statement: "The value is read." }];
 
     const fingerprint = (table) =>
       show(db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
@@ -442,6 +500,52 @@ async function main(mods) {
             ctx,
           ),
       },
+      {
+        id: "W10",
+        tool: "add_finding",
+        table: "findings",
+        // fix_location alone, with no primary_files to be guarded in its stead.
+        call: (path) =>
+          call(
+            "add_finding",
+            {
+              finding_id: `S01-${++n}`,
+              subsystem_id: SUBSYSTEM,
+              symptom: "a fixture symptom",
+              root_cause: "a fixture cause",
+              severity: "LOW",
+              status: "confirmed-bug",
+              fix_location: `${path}:value`,
+              ref_sha: c0,
+              pass_type: "survey",
+            },
+            ctx,
+          ),
+      },
+      {
+        id: "W11",
+        tool: "update_finding_status",
+        table: "findings",
+        call: (path) =>
+          call(
+            "update_finding_status",
+            { finding_id: "S01-FIX", status: "confirmed-bug", fix_location: `${path}:value` },
+            ctx,
+          ),
+      },
+      {
+        id: "W12",
+        tool: "draft_decision_revision",
+        table: "decision_revisions",
+        call: (path) => decisionDraft(claimPremise, [{ path, relationship: "constrains" }]),
+      },
+      {
+        id: "W13",
+        tool: "draft_decision_revision",
+        table: "decision_revisions",
+        call: (path) =>
+          decisionDraft([{ premise_id: "p1", kind: "code", ref: path, statement: "The value is read." }], []),
+      },
     ];
 
     for (const route of ROUTES) {
@@ -458,6 +562,8 @@ async function main(mods) {
           const wrote = fingerprint(route.table) !== before;
           if (!refused) return `accepted${wrote ? `, and wrote to ${route.table}` : ""}`;
           if (wrote) return `refused, but wrote to ${route.table} first`;
+          const grammar = excluded.grammar?.[route.tool];
+          if (grammar && refused.includes(grammar)) return null;
           return refusalMisses(route.tool, refused, excluded);
         });
       }
@@ -473,7 +579,7 @@ async function main(mods) {
           expected_generator_count, expected_refuter_count, expected_verifier_count,
           blind_assignment_id, sealed_truth_hash, status, manifest_json, manifest_hash, session_id)
        VALUES ('sc10-review', 'sc10-impact-core', ?, 'r1', 'same-context', 'orchestrator-family',
-               '["fixture-provider"]', '["src","design","notes","build"]', 1000, 0, 2, 2, 2,
+               '["fixture-provider"]', '["src","design","notes","build"]', 1000, 0, 20, 2, 2,
                'sc10-assignment', 'sealed', 'generating', '{}', 'manifest', ?)`,
     ).run(c2, ctx.sessionId);
     let ordinal = 0;
@@ -520,6 +626,82 @@ async function main(mods) {
         if (!refused) return `accepted${wrote ? ", and wrote an evidence row" : ""}`;
         if (wrote) return "refused, but wrote an evidence row first";
         return refusalMisses("land_review_pass", refused, excluded);
+      });
+    }
+
+    // An existing evidence row, attached to a judgment by id: one per path,
+    // written directly because they predate the rules, and dispatched to the
+    // generator pass in its evidence catalog.
+    const priorEvidence = Object.fromEntries(
+      [CORE, ...EXCLUDED.map((excluded) => excluded.path)].map((path) => [
+        path,
+        Number(
+          db
+            .prepare(
+              `INSERT INTO evidence (file_path, symbol, line_range, ref_sha, kind, excerpt, session_id)
+               VALUES (?, 'value', '1', ?, 'code-verified', 'x', ?)`,
+            )
+            .run(path, c0, ctx.sessionId).lastInsertRowid,
+        ),
+      ]),
+    );
+    const landJudgment = (path) => {
+      const passId = `sc10-review:g${++ordinal}`;
+      db.prepare(
+        `INSERT INTO review_passes
+           (pass_id, run_id, ordinal, role, replicate_id, context_profile, analytical_frame,
+            provider, model, model_family, runtime, planned_tokens, planned_cost_microusd, status,
+            runtime_input_json, dispatched_at)
+         VALUES (?, 'sc10-review', ?, 'generator', ?, 'diff-scoped', 'contract-risk',
+                 'fixture-provider', 'fixture-model', 'family-a', 'fixture-runtime', 10, 0,
+                 'dispatched', ?, datetime('now'))`,
+      ).run(passId, ordinal, `g${ordinal}`, JSON.stringify({ evidence_catalog: [{ id: priorEvidence[path] }] }));
+      const landed = () =>
+        db.prepare("SELECT status FROM review_passes WHERE pass_id = ?").get(passId)?.status === "landed";
+      return {
+        landed,
+        run: () =>
+          call(
+            "land_review_pass",
+            {
+              run_id: "sc10-review",
+              pass_id: passId,
+              judgments: [
+                {
+                  finding_key: `sc10-key-${ordinal}`,
+                  claim: "A fixture candidate.",
+                  severity: "LOW",
+                  scope: "the fixture",
+                  rationale: "read there",
+                  evidence_ids: [priorEvidence[path]],
+                },
+              ],
+              actual_tokens: 1,
+              actual_cost_microusd: 0,
+            },
+            ctx,
+          ),
+      };
+    };
+    await check(`L2 control: land_review_pass links a judgment to the existing evidence on ${CORE}`, async () => {
+      const before = fingerprint("review_judgment_evidence");
+      const pass = landJudgment(CORE);
+      const { refused } = await attempt(pass.run);
+      if (refused) return `refused: ${refused}`;
+      if (!pass.landed()) return "the pass did not land";
+      return fingerprint("review_judgment_evidence") === before ? "no judgment evidence was linked" : null;
+    });
+    for (const excluded of EXCLUDED) {
+      await check(`L2 land_review_pass refuses judgments[].evidence_ids on ${excluded.path} (${excluded.source})`, async () => {
+        const before = fingerprint("review_judgment_evidence");
+        const pass = landJudgment(excluded.path);
+        const { refused } = await attempt(pass.run);
+        const wrote = fingerprint("review_judgment_evidence") !== before || pass.landed();
+        if (!refused) return `accepted${wrote ? ", and linked the evidence or landed the pass" : ""}`;
+        if (wrote) return "refused, but linked the evidence or landed the pass first";
+        const miss = refusalMisses("land_review_pass", refused, excluded);
+        if (miss) return miss;
+        return refused.includes(`evidence ${priorEvidence[excluded.path]}`) ? null : `the refusal does not name the evidence row: ${refused}`;
       });
     }
 
@@ -640,6 +822,8 @@ async function main(mods) {
       "define_term",
       "add_field_note",
       "add_finding",
+      "update_finding_status",
+      "draft_decision_revision",
       "carry_finding",
       "log_dispatch",
     ];
@@ -794,6 +978,7 @@ try {
       ["carried", "carriedTools"],
       ["claims", "claimTools"],
       ["code-index", "codeIndexTools"],
+      ["decisions", "decisionTools"],
       ["dispatch", "dispatchTools"],
       ["evidence", "evidenceTools"],
       ["field-notes", "fieldNoteTools"],
