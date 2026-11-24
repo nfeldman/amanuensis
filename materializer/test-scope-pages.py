@@ -309,6 +309,9 @@ def seed(storage: Path, ws: Path, head: str, world: str) -> None:
     if world == "B":
         proto = evidence(OWNER_EXCLUDED, "protoSymbol")
         notes = evidence(META, "notesSymbol")
+        # An older evidence symbol for the third source too, so a filter that
+        # drops one source's exclusions leaks a symbol into an index (C3, C4).
+        evidence(GITIGNORED, "builtSymbol")
         claim("CL-B02", OUTSIDE, "The prototype plans name the cache.", proto)
         x("INSERT INTO dispositions (subsystem_id, concern_code, classification, evidence, evidence_quality,"
           " rationale, ref_sha, session_id) VALUES (?, 'CC-1', 'ruled-out', ?, 'code-verified',"
@@ -622,6 +625,15 @@ def run(root: Path) -> None:
     check("C3 the locus index of store B carries no path or symbol on an excluded path",
           lambda: index_rows(out_b, in_symbol))
 
+    def symbols_unindexed() -> str | None:
+        index = (out_b / "search-index.js").read_text()
+        found = [name for name in ("protoSymbol", "notesSymbol", "builtSymbol") if name in index]
+        found += [path for path in EXCLUDED if path in index]
+        return f"store B's search-index.js carries {found}" if found else None
+
+    check("C4 store B's search index carries no older evidence symbol or path from any exclusion source",
+          symbols_unindexed)
+
     def files_listing() -> str | None:
         links = parse(pages_a["files.html"])
         listed = sorted(i for i in links.ids if i.startswith("f-"))
@@ -699,6 +711,56 @@ def run(root: Path) -> None:
 
     check("O4 a seam outside the survey, with its contract recorded, is no topology edge and no seam-contract block",
           seams_drawn_anywhere)
+    # A flow strip draws a seam crossing as a mark and hatches a step whose cited
+    # file is stale. Neither may come from outside the survey: a crossing of the
+    # outside seam is drawn nowhere, and an inactive row's frozen stale flag
+    # hatches nothing (final review, F6/codex, F8/claude, F9/claude). Read off a
+    # copy of store B with a three-step flow whose controls are the inside seam
+    # and src/a.ts, made stale in the copy.
+    def flow_strip() -> str | None:
+        sys.path.insert(0, str(ROOT))
+        from amanuensis_materializer import diagrams  # noqa: PLC0415
+
+        copy = root / "flow" / "memory.db"
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(stores["B"][0] / "memory.db", copy)
+        conn = sqlite3.connect(copy)
+        conn.row_factory = sqlite3.Row
+        try:
+            ev = {str(r["file_path"]): int(r["id"]) for r in conn.execute("SELECT id, file_path FROM evidence")}
+            conn.execute("UPDATE file_ledger SET stale = 1 WHERE subsystem_id = 'B-01' AND file_path = 'src/a.ts'")
+            cited = {"01": META, "02": "src/a.ts", "03": "src/a.ts"}
+            for step, path in cited.items():
+                conn.execute(
+                    "INSERT INTO claims (claim_id, claim_key, subject_type, subject_id, statement, epistemic_kind,"
+                    " asserted_at_sha, valid_from_sha, session_id) VALUES (?, ?, 'symbol', 'src/a.ts:alphaSymbol',"
+                    " ?, 'observation', ?, ?, ?)",
+                    (f"FLOW-{step}", f"B-01/flow/route/{step}", f"Step {step} runs.", head, head, SESSION))
+                conn.execute("INSERT INTO claim_evidence (claim_id, evidence_id, role) VALUES (?, ?, 'supports')",
+                             (f"FLOW-{step}", ev[path]))
+            for step, seam in (("01", SEAM_OUTSIDE), ("02", SEAM_INSIDE)):
+                conn.execute(
+                    "INSERT INTO claim_marks (claim_id, kind, target, evidence_id, ref_sha, session_id)"
+                    " VALUES (?, 'crosses-seam', ?, ?, ?, ?)", (f"FLOW-{step}", seam, ev["src/a.ts"], head, SESSION))
+            conn.commit()
+            model = diagrams.flow_strip_model(conn, "B-01/flow/route")
+        finally:
+            conn.close()
+        drawn = repr(model)
+        hatch = {n.record: n.hatch for n in model.nodes if str(n.record).startswith("flow-step:")}
+        problems = []
+        if SEAM_OUTSIDE in drawn:
+            problems.append(f"the strip draws a crossing of {SEAM_OUTSIDE}")
+        if SEAM_INSIDE not in drawn:
+            problems.append(f"the strip draws no crossing of {SEAM_INSIDE}, so the check cannot see marks")
+        if META in drawn or hatch.get("flow-step:FLOW-01"):
+            problems.append(f"step 01 is hatched for {META}, an inactive row: {hatch.get('flow-step:FLOW-01')!r}")
+        if not hatch.get("flow-step:FLOW-02"):
+            problems.append("step 02 is not hatched for src/a.ts, so the check cannot see hatching")
+        return "; ".join(problems) or None
+
+    check("O5 a flow strip draws no crossing of a seam outside the survey and no hatch from an inactive row",
+          flow_strip)
     check("O3 the in-survey subsystem lists exactly its rows inside the survey set",
           lambda: (lambda got, want: None if got == want else f"B-01's ledger anchors {got}, want {want}")(
               ledger_anchors(subsystem_page(out_b, "B-01").read_text()),
@@ -765,6 +827,31 @@ def run(root: Path) -> None:
         return None
 
     check("W1 the overview names each source's count and the owner's patterns", overview_line)
+    # The overview names the patterns of the rules that excluded something: an
+    # exclude rule a later include of the same pattern overrides names none of
+    # the counted paths, so it is not named (final review, F11/claude).
+    def overview_patterns() -> str | None:
+        sys.path.insert(0, str(ROOT))
+        from amanuensis_materializer import renderers  # noqa: PLC0415
+
+        copy = root / "overview" / "memory.db"
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(stores["A"][0] / "memory.db", copy)
+        conn = sqlite3.connect(copy)
+        conn.row_factory = sqlite3.Row
+        try:
+            for rule_id, action in ((7, "exclude"), (8, "include")):
+                conn.execute("INSERT INTO scope_rules (id, pattern, action, reason, owner_words, session_id)"
+                             " VALUES (?, 'src/b.ts', ?, 'fixture', '\"then keep it\"', ?)", (rule_id, action, SESSION))
+            conn.commit()
+            sentence = renderers.outside_survey_sentence(conn) or ""
+        finally:
+            conn.close()
+        if "src/b.ts" in sentence:
+            return f"the overview names an exclude rule that excluded nothing: {sentence!r}"
+        return None if f"`{OWNER_PATTERN}`" in sentence else f"the overview lost the rule that did exclude: {sentence!r}"
+
+    check("W3 the overview names only the owner patterns whose rules excluded a counted path", overview_patterns)
     check("W2 no overview line when nothing is excluded",
           lambda: "store C's overview prints the line" if "Outside this survey" in pages_c["index.html"] else None)
 
