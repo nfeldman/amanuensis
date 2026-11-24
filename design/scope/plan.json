@@ -470,8 +470,8 @@
       "attempts": 1,
       "start_sha": "cfc4fcfae7fdb906d5a732114c16648392137903",
       "red_sha": "a40c9bfc32034ae1bc22aa109df1e4fad107e210",
-      "green_sha": "24075b083ec67e451f66df5c75e4c03d17e67c52",
-      "verified_by_launcher": false,
+      "green_sha": "f367f781e43147e415e1cbb2b55f413fb31aafb9",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Checker restates scope_digest, exclusion_digest, the mode lookup and the §2.2 matcher (for unsorted:<path>); judges each candidate in the server's order (scope, mode, exclusions, then ledger) and reports the first failing reason. Outside-survey = a subsystem with at least one ledger row, all on the standing reconciliation's exclusions (SC6 owns the server-side outside_survey; same definition); clauses 2-4 report it in an outside_survey field and a text line, and nothing is skipped when no reconciliation stands. Changed mcp-server/test-carried-findings.mjs E4's control fixture to insert a product sorting row for src/ (old whole-tree denominator in a sorted store). Registered in test.yml beside SC12."
     },
