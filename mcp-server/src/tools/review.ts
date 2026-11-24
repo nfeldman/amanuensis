@@ -9,7 +9,7 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
-import { requireActiveSession } from "../invariants.js";
+import { ACTIVE_LEDGER_ROW_SQL, requireActiveSession } from "../invariants.js";
 import { spawnSync } from "../subprocess.js";
 import { OBLIGATION_BEARING_SQL } from "../vocabulary.js";
 
@@ -631,10 +631,12 @@ function buildCandidates(
     }
     // Staleness lives on the file ledger. This read once took `entries`,
     // which no code path writes, so no brief ever carried a stale file.
+    // A row on a path the survey set excludes is inactive and is not review
+    // work, stale or unread (design/scope/PLAN.md §2.6a).
     const staleFiles = ctx.db
       .prepare(
         `SELECT * FROM file_ledger
-          WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}
+          WHERE stale=1 AND ${OBLIGATION_BEARING_SQL} AND ${ACTIVE_LEDGER_ROW_SQL}
             AND subsystem_id IN (${placeholders(impactedSubsystems)})
           ORDER BY subsystem_id, file_path`,
       )
@@ -666,7 +668,7 @@ function buildCandidates(
       .prepare(
         `SELECT * FROM file_ledger
           WHERE subsystem_id IN (${placeholders(impactedSubsystems)})
-            AND classification!='examined'
+            AND classification!='examined' AND ${ACTIVE_LEDGER_ROW_SQL}
           ORDER BY subsystem_id, file_path`,
       )
       .all(...impactedSubsystems) as Array<

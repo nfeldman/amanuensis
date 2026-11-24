@@ -11,6 +11,7 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
+import { ACTIVE_LEDGER_ROW_SQL } from "../invariants.js";
 import { indexOrUnavailable, lineRangeOf } from "./code-index.js";
 import { type Definitions, readDefinitions } from "./evidence.js";
 
@@ -142,7 +143,11 @@ function workspaceHead(ctx: ServerContext): string | null {
   }
 }
 
-/** Ledger rows of the stale backlog, hottest subsystem first. */
+/**
+ * Ledger rows of the stale backlog, hottest subsystem first. A row on a path
+ * the last reconciliation excluded is inactive and owes no refresh
+ * (design/scope/PLAN.md §2.6a), whatever its stale flag says.
+ */
 export function staleLedgerRows(ctx: ServerContext, limit: number | null): StaleRow[] {
   return ctx.db
     .prepare(
@@ -156,7 +161,7 @@ export function staleLedgerRows(ctx: ServerContext, limit: number | null): Stale
               COALESCE(h.access_count,0) AS access_count
          FROM file_ledger fl
          LEFT JOIN hot_subsystems h ON h.entry_id = fl.subsystem_id
-        WHERE fl.stale = 1 AND ${OBLIGATION_BEARING_SQL}
+        WHERE fl.stale = 1 AND ${OBLIGATION_BEARING_SQL} AND ${ACTIVE_LEDGER_ROW_SQL}
         ORDER BY heat DESC, fl.subsystem_id, fl.file_path
         LIMIT ?`,
     )

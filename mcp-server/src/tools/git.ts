@@ -403,11 +403,13 @@ export const gitTools: ToolDefinition[] = [
           .prepare("SELECT subsystem_id, file_path, ref_sha, classification FROM file_ledger")
           .all() as LedgerRow[];
 
-        // Map changed files → affected subsystems.
+        // Map changed files → affected subsystems. A change to an excluded
+        // path maps to nothing: its rows are inactive and create no work
+        // (design/scope/PLAN.md §2.6a).
         const bySubsystem = new Map<string, { files: Set<string>; commits: number }>();
         const changed = new Set(changedFiles);
         for (const r of ledgerRows) {
-          if (!changed.has(r.file_path)) continue;
+          if (!changed.has(r.file_path) || excludedPaths.has(r.file_path)) continue;
           if (!bySubsystem.has(r.subsystem_id)) {
             bySubsystem.set(r.subsystem_id, { files: new Set(), commits: 0 });
           }
@@ -485,9 +487,14 @@ export const gitTools: ToolDefinition[] = [
         //
         // Rows are grouped by their examination commit so this costs one git call
         // per distinct ref_sha rather than one per file.
+        //
+        // An inactive row is neither marked nor cleared: its flag stays as it
+        // was until an include rule makes it active again, and its ref_sha is
+        // then checked like any other row's (§2.6a).
         const byRefSha = new Map<string, LedgerRow[]>();
         for (const row of ledgerRows) {
           if (!trackedSet.has(row.file_path) || !row.ref_sha) continue;
+          if (excludedPaths.has(row.file_path)) continue;
           const group = byRefSha.get(row.ref_sha);
           if (group) group.push(row);
           else byRefSha.set(row.ref_sha, [row]);

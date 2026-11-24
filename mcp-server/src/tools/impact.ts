@@ -12,7 +12,7 @@ import {
   ToolError,
   workspaceTreeHasPath,
 } from "../helpers.js";
-import { requireActiveSession } from "../invariants.js";
+import { ACTIVE_LEDGER_ROW_SQL, requireActiveSession } from "../invariants.js";
 import { spawnSync } from "../subprocess.js";
 
 const DISCOVERY_MODES = ["explicit-only", "request-if-gap"] as const;
@@ -234,7 +234,23 @@ function computeImpact(
   }
 
   const subsystemPaths = new Map<string, PathStep[]>();
-  const allChangedPaths = [...changedPathReasons.keys()];
+  // A changed path the last reconciliation excluded from the survey set
+  // creates no work (design/scope/PLAN.md §2.6a): its ledger rows are inactive
+  // and map it to no subsystem, and it opens no gap. The same predicate as the
+  // ledger's, applied to the changed paths themselves.
+  const excludedChanged = new Set(
+    (
+      ctx.db
+        .prepare(
+          `SELECT file_path FROM (SELECT value AS file_path FROM json_each(?))
+            WHERE NOT (${ACTIVE_LEDGER_ROW_SQL})`,
+        )
+        .all(JSON.stringify([...changedPathReasons.keys()])) as Array<{ file_path: string }>
+    ).map((row) => row.file_path),
+  );
+  const allChangedPaths = [...changedPathReasons.keys()].filter(
+    (path) => !excludedChanged.has(path),
+  );
   if (allChangedPaths.length > 0) {
     const placeholders = allChangedPaths.map(() => "?").join(",");
     const rows = ctx.db

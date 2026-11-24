@@ -35,7 +35,7 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
-import { importedSurveyBodies, readNarratives } from "../invariants.js";
+import { ACTIVE_LEDGER_ROW_SQL, importedSurveyBodies, readNarratives } from "../invariants.js";
 import {
   ambiguousSymbolSentence,
   describeLocusStanding,
@@ -2783,6 +2783,8 @@ function buildStale(
     // out rather than admitting one the tool cannot place.
     return head === null ? false : probe.isAncestor(row.valid_until_sha, head);
   });
+  // A row on a path the survey set excludes is inactive and owes no refresh
+  // (design/scope/PLAN.md §2.6a), whatever its stale flag says.
   const ledgerRows = db
     .prepare(
       `SELECT subsystem_id, file_path, COALESCE(classification,'candidate') AS classification,
@@ -2791,6 +2793,7 @@ function buildStale(
         WHERE stale = 1
           AND COALESCE(classification,'candidate')
               NOT IN ('generated-ignore','vendor-ignore','irrelevant')
+          AND ${ACTIVE_LEDGER_ROW_SQL}
         ORDER BY subsystem_id, file_path`,
     )
     .all() as {
@@ -2916,6 +2919,8 @@ function buildHotSpots(db: DB, scope: AttentionScope): BudgetedSection {
         AND f.subsystem_id IN (${holder}) GROUP BY f.subsystem_id`,
     ...ids,
   );
+  // Inactive rows, on paths the survey set excludes, count in none of the
+  // three columns (design/scope/PLAN.md §2.6a).
   const ledgerRows = counted<{
     subsystem_id: string;
     candidate: number;
@@ -2928,7 +2933,8 @@ function buildHotSpots(db: DB, scope: AttentionScope): BudgetedSection {
                      NOT IN ('generated-ignore','vendor-ignore','irrelevant') THEN 1 ELSE 0 END) AS obligation,
             SUM(CASE WHEN stale = 1 AND COALESCE(classification,'candidate')
                      NOT IN ('generated-ignore','vendor-ignore','irrelevant') THEN 1 ELSE 0 END) AS stale
-       FROM file_ledger WHERE subsystem_id IN (${holder}) GROUP BY subsystem_id`,
+       FROM file_ledger WHERE subsystem_id IN (${holder}) AND ${ACTIVE_LEDGER_ROW_SQL}
+      GROUP BY subsystem_id`,
     ...ids,
   );
   const bugQuality = counted<{ subsystem_id: string; evidence_quality: string | null }>(
@@ -3097,12 +3103,14 @@ function getAttentionHandler(args: Record<string, unknown>, ctx: ServerContext) 
         .all() as { finding_id: string }[]
     ).map((row) => row.finding_id),
   );
+  // The empty state's denominator is the active ledger: an inactive row is
+  // neither examined nor still to be read (§2.6a).
   const ledgerCounts = db
     .prepare(
       `SELECT COUNT(*) AS scoped,
               SUM(CASE WHEN classification = 'examined' THEN 1 ELSE 0 END) AS examined,
               SUM(CASE WHEN COALESCE(classification,'candidate') = 'candidate' THEN 1 ELSE 0 END) AS candidate
-         FROM file_ledger`,
+         FROM file_ledger WHERE ${ACTIVE_LEDGER_ROW_SQL}`,
     )
     .get() as { scoped: number; examined: number | null; candidate: number | null };
   // §6.1's empty state: scope, basis, and the checked revision are always

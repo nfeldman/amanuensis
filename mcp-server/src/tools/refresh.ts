@@ -13,7 +13,7 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
-import { requireActiveSession } from "../invariants.js";
+import { ACTIVE_LEDGER_ROW_SQL, requireActiveSession } from "../invariants.js";
 import { resolveStorageOutputPath } from "../project.js";
 import { spawnSync } from "../subprocess.js";
 import { impactTools } from "./impact.js";
@@ -413,7 +413,9 @@ function drive(
   // If the range moved a file the ledger records as examined and the run owns
   // none of it, completing would report success against an empty denominator —
   // the refresh looked at real drift and claimed nothing. Halt and name the
-  // files, so the gap is actionable rather than silent.
+  // files, so the gap is actionable rather than silent. A row on a path the
+  // survey set excludes is inactive and owes nothing, so drift there is not
+  // drift the run has to own (design/scope/PLAN.md §2.6a).
   if (invalidations.n === 0) {
     const diff = git(ctx, ["diff", "--name-only", "-z", `${run.base_sha}..${run.head_sha}`]);
     const rangeChanged = diff.status === 0 ? splitGitPaths(String(diff.stdout)) : ([] as string[]);
@@ -422,7 +424,7 @@ function drive(
       const unowned = ctx.db
         .prepare(
           `SELECT subsystem_id, file_path FROM file_ledger
-             WHERE file_path IN (${placeholders})
+             WHERE file_path IN (${placeholders}) AND ${ACTIVE_LEDGER_ROW_SQL}
              ORDER BY subsystem_id, file_path`,
         )
         .all(...rangeChanged) as { subsystem_id: string; file_path: string }[];
