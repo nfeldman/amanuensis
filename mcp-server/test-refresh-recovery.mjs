@@ -13,6 +13,7 @@ import { evidenceTools } from "./dist/tools/evidence.js";
 import { gitTools } from "./dist/tools/git.js";
 import { projectTools } from "./dist/tools/project.js";
 import { refreshTools } from "./dist/tools/refresh.js";
+import { scopeTools } from "./dist/tools/scope.js";
 
 let passed = 0;
 function assert(value, message) {
@@ -115,7 +116,7 @@ function fixture(
   const db = openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
   const tools = new Map(
-    [...projectTools, ...evidenceTools, ...claimTools, ...refreshTools, ...gitTools].map((tool) => [
+    [...projectTools, ...evidenceTools, ...claimTools, ...refreshTools, ...gitTools, ...scopeTools].map((tool) => [
       tool.name,
       tool,
     ]),
@@ -154,7 +155,10 @@ function fixture(
   // §3.3: the run's final step publishes, and publication is refused over a
   // store with no standing reconciliation at the revision it is about to stamp.
   // Run once here, after the ledger is final, through the same tool a survey
-  // uses.
+  // uses. A fresh store is in sorted mode, where publication also needs every
+  // survey path sorted (design/scope/PLAN.md §2.5), so the tree's one path at
+  // HEAD gets a `product` row first.
+  call("record_scope_sorting", { pattern: corePath, category: "product", description: "the code" });
   call("set_git_state", { canonical_branch: "main", onboarding_sha: baseSha });
   call("detect_changes", { current_sha: headSha });
 
