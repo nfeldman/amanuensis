@@ -19,7 +19,8 @@
 //   - precedence, compared row for row over a golden table:
 //       an owner include does not beat gitignore and meta;
 //       between owner rules the more specific does not win (an exact exclude
-//       recorded before an included prefix must stay excluded; a longer
+//       recorded before an included prefix must stay excluded, and so must
+//       one against a later glob with as many literal characters; a longer
 //       prefix beats a shorter one; a glob with more literal characters
 //       beats a prefix with fewer);
 //       the later rule does not win a tie;
@@ -254,6 +255,8 @@ const RULES = [
   { id: 10, pattern: "old/", action: "include", supersedes: 9 },
   { id: 11, pattern: "gone/", action: "exclude", supersedes: null },
   { id: 12, pattern: "never.txt", action: "exclude", supersedes: 11 },
+  { id: 13, pattern: "cfg/a.md", action: "exclude", supersedes: null },
+  { id: 14, pattern: "cfg/a.md*", action: "include", supersedes: null },
 ];
 const SORTING = [
   { id: 1, pattern: "design/", category: "meta", supersedes: null },
@@ -279,6 +282,7 @@ const GOLDEN = [
   ["tmp/x", true, null, null, "rule", false], // tie: the later rule
   ["notes/a/b.keep.md", true, null, null, "rule", false], // glob with more literals beats prefix
   ["notes/a/b.md", false, "user", 7, "rule", false],
+  ["cfg/a.md", false, "user", 13, "rule", false], // exact beats a later glob with as many literals
   ["old/thing", true, null, null, "rule", false], // superseded exclude no longer decides
   ["gone/thing", true, null, null, "none", true], // superseded rule, nothing else covers it
   ["build/out.js", false, "gitignore", null, "gitignore", false], // gitignore beats product
@@ -325,6 +329,7 @@ check("R2 the deciding rule or row is named by id", () => {
   };
   probe("design/notes.md", "rule", 2);
   probe("design/spec.md", "rule", 1);
+  probe("cfg/a.md", "rule", 13);
   probe("tmp/x", "rule", 6);
   probe("notes/a/b.keep.md", "rule", 8);
   probe("old/thing", "rule", 10);
@@ -352,7 +357,7 @@ check("R4 resolveScope agrees with decidePath: survey set, exclusions by path wi
     .map(([file_path, , source, rule_id]) => ({ file_path, source, rule_id }))
     .sort((a, b) => (a.file_path < b.file_path ? -1 : a.file_path > b.file_path ? 1 : 0));
   const wantUnsorted = GOLDEN.filter((row) => row[5]).map((row) => row[0]).sort();
-  const wantCounts = { gitignore: 3, user: 3, meta: 2 };
+  const wantCounts = { gitignore: 3, user: 4, meta: 2 };
   const wrong = [];
   if (!same(result.survey, wantSurvey)) wrong.push(`survey ${JSON.stringify(result.survey)}`);
   if (!same(result.exclusions, wantExclusions)) wrong.push(`exclusions ${JSON.stringify(result.exclusions)}`);
