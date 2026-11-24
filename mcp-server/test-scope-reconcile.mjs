@@ -30,6 +30,9 @@
 //      (R1);
 //   8. an untouched legacy store loses its standing after the upgrade (L1),
 //      or a legacy store's gitignore matches do not leave the survey set (L2);
+//      or an owner rule alone leaves a legacy reconciliation standing, or
+//      publication allowed (L4); or legacy publication accepts a standing
+//      reconciliation with an unledgered path (L5);
 //   9. this gate is not registered in CI (CI1);
 //  11. `records_citing_excluded` misses a finding or a term anchored at an
 //      excluded path that carries an `@` (R2); or a deleted path the owner
@@ -906,6 +909,32 @@ function main(mods) {
         return message === null ? null : `publication was refused: ${message}`;
       });
 
+      // An owner rule alone leaves the store legacy, and still takes away the
+      // standing of a reconciliation taken before survey scope (§2.9: "no
+      // rules and no sorting rows"); publication is then refused. Rolled
+      // back, so the store is untouched for L2.
+      check("L4 an owner rule alone ends a legacy reconciliation's standing and refuses publication", () => {
+        return rolledBack(ctx3, () => {
+          const rule = call(
+            "set_scope_rule",
+            { pattern: "README.md", action: "exclude", reason: "boilerplate", owner_words: ownerWords },
+            ctx3,
+          );
+          if (!rule?.id) return `the rule was not recorded: ${show(rule)}`;
+          const wrong = [];
+          const mode = ctx3.db.prepare("SELECT mode FROM scope_mode_changes ORDER BY id DESC LIMIT 1").get()?.mode;
+          if (mode !== "legacy") wrong.push(`the store became ${mode}`);
+          const reading = standing(ctx3);
+          if (reading.standing) wrong.push("the legacy reconciliation still stands after an owner rule");
+          else if (reading.why !== RULE_CHANGED) wrong.push(`why is ${show(reading.why)}`);
+          const message = requireCompleteReconciliation(ctx3.db, ws3, "HEAD", "materialize_docs");
+          if (message === null || !message.includes(RULE_CHANGED)) {
+            wrong.push(`publication was not refused for the rule: ${show(message)}`);
+          }
+          return wrong.length ? wrong.join("; ") : null;
+        });
+      });
+
       check("L2 a legacy store's gitignore match leaves the survey set; P2 publication stays allowed in legacy", () => {
         const r = reconcile(ctx3);
         if (r?.ok === false) return `detect_changes refused: ${r.error}`;
@@ -923,6 +952,24 @@ function main(mods) {
         const message = requireCompleteReconciliation(ctx3.db, ws3, "HEAD", "materialize_docs");
         if (message !== null) wrong.push(`publication was refused in legacy mode: ${message}`);
         return wrong.length ? wrong.join("; ") : null;
+      });
+
+      // A legacy store is not exempt from completeness: a standing
+      // reconciliation with an unledgered path refuses publication.
+      check("L5 publication in legacy mode refuses a reconciliation with an unledgered path", () => {
+        writeFileSync(join(ws3, "b.ts"), citedSource("b"));
+        git(ws3, "add", "b.ts");
+        gitCommit(ws3, "an unledgered path");
+        const r = reconcile(ctx3);
+        if (r?.ok === false) return `detect_changes refused: ${r.error}`;
+        const row = latestRow(ctx3);
+        if (row.scope_mode !== "legacy" || row.unledgered !== 1) return `the row is ${show(row)}`;
+        const reading = standing(ctx3);
+        if (reading.standing?.id !== row.id) return `the new row does not stand: ${reading.why}`;
+        const message = requireCompleteReconciliation(ctx3.db, ws3, "HEAD", "materialize_docs");
+        return message !== null && /1 tracked path\(s\) with no ledger row/.test(message)
+          ? null
+          : `publication was not refused for the unledgered path: ${show(message)}`;
       });
 
       check("L3 the first sorting row ends a legacy reconciliation's standing, with the named reason", () => {
