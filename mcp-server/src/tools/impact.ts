@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readScopeMode } from "../db.js";
 import {
   ok,
   optEnum,
@@ -13,6 +14,15 @@ import {
   workspaceTreeHasPath,
 } from "../helpers.js";
 import { ACTIVE_LEDGER_ROW_SQL, requireActiveSession } from "../invariants.js";
+import {
+  gitignoredAbsentPaths,
+  gitignoredPaths,
+  listTreeEntries,
+  resolveScope,
+  ScopeGitError,
+  type ScopeRuleRow,
+  type ScopeSortingRow,
+} from "../scope.js";
 import { spawnSync } from "../subprocess.js";
 
 const DISCOVERY_MODES = ["explicit-only", "request-if-gap"] as const;
@@ -115,6 +125,40 @@ function isAncestor(ctx: ServerContext, ancestor: string, descendant: string): b
   throw new ToolError(
     `cannot compare git commits ${ancestor} and ${descendant}: ${result.stderr?.toString().trim() ?? "unknown git error"}`,
   );
+}
+
+/**
+ * The paths of `paths` the survey set leaves out at `revision`, decided by the
+ * store's rules and sorting rows and the revision's own ignore files (§2.2). A
+ * path the revision no longer carries is decided as it would be if it were
+ * still there.
+ */
+function excludedAtRevision(
+  ctx: ServerContext,
+  revision: string,
+  paths: readonly string[],
+): Set<string> {
+  if (paths.length === 0) return new Set();
+  const rules = ctx.db
+    .prepare("SELECT id, pattern, action, supersedes FROM scope_rules ORDER BY id")
+    .all() as ScopeRuleRow[];
+  const sorting = ctx.db
+    .prepare("SELECT id, pattern, category, supersedes FROM scope_sorting ORDER BY id")
+    .all() as ScopeSortingRow[];
+  try {
+    const entries = listTreeEntries(ctx.project.workspacePath, revision);
+    const tree = new Set(entries.map((entry) => entry.path));
+    const absent = paths.filter((path) => !tree.has(path));
+    const ignored = gitignoredPaths(ctx.project.workspacePath, entries);
+    for (const path of gitignoredAbsentPaths(ctx.project.workspacePath, entries, absent)) {
+      ignored.add(path);
+    }
+    const scope = resolveScope({ rules, sorting, mode: readScopeMode(ctx.db), paths, ignored });
+    return new Set(scope.exclusions.map((row) => row.file_path));
+  } catch (error) {
+    if (error instanceof ScopeGitError) throw new ToolError(error.message);
+    throw error;
+  }
 }
 
 function parseChangedFiles(ctx: ServerContext, baseSha: string, headSha: string): ChangedFile[] {
@@ -234,10 +278,13 @@ function computeImpact(
   }
 
   const subsystemPaths = new Map<string, PathStep[]>();
-  // A changed path the last reconciliation excluded from the survey set
-  // creates no work (design/scope/PLAN.md §2.6a): its ledger rows are inactive
-  // and map it to no subsystem, and it opens no gap. The same predicate as the
-  // ledger's, applied to the changed paths themselves.
+  // A changed path the survey set excludes creates no work (design/scope/
+  // PLAN.md §2.6a): its ledger rows are inactive and map it to no subsystem,
+  // it opens no gap, and it reaches no finding or claim through their
+  // evidence. Excluded is what the last reconciliation excluded, the same
+  // predicate as the ledger's, or what the rules exclude at the head
+  // revision, so a path added under an excluded prefix since then is
+  // excluded before the next detect_changes runs.
   const excludedChanged = new Set(
     (
       ctx.db
@@ -248,6 +295,10 @@ function computeImpact(
         .all(JSON.stringify([...changedPathReasons.keys()])) as Array<{ file_path: string }>
     ).map((row) => row.file_path),
   );
+  for (const path of excludedAtRevision(ctx, headSha, [...changedPathReasons.keys()])) {
+    excludedChanged.add(path);
+  }
+  for (const path of excludedChanged) invalidatingPaths.delete(path);
   const allChangedPaths = [...changedPathReasons.keys()].filter(
     (path) => !excludedChanged.has(path),
   );
