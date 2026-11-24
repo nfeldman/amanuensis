@@ -11,8 +11,9 @@
 //     decidePath, resolveScope, listTreeEntries, gitignoredPaths,
 //     resolveScopeAtRevision or clearGitignoreCache;
 //   - a row of the pattern table (more than 30 rows: exact paths, prefixes
-//     ending in `/`, `*` within a segment, `**` across segments) matches when
-//     it should not or misses when it should;
+//     ending in `/`, `*` within a segment, `**` across segments, whether a
+//     whole segment or inside one) matches when it should not or misses when
+//     it should;
 //   - a pattern containing `..`, a leading `/`, `.amanuensis/` (or the bare
 //     `.amanuensis`), an empty segment or `.` segment is accepted, or a
 //     leading `./` is not normalized away;
@@ -22,14 +23,16 @@
 //       recorded before an included prefix must stay excluded, and so must
 //       one against a later glob with as many literal characters; a longer
 //       prefix beats a shorter one; a glob with more literal characters
-//       beats a prefix with fewer);
+//       beats a prefix with fewer, and a prefix with more literal characters
+//       beats a longer, later glob with fewer);
 //       the later rule does not win a tie;
 //       the same rules do not hold among sorting rows (most specific, then
 //       later; meta excludes, product keeps);
 //       gitignore does not beat sorting;
 //       a superseded row still decides;
-//       a path no rule or sorting row covers is not `unsorted` in sorted
-//       mode, or is `unsorted` in legacy mode;
+//       a survey path no sorting row covers, whether an owner include or
+//       nothing decides it, is not `unsorted` in sorted mode, or is
+//       `unsorted` in legacy mode;
 //       resolveScope disagrees with decidePath, or its exclusions are not
 //       sorted by path with the source and rule id of their decider;
 //   - gitignore at a revision, each compared as the exact ignored set:
@@ -42,12 +45,22 @@
 //       between directories (same paths, same blobs), gives the same set;
 //       a working-tree edit to .gitignore, a pattern in .git/info/exclude or a
 //       global core.excludesFile changes the set;
+//       a tracked path starting with `:` is read as pathspec magic (missed,
+//       or the resolution fails);
+//       a path that turns from a file into a submodule, or back, keeps the
+//       other's set (the cache key misses the entry's kind), or a submodule
+//       is not a directory to a `dir/` pattern;
+//       ignore files in directories that differ only in case are merged
+//       rather than refused;
+//       a pattern matches regardless of case;
+//       a symlinked .gitignore is read;
 //   - a repeat resolution with the same key runs any git command, or a new key
 //     runs none;
 //   - a git failure (an unknown revision; check-ignore exiting 128) returns a
 //     set instead of throwing, or the error does not name the command;
-//   - src/scope.ts imports a subprocess function from node:child_process
-//     rather than ./subprocess.js, or a stalled git is not cut off by
+//   - src/scope.ts reaches node:child_process in any form (a named,
+//     namespace or default import, a dynamic import, a require) rather than
+//     ./subprocess.js, or a stalled git is not cut off by
 //     AMANUENSIS_SUBPROCESS_TIMEOUT_MS, or test-subprocess-timeouts.mjs fails.
 //
 // Prints exactly one last line: `GATE SC2 GREEN` (exit 0) or
@@ -183,6 +196,13 @@ const MATCHES = [
   ["**/fixtures/", "fixtures/a.json", true],
   ["**/fixtures/", "test/fixtures", false],
   ["**", "anything/at/all", true],
+  // `**` inside a segment still matches across segments (§2.2)
+  ["docs/**.md", "docs/nested/spec.md", true],
+  ["docs/**.md", "docs/a.md", true],
+  ["docs/**.md", "docs/a.mdx", false],
+  ["docs/**.md", "other/a.md", false],
+  ["a**z", "a/b/z", true],
+  ["a**z", "b/a/z", false],
 ];
 check(`P1 the pattern table (${MATCHES.length} rows) matches row for row`, () => {
   const wrong = [];
@@ -257,6 +277,8 @@ const RULES = [
   { id: 12, pattern: "never.txt", action: "exclude", supersedes: 11 },
   { id: 13, pattern: "cfg/a.md", action: "exclude", supersedes: null },
   { id: 14, pattern: "cfg/a.md*", action: "include", supersedes: null },
+  { id: 15, pattern: "a/bcd/", action: "exclude", supersedes: null },
+  { id: 16, pattern: "a/**/*.x", action: "include", supersedes: null },
 ];
 const SORTING = [
   { id: 1, pattern: "design/", category: "meta", supersedes: null },
@@ -273,17 +295,22 @@ const SORTING = [
 const IGNORED = new Set(["design/gen.txt", "build/out.js", "src/gen.ts", "loose.log"]);
 
 // [path, in_survey, source, rule_id, decided_by kind, unsorted (sorted mode)]
+//
+// A survey path no sorting row covers is unsorted (§2.2 step 4), even when an
+// owner include is what keeps it in: the include decides membership, not
+// sorting.
 const GOLDEN = [
   ["design/notes.md", true, null, null, "rule", false], // include beats meta
   ["design/gen.txt", true, null, null, "rule", false], // include beats gitignore
   ["design/spec.md", false, "user", 1, "rule", false], // exact beats prefix, though earlier
   ["vendor/ours/a.c", true, null, null, "rule", false], // longer prefix, though earlier
   ["vendor/theirs/b.c", false, "user", 4, "rule", false], // owner exclude beats product
-  ["tmp/x", true, null, null, "rule", false], // tie: the later rule
-  ["notes/a/b.keep.md", true, null, null, "rule", false], // glob with more literals beats prefix
+  ["tmp/x", true, null, null, "rule", true], // tie: the later rule; no sorting row covers it
+  ["notes/a/b.keep.md", true, null, null, "rule", true], // glob with more literals beats prefix
   ["notes/a/b.md", false, "user", 7, "rule", false],
   ["cfg/a.md", false, "user", 13, "rule", false], // exact beats a later glob with as many literals
-  ["old/thing", true, null, null, "rule", false], // superseded exclude no longer decides
+  ["a/bcd/f.x", false, "user", 15, "rule", false], // 6 literal characters beat 5, though the glob is longer and later
+  ["old/thing", true, null, null, "rule", true], // superseded exclude no longer decides
   ["gone/thing", true, null, null, "none", true], // superseded rule, nothing else covers it
   ["build/out.js", false, "gitignore", null, "gitignore", false], // gitignore beats product
   ["src/gen.ts", false, "gitignore", null, "gitignore", false],
@@ -357,7 +384,7 @@ check("R4 resolveScope agrees with decidePath: survey set, exclusions by path wi
     .map(([file_path, , source, rule_id]) => ({ file_path, source, rule_id }))
     .sort((a, b) => (a.file_path < b.file_path ? -1 : a.file_path > b.file_path ? 1 : 0));
   const wantUnsorted = GOLDEN.filter((row) => row[5]).map((row) => row[0]).sort();
-  const wantCounts = { gitignore: 3, user: 4, meta: 2 };
+  const wantCounts = { gitignore: 3, user: 5, meta: 2 };
   const wrong = [];
   if (!same(result.survey, wantSurvey)) wrong.push(`survey ${JSON.stringify(result.survey)}`);
   if (!same(result.exclusions, wantExclusions)) wrong.push(`exclusions ${JSON.stringify(result.exclusions)}`);
@@ -528,8 +555,9 @@ check("G7 resolveScopeAtRevision takes gitignore from the revision and the rules
     { file_path: "sub/secret.txt", source: "gitignore", rule_id: null },
     { file_path: "sub/x.log", source: "gitignore", rule_id: null },
   ];
-  const wantUnsorted = [".gitignore", "README.md", "anchored", "docs/build", "keep.log", "secret.txt"];
-  const wantSurvey = [...wantUnsorted, "src/a.ts"].sort();
+  // src/a.ts is in by the owner's include, and no sorting row covers it.
+  const wantUnsorted = [".gitignore", "README.md", "anchored", "docs/build", "keep.log", "secret.txt", "src/a.ts"];
+  const wantSurvey = wantUnsorted;
   const wrong = [];
   if (!same(result.exclusions, wantExclusions)) wrong.push(`exclusions ${JSON.stringify(result.exclusions)}`);
   if (!same(result.unsorted, wantUnsorted)) wrong.push(`unsorted ${JSON.stringify(result.unsorted)}`);
@@ -537,6 +565,117 @@ check("G7 resolveScopeAtRevision takes gitignore from the revision and the rules
   const tree = git(ws, "ls-tree", "-r", "--name-only", c2).split("\n").sort();
   if (!same([...(result.paths ?? [])].sort(), tree)) wrong.push(`paths ${JSON.stringify(result.paths)} are not the tree at c2`);
   return wrong.length ? wrong.join("; ") : null;
+});
+
+// Fixtures built through the index, so a path the filesystem cannot hold (a
+// gitlink, a symlink, two names differing only in case) is still committed.
+function blob(cwd, text) {
+  const result = spawnSync(REAL_GIT, ["hash-object", "-w", "--stdin"], { cwd, input: text, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git hash-object: ${result.stderr}`);
+  return result.stdout.trim();
+}
+function commitIndex(cwd, entries, parent) {
+  git(cwd, "read-tree", "--empty");
+  for (const [mode, object, path] of entries) git(cwd, "update-index", "--add", "--cacheinfo", `${mode},${object},${path}`);
+  const tree = git(cwd, "write-tree");
+  return git(cwd, "commit-tree", tree, ...(parent ? ["-p", parent] : []), "-m", "fixture");
+}
+const idx = join(scratch, "idx");
+mkdirSync(idx);
+git(idx, "init", "-q");
+
+check("G8 a tracked path starting with : is checked as a path, not as pathspec magic", () => {
+  const lines = blob(idx, "x\n");
+  const sha = commitIndex(idx, [
+    ["100644", blob(idx, "/:x\n*.q\n"), ".gitignore"],
+    ["100644", lines, ":x"],
+    ["100644", lines, "x"],
+    ["100644", lines, ":(glob)q"],
+    ["100644", lines, ":(glob)a.q"],
+  ]);
+  scope.clearGitignoreCache();
+  const got = ignoredAt(idx, sha);
+  const want = [":(glob)a.q", ":x"];
+  return same(got, want) ? null : `expected ${JSON.stringify(want)}, got ${JSON.stringify(got)}`;
+});
+
+check("G9 a path that turns from a file into a submodule, or back, changes the set under a directory pattern", () => {
+  const ignore = blob(idx, "deps/\n");
+  const file = commitIndex(idx, [
+    ["100644", ignore, ".gitignore"],
+    ["100644", blob(idx, "file\n"), "deps"],
+  ]);
+  const link = commitIndex(idx, [
+    ["100644", ignore, ".gitignore"],
+    ["160000", file, "deps"],
+  ]);
+  const wrong = [];
+  for (const order of [
+    [file, link],
+    [link, file],
+  ]) {
+    scope.clearGitignoreCache();
+    for (const sha of order) {
+      const got = ignoredAt(idx, sha);
+      const want = sha === link ? ["deps"] : [];
+      if (!same(got, want)) wrong.push(`${sha === link ? "submodule" : "file"} after ${order[0] === sha ? "nothing" : "the other"}: expected ${JSON.stringify(want)}, got ${JSON.stringify(got)}`);
+    }
+  }
+  return wrong.length ? wrong.join("; ") : null;
+});
+
+check("G10 ignore files whose directories differ only in case are refused, never merged", () => {
+  const lines = blob(idx, "x\n");
+  const cases = {
+    "two ignore files": [
+      ["100644", blob(idx, "*.a\n"), "A/.gitignore"],
+      ["100644", blob(idx, "*.b\n"), "a/.gitignore"],
+      ["100644", lines, "A/x.a"],
+      ["100644", lines, "a/x.a"],
+    ],
+    "one ignore file and a directory spelled otherwise": [
+      ["100644", blob(idx, "*.a\n"), "A/.gitignore"],
+      ["100644", lines, "A/x.a"],
+      ["100644", lines, "a/x.a"],
+    ],
+  };
+  const wrong = [];
+  for (const [what, entries] of Object.entries(cases)) {
+    const sha = commitIndex(idx, entries);
+    scope.clearGitignoreCache();
+    try {
+      const got = ignoredAt(idx, sha);
+      wrong.push(`${what}: returned ${JSON.stringify(got)}`);
+    } catch (error) {
+      const message = String(error?.message ?? error);
+      if (!message.includes('"A/"') || !message.includes('"a/"') || !/case/.test(message)) wrong.push(`${what}: the refusal does not name both directories and the case: ${message}`);
+    }
+  }
+  return wrong.length ? wrong.join("; ") : null;
+});
+
+check("G11 ignore patterns match case-sensitively, whatever the filesystem", () => {
+  const lines = blob(idx, "x\n");
+  const sha = commitIndex(idx, [
+    ["100644", blob(idx, "*.LOG\n"), ".gitignore"],
+    ["100644", lines, "a.log"],
+    ["100644", lines, "b.LOG"],
+  ]);
+  scope.clearGitignoreCache();
+  const got = ignoredAt(idx, sha);
+  return same(got, ["b.LOG"]) ? null : `expected ["b.LOG"], got ${JSON.stringify(got)}`;
+});
+
+check("G12 a symlinked .gitignore is not read, as git does not read it", () => {
+  const lines = blob(idx, "x\n");
+  const sha = commitIndex(idx, [
+    ["120000", blob(idx, "secret.dat"), "lnk/.gitignore"],
+    ["100644", lines, "lnk/secret.dat"],
+    ["100644", lines, "secret.dat"],
+  ]);
+  scope.clearGitignoreCache();
+  const got = ignoredAt(idx, sha);
+  return same(got, []) ? null : `expected [], got ${JSON.stringify(got)}`;
 });
 
 // --------------------------------------------------------------- the cache and failures
@@ -636,10 +775,10 @@ check("F4 reading the ignore blobs failing is an error that names the command", 
 
 check("S1 src/scope.ts starts subprocesses through src/subprocess.ts", () => {
   const text = readFileSync(join(here, "src", "scope.ts"), "utf8");
-  const direct = (text.match(/import\s*\{([^}]*)\}\s*from\s*"node:child_process"/g) ?? []).filter((line) =>
-    /\b(spawnSync|execFileSync|execSync|spawn|exec|execFile)\b/.test(line),
-  );
-  if (direct.length) return `it imports ${direct.join("; ")}`;
+  // Any reach for child_process: named, namespace or default import, a
+  // dynamic import or a require.
+  const direct = text.match(/(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)["'`](?:node:)?child_process["'`]/g) ?? [];
+  if (direct.length) return `it reaches child_process directly: ${direct.join("; ")}`;
   if (!/from\s*"\.\/subprocess\.js"/.test(text)) return "it does not import ./subprocess.js";
   return null;
 });
