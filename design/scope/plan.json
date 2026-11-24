@@ -181,8 +181,8 @@
       "budget_minutes": 150,
       "needs_mcp": false,
       "status": "ready",
-      "attempts": 0,
-      "start_sha": "",
+      "attempts": 1,
+      "start_sha": "c40f284b4301f14cd6b5e5d1cd6207e7e2a31f36",
       "red_sha": "",
       "green_sha": "",
       "verified_by_launcher": false,
@@ -713,7 +713,8 @@
         "SC11"
       ],
       "review": {
-        "status": "pending"
+        "status": "pending",
+        "start_sha": "c40f284b4301f14cd6b5e5d1cd6207e7e2a31f36"
       }
     },
     {

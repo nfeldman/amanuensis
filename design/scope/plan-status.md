@@ -14,7 +14,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| SC3 | set_scope_rule, record_scope_sorting, get_scope | ready | SC2 | `mcp-server/test-scope-tools.mjs` | §3 SC3, §2.4 |
+| SC3 | set_scope_rule, record_scope_sorting, get_scope | ready (1 attempt) | SC2 | `mcp-server/test-scope-tools.mjs` | §3 SC3, §2.4 |
 | SC4 | Reconciliation core over the survey set | ready | SC3 | `mcp-server/test-scope-reconcile.mjs` | §3 SC4, §2.5, §2.6a |
 | SC11 | Consumers of inactive rows | ready | SC4 | `mcp-server/test-scope-consumers.mjs` | §3 SC11, §2.6a |
 
