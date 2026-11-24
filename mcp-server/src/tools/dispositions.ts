@@ -144,7 +144,7 @@ export const dispositionTools: ToolDefinition[] = [
           `unknown evidence_id: ${missing.join(", ")} — record the reading with add_evidence first`,
         );
       }
-      requireSurveyScopeForEvidence(ctx, "set_disposition", "evidence_ids", distinctIds);
+      requireSurveyScopeForEvidence(ctx, "set_disposition", "evidence_ids", distinctIds, refSha);
 
       // One subprocess for the whole set, not one per id: see
       // `resolveWorkspaceCommits`. An unreachable revision refuses the call,

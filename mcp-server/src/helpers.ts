@@ -430,14 +430,16 @@ function excludedAccount(decision: SurveyScopeDecision): string {
  * excludes. The guard reads each named row's `file_path`, so it holds however the row
  * arrives (`evidence_id`, `evidence_ids`, a snapshot's scope or a provenance entry), and it
  * runs before the call writes anything. An id that names no row is left to the caller's own
- * unknown-id refusal. The path is decided where the survey set is, at the last reconciled
- * revision, else HEAD, not at the evidence row's own revision.
+ * unknown-id refusal. A path is decided at `revision`, the commit the call is made at when
+ * it has resolved one, so no git process is spent finding it; else at the last reconciled
+ * revision, else HEAD. It is never decided at the evidence row's own revision.
  */
 export function requireSurveyScopeForEvidence(
   ctx: ServerContext,
   tool: string,
   label: string,
   evidenceIds: Iterable<number | null | undefined>,
+  revision: string | null = null,
 ): void {
   const ids = [...new Set([...evidenceIds].filter((id): id is number => Number.isInteger(id)))];
   if (ids.length === 0) return;
@@ -450,7 +452,7 @@ export function requireSurveyScopeForEvidence(
   for (const row of rows) {
     let decision = decided.get(row.file_path);
     if (!decision) {
-      decision = surveyScopeDecision(ctx, row.file_path);
+      decision = surveyScopeDecision(ctx, row.file_path, revision);
       decided.set(row.file_path, decision);
     }
     if (decision.in_survey) continue;

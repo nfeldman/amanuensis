@@ -223,7 +223,7 @@ function requireEvidence(
   authoritySha: string,
 ): EvidenceRow[] {
   requireExistingIds(ctx.db, "evidence", "id", evidenceIds, "evidence id(s)");
-  requireSurveyScopeForEvidence(ctx, tool, "evidence_ids", evidenceIds);
+  requireSurveyScopeForEvidence(ctx, tool, "evidence_ids", evidenceIds, authoritySha);
   const placeholders = evidenceIds.map(() => "?").join(",");
   const rows = ctx.db
     .prepare(
