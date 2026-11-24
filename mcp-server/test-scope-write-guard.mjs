@@ -46,6 +46,17 @@
 //      reconciled one: at the revision it cites, or at HEAD (G1–G3); or an
 //      owner include rule over one path under an excluded prefix, or over one
 //      gitignored path, does not let a write and only that path through (G4).
+//  11. since the final review: a field note's bare path, symbol location, or
+//      comma-separated list naming an excluded file is written (W6b–W6d); a
+//      claim whose symbol subject is on an excluded path is written (W14), or
+//      a successor in its key (X5); `shared_location` on a contradiction or a
+//      diagnosticity matrix (W15, W16), or an alternatives review's evidence
+//      text (W17), names an excluded file and is written; a respelling of a
+//      file an exact owner rule excludes (`docs/./guide.md`, `docs//guide.md`,
+//      `src/../docs/guide.md`, and `docs/guide.md#L3` in a citation) is
+//      written by any route, or an included respelling is refused (R5); or a
+//      location or dispatch path under an owner rule or a meta row is written
+//      because no tree carries the file (X4).
 //
 // Every fixture is a temporary git repository and a store under a temporary
 // AMANUENSIS_STORAGE_ROOT; no git configuration but the fixture's own is read,
@@ -69,6 +80,9 @@ const PROTO = "design/proto.ts";
 const LOG = "notes/log.md";
 const BUILT = "build/out.js";
 const SPACED = "design/my spec.md";
+// Excluded late, by an owner rule naming exactly this file (R5): a rule a
+// respelled path must not slip past.
+const GUIDE = "docs/guide.md";
 const INCLUDE_REMEDY = "an owner include rule";
 
 // A crash signature in this gate's output means the run never reached its
@@ -166,6 +180,7 @@ async function main(mods) {
   write(LOG, "# Log\n\nRead the code first.\n");
   write(BUILT, "export const built = 1;\n");
   write(SPACED, "# My spec\n");
+  write(GUIDE, "# Guide\n");
   git(ws, "add", "-A");
   git(ws, "add", "-f", BUILT);
   const c0 = commit(ws, "seed");
@@ -231,7 +246,7 @@ async function main(mods) {
     const specEvidence = claimOn(SPEC, "SC10-CL-SPEC");
     claimOn(CORE, "SC10-CL-CORE");
 
-    for (const pattern of ["src/", "design/", "README.md", ".gitignore"]) {
+    for (const pattern of ["src/", "design/", "docs/", "README.md", ".gitignore"]) {
       call("record_scope_sorting", { pattern, category: "product", description: `fixture ${pattern}` }, ctx);
     }
     const metaRow = call(
@@ -373,6 +388,53 @@ async function main(mods) {
       );
       return id;
     })();
+    // What the routes added since the final review need: an evidence row on the
+    // control file for a claim, a second finding for a contradiction, two
+    // concerns for a matrix, and a landed treatment case for an alternatives
+    // review, the last written directly since evaluation is not under test.
+    const coreEvidence = call(
+      "add_evidence",
+      { file_path: CORE, line_range: "1", ref_sha: c0, kind: "code-verified" },
+      ctx,
+    ).id;
+    call(
+      "add_finding",
+      {
+        finding_id: "S01-FIX2",
+        subsystem_id: SUBSYSTEM,
+        symptom: "a second fixture symptom",
+        root_cause: "a second fixture cause",
+        severity: "LOW",
+        status: "confirmed-acceptable",
+        primary_files: [`${CORE}:value@${c0}`],
+        ref_sha: c0,
+        pass_type: "survey",
+      },
+      ctx,
+    );
+    call("add_concern", { code: "SC10-1", origin: "seeded" }, ctx);
+    call("add_concern", { code: "SC10-2", origin: "seeded" }, ctx);
+    db.prepare(
+      `INSERT INTO evaluation_programs (program_id, schema_version, manifest_json, manifest_hash, expected_case_count, planned_by)
+       VALUES ('sc10-eval', '1.0.0', '{}', 'fixture', 1, ?)`,
+    ).run(ctx.sessionId);
+    db.prepare(
+      `INSERT INTO evaluation_cases
+         (case_id, program_id, stratum_id, repository_id, repository_type, languages_json, scale_bucket,
+          repository_shape, change_class, mode, context_condition, model_family, runtime_id,
+          condition_id, condition_role, replicate_id, expected_input_hash)
+       VALUES ('sc10-case', 'sc10-eval', 's', 'r', 't', '[]', 'b', 'shape', 'c', 'm', 'ctx', 'fam', 'rt',
+               'cond', 'treatment', 'sc10-replicate', 'fixture')`,
+    ).run();
+    db.prepare(
+      `INSERT INTO evaluation_results
+         (result_id, case_id, primary_metric_id, metrics_json, primary_value_milli, delivery_json,
+          instrument_status, rubric_counts_json, unused_category_checks_json, excluded_observations_json,
+          limitations_json, result_hash, landed_by)
+       VALUES ('sc10-result', 'sc10-case', 'm', '{}', 1, '{}', 'valid', '{}', '[]', '[]', '[]', 'fixture', ?)`,
+    ).run(ctx.sessionId);
+    db.prepare("UPDATE evaluation_cases SET status = 'landed', landed_at = datetime('now') WHERE case_id = 'sc10-case'").run();
+
     const ROUTES = [
       {
         id: "W1",
@@ -445,6 +507,37 @@ async function main(mods) {
           call(
             "add_field_note",
             { category: "pattern", observation: `note ${++n}`, location: `${path}:1`, ref_sha: c0 },
+            ctx,
+          ),
+      },
+      {
+        // A location is free text: a bare path, a symbol, or a comma-separated
+        // list that describe_locus reads token by token.
+        id: "W6b",
+        tool: "add_field_note",
+        table: "field_notes",
+        call: (path) =>
+          call("add_field_note", { category: "pattern", observation: `note ${++n}`, location: path, ref_sha: c0 }, ctx),
+      },
+      {
+        id: "W6c",
+        tool: "add_field_note",
+        table: "field_notes",
+        call: (path) =>
+          call(
+            "add_field_note",
+            { category: "pattern", observation: `note ${++n}`, location: `${path}:value`, ref_sha: c0 },
+            ctx,
+          ),
+      },
+      {
+        id: "W6d",
+        tool: "add_field_note",
+        table: "field_notes",
+        call: (path) =>
+          call(
+            "add_field_note",
+            { category: "pattern", observation: `note ${++n}`, location: `${CORE}, ${path}`, ref_sha: c0 },
             ctx,
           ),
       },
@@ -545,6 +638,81 @@ async function main(mods) {
         table: "decision_revisions",
         call: (path) =>
           decisionDraft([{ premise_id: "p1", kind: "code", ref: path, statement: "The value is read." }], []),
+      },
+      {
+        // A symbol subject names its file, whatever file the evidence cites.
+        id: "W14",
+        tool: "add_claim",
+        table: "claims",
+        call: (path) => {
+          const claimId = `SC10-SUBJ-${++n}`;
+          return call(
+            "add_claim",
+            {
+              claim_id: claimId,
+              claim_key: stableClaimKey(SUBSYSTEM, claimId, path),
+              subject_type: "symbol",
+              subject_id: `${path}:value`,
+              statement: "The fixture's value is read.",
+              epistemic_kind: "observation",
+              ref_sha: c0,
+              evidence_ids: [coreEvidence],
+            },
+            ctx,
+          );
+        },
+      },
+      {
+        id: "W15",
+        tool: "add_contradiction",
+        table: "contradictions",
+        call: (path) =>
+          call(
+            "add_contradiction",
+            {
+              finding_a: "S01-FIX",
+              finding_b: "S01-FIX2",
+              shared_location: `${path}:value`,
+              conflict_type: `classification-conflict-${++n}`,
+            },
+            ctx,
+          ),
+      },
+      {
+        id: "W16",
+        tool: "open_diagnosticity_matrix",
+        table: "diagnosticity_sessions",
+        call: (path) =>
+          call(
+            "open_diagnosticity_matrix",
+            {
+              subsystem_id: SUBSYSTEM,
+              symptom: `a symptom ${++n}`,
+              shared_location: `${path}:value`,
+              concern_codes: ["SC10-1", "SC10-2"],
+            },
+            ctx,
+          ),
+      },
+      {
+        id: "W17",
+        tool: "review_evaluation_alternatives",
+        table: "evaluation_alternative_reviews",
+        // One review per case: the control's lands it, so an excluded call the
+        // guard misses fails on the unique case instead, naming no source.
+        call: (path) =>
+          call(
+            "review_evaluation_alternatives",
+            {
+              review_id: `sc10-review-${++n}`,
+              case_id: "sc10-case",
+              alternatives: [{ explanation: "x", disposition: "unresolved", rationale: "x" }],
+              evidence: [`${path}:1`],
+              outcome: "underdetermined",
+              limitation: "A fixture.",
+            },
+            ctx,
+          ),
       },
     ];
 
@@ -780,6 +948,82 @@ async function main(mods) {
       return wrong.length ? wrong.join("; ") : null;
     });
 
+    // A rule names a file exactly; a respelling of that file names it too. The
+    // rule is recorded and reconciled here, after the routes' own checks.
+    const guideRule = call(
+      "set_scope_rule",
+      { pattern: GUIDE, action: "exclude", reason: "a draft", owner_words: `don't survey ${GUIDE}` },
+      ctx,
+    ).id;
+    call("detect_changes", { current_sha: c0 }, ctx);
+    // A `#` fragment respells a citation (`a.md#L3`); in a bare file path
+    // argument it is part of another file's name, so those routes skip it.
+    const RESPELLED = ["docs/./guide.md", "docs//guide.md", "src/../docs/guide.md", "docs/guide.md#L3"];
+    const FILE_PATH_ROUTES = new Set(["W1", "W2", "W3", "W4"]);
+    for (const route of ROUTES) {
+      for (const spelling of RESPELLED.filter((value) => !value.includes("#") || !FILE_PATH_ROUTES.has(route.id))) {
+        await check(`R5 ${route.id} ${route.tool} writes nothing for ${spelling}, a respelling of the excluded ${GUIDE}`, async () => {
+          const before = fingerprint(route.table);
+          const { refused } = await attempt(() => route.call(spelling));
+          const wrote = fingerprint(route.table) !== before;
+          if (!refused) return `accepted${wrote ? `, and wrote to ${route.table}` : ""}`;
+          return wrote ? `refused, but wrote to ${route.table} first` : null;
+        });
+      }
+    }
+    await check(`R5 control: the respelling of an included path is still written (add_finding, src/./core.ts)`, async () => {
+      const before = fingerprint("findings");
+      const { refused } = await attempt(() => ROUTES.find((route) => route.id === "W7").call("src/./core.ts"));
+      if (refused) return `refused: ${refused}`;
+      return fingerprint("findings") === before ? "findings is unchanged" : null;
+    });
+    await check(`R5 the exact rule's refusal names it (owner rule ${guideRule})`, async () => {
+      const { refused } = await attempt(() => ROUTES.find((route) => route.id === "W1").call("docs/./guide.md"));
+      return refused?.includes(`owner rule ${guideRule}`) && refused.includes(GUIDE)
+        ? null
+        : `the refusal: ${refused ?? "accepted"}`;
+    });
+
+    // An owner rule and a meta row decide without the tree, so a location under
+    // one is refused even where the cited revision, or any revision, lacks the
+    // file; whether it is excluded is decided at the last reconciled revision.
+    await check("X4 add_field_note and log_dispatch refuse a path under an owner rule or meta row the tree does not carry", async () => {
+      const wrong = [];
+      for (const [tool, args] of [
+        ["add_field_note", { category: "pattern", observation: "later", location: "design/later.md:1", ref_sha: c0 }],
+        ["add_field_note", { category: "pattern", observation: "later", location: "notes/later.md" }],
+        ["log_dispatch", { session_id: ctx.sessionId, seq: 901, role: "explore", file_path: "design/later.md" }],
+      ]) {
+        const { refused } = await attempt(() => call(tool, args, ctx));
+        if (!refused?.includes("outside the survey set")) wrong.push(`${tool} ${show(args.location ?? args.file_path)}: ${refused ?? "accepted"}`);
+      }
+      return wrong.length ? wrong.join("; ") : null;
+    });
+
+    // A successor in a claim key names the predecessor's subject again.
+    await check(`X5 supersede_claim refuses a successor whose subject is on the excluded ${SPEC}`, async () => {
+      const evidenceId = call("add_evidence", { file_path: CORE, line_range: "1", ref_sha: c1, kind: "code-verified" }, ctx).id;
+      const before = fingerprint("claims");
+      const { refused } = await attempt(() =>
+        call(
+          "supersede_claim",
+          {
+            predecessor_claim_id: "SC10-CL-SPEC",
+            successor_claim_id: "SC10-CL-SPEC-2",
+            statement: "The spec says the value again.",
+            epistemic_kind: "observation",
+            at_sha: c1,
+            rationale: "re-read",
+            evidence_ids: [evidenceId],
+          },
+          ctx,
+        ),
+      );
+      if (fingerprint("claims") !== before) return `wrote to claims${refused ? " before refusing" : ""}`;
+      if (!refused) return "accepted";
+      return refusalMisses("supersede_claim", refused, EXCLUDED[0]);
+    });
+
     // ------------------------------------------------------------------ reads
     const answers = async (label, fn) => {
       const { refused, result } = await attempt(fn);
@@ -978,8 +1222,12 @@ try {
       ["carried", "carriedTools"],
       ["claims", "claimTools"],
       ["code-index", "codeIndexTools"],
+      ["concerns", "concernTools"],
+      ["contradictions", "contradictionTools"],
       ["decisions", "decisionTools"],
+      ["diagnosticity", "diagnosticityTools"],
       ["dispatch", "dispatchTools"],
+      ["evaluation", "evaluationTools"],
       ["evidence", "evidenceTools"],
       ["field-notes", "fieldNoteTools"],
       ["files", "fileTools"],

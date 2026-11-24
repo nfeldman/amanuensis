@@ -24,13 +24,22 @@
 //      in-survey control (A0). The routes include resolve_crosswalk_identity's
 //      `evidence`, a decision revision's `evidence` premise and a research
 //      request's `current_evidence`;
+//      Since the final review the routes also cover stage_crosswalk_entity's
+//      own `source_ref` (A30), the file paths of a Chorusmith snapshot's
+//      evidence records (A31) and score_revalidation_result's
+//      `resolution_evidence_id` (A32);
 //   2. a route refuses an evidence row only when it arrives as `evidence_id`,
-//      or only as `evidence_ids`: both argument shapes have a route here;
+//      or only as `evidence_ids`: both argument shapes have a route here; or a
+//      route that takes a list writes when the included control's row comes
+//      first and the excluded one after it (A33);
 //   3. the census, built at run time from every registered tool's input
 //      schema, finds a tool with one of §2.6's argument names (`file_path`,
 //      `location`, `first_seen`, `path`, `paths`, `files`, `primary_files`,
 //      `evidence_id`, `evidence_ids`, `new_evidence`, `evidence`, at any
-//      depth) that is neither guarded nor exempt with its reason (C1); lists a
+//      depth, and since the final review `shared_location` and
+//      `resolution_evidence_id`) that is neither guarded nor exempt with its
+//      reason (C1); or score_refresh_result stops scoring through
+//      score_revalidation_result, whose route stands for it (C7); lists a
 //      tool that is not registered (C2); lists a guarded tool this gate has no
 //      route for (C3, C6); or does not turn red when a dummy tool with an
 //      `evidence_ids` argument is added to its input (C4);
@@ -130,6 +139,10 @@ const CENSUS_NAMES = new Set([
   "premises",
   "code_changes",
   "current_evidence",
+  // Found by the final review: a free-text location printed on pages, and the
+  // evidence row an obligation is closed on.
+  "shared_location",
+  "resolution_evidence_id",
 ]);
 
 /** Where each of a tool's input properties with a census name sits: `a.b[].c`. */
@@ -175,6 +188,8 @@ const LISTED = {
   update_finding_status: { table: "first" },
   carry_finding: { table: "first" },
   log_dispatch: { table: "first" },
+  add_contradiction: { table: "first" },
+  review_evaluation_alternatives: { table: "first" },
   // second table
   clear_staleness: { table: "second" },
   add_claim: { table: "second" },
@@ -197,6 +212,10 @@ const LISTED = {
   resolve_crosswalk_identity: { table: "second" },
   draft_decision_revision: { table: "second" },
   propose_research_request: { table: "second" },
+  score_revalidation_result: { table: "second" },
+  // Refresh scores through score_revalidation_result, whose route stands for it;
+  // C7 checks that it still does.
+  score_refresh_result: { table: "second", via: "score_revalidation_result" },
   // the exception among writes, and the exempt tools
   retire_ledger_file: { table: "exempt", reason: "the one write an excluded path accepts: it clears excluded_with_rows" },
   register_artifact: { table: "exempt", reason: "path names a store artifact, not a source path" },
@@ -209,10 +228,6 @@ const LISTED = {
   record_scope_sorting: {
     table: "exempt",
     reason: "inventory[].file_path writes only scope_inventory, never evidence, and has to reach excluded prefixes",
-  },
-  review_evaluation_alternatives: {
-    table: "exempt",
-    reason: "evidence is free text naming no evidence row and no path",
   },
 };
 
@@ -541,16 +556,22 @@ async function main(mods, tools) {
     // `evidence_id` route and an `evidence_ids` route are each present, and a
     // route that carries the evidence as a citation says so with `cites`.
     const ev = (path) => EV[path];
+    // A plural argument's ids: the row on `path` alone, or, while `mixed` is set,
+    // the included control's row first and then it, so a guard that reads only
+    // the first id is caught (A33).
+    let mixed = false;
+    const mixPaths = (path) => (mixed && path !== CORE ? [CORE, path] : [path]);
+    const evs = (path) => mixPaths(path).map(ev);
     const ROUTES = [
       {
         id: "A1", tool: "add_claim", label: "evidence_ids", table: "claim_evidence",
-        run: (_s, path) => newClaim([ev(path)]),
+        run: (_s, path) => newClaim(evs(path)),
       },
       {
         id: "A2", tool: "invalidate_claim", label: "evidence_ids", table: "claim_validity_events",
         setup: () => newClaim([auxEvidence]),
         run: (claimId, path) =>
-          call("invalidate_claim", { claim_id: claimId, at_sha: c1, reason: "a fixture reason", evidence_ids: [ev(path)] }, ctx),
+          call("invalidate_claim", { claim_id: claimId, at_sha: c1, reason: "a fixture reason", evidence_ids: evs(path) }, ctx),
       },
       {
         id: "A3", tool: "supersede_claim", label: "evidence_ids", table: "claims",
@@ -565,7 +586,7 @@ async function main(mods, tools) {
               epistemic_kind: "observation",
               at_sha: c1,
               rationale: "a fixture rationale",
-              evidence_ids: [ev(path)],
+              evidence_ids: evs(path),
             },
             ctx,
           ),
@@ -591,7 +612,7 @@ async function main(mods, tools) {
           call("add_concern", { code, origin: "seeded" }, ctx);
           return code;
         },
-        run: (code, path) => disposition(code, [ev(path)]),
+        run: (code, path) => disposition(code, evs(path)),
       },
       {
         id: "A7", tool: "set_disposition", label: "evidence", cites: true, table: "dispositions",
@@ -638,7 +659,7 @@ async function main(mods, tools) {
               subject_id: SUBSYSTEM,
               slot: "purpose",
               body: "The fixture holds one constant that the rest of the code reads.",
-              evidence_ids: [ev(path)],
+              evidence_ids: evs(path),
               ref_sha: c0,
             },
             ctx,
@@ -654,7 +675,7 @@ async function main(mods, tools) {
               subject_id: SUBSYSTEM,
               section: "structure",
               body: "The fixture holds one constant that the rest of the code reads.",
-              evidence_ids: [ev(path)],
+              evidence_ids: evs(path),
               ref_sha: c0,
             },
             ctx,
@@ -665,7 +686,7 @@ async function main(mods, tools) {
         run: (_s, path) =>
           call(
             "record_runtime_boundary",
-            { from_runtime: `rt-a-${++n}`, to_runtime: "rt-b", mechanism: "a call", evidence_ids: [ev(path)], ref_sha: c0 },
+            { from_runtime: `rt-a-${++n}`, to_runtime: "rt-b", mechanism: "a call", evidence_ids: evs(path), ref_sha: c0 },
             ctx,
           ),
       },
@@ -674,7 +695,7 @@ async function main(mods, tools) {
         run: (_s, path) =>
           call(
             "open_diagnosticity_matrix",
-            { subsystem_id: SUBSYSTEM, symptom: "a symptom", concern_codes: ["SC-1", "SC-2"], evidence_ids: [ev(path)] },
+            { subsystem_id: SUBSYSTEM, symptom: "a symptom", concern_codes: ["SC-1", "SC-2"], evidence_ids: evs(path) },
             ctx,
           ),
       },
@@ -810,7 +831,7 @@ async function main(mods, tools) {
               label: `method ${n}`,
               definition: "A fixture method.",
               negative_criteria: ["is not a fixture"],
-              provenance: [{ kind: "repository-evidence", ref: String(ev(path)), statement: "read there" }],
+              provenance: mixPaths(path).map((p) => ({ kind: "repository-evidence", ref: String(ev(p)), statement: "read there" })),
             },
             ctx,
           ),
@@ -849,7 +870,7 @@ async function main(mods, tools) {
               entity_id: second,
               candidate_entity_id: first,
               resolution: "same-as",
-              evidence: [{ kind: "repository-evidence", ref: String(ev(path)), statement: "read there" }],
+              evidence: mixPaths(path).map((p) => ({ kind: "repository-evidence", ref: String(ev(p)), statement: "read there" })),
               rationale: "the same method",
             },
             ctx,
@@ -863,7 +884,7 @@ async function main(mods, tools) {
             "draft_decision_revision",
             {
               ...DECISION_DRAFT(decisionId, scopeClaim),
-              premises: [{ premise_id: "p1", kind: "evidence", ref: String(ev(path)), statement: "The value is read." }],
+              premises: mixPaths(path).map((p, i) => ({ premise_id: `p${i + 1}`, kind: "evidence", ref: String(ev(p)), statement: "The value is read." })),
             },
             ctx,
           );
@@ -878,7 +899,7 @@ async function main(mods, tools) {
               request_id: fresh("sc12-research"),
               question: `What does the fixture value mean (${n})?`,
               uncertainty: "the fixture is silent",
-              current_evidence: [{ kind: "repository-evidence", ref: String(ev(path)), statement: "x" }],
+              current_evidence: mixPaths(path).map((p) => ({ kind: "repository-evidence", ref: String(ev(p)), statement: "x" })),
               needed_source_classes: ["vendor documentation"],
               disconfirmers: ["the value is documented"],
               budget: { max_sources: 1, max_minutes: 5 },
@@ -893,7 +914,149 @@ async function main(mods, tools) {
             ctx,
           ),
       },
+      {
+        // An entity whose own source is an evidence row, apart from its provenance.
+        id: "A30", tool: "stage_crosswalk_entity", label: "source_ref", table: "crosswalk_entities",
+        run: (_s, path) =>
+          call(
+            "stage_crosswalk_entity",
+            {
+              entity_id: fresh("sc12-sourced"),
+              entity_kind: "method",
+              source_kind: "repository-evidence",
+              source_ref: String(ev(path)),
+              label: `sourced method ${++n}`,
+              definition: "A fixture method.",
+              negative_criteria: ["is not a fixture"],
+              provenance: [{ kind: "repository-evidence", ref: String(EV[CORE]), statement: "read there" }],
+            },
+            ctx,
+          ),
+      },
+      {
+        // The snapshot's evidence records name their files; one on an excluded
+        // path is refused even when the scope's ids are all included.
+        id: "A31", tool: "plan_chorusmith_adapter_run", label: "expected_direct.snapshot.evidence", cites: true,
+        table: "chorusmith_adapter_runs",
+        run: (_s, path) => {
+          const captured = call("capture_chorusmith_parity_snapshot", { parity_scope: scopeFor([EV[CORE]]) }, ctx);
+          const snapshot = captured.snapshot;
+          if (path !== CORE) {
+            snapshot.evidence = {
+              ...snapshot.evidence,
+              records: snapshot.evidence.records.map((record) => ({ ...record, file_path: path })),
+            };
+          }
+          return call(
+            "plan_chorusmith_adapter_run",
+            {
+              run_id: fresh("sc12-run"),
+              external_run_ref: `chorusmith://run/sc12-${++n}`,
+              source_commit: c0,
+              expected_direct: {
+                snapshot,
+                snapshot_hash: path === CORE ? captured.snapshot_hash : contentHash(snapshot),
+                verification_time_us: captured.verification_time_us,
+              },
+              parity_policy: { recovery_probe_required: false, max_verification_overhead_us: 1000000 },
+              steps: [
+                {
+                  step_id: fresh("adapter-step"),
+                  adapter_kind: "CodebaseBrief",
+                  tool_name: "add_evidence",
+                  args: { file_path: CORE, line_range: "1", ref_sha: c0, kind: "code-verified" },
+                  expected_output_keys: ["id"],
+                },
+              ],
+            },
+            ctx,
+          );
+        },
+      },
+      {
+        // Last, since its first setup applies a change impact that retires the
+        // claims on the changed file. Each call scores its own landed attempt
+        // with a fresh evidence row, which no invalidated claim carries.
+        id: "A32", tool: "score_revalidation_result", label: "resolution_evidence_id", table: "revalidation_obligations",
+        setup: (path) => {
+          const attemptId = landedRevalidationAttempt();
+          return { attemptId, evidenceId: mkEvidence(path, c3, "test-observed") };
+        },
+        evidenceOf: (state) => state.evidenceId,
+        run: (state) =>
+          call(
+            "score_revalidation_result",
+            {
+              run_id: "sc12-revalidation",
+              attempt_id: state.attemptId,
+              verdict: "accepted",
+              resolution_outcome: "retired",
+              rationale: "the invalidated observation stays historical",
+              resolution_evidence_id: state.evidenceId,
+            },
+            ctx,
+          ),
+      },
     ];
+
+    // The revalidation run A32 scores in: planned on first use over the
+    // obligations a change impact on the control file opens, one landed attempt
+    // per call.
+    let revalidationObligations = null;
+    const landedRevalidationAttempt = () => {
+      if (revalidationObligations === null) {
+        call("predict_change_impact", { base_sha: c1, head_sha: c2, run_id: "sc12-impact" }, ctx);
+        call("apply_change_impact", { run_id: "sc12-impact" }, ctx);
+        call(
+          "plan_revalidation_run",
+          {
+            run_id: "sc12-revalidation",
+            impact_run_id: "sc12-impact",
+            allowed_sources: [CORE],
+            provider_allowlist: ["sc12-provider"],
+            authority_mode: "observe-only",
+            max_concurrency: 50,
+            max_attempts_per_obligation: 2,
+            max_tokens_per_attempt: 100,
+            max_total_tokens: 100000,
+            max_total_cost_microusd: 1000000,
+          },
+          ctx,
+        );
+        revalidationObligations = db
+          .prepare("SELECT obligation_id FROM revalidation_run_obligations WHERE run_id = 'sc12-revalidation' ORDER BY obligation_id")
+          .all()
+          .map((row) => row.obligation_id);
+      }
+      const obligationId = revalidationObligations.shift();
+      if (!obligationId) throw new Error("the revalidation fixture ran out of obligations");
+      const attemptId = fresh("sc12-attempt");
+      call(
+        "dispatch_revalidation_attempt",
+        {
+          run_id: "sc12-revalidation",
+          obligation_id: obligationId,
+          attempt_id: attemptId,
+          replicate_id: "replicate-1",
+          attempt_number: 1,
+          worker_id: `sc12-worker-${n}`,
+          provider: "sc12-provider",
+          model: "sc12-model",
+          planned_tokens: 50,
+          planned_cost_microusd: 500,
+        },
+        ctx,
+      );
+      call(
+        "land_revalidation_result",
+        { run_id: "sc12-revalidation", attempt_id: attemptId, result: { conclusion: "retired" }, actual_tokens: 40, actual_cost_microusd: 400 },
+        ctx,
+      );
+      return attemptId;
+    };
+
+    // The routes whose argument is a list of rows or references.
+    const PLURAL_ROUTES = new Set(["A1", "A2", "A3", "A6", "A10", "A11", "A12", "A13", "A21", "A22", "A27", "A28"]);
 
     /** What a refusal of `route` on `excluded` must say; the missing parts, or null. */
     const refusalMisses = (route, message, excluded, evidenceId) => {
@@ -936,6 +1099,24 @@ async function main(mods, tools) {
         });
       }
     }
+
+    // Every route that carries more than one row: with the included control's row
+    // first and the excluded one after it, the call is still refused whole.
+    mixed = true;
+    for (const route of ROUTES.filter((candidate) => PLURAL_ROUTES.has(candidate.id))) {
+      for (const excluded of EXCLUDED) {
+        await check(`A33 ${route.id} ${route.tool} refuses ${excluded.path} (${excluded.source}) after an included row`, async () => {
+          const state = route.setup?.(excluded.path);
+          const before = route.table && fingerprint(route.table);
+          const { refused } = await attempt(() => route.run(state, excluded.path));
+          const wrote = route.table ? fingerprint(route.table) !== before : false;
+          if (!refused) return `accepted${wrote ? `, and wrote to ${route.table}` : ""}`;
+          if (wrote) return `refused, but wrote to ${route.table} first`;
+          return refusalMisses(route, refused, excluded, ev(excluded.path));
+        });
+      }
+    }
+    mixed = false;
 
     // Both argument shapes are routes: at least one refusal over `evidence_id`
     // and one over `evidence_ids`, so a guard that reads only one is caught.
@@ -983,9 +1164,15 @@ async function main(mods, tools) {
     await check("C6 every tool the second table lists has a route in this gate", () => {
       const routed = new Set(ROUTES.map((route) => route.tool));
       const missing = Object.entries(LISTED)
-        .filter(([name, entry]) => entry.table === "second" && !routed.has(name))
+        .filter(([name, entry]) => entry.table === "second" && !routed.has(name) && !routed.has(entry.via))
         .map(([name]) => name);
       return missing.length ? `no route for ${missing.join(", ")}` : null;
+    });
+    await check("C7 score_refresh_result scores through score_revalidation_result, so A32's route covers it", () => {
+      const source = readFileSync(join(here, "src", "tools", "refresh.ts"), "utf8");
+      return /invoke\(revalidationTools, "score_revalidation_result"/.test(source)
+        ? null
+        : "refresh.ts no longer delegates its scoring to score_revalidation_result";
     });
   } finally {
     try {
