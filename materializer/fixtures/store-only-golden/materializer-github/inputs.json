@@ -21,6 +21,7 @@
   "onboarding_sha": "deadbeefdeadbeef",
   "project_name": "FictionalProject",
   "repo_id": "default",
+  "repository_ref": "main",
   "repository_url": "https://github.com/acme/fictional",
   "scoped_files": 0,
   "stale_entries": 0,

@@ -3,7 +3,8 @@
 (design/store-only/PLAN.md §3.2 step 3, §3.5, §6, §8 SO13).
 
 The run builds each page as a model, resolves cross-references on it, and writes HTML,
-`search-index.js` and the two contract files. Nothing else. (When it was written the
+`search-index.js`, the shared stylesheet and script (`assets/site.<hash>.css` and `.js`,
+since the style lane) and the two contract files. Nothing else. (When it was written the
 run held each page's Markdown in memory and parsed it; SO19 deleted that parser.)
 
 Turns red when:
@@ -65,6 +66,9 @@ import tempfile
 from collections.abc import Callable
 from html.parser import HTMLParser
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import lineage_style  # noqa: E402
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
@@ -447,9 +451,10 @@ def main() -> int:
                 for rel in files_under(docs)
                 if not rel.endswith(".html")
                 and rel not in {"search-index.js", ".manifest.json", ".projection-contract.json", README}
+                and not re.fullmatch(r"assets/site\.[0-9a-f]{12}\.(?:css|js)", rel)
             ]
             if extra:
-                return f"the publication holds files beyond HTML, the index and the two contract files: {extra[:5]}"
+                return f"the publication holds files beyond HTML, the index, the shared assets and the two contract files: {extra[:5]}"
             return None
 
         check("an in-place publish writes no .md, only HTML, search-index.js and the two contract files", no_md_in_place)
@@ -692,13 +697,14 @@ def main() -> int:
                 if not after or sorted(after) != sorted(before):
                     return f"the golden fixture {name} holds {len(after)} pages for SO11's {len(before)}"
                 for rel, new in after.items():
-                    if later is not None:
-                        new = _EMPTY_FLOW.sub("", later.sub("", new))
                     if md_targets(new):
                         return f"golden {name}/{rel} links {md_targets(new)[:3]}"
-                    if masked(before[rel]) != masked(new):
+                    new, was = lineage_style.pair(new, before[rel])
+                    if later is not None:
+                        new = _EMPTY_FLOW.sub("", later.sub("", new))
+                    if masked(was) != masked(new):
                         return f"golden {name}/{rel} differs from SO11's outside the Markdown links and the views paragraph"
-                    drift = volatile_drift(pairs, before[rel], new, fixed)
+                    drift = volatile_drift(pairs, was, new, fixed)
                     if drift:
                         return f"golden {name}/{rel}: {drift}"
                     compared += 1

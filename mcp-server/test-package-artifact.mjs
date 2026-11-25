@@ -234,6 +234,12 @@ try {
     existsSync(join(packageRoot, "materializer", "materialize.py")),
     "materializer is missing",
   );
+  for (const file of ["page.html", "site.css", "site.js"]) {
+    assert(
+      existsSync(join(packageRoot, "materializer", "amanuensis_materializer", "site", file)),
+      `materializer site/${file} is missing; every page is built from it`,
+    );
+  }
   assert(!existsSync(join(packageRoot, "agents")), "obsolete custom-agent bundle was packed");
   assert(
     !existsSync(join(packageRoot, "materializer", "test-readback.py")),

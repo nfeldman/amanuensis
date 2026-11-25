@@ -60,6 +60,9 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import lineage_style  # noqa: E402
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
@@ -389,7 +392,7 @@ def golden_additions_only(previous: Path | None) -> str | None:
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     gained = 0
     for rel in sorted(after):
-        new, old = _SO20_MARKS.sub("", after[rel].read_text()), _SO20_MARKS.sub("", before[rel].read_text())
+        new, old = (_SO20_MARKS.sub("", t) for t in lineage_style.pair(after[rel].read_text(), before[rel].read_text()))
         if _without_additions(new) != _EMPTY_FLOW.sub("", _EARLIER.sub("", old)).replace("\n", ""):
             return f"{rel} differs from the start's corpus outside a seam-contract figure or sentence, or the slice's earlier diagrams"
         gained += bool(_SEAM_ADDED.search(new))

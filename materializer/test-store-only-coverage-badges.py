@@ -66,6 +66,9 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import lineage_style  # noqa: E402
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
@@ -452,7 +455,7 @@ def golden_additions_only(previous: Path | None) -> str | None:
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     gained = 0
     for rel in sorted(after):
-        new, old = (_EARLIER.sub("", _SO20_MARKS.sub("", p.read_text())) for p in (after[rel], before[rel]))
+        new, old = (_EARLIER.sub("", _SO20_MARKS.sub("", t)) for t in lineage_style.pair(after[rel].read_text(), before[rel].read_text()))
         # Blocks are joined by a newline, so taking one out can leave a newline behind; only that is let go.
         if _EMPTY_FLOW.sub("", _ADDED.sub("", new)).replace("\n", "") != old.replace("\n", ""):
             return f"{rel} differs from the start's corpus outside a coverage figure, a sentence, a badge or its note, or the slice's earlier diagrams"

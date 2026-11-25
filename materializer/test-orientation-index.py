@@ -6,8 +6,8 @@ Turns red when:
 
   - `PagePlan` or `SitePage` carries no `use_when` field;
   - a static page's HTML head does not open, directly under its H1, with a hint
-    paragraph and then a `use_when` paragraph holding "Use it when <Appendix D
-    text>"; in particular when a prose source opens with an H2 rather than an
+    paragraph, or its "About this page" popover in the head holds no `use_when`
+    paragraph reading "Use it when <Appendix D text>"; in particular when a prose source opens with an H2 rather than an
     H1, or when the overview's or the reader's guide's hint is still empty or
     is not the Appendix D sentence, or a kept hint was replaced;
   - a page's HTML head prints no `use_when` at all, carries markup inside its
@@ -245,16 +245,22 @@ def read(path: Path) -> str | None:
 # ---------------------------------------------------------------------------
 def head_of(text: str) -> tuple[str, str, str] | None:
     """(H1, hint, use_when) of an HTML page, with the markup inside the paragraphs
-    kept, or None unless the page head holds an H1 directly followed by both."""
+    kept, or None unless the page head holds an H1 directly followed by a hint, and
+    an "About this page" popover holding the use_when with a button that opens it."""
 
-    match = re.search(
-        r'<h1\b[^>]*>(.*?)</h1>\s*<p class="page-hint">(.*?)</p>\s*<p class="page-use-when">(.*?)</p>',
-        text,
+    head = re.search(r'<header class="page-head">(.*?)</header>', text, re.S)
+    if not head:
+        return None
+    match = re.search(r'<h1\b[^>]*>(.*?)</h1>\s*<p class="page-hint">(.*?)</p>', head.group(1), re.S)
+    use = re.search(
+        r'<div class="help-popover" id="page-help" popover\b[^>]*>.*?<p class="page-use-when">(.*?)</p>',
+        head.group(1),
         re.S,
     )
-    if not match:
+    opener = re.search(r'<button\b[^>]*\bpopovertarget="page-help"[^>]*>', head.group(1))
+    if not match or not use or not opener:
         return None
-    return html_text(match.group(1)), match.group(2), match.group(3)
+    return html_text(match.group(1)), match.group(2), use.group(1)
 
 
 def article_of(text: str) -> str:

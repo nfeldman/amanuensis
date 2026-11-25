@@ -14,7 +14,7 @@
 //     second clean publish or a copy would treat it as somebody else's file;
 //   - the read-back accepts a README that was edited, or one that was deleted;
 //   - `dev/promote-docs.mjs` over a temp copy of that publication does not carry
-//     the same file set (HTML, `search-index.js`, both receipt files, README, and
+//     the same file set (HTML, `search-index.js`, the shared `assets/site.*`, both receipt files, README, and
 //     no other `.md`); does not run the read-back at the destination, or does not
 //     stop on a red one and restore what was there; promotes a source that holds
 //     a Markdown page the contract names, or no README; or does not refuse a
@@ -222,7 +222,9 @@ const AUXILIARY = new Set([CONTRACT, MANIFEST, "search-index.js", README]);
 check("the publication holds HTML pages, the index, the two receipt files and the README, and no other .md", () => {
   if (!published) return "no publication";
   if (!filesA.includes(README)) return `the publication has no ${README} (D10): GitHub's directory view would show a bare list of .html source`;
-  const stray = filesA.filter((rel) => !rel.endsWith(".html") && !AUXILIARY.has(rel));
+  // The shared stylesheet and script every page links (the style lane), named by content hash.
+  const SITE_ASSET = /^assets\/site\.[0-9a-f]{12}\.(css|js)$/;
+  const stray = filesA.filter((rel) => !rel.endsWith(".html") && !AUXILIARY.has(rel) && !SITE_ASSET.test(rel));
   if (stray.length) return `the publication holds ${stray.length} file(s) that are neither a page nor a named auxiliary: ${stray.slice(0, 4).join(", ")}`;
   const markdown = filesA.filter((rel) => rel.endsWith(".md") && rel !== README);
   if (markdown.length) return `the publication holds ${markdown.length} .md page(s): ${markdown.slice(0, 4).join(", ")}`;

@@ -16,7 +16,8 @@ Builds one temporary git repository and several stores over it. Subsystems:
 Turns red when:
 
   - a recorded purpose does not lead the subsystem page, or the section order
-    is not Purpose, Scope, Start here, How it works, Structure;
+    is not Purpose, Scope, How it works, Structure, or Scope does not end
+    with the "Start here" line;
   - a Purpose heading renders without an effective record (nothing, an
     ineligible subsystem, a withdrawn row, an unreachable revision), or such a
     page stops opening with Scope and the no-purpose sentence;
@@ -144,7 +145,7 @@ NO_PURPOSE_WITH_SCOPE = (
     "No purpose statement is recorded for this subsystem; the scope below states what it covers."
 )
 NO_PURPOSE_STEM = "No purpose statement is recorded for this subsystem"
-SECTION_ORDER = ("Purpose", "Scope", "Start here", "How it works", "Structure")
+SECTION_ORDER = ("Purpose", "Scope", "How it works", "Structure")
 REFUSAL = (
     "The recorded {slot} carries survey-status vocabulary and was not published;"
     " record a corrected version."
@@ -752,6 +753,8 @@ def main() -> int:
                 return f"the HTML page's sections run {order}, not {list(SECTION_ORDER)}"
             if next(iter(sections)) != "Purpose":
                 return f"the HTML page's first section is {next(iter(sections))!r}"
+            if "Start here " not in sections["Scope"]:
+                return "the HTML page's Scope has no Start here line"
             if PURPOSE_B01 not in sections["Purpose"]:
                 return "the recorded purpose is not under Purpose on the HTML page"
             for line in ACCOUNT_B01.splitlines():

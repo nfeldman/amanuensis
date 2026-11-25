@@ -16,9 +16,10 @@ Turns red when, on a store this gate seeds and publishes:
     term first) that its terms line omits: read from the page, not from the
     contract's `pages`, so an incomplete mapping such as subsystem pages
     without Layer, or the overview without Survey depth, is red;
-  - the line is not directly under the page's hint and "Use it when" sentence
-    (after the `page-use-when` paragraph, inside the page head);
-  - the line carries text besides its links and their separators;
+  - the line is not directly under the page's "Use it when" sentence (after
+    the `page-use-when` paragraph, inside the page head's "About this page"
+    popover, where it is a list of linked terms with their definitions);
+  - a listed term carries text besides its link;
   - a link's anchor does not exist as an `id` in the guide's HTML, or its path
     does not reach the guide's published file from the page's own directory (a
     subsystem page needs the `../`);
@@ -366,6 +367,14 @@ def main() -> int:
 
         check("every term a page prints as a label is on its terms line", labels_are_listed)
 
+        def terms_block(head: str) -> tuple[re.Match[str] | None, re.Match[str] | None]:
+            """The popover's terms heading and the definition list under it."""
+            heading = re.search(r'<p class="help-heading">' + re.escape(LINE_LABEL.rstrip(":")) + r"</p>", head)
+            if not heading:
+                return None, None
+            listing = re.match(r'\s*<dl class="help-terms">.*?</dl>', head[heading.end() :], re.S)
+            return heading, listing
+
         def html_view() -> str | None:
             for html_page in pages:
                 want = terms_for(html_page, terms)
@@ -375,23 +384,26 @@ def main() -> int:
                 head = html_head(text)
                 if not head:
                     return f"{html_page} has no page head"
+                label = f'<p class="help-heading">{LINE_LABEL.rstrip(":")}</p>'
                 if not want:
-                    if LINE_LABEL in text:
+                    if label in text or LINE_LABEL in text:
                         return f"{html_page} has the terms line and names no term"
                     continue
-                if text.count(LINE_LABEL) != 1:
-                    return f"{html_page} prints the terms line {text.count(LINE_LABEL)} times, expected 1"
-                paragraph = re.search(r"<p\b[^>]*>\s*" + re.escape(LINE_LABEL) + r".*?</p>", head, re.S)
-                if not paragraph:
-                    return f"{html_page}: the terms line is not a paragraph in the page head"
+                if text.count(label) != 1 or LINE_LABEL in text:
+                    return f"{html_page} prints the terms line {text.count(label)} times, expected 1"
+                heading, listing = terms_block(head)
+                if not heading or not listing:
+                    return f"{html_page}: the terms are not a list in the page head's help"
+                if not re.search(r'<button\b[^>]*\bpopovertarget="page-help"', head) or 'id="page-help" popover' not in head:
+                    return f"{html_page}: no button in the page head opens the help that holds the terms"
                 use_when = re.search(r'<p class="page-use-when">.*?</p>', head, re.S)
                 if not use_when:
                     return f"{html_page} has no use-when line to sit under"
-                if head[use_when.end() : paragraph.start()].strip():
+                if head[use_when.end() : heading.start()].strip():
                     return f"{html_page}: the terms line is not directly under the use-when line"
                 links = [
                     (re.sub(r"<[^>]+>", "", t).strip(), h)
-                    for h, t in re.findall(r'<a\b[^>]*\bhref="([^"]+)"[^>]*>(.*?)</a>', paragraph.group(0), re.S)
+                    for h, t in re.findall(r'<dt><a\b[^>]*\bhref="([^"]+)"[^>]*>(.*?)</a></dt>', listing.group(0), re.S)
                 ]
                 reason = check_links(html_page, links, want)
                 if reason:
@@ -403,13 +415,13 @@ def main() -> int:
                 if not terms_for(html_page, terms):
                     continue
                 head = html_head(read(docs / html_page) or "")
-                paragraph = re.search(r"<p\b[^>]*>\s*" + re.escape(LINE_LABEL) + r".*?</p>", head, re.S)
-                if not paragraph:
+                _heading, listing = terms_block(head)
+                if not listing:
                     return f"{html_page} has no terms line"
-                opening = re.match(r"<p\b[^>]*>", paragraph.group(0))
+                opening = re.match(r"\s*<dl\b[^>]*>", listing.group(0))
                 if opening and hides_from_readers(opening.group(0)):
                     return f"{html_page}: the terms line is hidden from readers: {opening.group(0)!r}"
-                for tag in re.findall(r"<a\b[^>]*>", paragraph.group(0)):
+                for tag in re.findall(r"<a\b[^>]*>", listing.group(0)):
                     if hides_from_readers(tag) or re.search(r"\btabindex\s*=\s*\"?-1", tag):
                         return f"{html_page}: a terms link is hidden from readers: {tag!r}"
                     if re.search(r"\baria-label(ledby)?\s*=", tag):
@@ -421,13 +433,13 @@ def main() -> int:
                 if not terms_for(html_page, terms):
                     continue
                 head = html_head(read(docs / html_page) or "")
-                paragraph = re.search(r"<p\b[^>]*>\s*" + re.escape(LINE_LABEL) + r".*?</p>", head, re.S)
-                if not paragraph:
+                _heading, listing = terms_block(head)
+                if not listing:
                     return f"{html_page} has no terms line"
-                rest = re.sub(r"<a\b[^>]*>.*?</a>", "", paragraph.group(0), flags=re.S)
-                rest = htmllib.unescape(re.sub(r"<[^>]+>", "", rest)).replace(LINE_LABEL, "")
-                if not only_separators(rest):
-                    return f"{html_page}: the terms line carries text besides links: {paragraph.group(0)!r}"
+                for dt in re.findall(r"<dt>(.*?)</dt>", listing.group(0), re.S):
+                    rest = re.sub(r"<a\b[^>]*>.*?</a>", "", dt, flags=re.S)
+                    if htmllib.unescape(re.sub(r"<[^>]+>", "", rest)).strip():
+                        return f"{html_page}: a term carries text besides its link: {dt!r}"
             return None
 
         check("every page that names terms prints the line in HTML, and no other does", html_view)

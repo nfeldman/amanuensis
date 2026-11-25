@@ -71,6 +71,9 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import lineage_style  # noqa: E402
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
@@ -604,7 +607,8 @@ def golden_attributes_only(previous: Path | None) -> str | None:
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     marked = 0
     for rel in sorted(after):
-        new, old = EMPTY_FLOW.sub("", FIGURE_BLOCK.sub("", after[rel].read_text())), before[rel].read_text()
+        fresh, old = lineage_style.pair(after[rel].read_text(), before[rel].read_text())
+        new = EMPTY_FLOW.sub("", FIGURE_BLOCK.sub("", fresh))
         if MARK_ATTRIBUTE.sub("", new) != old:
             return f"{rel} differs from the start's corpus by more than the record attributes"
         if new != old:

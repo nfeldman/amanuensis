@@ -51,6 +51,9 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import lineage_style  # noqa: E402
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
@@ -556,8 +559,8 @@ def main() -> int:
                         return f"the tree this packet started from did not publish the {store} store"
                     after = runs[store][1]
                     files = sorted(
-                        {str(p.relative_to(before)) for p in before.rglob("*") if p.is_file() and p.suffix in (".html", ".js")}
-                        | {str(p.relative_to(after)) for p in after.rglob("*") if p.is_file() and p.suffix in (".html", ".js")}
+                        {str(p.relative_to(before)) for p in before.rglob("*") if p.is_file() and p.suffix in (".html", ".js") and not lineage_style.is_style_asset(str(p.relative_to(before if p.is_relative_to(before) else after)))}
+                        | {str(p.relative_to(after)) for p in after.rglob("*") if p.is_file() and p.suffix in (".html", ".js") and not lineage_style.is_style_asset(str(p.relative_to(before if p.is_relative_to(before) else after)))}
                     )
                     for name in FAMILY:
                         if f"{name}.html" not in files:
@@ -566,8 +569,8 @@ def main() -> int:
                         a, b = after / name, before / name
                         if not a.is_file() or not b.is_file():
                             return f"{store}/{name} is published by only one of the two trees"
-                        if unmarked(a.read_text()) != b.read_text():
-                            return f"{store}/{name} {differs(unmarked(a.read_text()), b.read_text())}"
+                        if lineage_style.current(unmarked(a.read_text())) != lineage_style.start(b.read_text()):
+                            return f"{store}/{name} {differs(lineage_style.current(unmarked(a.read_text())), lineage_style.start(b.read_text()))}"
             return None
 
         check("the lens, rich, bare and leaf stores print what the packet's start tree prints for them", start_equal)

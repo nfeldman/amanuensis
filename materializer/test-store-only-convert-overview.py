@@ -55,6 +55,9 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import lineage_style  # noqa: E402
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
@@ -367,7 +370,7 @@ def main() -> int:
                     return "the tree this packet started from did not publish the lens fixture"
                 _s, output, _summary, _calls = runs["lens"]
                 for page in FAMILY:
-                    if unmarked((output / f"{page}.html").read_text()) != (before / f"{page}.html").read_text():
+                    if lineage_style.current(unmarked((output / f"{page}.html").read_text())) != lineage_style.start((before / f"{page}.html").read_text()):
                         return f"lens/{page}.html differs from the page the start tree printed for the same store"
             return None
 

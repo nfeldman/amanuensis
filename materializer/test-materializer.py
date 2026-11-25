@@ -216,6 +216,18 @@ def seed(db: sqlite3.Connection) -> None:
     db.commit()
 
 
+def with_assets(page: Path) -> str:
+    """The page's HTML followed by the shared stylesheet and script it links."""
+    html = page.read_text()
+    parts = [html]
+    for ref in re.findall(r'<link rel="stylesheet" href="([^"]+)"|<script src="([^"]+)"', html):
+        target = next(r for r in ref if r)
+        asset = (page.parent / target).resolve()
+        if asset.suffix in {".css", ".js"} and asset.parent.name == "assets":
+            parts.append(asset.read_text())
+    return "\n".join(parts)
+
+
 def run_materializer(storage: Path) -> dict:
     proc = subprocess.run(
         [sys.executable, str(ROOT / "materialize.py"), "--storage", str(storage)],
@@ -321,7 +333,7 @@ def main() -> None:
         ]:
             assert (docs / p).is_file(), f"missing: {p}"
             assert '<article class="content' in (docs / p).read_text(), f"no article in HTML page: {p}"
-        html_index = (docs / "index.html").read_text()
+        html_index = with_assets(docs / "index.html")
         assert "Amanuensis HTML projection" in html_index
         assert "FictionalProject" in html_index
         assert "Architecture survey · Amanuensis" in html_index
@@ -350,7 +362,7 @@ def main() -> None:
         assert "systemTheme.addEventListener?.('change', updateThemeLabel);" in html_index
         assert 'href="findings.html"' in html_index
         assert "https://" not in html_index, "HTML shell must not depend on a remote asset"
-        html_findings = (docs / "findings.html").read_text()
+        html_findings = with_assets(docs / "findings.html")
         assert 'href="subsystems/b02-auth-service.html"' in html_findings
         assert '<h4 class="finding-subsystem-heading"' in html_findings
         assert '>Auth Service</a></h4>' in html_findings
@@ -376,7 +388,8 @@ def main() -> None:
         assert 'class="severity severity-high"' not in html_findings
         assert 'record-fact-severity' not in html_findings
         assert 'record-fact-subsystem' not in html_findings
-        assert '.content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }' in html_findings
+        assert '.content > * + section { margin-top: var(--section-gap); }' in html_findings
+        assert 'border-bottom: 1px solid var(--rule)' not in html_findings.split('.content > section', 1)[1].split('}', 1)[0]
         assert '.record-finding { display: block; }' in html_findings
         assert 'grid-template-columns: minmax(0, 1fr) max-content; gap: .4rem 1rem' in html_findings
         assert "@container report (max-width: 92ch)" in html_findings
@@ -398,7 +411,7 @@ def main() -> None:
         assert 'background: color-mix(in srgb, var(--enum-color) 10%, var(--surface));' in html_findings
         assert '.content-findings section > h2::before' in html_findings
         assert 'background: var(--source-aligned)' in html_findings
-        html_concerns = (docs / "concerns.html").read_text()
+        html_concerns = with_assets(docs / "concerns.html")
         assert 'class="identifier-definition"' in html_concerns
         assert 'title="CC-1 — Cache Coherence"' in html_concerns
         assert 'aria-label="CC-1 — Cache Coherence"' in html_concerns
@@ -422,7 +435,7 @@ def main() -> None:
         assert html_concerns.count('<td class="coverage-matrix-empty">') == 6
         assert 'href="subsystems/b02-auth-service.html#concern-disposition-tc-1"' in html_concerns
         assert "Coverage heatmap" not in html_concerns
-        html_checklist = (docs / "concern-checklist.html").read_text()
+        html_checklist = with_assets(docs / "concern-checklist.html")
         assert 'id="active-concerns"' in html_checklist
         assert '>Active concerns</h2>' in html_checklist
         assert "Active concerns (3)" not in html_checklist
@@ -440,19 +453,19 @@ def main() -> None:
         assert 'title="B-01 — Job Scheduler"' in first_concern_bar
         assert '<table' not in html_checklist
         assert "<table" not in html_findings and "<p>|" not in html_findings
-        html_entry = (docs / "entry-point.html").read_text()
+        html_entry = with_assets(docs / "entry-point.html")
         assert 'class="record-list record-list-file-ledger"' in html_entry
         assert "scheduler/main.ts" in html_entry and "Why this file is in scope" in html_entry
         assert 'class="table-wrap lifecycle-table"' in html_entry
         assert "Location: " in html_entry and "JobQueue" in html_entry
         assert 'class="summary-list"' in html_entry and "Native memory" in html_entry
-        html_master_plan = (docs / "master-plan.html").read_text()
+        html_master_plan = with_assets(docs / "master-plan.html")
         assert 'class="record-list record-list-subsystem"' in html_master_plan
         assert 'class="record-fact record-fact-id"' in html_master_plan
         assert '<dd><span data-identifier-defined>' in html_master_plan
         assert 'class="nav-id" data-identifier-defined>B-01</span>' in html_master_plan
         assert 'class="nav-id"><abbr' not in html_master_plan
-        html_b02 = (docs / "subsystems/b02-auth-service.html").read_text()
+        html_b02 = with_assets(docs / "subsystems/b02-auth-service.html")
         assert 'class="record-list record-list-concern-disposition"' in html_b02
         assert 'Subsystem · <span data-identifier-defined>B-02</span>' in html_b02
         assert '.record-concern-disposition { display: block; }' in html_b02
@@ -460,7 +473,7 @@ def main() -> None:
         assert 'title="TC-1 — Trust Boundary"' in html_b02
         assert 'class="status status-disposition status-confirmed-bug"' in html_b02
         assert 'class="evidence-label evidence-code-verified"' in html_b02
-        html_architecture = (docs / "architecture.html").read_text()
+        html_architecture = with_assets(docs / "architecture.html")
         assert "A generated mermaid version will replace this placeholder" not in html_architecture
         # The runtime boundary table's columns, as the HTML presents each boundary:
         # its name and language in the heading, then one labelled line per column.
@@ -505,8 +518,9 @@ def main() -> None:
         assert ".atlas-regions { display: grid;" in html_architecture
         assert "align-items: start; border-left: 1px solid var(--rule);" in html_architecture
 
-        # A file ledger table in an imported body prints as records, and its paths link to
-        # the repository at the revision the row names.
+        # A file ledger table in an imported body prints as records. Its paths link to
+        # the repository on a branch the origin has; the row's revision is kept as data,
+        # since a commit the remote lacks would 404. With no known branch, no link.
         ledger = render_body(
             "| Path | Classification | Why in scope | Ref SHA |\n"
             "|---|---|---|---|\n"
@@ -519,8 +533,29 @@ def main() -> None:
             Page("Files", "entry-point.html", (Section("file-ledger", ledger),)),
             {},
             repository_url="https://github.com/acme/fictional",
+            repository_ref="main",
         )
-        assert 'href="https://github.com/acme/fictional/blob/deadbeef/scheduler/main.ts"' in github_ledger
+        assert 'href="https://github.com/acme/fictional/blob/main/scheduler/main.ts"' in github_ledger
+        assert 'data-source-path="scheduler/main.ts"' in github_ledger
+        assert 'data-source-rev="deadbeef"' in github_ledger
+        unlinked_ledger = write_html(
+            Page("Files", "entry-point.html", (Section("file-ledger", ledger),)),
+            {},
+            repository_url="https://github.com/acme/fictional",
+        )
+        assert "https://github.com" not in unlinked_ledger
+        assert 'data-source-path="scheduler/main.ts"' in unlinked_ledger
+        # A path the linked branch does not hold (added since the last push, or deleted
+        # and still named by an imported table) is marked and not linked.
+        absent_ledger = write_html(
+            Page("Files", "entry-point.html", (Section("file-ledger", ledger),)),
+            {},
+            repository_url="https://github.com/acme/fictional",
+            repository_ref="main",
+            linkable_paths=frozenset({"scheduler/other.ts"}),
+        )
+        assert "https://github.com" not in absent_ledger
+        assert 'data-source-path="scheduler/main.ts"' in absent_ledger
         long_paragraph = "A precise architectural account remains readable when its evidence and limits stay adjacent. " * 10
         column_prose = write_html(
             Page(

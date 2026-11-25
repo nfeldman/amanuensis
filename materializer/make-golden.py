@@ -152,7 +152,9 @@ def render_inputs(inputs: dict[str, Any], models: dict[str, Any]) -> dict[str, s
 # page's bytes. They are stored once under `assets/` and a page holds their
 # digest; `unfold` puts them back before any comparison, so the corpus is still
 # compared byte for byte.
-_FOLDABLE = re.compile(r"(<style>|<script>)(.{1024,}?)(</style>|</script>)", re.DOTALL)
+# One block's body, never past its own closing tag: a short inline script must not reach
+# across the page to a later `</script>`.
+_FOLDABLE = re.compile(r"(<style>|<script>)((?:(?!</style>|</script>).){1024,}?)(</style>|</script>)", re.DOTALL)
 
 
 def fold(text: str) -> str:
@@ -339,6 +341,9 @@ def with_repository(seen: dict[str, Any], url: str) -> dict[str, Any]:
     inputs = {key: seen[key] for key in ("pages", "context", "locus_index", "notice")}
     inputs = json.loads(json.dumps(inputs))
     inputs["context"]["repository_url"] = url
+    # A branch the origin is known to have, so the fixture prints source links (a store's
+    # own render finds it from the workspace's remote-tracking refs).
+    inputs["context"]["repository_ref"] = "main"
     return {**inputs, "models": seen["models"], "html": render_inputs(inputs, seen["models"])}
 
 
@@ -373,10 +378,12 @@ def reprint_recorded() -> None:
             seen = capture_publish(storage, [])
             write_pages(name, seen["html"])
             if name == "materializer":
-                write_pages(
-                    "materializer-github",
-                    with_repository(seen, "https://github.com/acme/fictional")["html"],
-                )
+                github = with_repository(seen, "https://github.com/acme/fictional")
+                write_pages("materializer-github", github["html"])
+                recorded = GOLDEN / "materializer-github" / "inputs.json"
+                held = json.loads(recorded.read_text())
+                held["context"]["repository_ref"] = github["context"]["repository_ref"]
+                recorded.write_text(json.dumps(held, indent=1, sort_keys=True) + "\n")
 
 
 def main() -> int:
