@@ -37,8 +37,10 @@ diagnosticity/
 .projection-contract.json post-xref publication and read-back receipt
 ```
 
-The HTML projection is self-contained: it makes no font, stylesheet,
-JavaScript, or diagram-renderer requests. It can be opened directly from the
+The HTML projection is self-contained: it makes no network requests for fonts,
+stylesheets, scripts or diagram renderers. Its one stylesheet and script are
+files beside the pages (`assets/site.<hash>.css` and `.js`, from
+`amanuensis_materializer/site/`). It can be opened directly from the
 filesystem or served by any static server. Its global navigation uses
 human-facing page names and descriptions, exposes subsystem IDs without making
 them the primary label, supports name/ID/topic filtering, and keeps Markdown

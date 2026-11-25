@@ -213,6 +213,24 @@ def _paragraph(text: str) -> Paragraph:
     return Paragraph(inlines(text))
 
 
+def _labelled_line(label: str, text: str, css_class: str) -> list[Block]:
+    """A short stored value as one line led by its label.
+
+    A value of one paragraph prints on the label's line; anything longer keeps
+    its own blocks after a labelled first paragraph, so nothing stored is lost.
+    """
+
+    body = list(render_prose(text))
+    lead = Strong((Text(label),))
+    if body and isinstance(body[0], Paragraph):
+        first = body[0]
+        body[0] = Paragraph(
+            Inlines((lead, Text(" "), *first.text.nodes), f"{label} {first.text.plain}"), css_class
+        )
+        return body
+    return [Paragraph(Inlines((lead,), label), css_class), *body]
+
+
 def _paragraphs(text: str) -> list[Paragraph]:
     """A free-text value as paragraphs: a blank line ends one, and its lines are joined."""
 
@@ -2280,14 +2298,9 @@ def render_subsystem(
     }
 
     path = subsystem_page(str(sid), str(s["name"]))
-    blocks: list[Block] = [
-        # The status line prints the subsystem's depth, so it carries the record's mark (§3.5).
-        Marked(
-            f"subsystem:{sid}",
-            str(s["status"]),
-            (_paragraph(f"**Status**: {_badge(s['status'])} **Layer**: {s.get('layer') or '—'}"),),
-        ),
-    ]
+    # The depth prints once, in the page head's snapshot strip, which carries
+    # the record's mark (§3.5), and the layer is the page's subheading.
+    blocks: list[Block] = []
 
     if outside:
         held_seams = [str(sm["id"]) for sm in seams if str(sm["id"]) in outside_seams]
@@ -2349,6 +2362,12 @@ def render_subsystem(
                 " recorded in its ledger. Nothing here states what it contains."
             )
         )
+    # 2. Start here: where to begin reading, usually a path or two. It is a
+    #    pointer into the scope just stated, so it prints as one labelled line
+    #    at the end of Scope, not as a section of its own.
+    jump_in = str(s.get("jump_in_reading") or "").strip()
+    if jump_in:
+        scope += _labelled_line("Start here", jump_in, "start-here")
     survey_note = str(s.get("notes") or "").strip()
     if survey_note:
         scope += [
@@ -2357,10 +2376,6 @@ def render_subsystem(
             *render_prose(survey_note, under=3),
         ]
     blocks.append(_section("Scope", *scope))
-
-    # 2. Start here.
-    if s.get("jump_in_reading"):
-        blocks.append(_section("Start here", *render_prose(str(s["jump_in_reading"]))))
 
     # 2b. How it works — the recorded account. A declined account prints one
     #     sentence under the survey record instead.

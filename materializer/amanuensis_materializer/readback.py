@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import posixpath
 import re
 import subprocess
 from collections import Counter
@@ -68,6 +69,9 @@ LINKED_SUFFIXES = HTML_SUFFIXES
 # page: inventoried, hashed into the receipt, and — unlike a page — read back
 # against the ledger and the evidence it indexes.
 SEARCH_INDEX_NAME = "search-index.js"
+# The shared stylesheet and script, named for the first twelve hex digits of
+# their content's SHA-256 (html_projection.SITE_ASSETS).
+SITE_ASSET_NAME = re.compile(r"assets/site\.([0-9a-f]{12})\.(?:css|js)")
 SEARCH_INDEX_ASSIGNMENT = re.compile(
     r"window\.__amanuensisLocusIndex\s*=\s*(\{.*\})\s*;", re.DOTALL
 )
@@ -1259,6 +1263,7 @@ class _HtmlInventory(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.links: list[str] = []
         self.anchors: set[str] = set()
+        self.resources: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
@@ -1266,6 +1271,13 @@ class _HtmlInventory(HTMLParser):
             self.anchors.add(str(values["id"]))
         if tag == "a" and values.get("href"):
             self.links.append(str(values["href"]))
+        # A stylesheet or script a page loads is not a cross-link a reader
+        # follows, so it is kept apart from `links` and the receipt's
+        # `local_links`; the site-asset census resolves it.
+        if tag == "link" and values.get("rel") == "stylesheet" and values.get("href"):
+            self.resources.append(str(values["href"]))
+        if tag == "script" and values.get("src"):
+            self.resources.append(str(values["src"]))
 
 
 def _links(text: str) -> list[str]:
@@ -1600,15 +1612,15 @@ class ProjectionVerifier:
                 )
             return self._summary(mismatches)
 
-        # `*.js` joins the inventory so the generated index is a page the
-        # coverage axis can find. Without it the file is present, expected, and
-        # reported missing — the wrong red, which is as much a defect as the
+        # `*.js` and `*.css` join the inventory so the generated index and the
+        # shared site assets are files the coverage axis can find. Without them
+        # a file is present, expected, and reported missing — the wrong red, which is as much a defect as the
         # wrong green (§8.2). `*.md` is inventoried though no run writes one
         # (store-only PLAN §3.2 step 3): a `.md` left in the output is an
         # unplanned page, and coverage reports it.
         projection = {
             str(path.relative_to(self.output)): path.read_text()
-            for pattern in ("*.md", "*.html", "*.js")
+            for pattern in ("*.md", "*.html", "*.js", "*.css")
             for path in self.output.rglob(pattern)
             if path.is_file()
         }
@@ -1682,6 +1694,10 @@ class ProjectionVerifier:
             for source, body in projection.items()
             for target in _local_links(body, Path(source).suffix.lower())
         )
+        # A page's anchors are parsed once: a fragment link per record means
+        # thousands of links into a few dozen pages, and parsing the target for
+        # each one made this loop most of a publication's time.
+        anchors_of: dict[str, set[str]] = {}
         for (source, target), expected_count in sorted(expected_links.items()):
             actual_count = actual_links[(source, target)]
             if actual_count < expected_count:
@@ -1720,7 +1736,9 @@ class ProjectionVerifier:
                             target_text = resolved.read_text()
                         except OSError:
                             target_text = ""
-                    if fragment not in _anchors(target_text, resolved.suffix.lower()):
+                    if target_rel not in anchors_of:
+                        anchors_of[target_rel] = _anchors(target_text, resolved.suffix.lower())
+                    if fragment not in anchors_of[target_rel]:
                         mismatches.append(
                             {
                                 "axis": "coverage",
@@ -1771,7 +1789,60 @@ class ProjectionVerifier:
                 )
         mismatches.extend(self._render_notice_census(contract, projection))
         mismatches.extend(self._readme_census(projection))
+        mismatches.extend(self._site_asset_census(projection))
         return self._summary(mismatches)
+
+    @staticmethod
+    def _site_asset_census(projection: dict[str, str]) -> list[dict[str, str]]:
+        """Each page loads its stylesheet and scripts from files that are there.
+
+        The shared stylesheet and script are named for their content, so a
+        page cached beside an older asset can never load the wrong one. That
+        holds only while each name still states its bytes, and while every
+        page's `<link>` and `<script src>` resolve inside the projection: a
+        page whose stylesheet is missing is unreadable, and nothing else here
+        would say so, since those references are not cross-links.
+        """
+
+        mismatches: list[dict[str, str]] = []
+        for rel, body in sorted(projection.items()):
+            found = SITE_ASSET_NAME.fullmatch(rel)
+            if found and sha256_bytes(body.encode("utf-8"))[:12] != found.group(1):
+                mismatches.append(
+                    {
+                        "axis": "content",
+                        "object_type": "site-asset",
+                        "object_id": rel,
+                        "detail": "the asset's bytes do not match the hash its name states",
+                    }
+                )
+        for rel, body in sorted(projection.items()):
+            if Path(rel).suffix.lower() not in HTML_SUFFIXES:
+                continue
+            parser = _HtmlInventory()
+            parser.feed(body)
+            for target in parser.resources:
+                if target.startswith(("http://", "https://", "//", "data:")):
+                    mismatches.append(
+                        {
+                            "axis": "content",
+                            "object_type": "site-asset",
+                            "object_id": f"{rel}->{target}",
+                            "detail": "the page loads a stylesheet or script from outside the projection",
+                        }
+                    )
+                    continue
+                resolved = posixpath.normpath(posixpath.join(posixpath.dirname(rel), target))
+                if resolved not in projection:
+                    mismatches.append(
+                        {
+                            "axis": "coverage",
+                            "object_type": "site-asset",
+                            "object_id": f"{rel}->{target}",
+                            "detail": "the page's stylesheet or script does not resolve inside the projection",
+                        }
+                    )
+        return mismatches
 
     @staticmethod
     def _readme_census(projection: dict[str, str]) -> list[dict[str, str]]:

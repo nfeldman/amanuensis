@@ -127,6 +127,13 @@ class Heading:
 @dataclass(frozen=True)
 class Paragraph:
     text: Inlines
+    # A paragraph that prints a compact labelled fact, not running prose.
+    css_class: str = ""
+
+    def __repr__(self) -> str:
+        # An unclassed paragraph reads as it did before it could carry a class.
+        cls = f", css_class={self.css_class!r}" if self.css_class else ""
+        return f"Paragraph(text={self.text!r}{cls})"
 
 
 @dataclass(frozen=True)

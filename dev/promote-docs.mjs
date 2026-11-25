@@ -33,10 +33,11 @@
 //   6. a destination holding files its own manifest does not claim, which are
 //      somebody else's and are not this script's to replace;
 //   7. a source whose contract names a page that is not HTML — a Markdown page,
-//      or anything but the search index and the README — and a source with no
-//      `README.md`. The publication is HTML only (store-only PLAN §6, D10): a
-//      copy carries every `.html` page, `search-index.js`, the two receipt files
-//      and the one content-free README, and nothing else.
+//      or anything but the search index, the shared site stylesheet and script
+//      and the README — and a source with no `README.md`. The publication is
+//      HTML only (store-only PLAN §6, D10): a copy carries every `.html` page,
+//      `search-index.js`, the content-hashed `assets/site.*.css` and `.js`, the
+//      two receipt files and the one content-free README, and nothing else.
 //
 // Nothing is written before all six pass. The promotion itself stages a copy
 // beside the destination and renames it into place, keeping the previous
@@ -75,6 +76,8 @@ const CONTRACT_NAME = ".projection-contract.json";
 const MANIFEST_NAME = ".manifest.json";
 const README_NAME = "README.md";
 const SEARCH_INDEX_NAME = "search-index.js";
+// The shared stylesheet and script every page links, named for their content.
+const SITE_ASSET = /^assets\/site\.[0-9a-f]{12}\.(css|js)$/;
 const MATERIALIZER = join(REPO, "materializer", "materialize.py");
 const READBACK_AXES = ["state", "coverage", "content"];
 
@@ -179,8 +182,8 @@ function matchContract(directory, label) {
     if (rel.endsWith(".md") && rel !== README_NAME) {
       refuse(`${label}'s contract names the Markdown page ${rel}: a publication is HTML only, so there is nothing to copy it as`);
     }
-    if (!rel.endsWith(".html") && rel !== SEARCH_INDEX_NAME && rel !== README_NAME) {
-      refuse(`${label}'s contract names ${rel}, which is neither an HTML page, the search index nor the README`);
+    if (!rel.endsWith(".html") && rel !== SEARCH_INDEX_NAME && rel !== README_NAME && !SITE_ASSET.test(rel)) {
+      refuse(`${label}'s contract names ${rel}, which is not an HTML page, the search index, a site asset or the README`);
     }
     if (claimed.has(rel)) refuse(`${label}'s contract names ${rel} twice`);
     claimed.add(rel);
@@ -332,14 +335,19 @@ function main() {
   const backup = existsSync(destination)
     ? join(parent, `.${options.destination.split("/").pop()}.amanuensis-previous-${randomUUID().slice(0, 8)}`)
     : null;
-  // HTML, the search index, the two receipt files and the README, and nothing
-  // else; the checks above already refused a source holding any other file.
+  // HTML, the search index, the site assets, the two receipt files and the
+  // README, and nothing else; the checks above already refused a source
+  // holding any other file.
   cpSync(source, stage, {
     recursive: true,
     filter: (path) => {
       if (statSync(path).isDirectory()) return true;
       const rel = relative(source, path);
-      return rel.endsWith(".html") || [SEARCH_INDEX_NAME, README_NAME, CONTRACT_NAME, MANIFEST_NAME].includes(rel);
+      return (
+        rel.endsWith(".html") ||
+        SITE_ASSET.test(rel) ||
+        [SEARCH_INDEX_NAME, README_NAME, CONTRACT_NAME, MANIFEST_NAME].includes(rel)
+      );
     },
   });
   if (backup) renameSync(destination, backup);

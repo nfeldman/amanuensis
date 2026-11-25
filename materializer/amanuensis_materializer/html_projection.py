@@ -3,9 +3,10 @@
 HTML is the only published view (store-only PLAN §3.2).  This module turns each
 page's model, built by its renderer and linked by the cross-reference pass, into a
 dependency-free HTML site with global navigation, reader hints, semantic
-status labels, and local-link integrity.  Every page embeds the same compact
-CSS and JavaScript so the projection works from ``file://`` as well as from a
-static web server.
+status labels, and local-link integrity.  Every page links the same stylesheet
+and script, kept as files in ``site/`` and written beside the pages under names
+that carry their content hash, so the projection works from ``file://`` as well
+as from a static web server and a cached asset is never the wrong one.
 
 A page is a model of the blocks of `page.py`, and `write_html` prints those blocks.
 No Markdown is read here: the one Markdown reader left is `legacy_prose.py`, for
@@ -18,8 +19,10 @@ import html
 import json
 import posixpath
 import re
+import string
 import textwrap
 from collections.abc import Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
@@ -84,6 +87,7 @@ from .prose import (
     parse_inlines,
 )
 from .slugs import slugify
+from .vocabulary import READER_TERMS
 from .xref import identifier_pattern
 
 HTML_PROJECTION_VERSION = "1.14.0"
@@ -189,6 +193,52 @@ def cli_render_notice(*, recorded: bool, verified: bool) -> str:
     return CLI_RENDER_NOTICE if verified else CLI_RENDER_NOTICE_UNVERIFIED
 
 
+# The snapshot strip's label for a page's status, by page kind, and whether the
+# strip carries the page's record mark.
+_STRIP_STATUS = {"subsystem": ("Survey depth", True), "matrix": ("Outcome", False)}
+
+_TERM_DEFINITIONS = {str(entry["term"]): str(entry.get("definition") or "") for entry in READER_TERMS}
+
+
+def _page_help(page: SitePage) -> str:
+    """The page's own help: when to use it and the terms it uses, behind one button.
+
+    A reader starting out needs both, and a reader who knows the site needs
+    neither, so they sit in a popover the page head opens rather than in the
+    head itself. The popover is declarative (`popovertarget`), so it opens
+    without the site script; the script only places it beside its button.
+    """
+
+    if not page.use_when and not page.terms:
+        return ""
+    parts: list[str] = []
+    if page.use_when:
+        parts.append(f'<p class="page-use-when">{html.escape("Use it when " + page.use_when)}</p>')
+    if page.terms:
+        guide_href = _rel_link(page.html_path, GUIDE_PAGE)
+        rows = "".join(
+            f'<div><dt><a href="{html.escape(guide_href + "#term-" + slug, quote=True)}">'
+            f"{html.escape(term)}</a></dt>"
+            + (f"<dd>{html.escape(_TERM_DEFINITIONS[term])}</dd>" if _TERM_DEFINITIONS.get(term) else "")
+            + "</div>"
+            for term, slug in page.terms
+        )
+        parts.append(
+            f'<p class="help-heading">{html.escape(TERMS_LABEL.rstrip(":"))}</p>'
+            f'<dl class="help-terms">{rows}</dl>'
+        )
+        parts.append(
+            f'<p class="help-more"><a href="{html.escape(guide_href, quote=True)}">Reader\'s guide</a></p>'
+        )
+    return (
+        '<button class="quiet-button help-button" type="button" popovertarget="page-help" '
+        'aria-haspopup="dialog">About this page</button>'
+        '<div class="help-popover" id="page-help" popover role="dialog" aria-label="About this page">'
+        + "".join(parts)
+        + "</div>"
+    )
+
+
 def terms_line(page_path: str, terms: Sequence[tuple[str, str]]) -> str:
     """The line listing a page's terms, linked to the guide's anchors.
 
@@ -216,1194 +266,24 @@ class HtmlProjectionResult:
 
 
 
-_CSS = r"""
-:root {
-  color-scheme: light dark;
-  --canvas: #f3f4ef;
-  --canvas-subtle: #eaeae6;
-  --surface: #fbfcf7;
-  --text: #1d261b;
-  --text-muted: #596153;
-  --text-subtle: #7a8273;
-  --rule: #cdd1c5;
-  --rule-strong: #a4ac9d;
-  --accent: #48651f;
-  --accent-strong: #314a16;
-  --accent-soft: #e4ebd3;
-  --signal: #9b5b27;
-  --quiet: #697263;
-  --survey-unmapped: #858b81;
-  --survey-scoping: #75836d;
-  --survey-structural: #637a55;
-  --survey-concerns: #536f3f;
-  --survey-adversarial: #42672a;
-  --survey-mapped: #315c18;
-  --survey-deferred: #7a7e75;
-  --severity-low: #767b75;
-  --severity-medium: #b07b00;
-  --severity-high: #bd5217;
-  --severity-critical: #aa2438;
-  --evidence-code: #3f611f;
-  --evidence-contract: #4d6a31;
-  --evidence-test: #5b7343;
-  --evidence-config: #687a56;
-  --evidence-doc: #737f65;
-  --evidence-comment: #7b8471;
-  --evidence-name: #82887a;
-  --evidence-pattern: #878b83;
-  --disposition-defect: #aa2438;
-  --disposition-acceptable: #4b6b2e;
-  --disposition-ruled-out: #616b5c;
-  --disposition-out-of-scope: #7d8380;
-  --disposition-ambiguous: #6f5b76;
-  --resolution-open: #98532f;
-  --resolution-pending: #806c27;
-  --resolution-closed: #3f6428;
-  --resolution-accepted: #5a7043;
-  --source-aligned: #607446;
-  --source-stale: #98532f;
-  --heading: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --rail: 17.25rem;
-  --measure: 120ch;
-  --page: 128rem;
-  --baseline: .25rem;
-}
+# The stylesheet, the page script and the page shell are files in `site/`, edited as CSS, JavaScript
+# and HTML. A publication writes the stylesheet and the script once, under names that carry a hash of
+# their bytes (`assets/site.<hash>.css`), and every page links them, so a browser caches them and a
+# changed file gets a new name.
+SITE_DIR = Path(__file__).with_name("site")
+_CSS = (SITE_DIR / "site.css").read_text()
+_JS = (SITE_DIR / "site.js").read_text()
+_PAGE_TEMPLATE = string.Template((SITE_DIR / "page.html").read_text())
 
-:root[data-theme="dark"] {
-  --canvas: #171a15;
-  --canvas-subtle: #131510;
-  --surface: #20231d;
-  --text: #edf0e6;
-  --text-muted: #b7bdac;
-  --text-subtle: #929989;
-  --rule: #3b4234;
-  --rule-strong: #5d6651;
-  --accent: #b4d35d;
-  --accent-strong: #d5e88b;
-  --accent-soft: #35431f;
-  --signal: #d5a064;
-  --quiet: #a3aa98;
-  --survey-unmapped: #9ba093;
-  --survey-scoping: #a0ad83;
-  --survey-structural: #a5b977;
-  --survey-concerns: #aac56a;
-  --survey-adversarial: #b1d05e;
-  --survey-mapped: #b8dc55;
-  --survey-deferred: #9a9e95;
-  --severity-low: #a0a8a3;
-  --severity-medium: #e2bf4f;
-  --severity-high: #f09a58;
-  --severity-critical: #f27b88;
-  --evidence-code: #b4d171;
-  --evidence-contract: #afc775;
-  --evidence-test: #abc078;
-  --evidence-config: #a6b67c;
-  --evidence-doc: #a3ae82;
-  --evidence-comment: #a0a789;
-  --evidence-name: #9ea18f;
-  --evidence-pattern: #9b9d94;
-  --disposition-defect: #f27b88;
-  --disposition-acceptable: #afd378;
-  --disposition-ruled-out: #a6ae9c;
-  --disposition-out-of-scope: #8e9692;
-  --disposition-ambiguous: #b7a0bd;
-  --resolution-open: #d99468;
-  --resolution-pending: #c6ad61;
-  --resolution-closed: #b0d775;
-  --resolution-accepted: #bdcf98;
-  --source-aligned: #b3c581;
-  --source-stale: #d99468;
-}
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --canvas: #171a15; --canvas-subtle: #131510; --surface: #20231d;
-    --text: #edf0e6; --text-muted: #b7bdac; --text-subtle: #929989;
-    --rule: #3b4234; --rule-strong: #5d6651;
-    --accent: #b4d35d; --accent-strong: #d5e88b; --accent-soft: #35431f;
-    --signal: #d5a064; --quiet: #a3aa98;
-    --survey-unmapped: #9ba093; --survey-scoping: #a0ad83;
-    --survey-structural: #a5b977; --survey-concerns: #aac56a;
-    --survey-adversarial: #b1d05e; --survey-mapped: #b8dc55; --survey-deferred: #9a9e95;
-    --severity-low: #a0a8a3; --severity-medium: #e2bf4f;
-    --severity-high: #f09a58; --severity-critical: #f27b88;
-    --evidence-code: #b4d171; --evidence-contract: #afc775; --evidence-test: #abc078;
-    --evidence-config: #a6b67c; --evidence-doc: #a3ae82; --evidence-comment: #a0a789;
-    --evidence-name: #9ea18f; --evidence-pattern: #9b9d94;
-    --disposition-defect: #f27b88; --disposition-acceptable: #afd378;
-    --disposition-ruled-out: #a6ae9c; --disposition-out-of-scope: #8e9692;
-    --disposition-ambiguous: #b7a0bd;
-    --resolution-open: #d99468; --resolution-pending: #c6ad61;
-    --resolution-closed: #b0d775; --resolution-accepted: #bdcf98;
-    --source-aligned: #b3c581; --source-stale: #d99468;
-  }
-}
+def _asset_path(stem: str, suffix: str, text: str) -> str:
+    return f"assets/{stem}.{sha256_bytes(text.encode('utf-8'))[:12]}.{suffix}"
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; background: var(--canvas-subtle); }
-body {
-  margin: 0;
-  color: var(--text);
-  background: var(--canvas);
-  font-family: var(--body);
-  font-size: 1rem;
-  line-height: 1.58;
-  font-kerning: normal;
-  font-optical-sizing: auto;
-  font-synthesis: none;
-  font-variant-ligatures: common-ligatures contextual;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-}
-a { color: var(--accent-strong); text-decoration-thickness: .08em; text-underline-offset: .18em; }
-a:hover { text-decoration-thickness: .14em; }
-a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
-  outline: 2px solid var(--accent); outline-offset: 3px;
-}
 
-.skip-link {
-  position: fixed; left: 1rem; top: -5rem; z-index: 100;
-  padding: .55rem .8rem; background: var(--text); color: var(--canvas);
-}
-.skip-link:focus { top: 1rem; }
-.shell { min-height: 100vh; }
-.nav-rail {
-  position: fixed; inset: 0 auto 0 0; width: var(--rail); z-index: 20;
-  display: flex; flex-direction: column; overflow-y: auto;
-  padding: 2rem 1.35rem 1.5rem;
-  background: var(--canvas-subtle); border-right: 1px solid var(--rule);
-}
-.brand { display: block; color: var(--text); text-decoration: none; margin: 0 0 1.6rem; }
-.brand-mark {
-  display: block; font: 600 1.35rem/1.05 var(--heading); letter-spacing: -.015em;
-}
-.brand-sub { display: block; margin-top: .32rem; color: var(--text-muted); font: .73rem/1.4 var(--body); }
-.search-label { display: block; margin-bottom: .35rem; color: var(--text-muted); font: .67rem/1.2 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
-.nav-search {
-  width: 100%; padding: .55rem .65rem; color: var(--text); background: var(--surface);
-  border: 1px solid var(--rule-strong); border-radius: 0; font: .82rem/1.3 var(--body);
-}
-.nav-search::placeholder { color: var(--text-subtle); }
-.rail-nav { margin-top: 1.5rem; }
-.nav-group { margin: 0 0 1.35rem; }
-.nav-group-title {
-  margin: 0 0 .32rem; color: var(--text-subtle);
-  font: 600 .64rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase;
-}
-.nav-list { list-style: none; margin: 0; padding: 0; }
-.nav-item { margin: .08rem 0; }
-.nav-subgroup { margin: .5rem 0 0; }
-.nav-subgroup-title {
-  margin: 0 0 .2rem .45rem; color: var(--text-subtle);
-  font: 600 .62rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
-}
-.nav-item[hidden], .nav-group[hidden], .nav-subgroup[hidden] { display: none; }
-.nav-link { display: grid; grid-template-columns: .55rem 1fr; gap: .48rem; padding: .5rem .45rem; color: var(--text-muted); text-decoration: none; border-radius: 0; }
-.nav-link:hover { color: var(--text); background: var(--surface); }
-.nav-link[aria-current="page"] { color: var(--accent-strong); }
-.nav-link[aria-current="page"] .nav-name { font-weight: 700; }
-.nav-tick { width: .34rem; height: .34rem; margin-top: .44rem; border: 1px solid var(--rule-strong); background: transparent; }
-.nav-link[aria-current="page"] .nav-tick { border-color: var(--accent); background: var(--accent); }
-.nav-tick.status-unmapped { border-color: var(--survey-unmapped); }
-.nav-tick.status-scoping { background: var(--survey-scoping); border-color: var(--survey-scoping); }
-.nav-tick.status-structural { background: var(--survey-structural); border-color: var(--survey-structural); }
-.nav-tick.status-concerns { background: var(--survey-concerns); border-color: var(--survey-concerns); }
-.nav-tick.status-adversarial { background: var(--survey-adversarial); border-color: var(--survey-adversarial); }
-.nav-tick.status-mapped { background: var(--survey-mapped); border-color: var(--survey-mapped); }
-.nav-tick.status-deferred { border-color: var(--survey-deferred); border-style: dashed; }
-.nav-name { display: block; font-size: .82rem; line-height: 1.3; }
-.nav-id { display: block; margin-top: .12rem; color: var(--text-subtle); font: .64rem/1.3 var(--mono); }
-.rail-foot { margin-top: auto; padding-top: 1.5rem; }
-.rail-actions { display: flex; gap: .5rem; align-items: center; }
-.quiet-button {
-  border: 1px solid var(--rule); padding: .36rem .5rem; color: var(--text-muted);
-  background: transparent; border-radius: 0; cursor: pointer; font: .68rem/1 var(--mono);
-}
-.quiet-button:hover { border-color: var(--accent); color: var(--accent-strong); }
-.rail-note { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.45 var(--mono); }
+SITE_CSS_PATH = _asset_path("site", "css", _CSS)
+SITE_JS_PATH = _asset_path("site", "js", _JS)
+SITE_ASSETS: dict[str, str] = {SITE_CSS_PATH: _CSS, SITE_JS_PATH: _JS}
 
-.document { margin-left: var(--rail); min-height: 100vh; background: var(--surface); }
-.mobile-bar { display: none; }
-.document-inner { width: min(100%, var(--page)); margin: 0 auto; padding: 4.5rem clamp(2rem, 5vw, 6.5rem) 5.5rem; }
-.page-head { padding: 0 0 2.25rem; border-bottom: 1px solid var(--rule); }
-.eyebrow { margin: 0 0 1rem; color: var(--accent); font: 650 .69rem/1.3 var(--mono); letter-spacing: .11em; text-transform: uppercase; }
-h1 {
-  margin: 0; font: 600 clamp(2.8rem, 4.8vw, 5.2rem)/.98 var(--heading);
-  letter-spacing: -.042em; text-wrap: balance;
-  font-variant-ligatures: common-ligatures discretionary-ligatures;
-}
-.page-use-when { max-width: none; margin: .4rem 0 0; color: var(--text-muted); font: clamp(.95rem, .3vw + .88rem, 1.1rem)/1.5 var(--body); text-wrap: pretty; }
-.page-terms { max-width: none; margin: .4rem 0 0; color: var(--text-muted); font: .85rem/1.6 var(--body); }
-.page-terms a { color: var(--accent); }
-.page-notice { max-width: none; margin: .9rem 0 0; padding: .45rem .75rem; border-left: 2px solid var(--signal); color: var(--text-muted); font: .85rem/1.55 var(--body); }
-.page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
-.snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
-.snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
-.snapshot-item b { color: var(--text); font-weight: 650; }
-.freshness { display: inline-flex; gap: .38rem; align-items: center; }
-.freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--source-aligned); border-radius: 50%; }
-.freshness.stale::before { background: var(--source-stale); }
-.freshness.unmeasured::before { background: var(--rule-strong); }
-
-.content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
-.content > section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
-.content > section:last-child { border-bottom: 0; }
-.content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
-.content-findings .section-open { --enum-color: var(--resolution-open); }
-.content-findings .section-awaiting-verification { --enum-color: var(--resolution-pending); }
-.content-findings .section-verified-fixed { --enum-color: var(--resolution-closed); }
-.content-findings .section-ruled-out, .content-findings .section-accepted {
-  --enum-color: var(--resolution-accepted);
-}
-.content-findings section > h3 { --enum-color: var(--rule-strong); }
-.content-findings .section-open > h3, .content-findings .section-awaiting-verification > h3 {
-  border-left: .14em solid var(--enum-color); padding-left: .5rem;
-}
-.content-findings section > h2::before {
-  content: ""; display: inline-block; width: .14em; height: .72em;
-  margin-right: .42em; background: var(--enum-color); vertical-align: .02em;
-}
-.finding-subsystem-heading {
-  margin: 2rem 0 .55rem;
-  color: var(--text);
-  font: 600 clamp(1.25rem, 1.6vw, 1.6rem)/1.25 var(--heading);
-}
-.finding-subsystem-heading a { color: inherit; text-decoration-color: var(--rule-strong); }
-.finding-subsystem-heading + .record-list-finding { margin-top: 0; }
-.content > p, .content > ul, .content > ol, .content > blockquote { margin-left: 0; }
-h2, h3, h4, h5, h6 { position: relative; color: var(--text); text-wrap: balance; scroll-margin-top: 1.5rem; }
-h2 { margin: 0 0 1.25rem; font: 600 clamp(1.7rem, 1.2vw + 1.25rem, 2.15rem)/1.12 var(--heading); letter-spacing: -.018em; }
-h3 { margin: 2.1rem 0 .7rem; font: 650 1.05rem/1.3 var(--body); }
-h4 { margin: 1.65rem 0 .55rem; color: var(--accent-strong); font: 650 .9rem/1.35 var(--body); }
-h5, h6 { margin: 1.4rem 0 .5rem; font-size: .85rem; }
-.heading-anchor { position: absolute; left: -1.2rem; color: var(--text-subtle); text-decoration: none; opacity: 0; font-family: var(--mono); }
-:is(h2,h3,h4,h5,h6):hover .heading-anchor, .heading-anchor:focus { opacity: 1; }
-p { max-width: var(--measure); margin: 0 0 1rem; }
-strong { font-weight: 680; }
-em { font-family: var(--heading); }
-code {
-  padding: .08rem .25rem; color: var(--accent-strong); background: var(--accent-soft);
-  font: .82em/1.4 var(--mono); overflow-wrap: anywhere;
-}
-ul, ol { max-width: var(--measure); margin: .4rem 0 1.2rem; padding-left: 1.35rem; }
-li { padding-left: .25rem; margin: 0 0 .48rem; }
-li::marker { color: var(--accent); }
-blockquote { max-width: var(--measure); margin: 1.2rem 0; padding: .25rem 0 .25rem 1.2rem; border-left: 3px solid var(--accent); color: var(--text-muted); }
-blockquote p { margin: 0; font: italic 1rem/1.58 var(--heading); }
-.raw-prose-note { border-left-color: var(--signal); }
-
-.prose-flow {
-  max-width: var(--measure);
-  margin: 1rem 0 1.5rem;
-  orphans: 3;
-  widows: 3;
-}
-.prose-flow > p {
-  max-width: none;
-  margin: 0 0 1em;
-  hyphens: auto;
-  text-wrap: pretty;
-}
-.prose-flow > p:last-child { margin-bottom: 0; }
-
-.table-wrap { width: 100%; margin: 1.1rem 0 1.5rem; overflow-x: auto; border: 1px solid var(--rule); border-radius: 0; }
-table { width: 100%; border-collapse: collapse; font-size: .86rem; line-height: 1.48; }
-caption { padding: .55rem 0; color: var(--text-subtle); text-align: left; font: .65rem/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
-th { padding: .6rem .7rem; color: var(--text-muted); border-bottom: 1px solid var(--rule-strong); text-align: left; vertical-align: bottom; font: 650 .65rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
-td { padding: .7rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
-tbody tr:last-child td { border-bottom: 0; }
-tbody tr:hover td { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
-td:first-child, th:first-child { padding-left: .7rem; }
-.section-current-state .table-wrap { max-width: 54rem; }
-.section-current-state table { font-size: .92rem; }
-.section-current-state td:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-
-.coverage-index { margin: 1.1rem 0 1.8rem; }
-.coverage-summary {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong);
-}
-.coverage-summary-item { min-width: 0; padding: .85rem 1rem; border-right: 1px solid var(--rule); }
-.coverage-summary-item:last-child { border-right: 0; }
-.coverage-summary-item strong { display: block; font: 600 1.45rem/1 var(--heading); }
-.coverage-summary-item span { display: block; margin-top: .32rem; color: var(--text-subtle); font: .61rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
-.coverage-intro { max-width: var(--measure); margin: 1rem 0 1.25rem; color: var(--text-muted); }
-.coverage-subsystem-list {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-top: 1px solid var(--rule-strong); border-left: 1px solid var(--rule);
-}
-.coverage-subsystem {
-  display: grid; grid-template-columns: minmax(12rem, .82fr) minmax(0, 1.18fr);
-  gap: .7rem 1rem; align-content: start; min-width: 0; padding: .8rem 1rem;
-  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
-}
-.coverage-subsystem-head { min-width: 0; }
-.coverage-subsystem-title { margin: 0; font: 650 .9rem/1.32 var(--body); text-wrap: pretty; }
-.coverage-subsystem-title a { color: inherit; text-decoration-color: var(--rule-strong); }
-.coverage-subsystem-id { display: block; margin-top: .22rem; color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
-.coverage-measure { min-width: 0; }
-.coverage-review-count { margin: 0; color: var(--text-muted); font: .67rem/1.35 var(--mono); }
-.coverage-progress { display: block; height: .22rem; margin-top: .42rem; background: var(--canvas-subtle); }
-.coverage-progress > span { display: block; height: 100%; background: var(--accent); }
-.coverage-outcome-counts { display: flex; flex-wrap: wrap; gap: .28rem .7rem; margin: .48rem 0 0; color: var(--text-subtle); font: .61rem/1.35 var(--mono); }
-.coverage-outcome-counts span::before { content: ""; display: inline-block; width: .42rem; height: .42rem; margin-right: .28rem; background: var(--enum-color); }
-.coverage-state-confirmed-bug { --enum-color: var(--disposition-defect); }
-.coverage-state-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
-.coverage-state-ruled-out { --enum-color: var(--disposition-ruled-out); }
-.coverage-state-out-of-scope { --enum-color: var(--disposition-out-of-scope); }
-.coverage-state-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
-.coverage-state-unknown { --enum-color: var(--quiet); }
-.coverage-tokens { display: flex; flex-wrap: wrap; align-items: flex-start; align-self: start; gap: .32rem; grid-column: 1 / -1; }
-.coverage-token {
-  display: inline-flex; align-items: center; gap: .3rem; min-height: 1.65rem;
-  padding: .22rem .38rem; border: 1px solid var(--rule); color: var(--text-muted);
-  background: var(--surface); text-decoration: none; font: .63rem/1.15 var(--mono);
-}
-.coverage-token:hover, .coverage-token:focus-visible { border-color: var(--enum-color); color: var(--text); }
-.coverage-token-mark, .coverage-matrix-mark {
-  display: inline-grid; place-items: center; width: 1.05rem; height: 1.05rem;
-  color: var(--enum-color); border: 1px solid currentColor; font: 700 .62rem/1 var(--mono);
-}
-.coverage-linchpin { color: var(--accent); font-size: .58rem; }
-.coverage-legend { display: flex; flex-wrap: wrap; gap: .48rem 1rem; margin: .85rem 0 0; color: var(--text-muted); font: .63rem/1.4 var(--mono); }
-.coverage-legend-item { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); }
-.coverage-matrix-disclosure { margin-top: 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
-.coverage-matrix-disclosure > summary { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
-.vocabulary-disclosure { margin-top: 1rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
-.vocabulary-disclosure > summary { padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
-.coverage-matrix-disclosure > summary span:last-child { color: var(--text-subtle); font: .62rem/1.4 var(--mono); font-weight: 400; }
-.coverage-matrix-note { max-width: var(--measure); margin: 0 0 .8rem; color: var(--text-muted); font-size: .8rem; }
-.coverage-matrix-wrap { max-height: min(72vh, 56rem); margin: 0 0 1rem; }
-.coverage-matrix { width: max-content; min-width: 100%; table-layout: fixed; }
-.coverage-matrix th, .coverage-matrix td { text-align: center; }
-.coverage-matrix thead th { position: sticky; top: 0; z-index: 3; min-width: 2.65rem; padding: .5rem .35rem; background: var(--canvas); }
-.coverage-matrix thead th:first-child { left: 0; z-index: 5; min-width: 18rem; text-align: left; }
-.coverage-matrix tbody th { position: sticky; left: 0; z-index: 2; width: 18rem; max-width: 18rem; padding: .5rem .65rem; background: var(--surface); text-align: left; text-transform: none; letter-spacing: 0; font: 650 .75rem/1.3 var(--body); }
-.coverage-matrix tbody th a { color: inherit; text-decoration-color: var(--rule-strong); }
-.coverage-matrix-subsystem-id { display: block; margin-top: .12rem; color: var(--text-subtle); font-size: .58rem; }
-.coverage-matrix td { width: 2.65rem; height: 2.25rem; padding: .25rem; }
-.coverage-matrix td > a { display: inline-grid; place-items: center; color: inherit; text-decoration: none; }
-.coverage-matrix-empty { color: var(--rule-strong); font-family: var(--mono); }
-
-.record-list { margin: 1.1rem 0 1.6rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
-.record {
-  display: grid; grid-template-columns: minmax(11.5rem, .34fr) minmax(0, 1fr);
-  border-bottom: 1px solid var(--rule);
-}
-.record:last-child { border-bottom: 0; }
-.record-meta { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
-.record-primary { margin: 0; color: var(--text); font: 600 1.08rem/1.25 var(--heading); overflow-wrap: anywhere; }
-.record-primary code { font-size: .75rem; }
-.record-facts { margin: .7rem 0 0; }
-.record-facts > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .55rem; align-items: center; padding: .23rem 0; }
-.record-facts dt, .record-label { color: var(--text-subtle); font: 600 .62rem/1.35 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
-.record-facts dd { min-width: 0; margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
-.record-facts :is(.status, .evidence-label, .severity) { max-width: none; white-space: nowrap; overflow-wrap: normal; }
-.record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
-.record-field { min-width: 0; padding: 1rem 1.1rem; border-right: 1px solid var(--rule); }
-.record-field:last-child { border-right: 0; }
-.record-field:nth-child(n + 3) { border-top: 1px solid var(--rule); }
-.record-label { margin: 0 0 .48rem; }
-.record-copy { color: var(--text); line-height: 1.55; }
-.record-copy code { overflow-wrap: anywhere; }
-.record-body { min-width: 0; padding: 1.15rem 1.25rem 1.3rem; }
-.record-lede { max-width: var(--measure); margin: 0 0 1.25rem; color: var(--text); font: 600 1.15rem/1.38 var(--heading); }
-h1, h2, .brand-mark, .record-primary, .record-lede {
-  font-kerning: normal;
-  font-variant-ligatures: common-ligatures discretionary-ligatures;
-  font-feature-settings: "kern" 1, "liga" 1, "clig" 1;
-  text-rendering: optimizeLegibility;
-}
-.record-finding { display: block; }
-.record-finding .record-meta {
-  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
-  gap: .65rem 1.25rem; align-items: center;
-  padding: .85rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
-}
-.record-finding .record-primary { align-self: start; margin-top: .08rem; }
-.record-finding .record-facts {
-  display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: .4rem 1rem;
-  align-items: center; min-width: 0; margin: 0;
-}
-.record-finding .record-facts > div {
-  display: flex; gap: .35rem; align-items: center;
-  min-width: 0; padding: 0;
-}
-.record-finding .record-facts dd { overflow-wrap: normal; }
-.record-finding .record-fact-ref-sha code { white-space: nowrap; overflow-wrap: normal; }
-.record-finding .record-fact-status { justify-self: start; }
-.record-finding .record-fact-ref-sha { justify-self: end; }
-.record-finding .record-fact-status dt,
-.record-finding .record-fact-ref-sha dt {
-  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-}
-.record-finding .record-fields { display: block; }
-.record-finding .record-field { max-width: var(--measure); padding: 1rem 0 0; border: 0; border-top: 1px solid var(--rule); }
-.record-finding .record-field + .record-field { margin-top: 1rem; }
-.record-file-ledger { grid-template-columns: minmax(14rem, .42fr) minmax(0, 1fr); }
-.record-file-ledger .record-fields, .record-structural-inventory .record-fields, .record-concern-disposition .record-fields { grid-template-columns: minmax(0, 1fr); }
-.record-concern .record-fields, .record-territory .record-fields, .record-finding-summary .record-fields,
-.record-open-question .record-fields, .record-seam .record-fields { grid-template-columns: minmax(0, 1fr); }
-.record-concern-disposition { display: block; }
-.record-concern-disposition .record-meta {
-  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
-  gap: .8rem 1.5rem; align-items: start;
-  padding: .9rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
-}
-.record-concern-disposition .record-primary { margin-top: .1rem; }
-.record-concern-disposition .record-facts {
-  display: flex; flex-wrap: wrap; gap: .48rem 1.35rem; align-items: center;
-  min-width: 0; margin: 0;
-}
-.record-concern-disposition .record-facts > div {
-  display: grid; grid-template-columns: auto auto; gap: .45rem;
-  align-items: center; min-width: max-content; padding: 0;
-}
-.record-concern-disposition .record-facts dd { overflow-wrap: normal; }
-.concern-family { margin: 2rem 0 2.6rem; }
-.concern-family-heading {
-  display: flex; flex-wrap: wrap; gap: .45rem .8rem; align-items: baseline;
-  margin: 0 0 .55rem; color: var(--text); font: 600 1.35rem/1.25 var(--heading);
-}
-.concern-territory { color: var(--text-subtle); font: .62rem/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
-.record-list-concern-checklist { margin-top: 0; }
-.record-concern-checklist { display: block; }
-.record-concern-checklist .record-meta {
-  display: grid; grid-template-columns: max-content minmax(0, 1fr);
-  gap: .6rem 1.25rem; align-items: center;
-  padding: .72rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
-}
-.record-concern-checklist .record-primary { font-size: 1rem; }
-.record-concern-checklist .record-facts { min-width: 0; margin: 0; }
-.record-concern-checklist .record-facts > div {
-  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem .5rem;
-  align-items: baseline; min-width: 0; padding: 0;
-}
-.record-concern-checklist .record-facts dd { overflow-wrap: normal; }
-.record-concern-checklist .record-body { padding: 1rem 1.1rem 1.15rem; }
-.record-probe { max-width: var(--measure); color: var(--text); font-size: .86rem; line-height: 1.58; }
-.record-file-ledger .record-primary code { color: var(--text); background: transparent; padding: 0; font: 600 .95rem/1.3 var(--heading); }
-.file-source-link { color: inherit; text-decoration-color: var(--rule-strong); }
-.file-source-link::after { content: " ↗"; color: var(--accent); font: .68rem/1 var(--mono); }
-.identifier-definition {
-  color: inherit;
-  text-decoration-line: underline;
-  text-decoration-style: dotted;
-  text-decoration-thickness: .06em;
-  text-underline-offset: .2em;
-  cursor: help;
-}
-a .identifier-definition { text-decoration-color: currentColor; }
-.record-subsystem { display: block; }
-.record-subsystem .record-meta { padding: 1.05rem 1rem .85rem; background: transparent; border-right: 0; border-bottom: 1px solid var(--rule); }
-.record-subsystem .record-primary { max-width: 48ch; font-size: 1.25rem; }
-.record-primary-link { color: inherit; text-decoration-color: var(--rule-strong); }
-.record-subsystem .record-facts { display: flex; flex-wrap: wrap; gap: .35rem 1rem; align-items: center; margin-top: .55rem; }
-.record-subsystem .record-facts > div { display: flex; grid-template-columns: none; gap: .35rem; align-items: baseline; padding: 0; }
-.record-subsystem .record-facts dt { font-size: .58rem; }
-.record-subsystem .record-facts dd { font-size: .7rem; }
-.record-subsystem .record-fact-id dt, .record-subsystem .record-fact-status dt { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.record-subsystem .record-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-.summary-list { max-width: 54rem; margin: 1rem 0 1.5rem; border-top: 1px solid var(--rule-strong); }
-.summary-list > div { display: grid; grid-template-columns: minmax(10rem, .42fr) minmax(0, 1fr); border-bottom: 1px solid var(--rule); }
-.summary-list dt, .summary-list dd { margin: 0; padding: .65rem .75rem; }
-.summary-list dt { color: var(--text-muted); font-weight: 650; }
-.summary-list dd { border-left: 1px solid var(--rule); }
-
-.runtime-boundary-projection { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
-.runtime-boundary-diagram { margin: 0; }
-.runtime-diagram-caption {
-  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
-  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
-  color: var(--text-muted); font-size: .78rem;
-}
-.runtime-diagram-caption strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
-.runtime-svg-scroll { max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--rule); }
-.runtime-boundary-svg { display: block; width: 100%; min-width: 52rem; height: auto; background: var(--surface); }
-.runtime-svg-lane { fill: color-mix(in srgb, var(--canvas-subtle) 44%, transparent); }
-.runtime-svg-lane-even { fill: color-mix(in srgb, var(--canvas-subtle) 72%, transparent); }
-.runtime-svg-node { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
-.runtime-svg-target { fill: var(--canvas-subtle); }
-.runtime-svg-edge { stroke: var(--accent); stroke-width: 1.5; }
-.runtime-svg-arrow { fill: var(--accent); }
-.runtime-svg-edge-label { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
-.runtime-svg-column-label {
-  fill: var(--text-subtle); font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
-}
-.runtime-svg-title { fill: var(--text); font: 600 14px/1.3 var(--heading); }
-.runtime-svg-language { fill: var(--text-muted); font: 11px/1.3 var(--mono); }
-.runtime-svg-mechanism { fill: var(--accent-strong); font: 600 11px/1.3 var(--mono); text-anchor: middle; }
-.runtime-boundary-details { display: grid; }
-.boundary-projection { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
-.boundary-diagram { margin: 0; }
-.boundary-svg-scroll { max-width: 100%; overflow-x: auto; }
-.boundary-svg { display: block; max-width: none; height: auto; background: var(--surface); }
-.boundary-svg-node { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
-.boundary-svg-seam { stroke: var(--text-subtle); stroke-width: 1.25; }
-.boundary-svg-xref { stroke: var(--accent); stroke-width: 1.5; }
-.boundary-svg-arrow { fill: var(--accent); }
-.boundary-svg-label-box { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
-.boundary-svg-label { fill: var(--text-muted); font: 600 10px/1 var(--mono); text-anchor: middle; }
-.boundary-svg-column {
-  fill: var(--text-subtle); font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
-}
-.boundary-svg-id { fill: var(--text); font: 600 12px/1.2 var(--mono); }
-.boundary-svg-name { fill: var(--text-muted); font: 12px/1.2 var(--heading); }
-.runtime-detail {
-  display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(0, 1.2fr);
-  min-width: 0; border-bottom: 1px solid var(--rule);
-}
-.runtime-detail:last-child { border-bottom: 0; }
-.runtime-detail:focus-within, .runtime-detail:hover { background: color-mix(in srgb, var(--accent-soft) 24%, transparent); }
-.runtime-detail-head { min-width: 0; padding: .72rem .85rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
-.runtime-detail-head h3 { margin: 0; color: var(--text); font: 600 .88rem/1.35 var(--heading); }
-.runtime-detail-language { display: block; margin-top: .28rem; color: var(--text-muted); font: .64rem/1.35 var(--mono); }
-.runtime-detail-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
-.runtime-detail-body p { min-width: 0; margin: 0; padding: .66rem .78rem; border-right: 1px solid var(--rule); }
-.runtime-detail-body p:nth-child(2) { border-right: 0; }
-.runtime-detail-body .runtime-detail-note { grid-column: 1 / -1; border-top: 1px solid var(--rule); border-right: 0; }
-.runtime-detail-label {
-  display: block; margin-bottom: .2rem; color: var(--text-subtle);
-  font: 600 .58rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
-}
-
-.subsystem-atlas { margin: 1.2rem 0 1.7rem; }
-.atlas-summary, .topology-summary {
-  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
-  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
-  color: var(--text-muted); font-size: .78rem;
-}
-.atlas-summary strong, .topology-summary strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
-.atlas-regions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; border-left: 1px solid var(--rule); }
-.atlas-region { min-width: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
-.atlas-region-head {
-  display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
-  padding: .7rem .8rem; background: var(--canvas-subtle); border-bottom: 1px solid var(--rule);
-}
-.atlas-region-head h3 { margin: 0; color: var(--text); font: 600 .86rem/1.3 var(--heading); }
-.atlas-region-count { color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
-.atlas-list { max-width: none; margin: 0; padding: 0; list-style: none; }
-.atlas-item {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .7rem; align-items: start;
-  min-height: 3.25rem; margin: 0; padding: .68rem .8rem; border-bottom: 1px solid var(--rule);
-}
-.atlas-item:last-child { border-bottom: 0; }
-.atlas-item:focus-within, .atlas-item:hover { background: color-mix(in srgb, var(--accent-soft) 32%, transparent); }
-.atlas-subsystem { min-width: 0; color: var(--text-muted); font-size: .76rem; line-height: 1.38; }
-.atlas-subsystem strong { display: block; margin-bottom: .13rem; font: 650 .7rem/1.25 var(--mono); }
-.atlas-depth .status { padding: .08rem .28rem; font-size: .58rem; }
-
-.topology { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
-.topology-component {
-  display: grid; grid-template-columns: minmax(13rem, .32fr) minmax(0, 1fr);
-  border-bottom: 1px solid var(--rule-strong);
-}
-.topology-component:last-child { border-bottom: 0; }
-.topology-hub { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
-.topology-hub-label, .topology-cross-label {
-  margin: 0 0 .48rem; color: var(--text-subtle);
-  font: 600 .61rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase;
-}
-.topology-hub-title { margin: 0; color: var(--text-muted); font: .83rem/1.42 var(--body); }
-.topology-hub-title strong { display: block; margin-bottom: .2rem; font: 650 .78rem/1.25 var(--mono); }
-.topology-hub-count { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.4 var(--mono); }
-.topology-spokes { min-width: 0; }
-.topology-spoke {
-  display: grid; grid-template-columns: 3.1rem minmax(0, 1fr); min-width: 0;
-  border-bottom: 1px solid var(--rule);
-}
-.topology-spoke:last-child { border-bottom: 0; }
-.topology-spoke:focus-within, .topology-spoke:hover { background: color-mix(in srgb, var(--accent-soft) 28%, transparent); }
-.topology-edge-mark {
-  display: flex; align-items: center; justify-content: center; min-height: 5.1rem;
-  color: var(--accent); border-right: 1px solid var(--rule); font: 1.2rem/1 var(--heading);
-}
-.topology-edge-body { min-width: 0; padding: .78rem .9rem .85rem; }
-.topology-edge-head { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: baseline; margin: 0 0 .25rem; }
-.topology-edge-key { color: var(--accent-strong); font: 650 .7rem/1.3 var(--mono); }
-.topology-qualifier { color: var(--text-subtle); font: .61rem/1.3 var(--mono); }
-.topology-peer { margin: 0 0 .32rem; color: var(--text-muted); font-size: .8rem; }
-.topology-peer-label { margin-right: .28rem; color: var(--text-subtle); font: .61rem/1.3 var(--mono); text-transform: uppercase; }
-.topology-peer strong { font-family: var(--mono); font-size: .72rem; }
-.topology-object { max-width: 64ch; margin: 0; color: var(--text); font-size: .86rem; line-height: 1.5; }
-.topology-cross { grid-column: 1 / -1; padding: .8rem 1rem 1rem; background: color-mix(in srgb, var(--canvas-subtle) 55%, transparent); border-top: 1px solid var(--rule); }
-.topology-cross-list { display: grid; gap: .55rem; }
-.topology-cross-edge { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .7rem; align-items: center; }
-.topology-cross-edge .topology-node:last-child { text-align: right; }
-.topology-cross-relation { min-width: 7rem; color: var(--text-subtle); text-align: center; font: .62rem/1.35 var(--mono); }
-.topology-cross-relation strong { display: block; color: var(--accent-strong); }
-.topology-cross-object { display: block; max-width: 42ch; margin-top: .18rem; color: var(--text-muted); font-family: var(--body); font-size: .72rem; }
-
-.table-key { display: block; color: var(--text); font: 650 .76rem/1.35 var(--mono); letter-spacing: 0; text-transform: none; }
-.table-detail { display: block; margin-top: .28rem; color: var(--text-subtle); font: .68rem/1.4 var(--mono); letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-
-.status, .evidence-label, .severity {
-  --enum-color: var(--quiet);
-  display: inline-flex; align-items: center; gap: .38rem; padding: .16rem .46rem;
-  color: color-mix(in srgb, var(--enum-color) 72%, var(--text));
-  background: color-mix(in srgb, var(--enum-color) 10%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--enum-color) 68%, var(--rule));
-  border-radius: 0; white-space: nowrap; font: 650 .68rem/1.3 var(--mono); letter-spacing: .015em;
-}
-.status::before, .severity::before, .evidence-label::before { content: ""; flex: 0 0 auto; width: .43rem; height: .43rem; border-radius: 50%; background: var(--enum-color); }
-.status-unmapped { --enum-color: var(--survey-unmapped); }
-.status-scoping { --enum-color: var(--survey-scoping); }
-.status-structural { --enum-color: var(--survey-structural); }
-.status-concerns { --enum-color: var(--survey-concerns); }
-.status-adversarial { --enum-color: var(--survey-adversarial); }
-.status-mapped { --enum-color: var(--survey-mapped); }
-.status-deferred { --enum-color: var(--survey-deferred); border-style: dashed; }
-.status-confirmed-bug { --enum-color: var(--disposition-defect); }
-.status-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
-.status-ruled-out { --enum-color: var(--disposition-ruled-out); }
-.status-out-of-scope { --enum-color: var(--disposition-out-of-scope); border-style: dashed; }
-.status-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
-.status-open { --enum-color: var(--resolution-open); }
-.status-fixed-pending-verification { --enum-color: var(--resolution-pending); }
-.status-fixed, .status-resolved, .status-verified-fixed { --enum-color: var(--resolution-closed); }
-.status-accepted { --enum-color: var(--resolution-accepted); }
-.severity-critical { --enum-color: var(--severity-critical); }
-.severity-high { --enum-color: var(--severity-high); }
-.severity-medium { --enum-color: var(--severity-medium); }
-.severity-low { --enum-color: var(--severity-low); }
-.evidence-label { border-style: dotted; }
-.evidence-code-verified { --enum-color: var(--evidence-code); }
-.evidence-contract-stated { --enum-color: var(--evidence-contract); }
-.evidence-test-observed { --enum-color: var(--evidence-test); }
-.evidence-config-asserted { --enum-color: var(--evidence-config); }
-.evidence-doc-asserted { --enum-color: var(--evidence-doc); }
-.evidence-comment-asserted { --enum-color: var(--evidence-comment); }
-.evidence-name-inferred { --enum-color: var(--evidence-name); }
-.evidence-pattern-matched { --enum-color: var(--evidence-pattern); }
-
-.figure { margin: 1.4rem 0 1.7rem; padding: 1rem 0 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
-.figure-label { margin: 0 0 .9rem; color: var(--text-subtle); font: .65rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
-.relationship-map { display: grid; gap: .55rem; }
-.relationship { display: grid; grid-template-columns: minmax(8rem, 1fr) 3.5rem minmax(8rem, 1fr); gap: .65rem; align-items: center; }
-.relationship-node { display: block; min-width: 0; padding: .65rem .75rem; border-left: 3px solid var(--accent); background: var(--canvas-subtle); text-decoration: none; }
-.relationship-node strong { display: block; color: var(--accent-strong); font: .74rem/1.3 var(--mono); }
-.relationship-node span { display: block; margin-top: .16rem; color: var(--text-muted); font-size: .78rem; overflow-wrap: anywhere; }
-.relationship-edge { color: var(--text-subtle); text-align: center; font: .62rem/1.15 var(--mono); }
-.relationship-edge b { display: block; color: var(--accent); font-size: 1.1rem; font-weight: 400; }
-.bar-chart { display: grid; gap: .6rem; }
-.bar-row { display: grid; grid-template-columns: minmax(7rem, 12rem) 1fr 3rem; gap: .7rem; align-items: center; }
-.bar-label, .bar-value { font: .7rem/1.3 var(--mono); }
-.bar-track { height: .5rem; background: var(--canvas-subtle); }
-.bar-fill { height: 100%; background: var(--accent); }
-.diagram-source, pre:not(.diagram-source) { max-width: 100%; overflow-x: auto; margin: 1rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: 0; background: var(--canvas-subtle); color: var(--text); font: .75rem/1.55 var(--mono); white-space: pre-wrap; }
-
-.page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--text-subtle); font: .65rem/1.5 var(--mono); }
-.page-foot p { margin: 0; max-width: 52rem; }
-.page-foot a { color: inherit; }
-[hidden] { display: none !important; }
-
-/* Search results and the in-page filters. Ruled registers, not cards: a row
-   per result, one rule between them, no icon and no badge (§8.3). Every one of
-   these elements is built by script; nothing here is served hidden. */
-.search-status { margin: .55rem 0 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
-.search-status:empty { display: none; }
-.search-results { margin: .5rem 0 0; padding: 0; max-height: 18rem; overflow-y: auto; list-style: none; border-top: 1px solid var(--rule); }
-.search-results:empty { display: none; border-top: 0; }
-.search-option { display: grid; grid-template-columns: 4.1rem 1fr; gap: .1rem .55rem; padding: .45rem .1rem; border-bottom: 1px solid var(--rule); cursor: pointer; }
-.search-option[aria-selected="true"] { background: var(--canvas-subtle); box-shadow: inset 2px 0 0 var(--accent); }
-.search-option-kind { grid-row: 1 / span 2; color: var(--text-subtle); font: .6rem/1.5 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
-.search-option-label { color: var(--text); font: .74rem/1.4 var(--mono); overflow-wrap: anywhere; }
-.search-option-detail { grid-column: 2; color: var(--text-muted); font-size: .68rem; overflow-wrap: anywhere; }
-.filter-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: .65rem 1.4rem; margin: 0 0 1.6rem; padding: .85rem 0 .95rem; border: 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
-.filter-controls legend { padding: 0 .6rem 0 0; color: var(--text-subtle); font: .62rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
-.filter-facet { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .6rem; }
-.filter-label { color: var(--text-muted); font: .68rem/1.5 var(--mono); }
-.filter-options { display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
-.filter-option { display: inline-flex; align-items: baseline; gap: .3rem; font-size: .75rem; }
-.filter-select { padding: .2rem .3rem; border: 1px solid var(--rule-strong); border-radius: 0; background: var(--surface); color: var(--text); font: .75rem/1.4 var(--body); }
-.filter-status { flex-basis: 100%; margin: 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
-
-@media (max-width: 900px) {
-  .nav-rail { position: static; inset: auto; width: auto; max-height: none; }
-  .js .nav-rail { position: fixed; inset: 0 auto 0 0; width: var(--rail); transform: translateX(-102%); transition: transform .18s ease; box-shadow: 0 0 0 999px transparent; }
-  .js body.nav-open .nav-rail { transform: translateX(0); box-shadow: 0 0 0 999px color-mix(in srgb, var(--text) 28%, transparent); }
-  .document { margin-left: 0; }
-  .js .mobile-bar { position: sticky; top: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: .7rem 1rem; background: var(--surface); border-bottom: 1px solid var(--rule); }
-  :is(h2, h3, h4, h5, h6) { scroll-margin-top: 4.75rem; }
-  .mobile-brand { font: 600 1rem/1 var(--heading); }
-  .document-inner { padding: 2.5rem 1.35rem 4rem; }
-  .atlas-regions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@container report (min-width: 120ch) {
-  .prose-flow {
-    max-width: none;
-    column-count: 2;
-    column-gap: clamp(2.75rem, 4.25cqi, 4.75rem);
-    column-rule: 1px solid var(--rule);
-  }
-}
-
-@container report (min-width: 190ch) {
-  .prose-flow { column-count: 3; }
-}
-
-@container report (min-width: 165ch) {
-  .coverage-subsystem-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-@container report (max-width: 92ch) {
-  .coverage-subsystem-list { grid-template-columns: minmax(0, 1fr); }
-}
-
-@container report (max-width: 52ch) {
-  .record-finding .record-meta { grid-template-columns: minmax(0, 1fr); }
-  .record-concern-checklist .record-meta { grid-template-columns: minmax(0, 1fr); }
-  .record-concern-checklist .record-facts > div { justify-content: flex-start; }
-}
-
-@media (max-width: 620px) {
-  h1 { font-size: clamp(2.4rem, 12vw, 3.35rem); }
-  .runtime-detail { grid-template-columns: 1fr; }
-  .runtime-detail-head { border-right: 0; border-bottom: 1px solid var(--rule); }
-  .runtime-detail-body { grid-template-columns: 1fr; }
-  .runtime-detail-body p { border-right: 0; border-bottom: 1px solid var(--rule); }
-  .runtime-detail-body p:nth-child(2) { border-bottom: 0; }
-  .runtime-detail-body .runtime-detail-note { grid-column: auto; border-bottom: 0; }
-  .relationship { grid-template-columns: 1fr; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
-  .relationship-edge { text-align: left; }
-  .relationship-edge b { display: inline; margin-right: .4rem; }
-  .bar-row { grid-template-columns: 7rem 1fr 2.5rem; }
-  .heading-anchor { display: none; }
-  .record { grid-template-columns: 1fr; }
-  .record-meta { border-right: 0; border-bottom: 1px solid var(--rule); }
-  .record-concern-disposition .record-meta { grid-template-columns: 1fr; }
-  .record-fields { grid-template-columns: 1fr; }
-  .record-field { border-right: 0; border-bottom: 1px solid var(--rule); }
-  .record-field:last-child { border-bottom: 0; }
-  .summary-list > div { grid-template-columns: 1fr; }
-  .summary-list dd { padding-top: 0; border-left: 0; }
-  .atlas-regions { grid-template-columns: 1fr; }
-  .topology-component { grid-template-columns: 1fr; }
-  .topology-hub { border-right: 0; border-bottom: 1px solid var(--rule); }
-  .topology-cross-edge { grid-template-columns: 1fr; }
-  .topology-cross-edge .topology-node:last-child { text-align: left; }
-  .topology-cross-relation { text-align: left; }
-  .coverage-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .coverage-summary-item:nth-child(2) { border-right: 0; }
-  .coverage-summary-item:nth-child(-n + 2) { border-bottom: 1px solid var(--rule); }
-  .coverage-subsystem { grid-template-columns: 1fr; }
-  .coverage-tokens { grid-column: auto; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
-}
-
-@media print {
-  :root { --canvas: #fff; --surface: #fff; --text: #171b19; --text-muted: #4c5551; --rule: #c7ccc9; }
-  .nav-rail, .mobile-bar, .heading-anchor { display: none !important; }
-  .document { margin: 0; }
-  .document-inner { width: auto; padding: 0; }
-  .runtime-svg-scroll { overflow: visible; }
-  .runtime-boundary-svg { min-width: 0; }
-  .boundary-svg-scroll { overflow: visible; }
-  .boundary-svg { width: 100%; }
-  .content section, .figure, .runtime-boundary-projection, .table-wrap, .record { break-inside: avoid-page; }
-  a { color: inherit; text-decoration: none; }
-}
-"""
-
-_JS = r"""
-(() => {
-  const root = document.documentElement;
-  const body = document.body;
-  const themeButton = document.querySelector('[data-theme-toggle]');
-  const themeStorageKey = 'amanuensis-theme';
-  const systemTheme = matchMedia('(prefers-color-scheme: dark)');
-  let storedTheme = null;
-  try { storedTheme = localStorage.getItem(themeStorageKey); } catch (_) {}
-  if (storedTheme === 'light' || storedTheme === 'dark') root.dataset.theme = storedTheme;
-
-  const updateThemeLabel = () => {
-    if (!themeButton) return;
-    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
-    themeButton.textContent = dark ? 'Light theme' : 'Dark theme';
-    themeButton.setAttribute('aria-label', dark ? 'Use light theme' : 'Use dark theme');
-  };
-  const applyTheme = (theme) => {
-    if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
-    else delete root.dataset.theme;
-    updateThemeLabel();
-  };
-  updateThemeLabel();
-  themeButton?.addEventListener('click', () => {
-    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
-    const theme = dark ? 'light' : 'dark';
-    applyTheme(theme);
-    try { localStorage.setItem(themeStorageKey, theme); } catch (_) {}
-  });
-  window.addEventListener('storage', (event) => {
-    if (event.key !== themeStorageKey) return;
-    applyTheme(event.newValue);
-  });
-  systemTheme.addEventListener?.('change', updateThemeLabel);
-
-  const menuButton = document.querySelector('[data-nav-toggle]');
-  const navRail = document.querySelector('.nav-rail');
-  const documentInner = document.querySelector('.document-inner');
-  const narrow = matchMedia('(max-width: 900px)');
-  const setMenuOpen = (open, restoreFocus = false) => {
-    const effectiveOpen = Boolean(open && narrow.matches);
-    body.classList.toggle('nav-open', effectiveOpen);
-    menuButton?.setAttribute('aria-expanded', String(effectiveOpen));
-    if (navRail) navRail.inert = narrow.matches && !effectiveOpen;
-    if (documentInner) documentInner.inert = effectiveOpen;
-    if (effectiveOpen) navRail?.querySelector('a, input, button')?.focus();
-    else if (restoreFocus) menuButton?.focus();
-  };
-  setMenuOpen(false);
-  menuButton?.addEventListener('click', () => setMenuOpen(!body.classList.contains('nav-open')));
-  navRail?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenuOpen(false)));
-  narrow.addEventListener?.('change', () => setMenuOpen(false));
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && body.classList.contains('nav-open')) setMenuOpen(false, true);
-  });
-
-  // ---------------------------------------------------------------------
-  // Search over pages, ledger paths, and cited symbols (spec §8.1.1).
-  // The combobox is built here rather than served: an input announced as a
-  // combobox that no script can expand promises a control the reader does not
-  // have. Without script the rail still lists every page, and every result's
-  // target is reachable from it.
-  // ---------------------------------------------------------------------
-  const search = document.querySelector('[data-nav-search]');
-  const searchStatus = document.querySelector('[data-search-status]');
-  const locus = (window.__amanuensisLocusIndex && typeof window.__amanuensisLocusIndex === 'object')
-    ? window.__amanuensisLocusIndex : {};
-  const locusPaths = Array.isArray(locus.paths) ? locus.paths : [];
-  const locusSymbols = Array.isArray(locus.symbols) ? locus.symbols : [];
-  const RESULT_LIMIT = 24;
-  let listbox = null;
-  let options = [];
-  let activeIndex = -1;
-  let priorFocus = null;
-
-  document.addEventListener('focusin', (event) => {
-    const target = event.target;
-    if (!target || target === search || target === document.body) return;
-    if (listbox && listbox.contains(target)) return;
-    priorFocus = target;
-  });
-
-  if (search && searchStatus) {
-    listbox = document.createElement('ul');
-    listbox.id = 'conspectus-search-results';
-    listbox.className = 'search-results';
-    listbox.setAttribute('role', 'listbox');
-    listbox.setAttribute('aria-label', 'Search results');
-    searchStatus.insertAdjacentElement('afterend', listbox);
-    search.setAttribute('role', 'combobox');
-    search.setAttribute('aria-expanded', 'false');
-    search.setAttribute('aria-controls', listbox.id);
-    search.setAttribute('aria-activedescendant', '');
-    search.setAttribute('aria-autocomplete', 'list');
-    search.setAttribute('aria-haspopup', 'listbox');
-  }
-
-  const rootPrefix = body.dataset.root || '';
-  const entries = [];
-  document.querySelectorAll('.nav-item').forEach((item) => {
-    const link = item.querySelector('a');
-    if (!link) return;
-    const name = item.querySelector('.nav-name');
-    entries.push({
-      kind: 'Page',
-      label: name ? name.textContent.trim() : link.textContent.trim(),
-      detail: '',
-      haystack: (item.dataset.search || '').toLocaleLowerCase(),
-      href: link.getAttribute('href') || ''
-    });
-  });
-  locusPaths.forEach((item) => {
-    if (!item || typeof item.p !== 'string') return;
-    const owners = Array.isArray(item.o) ? item.o.join(', ') : '';
-    entries.push({
-      kind: 'File',
-      label: item.p,
-      detail: [owners, item.s || ''].filter(Boolean).join(' · '),
-      haystack: (item.p + ' ' + owners + ' ' + (item.s || '')).toLocaleLowerCase(),
-      href: rootPrefix + (item.h || '')
-    });
-  });
-  locusSymbols.forEach((item) => {
-    if (!item || typeof item.y !== 'string') return;
-    entries.push({
-      kind: 'Symbol',
-      label: item.y,
-      detail: item.p || '',
-      haystack: (item.y + ' ' + (item.p || '')).toLocaleLowerCase(),
-      href: rootPrefix + (item.h || '')
-    });
-  });
-
-  const closeList = (restoreFocus) => {
-    if (!listbox) return;
-    listbox.textContent = '';
-    options = [];
-    activeIndex = -1;
-    search.setAttribute('aria-expanded', 'false');
-    search.setAttribute('aria-activedescendant', '');
-    searchStatus.textContent = '';
-    if (!restoreFocus) return;
-    if (priorFocus && priorFocus.isConnected && typeof priorFocus.focus === 'function') priorFocus.focus();
-    else search.blur();
-  };
-
-  const setActive = (index) => {
-    if (!options.length) return;
-    const next = ((index % options.length) + options.length) % options.length;
-    options.forEach((option, position) => {
-      option.setAttribute('aria-selected', position === next ? 'true' : 'false');
-    });
-    activeIndex = next;
-    search.setAttribute('aria-activedescendant', options[next].id);
-    options[next].scrollIntoView({ block: 'nearest' });
-  };
-
-  const activate = (index) => {
-    const option = options[index];
-    if (!option) return;
-    const href = option.dataset.href || '';
-    closeList(false);
-    if (!href) return;
-    const parts = href.split('#');
-    const fragment = parts.length > 1 ? parts[1] : '';
-    const here = location.pathname.split('/').pop();
-    const target = parts[0] ? parts[0].split('/').pop() : here;
-    if (fragment && target === here) {
-      const node = document.getElementById(fragment);
-      if (node) {
-        if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
-        location.hash = '#' + fragment;
-        node.focus();
-        return;
-      }
-    }
-    location.href = href;
-  };
-
-  const renderResults = () => {
-    if (!listbox) return;
-    listbox.textContent = '';
-    options = [];
-    activeIndex = -1;
-    search.setAttribute('aria-activedescendant', '');
-    const needle = search.value.trim().toLocaleLowerCase();
-    if (!needle) {
-      search.setAttribute('aria-expanded', 'false');
-      searchStatus.textContent = '';
-      return;
-    }
-    const matches = entries.filter((entry) => entry.haystack.indexOf(needle) !== -1);
-    matches.slice(0, RESULT_LIMIT).forEach((entry, position) => {
-      const option = document.createElement('li');
-      option.id = 'conspectus-search-option-' + position;
-      option.className = 'search-option';
-      option.setAttribute('role', 'option');
-      option.setAttribute('aria-selected', 'false');
-      option.dataset.href = entry.href;
-      const kind = document.createElement('span');
-      kind.className = 'search-option-kind';
-      kind.textContent = entry.kind;
-      const label = document.createElement('span');
-      label.className = 'search-option-label';
-      label.textContent = entry.label;
-      option.append(kind, label);
-      if (entry.detail) {
-        const detail = document.createElement('span');
-        detail.className = 'search-option-detail';
-        detail.textContent = entry.detail;
-        option.append(detail);
-      }
-      option.addEventListener('click', () => activate(position));
-      listbox.append(option);
-      options.push(option);
-    });
-    search.setAttribute('aria-expanded', options.length ? 'true' : 'false');
-    if (!matches.length) searchStatus.textContent = 'No match in this projection.';
-    else if (matches.length > options.length) {
-      searchStatus.textContent = matches.length + ' matches, first ' + options.length + ' listed';
-    } else searchStatus.textContent = matches.length + (matches.length === 1 ? ' match' : ' matches');
-  };
-
-  search?.addEventListener('input', renderResults);
-  search?.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      if (!options.length) renderResults();
-      setActive(activeIndex + 1);
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      if (!options.length) renderResults();
-      setActive(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
-    } else if (event.key === 'Enter') {
-      if (!options.length) return;
-      event.preventDefault();
-      activate(activeIndex < 0 ? 0 : activeIndex);
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      closeList(true);
-    }
-  });
-  document.addEventListener('keydown', (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-      event.preventDefault(); search?.focus(); search?.select();
-    }
-  });
-
-  // ---------------------------------------------------------------------
-  // In-page filters (spec §8.1.2). Native controls in a labelled fieldset,
-  // built from the facets the projection stamped on the page; filtering is
-  // toggling `hidden` on the rows and on the containers and headings a fully
-  // hidden run leaves behind. Nothing is persisted: the state lives in the DOM
-  // for the life of the page.
-  // ---------------------------------------------------------------------
-  const filterScope = document.querySelector('[data-filter-scope]');
-  const filterRows = filterScope ? Array.from(filterScope.querySelectorAll('[data-filter-row]')) : [];
-  const splitFacet = (value) => (value || '').split('|').map((part) => part.trim()).filter(Boolean);
-  if (filterScope && filterRows.length) {
-    const scopeName = filterScope.dataset.filterScope || 'page';
-    const facets = [
-      { key: 'subsystem', prop: 'filterSubsystem', label: 'Subsystem', control: 'select', values: splitFacet(filterScope.dataset.facetSubsystem) },
-      { key: 'severity', prop: 'filterSeverity', label: 'Severity', control: 'checkbox', values: splitFacet(filterScope.dataset.facetSeverity) }
-    ].filter((facet) => facet.values.length > 1);
-    if (facets.length) {
-      const fieldset = document.createElement('fieldset');
-      fieldset.className = 'filter-controls';
-      fieldset.setAttribute('data-filter-controls', '');
-      const legend = document.createElement('legend');
-      legend.textContent = 'Narrow this page';
-      fieldset.append(legend);
-      const status = document.createElement('p');
-      status.className = 'filter-status';
-      status.setAttribute('data-filter-status', '');
-      status.setAttribute('role', 'status');
-      status.setAttribute('aria-live', 'polite');
-      const controls = [];
-
-      const rowValues = (row, prop) => splitFacet(row.dataset[prop]);
-      const keeps = (row) => controls.every((control) => {
-        const values = rowValues(row, control.prop);
-        if (control.select) {
-          const wanted = control.select.value;
-          return !wanted || values.indexOf(wanted) !== -1;
-        }
-        // A row that records no value on this facet cannot be excluded by it.
-        if (!values.length) return true;
-        const wanted = control.boxes.filter((box) => box.checked).map((box) => box.value);
-        return values.some((value) => wanted.indexOf(value) !== -1);
-      });
-      const prune = () => {
-        filterScope.querySelectorAll('.record-list, .table-wrap').forEach((group) => {
-          if (!group.querySelector('[data-filter-row]')) return;
-          group.hidden = !group.querySelector('[data-filter-row]:not([hidden])');
-        });
-        filterScope.querySelectorAll('h2, h3, h4, h5, h6').forEach((heading) => {
-          const level = Number(heading.tagName.slice(1));
-          let node = heading.nextElementSibling;
-          let total = 0;
-          let visible = 0;
-          while (node) {
-            const tag = node.tagName;
-            if (/^H[1-6]$/.test(tag) && Number(tag.slice(1)) <= level) break;
-            const rows = node.matches('[data-filter-row]')
-              ? [node]
-              : Array.from(node.querySelectorAll('[data-filter-row]'));
-            total += rows.length;
-            visible += rows.filter((row) => !row.hidden).length;
-            node = node.nextElementSibling;
-          }
-          if (total) heading.hidden = visible === 0;
-        });
-      };
-      const apply = () => {
-        let shown = 0;
-        filterRows.forEach((row) => {
-          const keep = keeps(row);
-          row.hidden = !keep;
-          if (keep) shown += 1;
-        });
-        prune();
-        status.textContent = shown + ' of ' + filterRows.length + ' rows shown';
-      };
-
-      facets.forEach((facet) => {
-        const wrap = document.createElement('div');
-        wrap.className = 'filter-facet';
-        if (facet.control === 'select') {
-          const id = 'filter-' + scopeName + '-' + facet.key;
-          const label = document.createElement('label');
-          label.className = 'filter-label';
-          label.setAttribute('for', id);
-          label.textContent = facet.label;
-          const select = document.createElement('select');
-          select.id = id;
-          select.className = 'filter-select';
-          const every = document.createElement('option');
-          every.value = '';
-          every.textContent = 'Every ' + facet.label.toLocaleLowerCase();
-          select.append(every);
-          facet.values.forEach((value) => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            select.append(option);
-          });
-          select.addEventListener('change', apply);
-          wrap.append(label, select);
-          controls.push({ prop: facet.prop, select: select });
-        } else {
-          const captionId = 'filter-' + scopeName + '-' + facet.key + '-label';
-          const caption = document.createElement('span');
-          caption.className = 'filter-label';
-          caption.id = captionId;
-          caption.textContent = facet.label;
-          const group = document.createElement('div');
-          group.className = 'filter-options';
-          group.setAttribute('role', 'group');
-          group.setAttribute('aria-labelledby', captionId);
-          const boxes = [];
-          facet.values.forEach((value, position) => {
-            const id = 'filter-' + scopeName + '-' + facet.key + '-' + position;
-            const box = document.createElement('input');
-            box.type = 'checkbox';
-            box.id = id;
-            box.value = value;
-            box.checked = true;
-            box.addEventListener('change', apply);
-            const label = document.createElement('label');
-            label.setAttribute('for', id);
-            label.textContent = value;
-            const pair = document.createElement('span');
-            pair.className = 'filter-option';
-            pair.append(box, label);
-            group.append(pair);
-            boxes.push(box);
-          });
-          wrap.append(caption, group);
-          controls.push({ prop: facet.prop, boxes: boxes });
-        }
-        fieldset.append(wrap);
-      });
-      fieldset.append(status);
-      filterScope.prepend(fieldset);
-      apply();
-    }
-  }
-})();
-"""
 
 
 # ---------------------------------------------------------------------------
@@ -1444,11 +324,151 @@ def _chip_html(chip: Chip) -> str:
     return _status_html(chip.value, show_hint=chip.show_hint)
 
 
+# The hosts whose file pages have a known address. A self-hosted forge cannot
+# be told from any other server by its URL, so only these link; a repository
+# URL is never guessed (reporting-style, "Architecture and source routes").
+# Each entry: the host's name, the repository URL it accepts, and the address
+# of one file at one revision.
+SOURCE_HOSTS = (
+    ("GitHub", re.compile(r"https://github\.com/[^/]+/[^/]+"), "{base}/blob/{rev}/{path}"),
+    ("GitLab", re.compile(r"https://gitlab\.com/[^/]+(?:/[^/]+)+"), "{base}/-/blob/{rev}/{path}"),
+    ("Bitbucket", re.compile(r"https://bitbucket\.org/[^/]+/[^/]+"), "{base}/src/{rev}/{path}"),
+)
+
+
+def source_file_url(repository_url: str | None, path: str, ref: str | None) -> tuple[str, str] | None:
+    """The host's page for `path` on branch `ref`, and the host's name, or None.
+
+    `ref` is a branch the origin is known to have (`core._repository_web_ref`),
+    never a commit: a commit link breaks until the commit is pushed.
+    """
+
+    parts = PurePosixPath(path).parts
+    if (
+        not repository_url
+        or not ref
+        or not re.fullmatch(r"[A-Za-z0-9._][A-Za-z0-9._/-]*", ref)
+        or ".." in ref
+        or not parts
+        or path.startswith("/")
+        or ".." in parts
+    ):
+        return None
+    base = repository_url.rstrip("/")
+    for name, accepts, address in SOURCE_HOSTS:
+        if accepts.fullmatch(base):
+            return address.format(base=base, rev=quote(ref, safe="/"), path=quote(path, safe="/")), name
+    return None
+
+
+@dataclass(frozen=True)
+class SourceLinks:
+    """What a page needs to mark, and link, the repository paths its prose names.
+
+    Only a path the file ledger holds is marked: the ledger is reconciled
+    against the checked revision, so each such path is a file the tree has
+    there. With no known host the path is still marked, and not linked.
+    """
+
+    repository_url: str | None
+    # The branch links name, and the checked revision the marks carry.
+    ref: str | None
+    revision: str
+    paths: frozenset[str]
+    pattern: re.Pattern[str]
+    # The paths the linked branch holds; None when not known (then any marked path links).
+    linkable: frozenset[str] | None = None
+
+
+def source_links(context: dict[str, Any]) -> SourceLinks | None:
+    url = str(context.get("repository_url") or "")
+    revision = str(context.get("last_checked_sha") or "")
+    paths = sorted({str(p) for p in context.get("source_paths") or () if p})
+    if not paths:
+        return None
+    alternation = "|".join(re.escape(p) for p in sorted(paths, key=lambda p: (-len(p), p)))
+    # Whole paths only: not part of a longer path, a word or a file name with
+    # a further extension. A full stop after a path ends a sentence.
+    pattern = re.compile(rf"(?<![\w./-])({alternation})(?![\w/-]|\.\w)")
+    ref = str(context.get("repository_ref") or "") or None
+    return SourceLinks(url.rstrip("/") or None, ref, revision, frozenset(paths), pattern, linkable_of(context))
+
+
+def linkable_of(context: dict[str, Any]) -> frozenset[str] | None:
+    held = context.get("linkable_paths")
+    return None if held is None else frozenset(str(p) for p in held)
+
+
+# Set while a render prints page bodies; unset, prose prints no source marks
+# (the read-back's `_inline` compares words, which marks do not change).
+_SOURCE_LINKS: ContextVar[SourceLinks | None] = ContextVar("_SOURCE_LINKS", default=None)
+
+
+def source_mark(
+    path: str,
+    revision: str,
+    repository_url: str | None,
+    ref: str | None,
+    inner: str,
+    *,
+    link_class: str,
+    linkable: frozenset[str] | None = None,
+) -> str:
+    """A repository path as printed: a link to its host, or a plain mark.
+
+    Either way it carries `data-source-path` (repository-relative) and, when
+    known, `data-source-rev`, so a tool other than a browser, such as an editor
+    showing these pages, can resolve the path itself. The attributes are the
+    contract; the link is one use of it.
+    """
+
+    parts = PurePosixPath(path).parts
+    if not parts or path.startswith("/") or ".." in parts:
+        return inner
+    attrs = f' data-source-path="{html.escape(path, quote=True)}"'
+    if re.fullmatch(r"[0-9a-fA-F]{7,40}", revision):
+        attrs += f' data-source-rev="{html.escape(revision, quote=True)}"'
+    found = source_file_url(repository_url, path, ref) if linkable is None or path in linkable else None
+    if found is None:
+        return f'<span class="source-path"{attrs}>{inner}</span>'
+    url, host = found
+    title = f"Open {path} on {host}, branch {ref}"
+    return (
+        f'<a class="{link_class}" href="{html.escape(url, quote=True)}" rel="noreferrer" '
+        f'title="{html.escape(title, quote=True)}"{attrs}>{inner}</a>'
+    )
+
+
+def _source_anchor(links: SourceLinks, path: str, inner: str) -> str:
+    return source_mark(
+        path, links.revision, links.repository_url, links.ref, inner, link_class="source-link", linkable=links.linkable
+    )
+
+
+def _text_html(text: str) -> str:
+    links = _SOURCE_LINKS.get()
+    if links is None or "/" not in text and "." not in text:
+        return html.escape(text, quote=False)
+    out: list[str] = []
+    at = 0
+    for match in links.pattern.finditer(text):
+        out.append(html.escape(text[at : match.start()], quote=False))
+        path = match.group(1)
+        out.append(_source_anchor(links, path, html.escape(path, quote=False)))
+        at = match.end()
+    out.append(html.escape(text[at:], quote=False))
+    return "".join(out)
+
+
 def _inline_html(node: Inline) -> str:
     if isinstance(node, Text):
-        return html.escape(node.text, quote=False)
+        return _text_html(node.text)
     if isinstance(node, CodeSpan):
-        return f"<code>{html.escape(node.text)}</code>"
+        code = f"<code>{html.escape(node.text)}</code>"
+        links = _SOURCE_LINKS.get()
+        if links is not None and node.text in links.paths:
+            return _source_anchor(links, node.text, code)
+        return code
     if isinstance(node, Chip):
         return _chip_html(node)
     if isinstance(node, Strong):
@@ -1457,11 +477,16 @@ def _inline_html(node: Inline) -> str:
         return f"<em>{''.join(_inline_html(child) for child in node.children)}</em>"
     if isinstance(node, Link):
         attrs = ' rel="noreferrer"' if node.external else ""
-        # A label's own words are escaped as the start tree's link printer escaped them.
-        label = "".join(
-            html.escape(child.text) if isinstance(child, Text) else _inline_html(child)
-            for child in node.children or (Text(node.label),)
-        )
+        # A label's own words are escaped as the start tree's link printer
+        # escaped them, and nothing inside a link links again.
+        held = _SOURCE_LINKS.set(None)
+        try:
+            label = "".join(
+                html.escape(child.text) if isinstance(child, Text) else _inline_html(child)
+                for child in node.children or (Text(node.label),)
+            )
+        finally:
+            _SOURCE_LINKS.reset(held)
         return f'<a href="{html.escape(node.href, quote=True)}"{attrs}>{label}</a>'
     if isinstance(node, Abbr):
         return f'<abbr title="{html.escape(node.title, quote=True)}">{html.escape(node.text)}</abbr>'
@@ -1546,20 +571,18 @@ def _atlas_badges(item: AtlasItem) -> str:
         return ""
     sid = item.record.removeprefix("subsystem:")
     pills = "".join(
-        f'<span class="finding-badge"{_badge_attrs(b, sid)}'
-        f' style="display:inline-block;margin:0 .4rem .2rem 0;padding:.08rem .4rem;font:.62rem/1.4 var(--mono);'
-        f'border:1px solid var(--rule-strong);border-left:.35rem solid var(--{_BADGE_TONE[b.measure]})">'
+        f'<span class="finding-badge tone-{_BADGE_TONE[b.measure]}"{_badge_attrs(b, sid)}>'
         f"{html.escape(b.label)}</span>"
         for b in item.badges
     )
     review = (
-        ' <span class="finding-badge-review" style="font:.62rem/1.4 var(--mono)">under review</span>'
+        ' <span class="finding-badge-review">under review</span>'
         if any(b.review for b in item.badges)
         else ""
     )
     return (
         '<div class="atlas-badges" role="group" aria-label="Open findings'
-        f'{" (under review)" if review else ""}" style="grid-column:1 / -1">{pills}{review}</div>'
+        f'{" (under review)" if review else ""}">{pills}{review}</div>'
     )
 
 
@@ -1634,10 +657,14 @@ class _HtmlWriter:
         route_map: dict[str, str],
         current_html_path: str,
         repository_url: str | None = None,
+        repository_ref: str | None = None,
+        linkable_paths: frozenset[str] | None = None,
     ) -> None:
         self.route_map = route_map
+        self.linkable_paths = linkable_paths
         self.current_html_path = current_html_path
         self.repository_url = repository_url.rstrip("/") if repository_url else None
+        self.repository_ref = repository_ref or None
         self.used_slugs: dict[str, int] = {}
 
     def _unique_slug(self, plain_title: str) -> str:
@@ -1690,19 +717,6 @@ class _HtmlWriter:
             return "Review"
         return _DISPLAY_FIELD.get(key, key.replace("-", " ").capitalize())
 
-    def _github_file_url(self, path: str, revision: str) -> str | None:
-        parts = PurePosixPath(path).parts
-        if (
-            not self.repository_url
-            or not re.fullmatch(r"https://github\.com/[^/]+/[^/]+", self.repository_url)
-            or not re.fullmatch(r"[0-9a-fA-F]{7,40}", revision)
-            or not parts
-            or path.startswith("/")
-            or ".." in parts
-        ):
-            return None
-        return f"{self.repository_url}/blob/{revision}/{quote(path, safe='/')}"
-
     def _record_list(self, block: RecordList) -> str:
         kind = block.kind
         rendered: list[str] = []
@@ -1711,13 +725,14 @@ class _HtmlWriter:
             if kind == "file-ledger":
                 path = record.key_text
                 basename = posixpath.basename(path) or path
-                file_url = self._github_file_url(record.path, record.revision)
-                filename = f"<code>{html.escape(basename)}</code>"
-                primary = (
-                    f'<a class="file-source-link" href="{html.escape(file_url, quote=True)}" '
-                    f'rel="noreferrer" title="Open {html.escape(path, quote=True)} at the reviewed revision on GitHub">{filename}</a>'
-                    if file_url
-                    else filename
+                primary = source_mark(
+                    record.path,
+                    record.revision,
+                    self.repository_url,
+                    self.repository_ref,
+                    f"<code>{html.escape(basename)}</code>",
+                    link_class="file-source-link",
+                    linkable=self.linkable_paths,
                 )
             elif kind == "open-question":
                 primary = f"Question {html.escape(record.key_text)}"
@@ -2069,7 +1084,7 @@ class _HtmlWriter:
         return (
             f'<figure class="diagram" data-diagram="{html.escape(block.kind, quote=True)}"{subject}>'
             f'<figcaption><strong>{text(block.title)}</strong> <span>{text(block.caption)}</span></figcaption>'
-            f'<div class="diagram-frame" style="max-width:100%;overflow-x:auto">{draw_svg(block)}</div>'
+            f'<div class="diagram-frame">{draw_svg(block)}</div>'
             f"{account}</figure>"
         )
 
@@ -2605,7 +1620,8 @@ class _HtmlWriter:
         if isinstance(block, Heading):
             return self._heading(block)
         if isinstance(block, Paragraph):
-            return f"<p>{_inlines_html(block.text)}</p>"
+            cls = f' class="{html.escape(block.css_class, quote=True)}"' if block.css_class else ""
+            return f"<p{cls}>{_inlines_html(block.text)}</p>"
         if isinstance(block, List):
             return self._list(block)
         if isinstance(block, Quote):
@@ -2657,10 +1673,12 @@ def write_html(
     page: Page,
     route_map: dict[str, str] | None = None,
     repository_url: str | None = None,
+    repository_ref: str | None = None,
+    linkable_paths: frozenset[str] | None = None,
 ) -> str:
     """Print a page model's body as HTML (§3.1). It reads no Markdown."""
 
-    return _HtmlWriter(route_map or {}, page.path, repository_url).write(page)
+    return _HtmlWriter(route_map or {}, page.path, repository_url, repository_ref, linkable_paths).write(page)
 
 
 class _IdentifierMarkup(HTMLParser):
@@ -2855,28 +1873,26 @@ def _shell(
         freshness_class = "freshness stale" if stale_entries else "freshness"
     display_title = page.title or source_title
     hint_para = f'<p class="page-hint">{html.escape(page.hint)}</p>' if page.hint else ""
-    use_when_para = (
-        f'<p class="page-use-when">{html.escape("Use it when " + page.use_when)}</p>'
-        if page.use_when
-        else ""
-    )
-    guide_href = _rel_link(page.html_path, GUIDE_PAGE)
-    terms_para = (
-        f'<p class="page-terms">{html.escape(TERMS_LABEL)} '
-        + " · ".join(
-            f'<a href="{html.escape(guide_href + "#term-" + slug, quote=True)}">{html.escape(term)}</a>'
-            for term, slug in page.terms
-        )
-        + "</p>"
-        if page.terms
-        else ""
-    )
+    help_markup = _page_help(page)
     notice_para = (
         f'<p class="page-notice" role="note">{html.escape(notice)}</p>' if notice else ""
     )
     home_link = _rel_link(page.html_path, "index.html")
     record_status = _status_html(page.status) if page.status else ""
-    status_meta = f'<span class="snapshot-item">Survey depth&nbsp; {record_status}</span>' if record_status else ""
+    # The strip names the status by what it is: a subsystem's survey depth, an
+    # evidence matrix's outcome. A subsystem page prints its depth only here,
+    # so the strip carries the subsystem's record mark (§3.5).
+    status_label, status_mark = _STRIP_STATUS.get(page.kind, ("Status", False))
+    mark = (
+        _mark_attrs(f"subsystem:{page.record_id}", str(page.status))
+        if status_mark and page.record_id
+        else ""
+    )
+    status_meta = (
+        f'<span class="snapshot-item"{mark}><b>{html.escape(status_label)}</b>&nbsp; {record_status}</span>'
+        if record_status
+        else ""
+    )
     definitions = {
         str(identifier): str(definition)
         for identifier, definition in dict(
@@ -2904,60 +1920,32 @@ def _shell(
     nav = _identifier_markup(_nav(pages, page), definitions)
     body = _identifier_markup(body, definitions)
     eyebrow = _identifier_markup(_page_eyebrow(page), definitions)
-    return f'''<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="Amanuensis HTML projection {HTML_PROJECTION_VERSION}">
-<meta name="description" content="{html.escape(page.hint or display_title, quote=True)}">
-<title>{html.escape(display_title)} · {html.escape(project_name)} · Amanuensis</title>
-<script>document.documentElement.classList.add('js');try{{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}}catch(e){{}}</script>
-<style>{_CSS}</style>
-</head>
-<body data-root="{html.escape(root_prefix, quote=True)}">
-<a class="skip-link" href="#content">Skip to content</a>
-<div class="shell">
-  <aside class="nav-rail" aria-label="{html.escape(project_name, quote=True)} report navigation">
-    <a class="brand" href="{html.escape(home_link, quote=True)}">
-      <span class="brand-mark">{html.escape(project_name)}</span>
-      <span class="brand-sub">Architecture survey · Amanuensis</span>
-    </a>
-    <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
-    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Page, path, or symbol…" autocomplete="off">
-    <p class="search-status" data-search-status role="status" aria-live="polite"></p>
-    <nav class="rail-nav">{nav}</nav>
-    <div class="rail-foot">
-      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button></div>
-    </div>
-  </aside>
-  <main class="document" id="content">
-    <div class="mobile-bar"><span class="mobile-brand">{html.escape(project_name)}</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
-    <div class="document-inner">
-      <header class="page-head">
-        <p class="eyebrow">{eyebrow}</p>
-        <h1>{html.escape(display_title)}</h1>
-        {hint_para}
-        {use_when_para}
-        {terms_para}
-        {notice_para}
-        <div class="snapshot-strip">
-          <span class="snapshot-item"><b>Branch</b>&nbsp; {html.escape(canonical)}</span>
-          <span class="snapshot-item"><b>Checked</b>&nbsp; {html.escape(checked[:12] or 'not recorded')}</span>
-          <span class="snapshot-item"><b>As of</b>&nbsp; {html.escape(checked_at)}</span>
-          <span class="snapshot-item"><span class="{freshness_class}">{html.escape(freshness_label)}</span></span>
-          {status_meta}
-        </div>
-      </header>
-      <article class="content content-{html.escape(slugify(page.kind), quote=True)}"{filter_attrs}>{body}</article>
-    </div>
-  </main>
-</div>
-<script src="{html.escape(index_href, quote=True)}"></script>
-<script>{_JS}</script>
-</body>
-</html>
-'''
+    return _PAGE_TEMPLATE.substitute(
+        generator=HTML_PROJECTION_VERSION,
+        description=html.escape(page.hint or display_title, quote=True),
+        title=html.escape(display_title),
+        project=html.escape(project_name),
+        project_attr=html.escape(project_name, quote=True),
+        stylesheet=html.escape(_rel_link(page.html_path, SITE_CSS_PATH), quote=True),
+        script=html.escape(_rel_link(page.html_path, SITE_JS_PATH), quote=True),
+        search_index=html.escape(index_href, quote=True),
+        root=html.escape(root_prefix, quote=True),
+        home=html.escape(home_link, quote=True),
+        nav=nav,
+        eyebrow=eyebrow,
+        hint=hint_para,
+        help=help_markup,
+        notice=notice_para,
+        branch=html.escape(canonical),
+        checked=html.escape(checked[:12] or "not recorded"),
+        checked_at=html.escape(checked_at),
+        freshness_class=freshness_class,
+        freshness=html.escape(freshness_label),
+        status=status_meta,
+        kind=html.escape(slugify(page.kind), quote=True),
+        filters=filter_attrs,
+        body=body,
+    )
 
 
 def render_search_index(locus_index: dict[str, Any] | None) -> str:
@@ -3024,6 +2012,15 @@ def render_html_projection(
         index_target.parent.mkdir(parents=True, exist_ok=True)
         index_target.write_text(index_text)
 
+    prose_links = source_links(context)
+
+    for rel, text in SITE_ASSETS.items():
+        target = output / rel
+        files[rel] = sha256_bytes(text.encode("utf-8"))
+        if not target.is_file() or target.read_text() != text:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text)
+
     readme_target = output / README_PATH
     files[README_PATH] = sha256_bytes(README_TEXT.encode("utf-8"))
     if not readme_target.is_file() or readme_target.read_text() != README_TEXT:
@@ -3034,11 +2031,18 @@ def render_html_projection(
         if model is None:
             warnings.append(f"HTML source missing for {page.path}")
             continue
-        body = write_html(
-            model,
-            route_map,
-            repository_url=str(context.get("repository_url") or "") or None,
-        )
+        # Prose prints the repository paths it names as links to the host.
+        held = _SOURCE_LINKS.set(prose_links)
+        try:
+            body = write_html(
+                model,
+                route_map,
+                repository_url=str(context.get("repository_url") or "") or None,
+                repository_ref=str(context.get("repository_ref") or "") or None,
+                linkable_paths=linkable_of(context),
+            )
+        finally:
+            _SOURCE_LINKS.reset(held)
         facets = model.facets
         document = _shell(
             page,

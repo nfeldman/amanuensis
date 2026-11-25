@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Amanuensis HTML projection ${generator}">
+<meta name="description" content="${description}">
+<title>${title} · ${project} · Amanuensis</title>
+<script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="${stylesheet}">
+</head>
+<body data-root="${root}">
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="shell">
+  <aside class="nav-rail" aria-label="${project_attr} report navigation">
+    <a class="brand" href="${home}">
+      <span class="brand-mark">${project}</span>
+      <span class="brand-sub">Architecture survey · Amanuensis</span>
+    </a>
+    <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
+    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Page, path, or symbol…" autocomplete="off">
+    <p class="search-status" data-search-status role="status" aria-live="polite"></p>
+    <nav class="rail-nav">${nav}</nav>
+    <div class="rail-foot">
+      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button></div>
+    </div>
+  </aside>
+  <main class="document" id="content">
+    <div class="mobile-bar"><span class="mobile-brand">${project}</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
+    <div class="document-inner">
+      <header class="page-head">
+        <div class="page-eyebrow-row"><p class="eyebrow">${eyebrow}</p>${help}</div>
+        <h1>${title}</h1>
+        ${hint}
+        ${notice}
+        <div class="snapshot-strip">
+          <span class="snapshot-item"><b>Branch</b>&nbsp; ${branch}</span>
+          <span class="snapshot-item"><b>Checked</b>&nbsp; ${checked}</span>
+          <span class="snapshot-item"><b>As of</b>&nbsp; ${checked_at}</span>
+          <span class="snapshot-item"><span class="${freshness_class}">${freshness}</span></span>
+          ${status}
+        </div>
+      </header>
+      <article class="content content-${kind}"${filters}>${body}</article>
+    </div>
+  </main>
+</div>
+<script src="${search_index}"></script>
+<script src="${script}"></script>
+</body>
+</html>

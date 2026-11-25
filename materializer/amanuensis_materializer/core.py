@@ -12,8 +12,9 @@ The orchestrator:
      both to the manifest to count it rendered or unchanged.
   4. Runs the global cross-reference resolver over every page's model, since
      a different page changing can change what an ID links to.
-  5. Writes each page's HTML from its model, `search-index.js` beside it, and
-     retires the HTML of pages that no longer have a generator.
+  5. Writes each page's HTML from its model, `search-index.js` and the shared
+     `assets/site.*` stylesheet and script beside it, and retires the HTML
+     of pages that no longer have a generator.
   6. Saves the manifest and the publication receipt, and reads the
      publication back against the store.
 
@@ -69,8 +70,12 @@ from .xref import XrefIndex, resolve_model
 PageFn = Callable[[], RenderResult]
 
 
-def _github_repository_url(workspace: Path) -> str | None:
-    """Return a verified github.com web URL for the workspace's origin."""
+def _repository_web_url(workspace: Path) -> str | None:
+    """The web URL of the workspace's origin, when it is on a host whose file pages are known.
+
+    GitHub, GitLab and Bitbucket, by their public hostnames (`SOURCE_HOSTS`).
+    Anything else, a self-hosted forge included, gets no URL rather than a guess.
+    """
 
     if not workspace.is_dir():
         return None
@@ -87,19 +92,101 @@ def _github_repository_url(workspace: Path) -> str | None:
     if result.returncode != 0:
         return None
     remote = result.stdout.strip()
-    patterns = (
-        r"^git@github\.com:(?P<path>[^\s]+)$",
-        r"^ssh://git@github\.com/(?P<path>[^\s]+)$",
-        r"^https?://github\.com/(?P<path>[^\s]+)$",
-    )
-    for pattern in patterns:
-        match = re.match(pattern, remote, re.IGNORECASE)
-        if not match:
-            continue
-        path = re.sub(r"\.git$", "", match.group("path").rstrip("/"), flags=re.IGNORECASE)
-        if path.count("/") == 1:
-            return f"https://github.com/{path}"
+    for host, nested in (("github.com", False), ("gitlab.com", True), ("bitbucket.org", False)):
+        h = re.escape(host)
+        patterns = (
+            rf"^git@{h}:(?P<path>[^\s]+)$",
+            rf"^ssh://git@{h}(?::\d+)?/(?P<path>[^\s]+)$",
+            rf"^https?://(?:[^@/\s]+@)?{h}/(?P<path>[^\s]+)$",
+        )
+        for pattern in patterns:
+            match = re.match(pattern, remote, re.IGNORECASE)
+            if not match:
+                continue
+            path = re.sub(r"\.git$", "", match.group("path").rstrip("/"), flags=re.IGNORECASE)
+            segments = path.split("/")
+            if all(segments) and (len(segments) == 2 or (nested and len(segments) > 2)):
+                return f"https://{host}/{path}"
     return None
+
+
+def _repository_web_ref(workspace: Path, revision: str) -> str | None:
+    """The branch a host link names: one the origin is known to have.
+
+    A link naming a commit breaks until that commit is pushed, so pages
+    published from unpushed work would link to nothing. A branch link opens the
+    file as the branch has it now, which can be ahead of the checked revision;
+    the revision itself stays on every path as `data-source-rev`.
+
+    In order: the origin's default branch when it holds the checked revision;
+    otherwise a pushed branch that holds it, the workspace's upstream first
+    (work surveyed before it is integrated); otherwise the default branch, where
+    only the paths that branch holds link (`_remote_tree_paths`).
+    "Known" means a remote-tracking ref this checkout has, so the answer is as
+    of the last fetch and a render makes no network call. With no such ref there
+    is no branch, and no link.
+    """
+
+    def git(*args: str) -> str:
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(workspace), *args],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return ""
+        return result.stdout.strip() if result.returncode == 0 else ""
+
+    if not workspace.is_dir():
+        return None
+    remote_branches = {
+        ref
+        for ref in git("for-each-ref", "--format=%(refname:short)", "refs/remotes/origin/").split()
+        if ref.startswith("origin/") and ref != "origin/HEAD"
+    }
+    if not remote_branches:
+        return None
+    default = git("symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
+    if default not in remote_branches:
+        default = next((b for b in ("origin/main", "origin/master") if b in remote_branches), "")
+    holding: set[str] = set()
+    if re.fullmatch(r"[0-9a-fA-F]{7,40}", revision or ""):
+        holding = set(
+            git("branch", "-r", "--contains", revision, "--format=%(refname:short)").split()
+        ) & remote_branches
+    upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+    for candidate in (default, upstream, *sorted(holding)):
+        if candidate in holding:
+            return candidate.removeprefix("origin/")
+    return default.removeprefix("origin/") or None
+
+
+def _remote_tree_paths(workspace: Path, ref: str | None) -> list[str] | None:
+    """The paths `origin/<ref>` holds, as of the last fetch, or None when unknown.
+
+    A link names a branch, not the checked commit, so a path the commit has and
+    the branch does not (a file added since the last push, or one an imported
+    table still names after it was deleted) would 404. Only these paths link.
+    """
+
+    if not ref or not workspace.is_dir():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(workspace), "ls-tree", "-r", "-z", "--name-only", f"refs/remotes/origin/{ref}"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return [p for p in result.stdout.split("\0") if p]
 
 
 def _compact_definition(label: str, detail: str | None = None, *, limit: int = 220) -> str:
@@ -421,7 +508,17 @@ class Materializer:
                 "stale_exempt": freshness["stale_exempt"],
                 "scoped_files": freshness["scoped_files"],
                 "staleness_measured": freshness["scoped_files"] > 0,
-                "repository_url": _github_repository_url(workspace),
+                "repository_url": _repository_web_url(workspace),
+                "repository_ref": (
+                    web_ref := _repository_web_ref(workspace, str(git.get("last_checked_sha") or ""))
+                ),
+                # The paths a link may name: those the linked branch holds.
+                "linkable_paths": _remote_tree_paths(workspace, web_ref),
+                # The paths prose may link to the host: every path the ledger
+                # holds, which the reconciliation keeps true of the checked tree.
+                "source_paths": [
+                    r["file_path"] for r in rows(conn, "SELECT DISTINCT file_path FROM file_ledger")
+                ],
                 "identifier_definitions": {
                     identifier: definition
                     for identifier, (_display, _target, definition) in index.entries.items()
@@ -466,7 +563,7 @@ class Materializer:
 
             # The incremental manifest records renderer-input hashes.  The
             # projection receipt is deliberately separate and hashes the bytes
-            # a reader sees: every HTML page and the search index, nothing else.
+            # a reader sees: every HTML page, the search index and the site assets.
             expected_paths = sorted(html_result.files)
             write_contract(self.output, expected_paths, notice=self.notice)
             if self.verify_readback:
@@ -608,7 +705,10 @@ class Materializer:
                     xref_display=f"{s['id']}",
                     title=s["name"],
                     label=s["name"],
-                    hint=f"Scope, structure, boundaries, defects, and the survey record for {s['name']}.",
+                    # The page's subheading: its layer, which places it among the
+                    # others. A sentence listing the page's sections says nothing
+                    # the sections do not.
+                    hint=f"In the {s['layer']} layer." if s["layer"] else "",
                     use_when="you have picked a subsystem.",
                     group="Codebase",
                     subgroup="Subsystems",

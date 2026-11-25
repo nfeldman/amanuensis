@@ -56,7 +56,8 @@ class Manifest:
     version: str = MATERIALIZER_VERSION
     generated_at: str = ""
     pages: dict[str, PageManifest] = field(default_factory=dict)
-    # The files a publication writes: every HTML page and `search-index.js`.
+    # The files a publication writes: every HTML page, `search-index.js` and the
+    # content-hashed `assets/site.*.css` and `.js`.
     # Keeping them in the custody manifest lets clean publication distinguish
     # our HTML from unrelated files a human placed beside the docs.
     projection_files: dict[str, str] = field(default_factory=dict)

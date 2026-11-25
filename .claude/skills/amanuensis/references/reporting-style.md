@@ -193,9 +193,19 @@ surfaces so the chromatic marks keep their information value.
   Mermaid or another diagram runtime in the browser.
 - Use a compact atlas for place and a separate topology for recorded relations;
   neither should become a decorative heroic graph or the only route to content.
-- When the recorded workspace has a verified `github.com` origin, make file
-  identities open the reviewed path at that record's revision. Keep the full
-  repository-relative path visible and copyable. Never guess a repository URL.
+- When the recorded workspace's origin is on `github.com`, `gitlab.com` or
+  `bitbucket.org`, make file identities, and repository paths that prose names,
+  open the path on a branch the origin is known to have: the default branch,
+  or a pushed branch holding the checked revision when the default branch does
+  not. Never link a commit, which breaks until it is pushed. Link only paths
+  the file ledger holds and the linked branch has, as of the last fetch; a file
+  added since the last push is marked and not linked. Keep the full
+  repository-relative path visible and copyable. Never guess a repository URL:
+  a self-hosted forge gets no links.
+- Every such path, linked or not, carries `data-source-path` (repository-
+  relative) and `data-source-rev` when the revision is known. These attributes
+  are the contract other readers, such as an editor showing the pages, resolve
+  paths by; keep them on any new path printing.
 - Translate method/storage labels at the projection boundary. Prefer `Concern
   review` over `Concern dispositions`, `Start here` over `Jump-in reading`, and
   `Related subsystems` over `Cross-references` as page headings. Durable schema
