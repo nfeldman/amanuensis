@@ -1,32 +1,33 @@
 #!/usr/bin/env python3
-"""Gate for orientation packet O9 — the overview's Method route
-(design/orientation/PLAN.md §4 O9, §3).
+"""Gate for the two-part overview (owner, 2026-11-26; first orientation packet O9).
+
+The overview says what the codebase is and what its parts are, and nothing
+else. The survey's own bookkeeping is on a back page, About this survey, and
+each page's provenance (branch, commit, freshness, how it was rendered) is in
+its footer.
 
 Turns red when:
 
-  - the overview (index.html) has no "The four lenses" section, or the section
-    has other than one route per lens;
-  - the Method route's visible text does not read "Reader's guide: what
-    each page is for, the terms it uses, and how a survey works";
-  - the Method route's link text is not "Reader's guide", or the link
-    does not point at the guide (how-to-read.html), or the guide it points at is
-    not published;
-  - the old Method wording ("every recorded state, what it authorizes, and what
-    it cannot justify") is still on the overview;
-  - anything else on the overview moved: the Codebase, Unresolved and History
-    routes differ from their published text or targets, or the overview's H2
-    sections are not the expected list in order;
+  - the overview's H2 sections are not exactly "What <codebase> is" and "Its
+    parts", or the first does not carry the recorded purpose;
+  - "Its parts" does not list every subsystem once, under its layer, linked to
+    its page; or a part's line is not its name followed by the first sentence
+    of its recorded purpose, cut at a colon, without repeating the name; or a
+    part with no purpose recorded carries anything but its name;
+  - the overview carries any of the survey's bookkeeping (the old status
+    sections, the lens routes, the method's identity sentence) or a digit;
+  - its closing line does not link the Reader's guide and About this survey,
+    or either page is not published;
+  - About this survey is not the last page of the Method group, or lacks the
+    bookkeeping sections the overview gave up;
+  - a page's snapshot strip sits in its head rather than its footer;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
-(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
-an inline `display: none` or `role="presentation"` on `<main>`, the page head,
-the article or any element around them), which every text check above reads
-straight through.
+(`orientation_exposure.hidden_pages`).
 
-False green it cannot exclude: "nothing else changes" is checked on the lens
-routes, the H2 list and the identity paragraph, not byte for byte against the
-previous overview. The HTML checks read bytes; they do not drive a browser.
+False green it cannot exclude: the HTML checks read bytes; they do not drive a
+browser, so a stylesheet that hid the footer or the parts list would pass.
 
 Output protocol: exactly one status line, last, on stdout. Every subprocess is
 captured and never echoed, and every message is scrubbed.
@@ -99,40 +100,33 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# What PLAN.md fixes, written out here rather than imported, so that rewriting
-# an implementation string cannot also rewrite what this gate expects.
+# What the owner fixed, written out here rather than imported, so that
+# rewriting an implementation string cannot also rewrite what this gate expects.
 # ---------------------------------------------------------------------------
-SECTION = "The four lenses"
-LENSES = ("Codebase", "Unresolved", "History", "Method")
-METHOD_LINK_TEXT = "Reader's guide"
-METHOD_TEXT = "Reader's guide: what each page is for, the terms it uses, and how a survey works"
-OLD_METHOD_WORDS = "every recorded state, what it authorizes, and what it cannot justify"
-# The other three routes, as visible text and target, unchanged by O9.
-OTHER_ROUTES: dict[str, tuple[str, str, str]] = {
-    "Codebase": (
-        "Subsystems",
-        "master-plan",
-        "Subsystems: every region, grouped by layer, with the boundaries and terms recorded for it",
-    ),
-    "Unresolved": (
-        "Open findings",
-        "findings",
-        "Open findings: defects open or awaiting verification at the checked revision",
-    ),
-    "History": (
-        "Resolved findings",
-        "resolved-findings",
-        "Resolved findings: the records that reached a terminal state, with the basis each one rests on",
-    ),
-}
-EXPECTED_H2 = (
-    "What is this codebase?",
+PROJECT = "Fixture Repo"
+PURPOSE = "Fixture Repo keeps a ledger of records and serves them to readers."
+B01_PURPOSE = (
+    "B-01 (Read path) reads every record by key: it opens the store, checks the key"
+    " and returns the row. It never writes."
+)
+B01_LINE = "Read path reads every record by key."
+EXPECTED_H2 = (f"What {PROJECT} is", "Its parts")
+LAYER_HEADINGS = ("Backend", "Frontend")
+GUIDE_LINK = ("Reader's guide", "how-to-read.html")
+ABOUT_LINK = ("About this survey", "about.html")
+ABOUT_H2 = ("Where the record stands", "Findings by resolution state", "Latest session")
+BOOKKEEPING = (
     "Where the record stands",
+    "Source alignment",
+    "Survey coverage",
+    "Open engineering work",
+    "Publication integrity",
     "Findings by resolution state",
     "The four lenses",
     "Latest session",
+    "An agent running Amanuensis",
+    "Amanuensis",
 )
-PROJECT = "Fixture Repo"
 SHA = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"
 SUBSYSTEMS = (
     ("B-01", "Read path", "mapped", "backend", "src/reader.ts", None, None),
@@ -159,6 +153,22 @@ def seed(storage: Path) -> None:
         " VALUES (?, ?, ?, ?, ?, ?, ?)",
         list(SUBSYSTEMS),
     )
+    cur.execute(
+        "INSERT INTO evidence (file_path, line_range, ref_sha, kind, excerpt, session_id)"
+        " VALUES ('src/reader.ts', '1-1', ?, 'code-verified', 'export function read() {}', 'o9')",
+        (SHA,),
+    )
+    evidence_id = cur.lastrowid
+    for subject_type, sid, body in (("project", "project", PURPOSE), ("subsystem", "B-01", B01_PURPOSE)):
+        cur.execute(
+            "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
+            " ref_sha, session_id) VALUES (?, ?, 'purpose', 'recorded', ?, ?, 'o9')",
+            (subject_type, sid, body, SHA),
+        )
+        cur.execute(
+            "INSERT INTO explanation_evidence (explanation_id, evidence_id) VALUES (?, ?)",
+            (cur.lastrowid, evidence_id),
+        )
     # The pages read the imports the store holds, never a file in storage.
     import_onboarding(
         db,
@@ -222,42 +232,32 @@ def html_h2_titles(text: str) -> list[str]:
     return [html_text(m.group(1)).lstrip("§").strip() for m in re.finditer(r"<h2\b[^>]*>(.*?)</h2>", text, re.S)]
 
 
-def html_route_list(section: str) -> list[tuple[str, str]]:
-    """(lens, inner HTML) per <li>, <p> or <tr> that opens with a lens name, duplicates kept."""
-
-    out: list[tuple[str, str]] = []
-    for m in re.finditer(r"<(li|p|tr)\b[^>]*>(.*?)</\1>", section, re.S):
-        for lens in LENSES:
-            if re.match(rf"\s*(<[^>]+>\s*)*{lens}\b", m.group(2)):
-                out.append((lens, m.group(2)))
-                break
-    return out
-
-
-def html_routes(section: str) -> dict[str, str]:
-    """lens -> the inner HTML of the first <li> or <p> that opens with the lens name."""
-
-    out: dict[str, str] = {}
-    for lens, raw in html_route_list(section):
-        out.setdefault(lens, raw)
-    return out
-
-
 def href_pages(fragment: str) -> list[str]:
     return [h.split("#", 1)[0] for h in re.findall(r'href="([^"]+)"', fragment)]
 
 
-def strip_dash(text: str) -> str:
-    return re.sub(r"^[\s—–:-]+", "", text)
+def anchors(fragment: str) -> list[tuple[str, str]]:
+    """(visible text, target page) per link."""
+
+    return [
+        (html_text(inner), href.split("#", 1)[0])
+        for href, inner in re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>', fragment, re.S)
+    ]
 
 
-def strip_trailing(text: str) -> str:
-    return text.strip().rstrip(".").strip()
+def nav_group(text: str, group: str) -> list[str]:
+    """The labels of one navigation group, in order."""
+
+    for section in re.findall(r'<section class="nav-group">(.*?)</section>', text, re.S):
+        title = re.search(r'<h2 class="nav-group-title"[^>]*>(.*?)</h2>', section, re.S)
+        if title and html_text(title.group(1)) == group:
+            return [html_text(m) for m in re.findall(r"<a\b[^>]*>(.*?)</a>", section, re.S)]
+    return []
 
 
 # ---------------------------------------------------------------------------
 def main() -> int:
-    emit("GATE O9 — the overview's Method route")
+    emit("GATE O9 — the two-part overview")
     emit("")
 
     with tempfile.TemporaryDirectory(prefix="o9-gate-") as tmpdir:
@@ -273,6 +273,7 @@ def main() -> int:
         full_html = read(docs / "index.html") or ""
         article = re.search(r"<article\b.*?</article>", full_html, re.S)
         page = article.group(0) if article else full_html
+        about_html = read(docs / "about.html") or ""
 
         def published() -> str | None:
             if summary.get("_returncode") != 0 or not summary.get("ok"):
@@ -283,95 +284,97 @@ def main() -> int:
 
         check("a fixture store publishes its overview", published)
 
-        html_sec = html_section(page, SECTION)
-        html_r = html_routes(html_sec)
+        def two_sections() -> str | None:
+            got = tuple(html_h2_titles(page))
+            return None if got == EXPECTED_H2 else f"the overview's H2 sections are {list(got)!r}, not {list(EXPECTED_H2)!r}"
 
-        def routes_present() -> str | None:
-            if not html_sec.strip():
-                return f"index.html has no {SECTION!r} section"
-            for lens in LENSES:
-                if lens not in html_r:
-                    return f"index.html has no {lens} route"
+        check("the overview has two sections: what the codebase is, and its parts", two_sections)
+
+        def purpose_first() -> str | None:
+            body = html_text(html_section(page, EXPECTED_H2[0]))
+            return None if PURPOSE in body else f"the first section reads {body[:160]!r}, not the recorded purpose"
+
+        check("the first section is the recorded purpose", purpose_first)
+
+        parts = html_section(page, EXPECTED_H2[1])
+        items = [html_text(li) for li in re.findall(r"<li\b[^>]*>(.*?)</li>", parts, re.S)]
+
+        def every_part_once() -> str | None:
+            links = anchors(parts)
+            wanted = {name: f"subsystems/{sid.lower().replace('-', '')}-{name.lower().replace(' ', '-')}.html" for sid, name, *_ in SUBSYSTEMS}
+            if len(items) != len(SUBSYSTEMS):
+                return f"Its parts lists {len(items)} items for {len(SUBSYSTEMS)} subsystems: {items!r}"
+            for name, target in wanted.items():
+                hits = [href for text, href in links if text == name]
+                if hits != [target]:
+                    return f"{name!r} is linked {hits!r}, not once to {target}"
+            heads = [html_text(h) for h in re.findall(r"<h3\b[^>]*>(.*?)</h3>", parts, re.S)]
+            if tuple(h.lstrip("§").strip() for h in heads) != LAYER_HEADINGS:
+                return f"the layer headings are {heads!r}, not {list(LAYER_HEADINGS)!r}"
             return None
 
-        check("the overview has a route for each lens", routes_present)
+        check("Its parts lists every subsystem once, under its layer, linked to its page", every_part_once)
 
-        def one_route_each() -> str | None:
-            # Count before the dictionary folds duplicates away.
-            names = [lens for lens, _ in html_route_list(html_sec)]
-            if names != list(LENSES):
-                return f"index.html has the routes {names}, expected one each: {list(LENSES)}"
+        def part_lines() -> str | None:
+            if B01_LINE not in items:
+                return f"the Read path line is not {B01_LINE!r}: {items!r}"
+            if "Console" not in items:
+                return f"a part with no purpose recorded carries more than its name: {items!r}"
             return None
 
-        check("the overview has exactly one route per lens, in order", one_route_each)
+        check("a part reads its name and its purpose's gist; a part with none, its name", part_lines)
 
-        def method_text_html() -> str | None:
-            raw = html_r.get("Method")
-            if raw is None:
-                return "index.html has no Method route"
-            visible = html_text(raw)
-            got = strip_trailing(re.sub(r"^Method\b\s*[—–:-]?\s*", "", visible))
-            if got != METHOD_TEXT:
-                return f"the HTML Method route reads {got!r}, not {METHOD_TEXT!r}"
+        def no_bookkeeping() -> str | None:
+            text = html_text(page)
+            for words in BOOKKEEPING:
+                if words in text:
+                    return f"the overview still carries {words!r}"
+            digits = re.findall(r"\d", text)
+            if digits:
+                return f"the overview prints a digit: {text[:200]!r}"
             return None
 
-        check("the Method route reads the plan's sentence", method_text_html)
+        check("the overview carries no bookkeeping and no figure", no_bookkeeping)
 
-        def method_link_html() -> str | None:
-            raw = html_r.get("Method", "")
-            anchors = re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>', raw, re.S)
-            if len(anchors) != 1:
-                return f"the HTML Method route carries {len(anchors)} links, expected 1"
-            href, inner = anchors[0]
-            if html_text(inner) != METHOD_LINK_TEXT:
-                return f"the HTML Method link text is {html_text(inner)!r}, not {METHOD_LINK_TEXT!r}"
-            if href.split("#", 1)[0] != "how-to-read.html":
-                return f"the HTML Method link points at {href!r}, not how-to-read.html"
-            if not (docs / "how-to-read.html").is_file():
-                return "the guide the Method route links is not published"
+        def closing_line() -> str | None:
+            links = anchors(page)
+            for text, target in (GUIDE_LINK, ABOUT_LINK):
+                if (text, target) not in links:
+                    return f"the overview does not link {text!r} -> {target}: {links!r}"
+                if not (docs / target).is_file():
+                    return f"{target} is not published"
             return None
 
-        check("the Method route links the guide", method_link_html)
+        check("the closing line links the Reader's guide and About this survey", closing_line)
 
-        def old_wording_gone() -> str | None:
-            if OLD_METHOD_WORDS in html_text(page):
-                return "index.html still carries the old Method wording"
+        def about_page() -> str | None:
+            if not about_html:
+                return "about.html was not published"
+            method = nav_group(full_html, "Method")
+            if not method or method[-1] != ABOUT_LINK[0]:
+                return f"the Method group ends {method[-3:]!r}, not with {ABOUT_LINK[0]!r}"
+            article = re.search(r"<article\b.*?</article>", about_html, re.S)
+            got = html_h2_titles(article.group(0) if article else "")
+            missing = [h for h in ABOUT_H2 if h not in got]
+            return f"About this survey lacks {missing!r}; it has {got!r}" if missing else None
+
+        check("About this survey ends the Method group and carries the bookkeeping", about_page)
+
+        def strip_in_footer() -> str | None:
+            pages = sorted(docs.rglob("*.html"))
+            if not pages:
+                return "no HTML page was published"
+            for path in pages:
+                text = read(path) or ""
+                head = re.search(r'<header class="page-head">(.*?)</header>', text, re.S)
+                foot = re.search(r'<footer class="page-foot">(.*?)</footer>', text, re.S)
+                if head is None or foot is None:
+                    return f"{path.name} has no page head or no page footer"
+                if "snapshot-strip" in head.group(1) or "snapshot-strip" not in foot.group(1):
+                    return f"{path.name} prints its snapshot strip outside its footer"
             return None
 
-        check("the old Method wording is gone", old_wording_gone)
-
-        def others_text_unchanged() -> str | None:
-            for lens, (_link_text, _page_stem, want) in OTHER_ROUTES.items():
-                hraw = html_r.get(lens)
-                if hraw is None:
-                    return f"the {lens} route is missing"
-                hgot = strip_trailing(re.sub(rf"^{lens}\b\s*[—–:-]?\s*", "", html_text(hraw)))
-                if hgot != want:
-                    return f"the HTML {lens} route reads {hgot!r}, not {want!r}"
-            return None
-
-        def others_links_unchanged() -> str | None:
-            for lens, (link_text, page_stem, _want) in OTHER_ROUTES.items():
-                hraw = html_r.get(lens)
-                if hraw is None:
-                    return f"the {lens} route is missing"
-                links = re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>', hraw, re.S)
-                if len(links) != 1 or html_text(links[0][1]) != link_text:
-                    return f"the HTML {lens} link is {links!r}, not {link_text!r} -> {page_stem}.html"
-                if href_pages(hraw) != [f"{page_stem}.html"]:
-                    return f"the HTML {lens} link targets {href_pages(hraw)!r}, not {page_stem}.html"
-            return None
-
-        check("the Codebase, Unresolved and History routes read as before", others_text_unchanged)
-        check("the Codebase, Unresolved and History routes link their pages as before", others_links_unchanged)
-
-        def sections_unchanged() -> str | None:
-            hgot = html_h2_titles(page)
-            if tuple(hgot) != EXPECTED_H2:
-                return f"the HTML overview's H2 sections are {hgot!r}, not {list(EXPECTED_H2)!r}"
-            return None
-
-        check("the overview's sections are unchanged", sections_unchanged)
+        check("every page prints its provenance in its footer, not its head", strip_in_footer)
         check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
 
     def in_ci() -> str | None:

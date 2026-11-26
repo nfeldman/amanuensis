@@ -9,9 +9,10 @@ Turns red when:
     page" popover in the head holds no `use_when` paragraph reading "Use it
     when <Appendix D text>"; in particular when a prose source opens with an H2
     rather than an H1;
-  - a top-level page or an evidence matrix page prints a hint under its title
-    (the title says what the page holds; owner ruling 2026-11-25), or a
-    subsystem page prints none (its hint is its layer);
+  - any page prints a hint under its title (the title says what the page holds;
+    owner rulings 2026-11-25 and, for subsystem pages, 2026-11-26), or a
+    subsystem page's head does not name its layer and id on the line above the
+    title, with its survey depth as a tag titled "Survey depth";
   - a page's HTML head prints no `use_when` at all, carries markup inside its
     hint or `use_when`, or prints the same hint paragraph a second time inside
     the article body, including when the xref pass has bolded or linked an ID
@@ -122,7 +123,7 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # path -> (label, group, use_when). Labels follow the owner's retitling of
 # 2026-11-25; no top-level page has a hint.
 STATIC_PAGES: dict[str, tuple[str, str, str]] = {
-    "index.html": ("Overview", "Overview", "you arrive, or want the current counts."),
+    "index.html": ("Overview", "Overview", "you want to know what the codebase is and what its parts are."),
     "architecture.html": ("Architecture", "Codebase", "you want the overall shape before reading any one part."),
     "master-plan.html": ("Subsystems", "Codebase", "you are looking for the part of the code that does something."),
     "files.html": ("Files", "Codebase", "you want to know whether a particular file was read."),
@@ -146,6 +147,7 @@ STATIC_PAGES: dict[str, tuple[str, str, str]] = {
     "diagnosticity.html": ("Competing explanations", "Method", "you want to see how a symptom's cause was weighed."),
     "onboarding-report.html": ("Onboarding record", "Method", "you want the first pass's decisions about scope and split."),
     "entry-point.html": ("First reading path", "Method", "you want the reading path an earlier session wrote."),
+    "about.html": ("About this survey", "Method", "you want to know how much of the code was read, what is open, and when the survey last ran."),
 }
 SUBSYSTEM_ROW = ("Subsystem pages", "you have picked a subsystem.")
 MATRIX_ROW = ("Evidence tables", "you followed a DM- link.")
@@ -384,21 +386,29 @@ def main() -> int:
             matrix_pages = sorted((docs / "diagnosticity").glob("*.html")) if (docs / "diagnosticity").is_dir() else []
             if len(subsystem_pages) != len(SUBSYSTEMS) or len(matrix_pages) != 1:
                 return f"fixture published {len(subsystem_pages)} subsystem pages and {len(matrix_pages)} matrix pages"
-            for pages, (_label, fragment), hinted in ((subsystem_pages, SUBSYSTEM_ROW, True), (matrix_pages, MATRIX_ROW, False)):
+            layers = {sid.lower().replace("-", ""): layer for sid, _name, _status, layer, *_ in SUBSYSTEMS}
+            for pages, (_label, fragment) in ((subsystem_pages, SUBSYSTEM_ROW), (matrix_pages, MATRIX_ROW)):
                 for page in pages:
-                    head = head_of(page.read_text())
+                    text = page.read_text()
+                    head = head_of(text)
                     if head is None:
                         return f"{page.name} does not open with an H1 and a use_when in its popover"
-                    if hinted and not htmllib.unescape(head[1]).strip():
-                        return f"{page.name} has no hint (its layer) under its H1"
-                    if not hinted and htmllib.unescape(head[1]).strip():
-                        return f"{page.name} prints a hint under its H1 ({head[1][:80]!r}); a matrix page has none"
+                    if htmllib.unescape(head[1]).strip():
+                        return f"{page.name} prints a hint under its H1 ({head[1][:80]!r}); no page has one"
+                    if pages is subsystem_pages:
+                        eyebrows = re.search(r'<div class="page-eyebrows">(.*?)</div>', text, re.S)
+                        line = htmllib.unescape(re.sub(r"<[^>]+>", "", eyebrows.group(1))) if eyebrows else ""
+                        layer = layers.get(page.name.split("-", 1)[0], "")
+                        if f"Layer · {layer}" not in line or "Subsystem · " not in line:
+                            return f"{page.name}'s head line reads {line!r}, not its layer {layer!r} and id"
+                        if not eyebrows or '<span class="page-status" title="Survey depth"' not in eyebrows.group(1):
+                            return f"{page.name}'s head line carries no survey-depth tag titled 'Survey depth'"
                     use = htmllib.unescape(head[2]).strip()
                     if use != f"Use it when {fragment}":
                         return f"{page.name}: use_when reads {use!r}, not 'Use it when {fragment}'"
             return None
 
-        check("subsystem pages carry their layer as a hint, matrix pages none, both the subgroup's use_when", dynamic_pages_carry_use_when)
+        check("subsystem pages name their layer, id and depth above the title, no page has a hint, both the subgroup's use_when", dynamic_pages_carry_use_when)
 
         # -- the head is printed once, as plain text -------------------------
         def head_printed_once() -> str | None:

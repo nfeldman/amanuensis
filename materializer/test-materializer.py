@@ -318,7 +318,7 @@ def main() -> None:
         head = subprocess.check_output(
             ["git", "-C", str(ROOT.parent), "rev-parse", "HEAD"], text=True,
         ).strip()
-        assert head[:12] in (relocated / "index.html").read_text()
+        assert head[:12] in (relocated / "about.html").read_text()
         assert (storage / "workspace_path").read_text() == "/example/FictionalProject\n"
         # Verify key pages exist.
         docs = storage / "docs"

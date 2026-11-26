@@ -151,7 +151,7 @@ REFUSAL = (
     " record a corrected version."
 )
 NARRATIVE_LABEL = "Narrative from the survey artifact; not individually bound to a revision"
-NOT_MEASURED = "Whether the files it cites have changed since is not measured here."
+NOT_MEASURED = "Not checked against later changes."
 
 READER = "src/reader.py"
 REGISTRY = "src/registry.py"
@@ -617,11 +617,14 @@ def tree_digest(directory: Path) -> dict[str, str]:
 
 
 def provenance(sha: str, n: int, ageing: str) -> str:
-    return squash(plain(f"*Written by a survey session at `{sha[:8]}` from {n} evidence row(s). {ageing}*"))
+    """The quiet provenance line (owner, 2026-11-26): the revision, then a clause only
+    when a cited file changed or nothing could check. `n` is kept for the callers."""
+
+    return squash(plain(f"Recorded at `{sha[:8]}`." + (f" {ageing}" if ageing else "")))
 
 
 def none_changed(n: int) -> str:
-    return f"None of the {n} file(s) it cites has changed since."
+    return ""
 
 
 def declined_purpose(sha: str, reason: str) -> str:
@@ -762,7 +765,7 @@ def main() -> int:
                 if words and words not in sections["How it works"]:
                     return f"the account line {words!r} is not under How it works on the HTML page"
             for heading in ("Purpose", "How it works"):
-                if "Written by a survey session at" not in sections[heading]:
+                if "Recorded at" not in sections[heading]:
                     return f"{heading} carries no provenance line on the HTML page"
             declined = html_sections(html_view("B-03"))
             if REASON_PURPOSE_B03 not in declined.get("Purpose", ""):
@@ -846,7 +849,7 @@ def main() -> int:
             want = declined_purpose(shas["c1"], REASON_PURPOSE_B03)
             if want not in body:
                 return f"the declined purpose reads {body!r}, not {want!r}"
-            if "Written by a survey session" in body:
+            if "Recorded at" in body:
                 return "a declination carries a provenance line"
             if NO_PURPOSE_STEM in section(text, "Scope"):
                 return "Scope prints the disclaimer beside a declined purpose"
@@ -870,7 +873,7 @@ def main() -> int:
                 return why
             cases = (
                 ("good", none_changed(2)),
-                ("one", f"1 of the 2 file(s) it cites changed since: `{READER}`."),
+                ("one", f"1 of its 2 cited files changed since: `{READER}`."),
                 ("lost", NOT_MEASURED),
                 ("unbound", NOT_MEASURED),
             )
@@ -879,6 +882,9 @@ def main() -> int:
                 want = provenance(shas["c1"], 2, sentence)
                 if want not in squash(body):
                     return f"store {name!r}: the provenance line is not `{want}`; got {body.strip()!r}"
+                # Unchanged prints no clause, so the bare line must not be followed by one.
+                if not sentence and ("cited files changed since" in body or NOT_MEASURED in body):
+                    return f"store {name!r}: unchanged files print an ageing clause: {body.strip()!r}"
             # The unbound reading is still rendered, never silently dropped.
             if PURPOSE_B01 not in page("unbound", "B-01"):
                 return "with no workspace the explanation is not rendered"
@@ -895,7 +901,7 @@ def main() -> int:
             if (why := published("awkward")):
                 return why
             paths = ", ".join(f"`{rel}`" for rel in sorted(AWKWARD))
-            sentence = f"{len(AWKWARD)} of the {len(AWKWARD)} file(s) it cites changed since: {paths}."
+            sentence = f"{len(AWKWARD)} of its {len(AWKWARD)} cited files changed since: {paths}."
             body = section(page("awkward", "B-07"), "Purpose")
             if provenance(shas["c4"], len(AWKWARD), sentence) not in squash(body):
                 return f"a change to a path git quotes, trims or reads as magic is misreported: {body.strip()!r}"
@@ -925,7 +931,7 @@ def main() -> int:
             if done.get("_returncode") != 0:
                 return f"the materializer failed — {done.get('_diagnostic')}"
             named = ", ".join(f"`{rel}`" for rel in sorted(SIX_FILES)[:5])
-            sentence = f"6 of the 6 file(s) it cites changed since: {named}, and others."
+            sentence = f"6 of its 6 cited files changed since: {named}, and others."
             want = provenance(shas["c6"], 7, sentence)
             body = section(subsystem_page(storage / "docs", "B-07"), "Purpose")
             if want not in squash(body):
@@ -1175,7 +1181,7 @@ def main() -> int:
             page_after, hash_after = reading()
             if provenance(shas["c1"], 2, none_changed(2)) not in squash(page_before):
                 return "the fixture's ageing line is not the unchanged one"
-            moved = f"1 of the 2 file(s) it cites changed since: `{READER}`."
+            moved = f"1 of its 2 cited files changed since: `{READER}`."
             if provenance(shas["c1"], 2, moved) not in squash(page_after):
                 return f"the ageing line did not follow the head: {page_after.strip()!r}"
             if hash_after == hash_before:

@@ -450,8 +450,8 @@ def golden_additions_only(previous: Path | None) -> str | None:
         return f"the golden corpus's VERSION is {version.read_text().strip() if version.is_file() else 'absent'!r}, not {PACKET} or a later diagram packet"
     if previous is None:
         return f"the golden corpus cannot be read from git at {START_SHA[:12]}"
-    before = {str(p.relative_to(previous)): p for p in previous.rglob("*.html") if "/html/" in str(p)}
-    after = {str(p.relative_to(GOLDEN)): p for p in GOLDEN.rglob("*.html") if "/html/" in str(p)}
+    before = {str(p.relative_to(previous)): p for p in previous.rglob("*.html") if "/html/" in str(p) and not lineage_style.is_uncompared_golden(str(p.relative_to(previous)))}
+    after = {str(p.relative_to(GOLDEN)): p for p in GOLDEN.rglob("*.html") if "/html/" in str(p) and not lineage_style.is_uncompared_golden(str(p.relative_to(GOLDEN)))}
     if sorted(before) != sorted(after):
         return f"the corpus holds {len(after)} HTML pages for the start's {len(before)}"
     gained = 0

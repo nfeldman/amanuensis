@@ -685,8 +685,8 @@ def main() -> int:
                         return f"the tree this packet started from did not publish the {store} store"
                     after = runs[store][1]
                     files = sorted(
-                        {str(p.relative_to(before)) for p in before.rglob("*") if p.is_file() and p.suffix in (".html", ".js") and not lineage_style.is_style_asset(str(p.relative_to(before if p.is_relative_to(before) else after)))}
-                        | {str(p.relative_to(after)) for p in after.rglob("*") if p.is_file() and p.suffix in (".html", ".js") and not lineage_style.is_style_asset(str(p.relative_to(before if p.is_relative_to(before) else after)))}
+                        {str(p.relative_to(before)) for p in before.rglob("*") if p.is_file() and p.suffix in (".html", ".js") and not lineage_style.is_uncompared(str(p.relative_to(before if p.is_relative_to(before) else after)))}
+                        | {str(p.relative_to(after)) for p in after.rglob("*") if p.is_file() and p.suffix in (".html", ".js") and not lineage_style.is_uncompared(str(p.relative_to(before if p.is_relative_to(before) else after)))}
                     )
                     for name in FAMILY:
                         if f"{name}.html" not in files:

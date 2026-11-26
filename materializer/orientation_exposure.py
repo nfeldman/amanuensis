@@ -3,8 +3,8 @@
 The gates read a page's text, links, counts and SVG from its bytes. An attribute
 that removes the report from the accessibility tree (`aria-hidden="true"` on the
 shared `<main>`, say) leaves every one of those reads satisfied, so each gate
-also asks this module whether the page head, the article and every element
-around them are exposed.
+also asks this module whether the page head, the article, the page foot and
+every element around them are exposed.
 
 Hidden means: `aria-hidden="true"`, the `hidden` or `inert` attribute, an inline
 `display: none` or `visibility: hidden`, or `role="presentation"`/`role="none"`.
@@ -42,7 +42,13 @@ def _hides(tag: str, attrs: list[tuple[str, str | None]]) -> str | None:
 
 def _is_report(tag: str, attrs: list[tuple[str, str | None]]) -> bool:
     classes = (dict(attrs).get("class") or "").split()
-    return tag == "main" or tag == "article" or (tag == "header" and "page-head" in classes)
+    return (
+        tag == "main"
+        or tag == "article"
+        or (tag == "header" and "page-head" in classes)
+        # The page foot carries the revision, freshness and render notice (codex, 2026-11-26).
+        or (tag == "footer" and "page-foot" in classes)
+    )
 
 
 class _Exposure(HTMLParser):

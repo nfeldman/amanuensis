@@ -837,7 +837,7 @@ Still open:
 | Lens | | One of four groups of pages: Codebase (what the project is), Unresolved (open work), History (what was settled), Method (how far to trust the rest). |
 | Thesis | | The paragraph on the overview that says what the codebase does. |
 | Purpose, account | explanation | A subsystem's one-sentence purpose and its longer explanation of how it works, each written from evidence. |
-| Publication check | read-back | After building the site, Amanuensis reads it back to confirm it matches the record. The overview shows the result. |
+| Publication check | read-back | After building the site, Amanuensis reads it back to confirm it matches the record. About this survey shows the result. |
 
 `pages` for each term: the packet fills it from where the term's label is printed (for
 example Lead → `field-notes.md`, `resolved-leads.md`, subsystem pages).
@@ -859,14 +859,18 @@ where this page says otherwise, the letters are not a code: read the name beside
 
 ## Appendix C · How a survey works (draft copy)
 
-**Overview identity (item 1 of §7.2):** "An architecture survey of {name}. An AI agent running
-Amanuensis read the repository, without changing it, and recorded what it found here. New to this
-site? Start with [How to read this survey](how-to-read.md)."
+**Overview (revised 2026-11-26, owner):** the overview is two parts and a closing line: the
+codebase's recorded purpose under "What {name} is", then "Its parts", each subsystem by layer as
+its linked name and the first sentence of its recorded purpose. The closing line reads "New to
+this site? Start with the [Reader's guide](how-to-read.html). How far the survey got is in
+[About this survey](about.html)." The overview names no method and prints no figure; the status
+dimensions, per-state finding counts and latest session moved to About this survey, the last
+page of Method. The identity sentence that used to open the overview moved to the guide.
 
-**Guide, "What this site is":** "This site is the record of an AI agent's survey of {name}. The
-agent read the code, recorded what it concluded and the code each conclusion rests on, and
-listed what it could not settle. It does not change the code. Every page is as of one commit,
-shown at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
+**Guide, "What this site is":** "This site is the record of a survey of {name} by an AI agent
+running Amanuensis. The agent read the code without changing it, recorded what it concluded and
+the code each conclusion rests on, and listed what it could not settle. Every page is as of one
+commit, shown at the foot of each page as *Checked* and on [About this survey](about.html)."
 (Revised by the slice-S2 fix, F6: the Markdown pages carry no *Checked* line at the top.)
 
 **Guide, "How a survey works":**
@@ -915,7 +919,7 @@ Use it when. "Use it when" is unchanged.
 
 | Page | Hint | Use it when |
 |---|---|---|
-| Overview | none | you arrive, or want the current counts. |
+| Overview | none | you want to know what the codebase is and what its parts are. |
 | Architecture | none | you want the overall shape before reading any one part. |
 | Subsystems | none | you are looking for the part of the code that does something. |
 | Files | none | you want to know whether a particular file was read. |
@@ -939,5 +943,6 @@ Use it when. "Use it when" is unchanged.
 | Competing explanations | none | you want to see how a symptom's cause was weighed. |
 | Onboarding record | none | you want the first pass's decisions about scope and split. |
 | First reading path | none | you want the reading path an earlier session wrote. |
-| Subsystem pages | its layer | you have picked a subsystem. |
+| About this survey | none | you want to know how much of the code was read, what is open, and when the survey last ran. |
+| Subsystem pages | none (the layer is on the line above the title, with the id and depth) | you have picked a subsystem. |
 | Evidence tables | none | you followed a `DM-` link. |

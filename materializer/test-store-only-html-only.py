@@ -26,7 +26,7 @@ Turns red when:
   - cross-references are not resolved: the imported entry point's bare B-01
     and SM-01 are not linked, or B-01's name is not printed beside it;
   - the reader's guide still mentions a Markdown view, or a page carries the
-    command-line render notice anywhere but its page head;
+    command-line render notice anywhere but its page footer;
   - any local link in any page (or in the golden corpus) targets a `.md`;
   - the golden corpus's `VERSION` is not SO13 (or SO20, which only adds the
     record attributes of §3.5; they are removed before comparing), it holds a
@@ -603,7 +603,7 @@ def main() -> int:
 
         check("the reader's guide does not mention a Markdown view", guide_one_view)
 
-        def notice_in_head_only() -> str | None:
+        def notice_in_foot_only() -> str | None:
             if not first:
                 return "no publication"
             from html import escape  # noqa: PLC0415
@@ -614,12 +614,12 @@ def main() -> int:
                 if not rel.endswith(".html"):
                     continue
                 text = (docs / rel).read_text()
-                head = re.search(r'<header class="page-head">(.*?)</header>', text, re.S)
-                if text.count(escape(CLI_RENDER_NOTICE)) != 1 or head is None or escape(CLI_RENDER_NOTICE) not in head.group(1):
-                    return f"{rel} does not carry the command-line render notice once, in its page head"
+                foot = re.search(r'<footer class="page-foot">(.*?)</footer>', text, re.S)
+                if text.count(escape(CLI_RENDER_NOTICE)) != 1 or foot is None or escape(CLI_RENDER_NOTICE) not in foot.group(1):
+                    return f"{rel} does not carry the command-line render notice once, in its page footer"
             return None
 
-        check("a command-line render's notice is in each page head, once", notice_in_head_only)
+        check("a command-line render's notice is in each page footer, once", notice_in_foot_only)
 
         # -- over a previous .md + .html publication -----------------------------
         def upgrade_in_place() -> str | None:
@@ -691,8 +691,9 @@ def main() -> int:
                 return f"SO11's golden corpus cannot be read from git at {START_SHA[:12]}"
             compared = 0
             for name in GOLDEN_FIXTURES:
-                before = html_pages(previous, name)
-                after = html_pages(GOLDEN, name)
+                # The two-part overview and About this survey have no SO11 counterpart.
+                before = {k: v for k, v in html_pages(previous, name).items() if k not in lineage_style.UNCOMPARED_PAGES}
+                after = {k: v for k, v in html_pages(GOLDEN, name).items() if k not in lineage_style.UNCOMPARED_PAGES}
                 pairs: dict[str, str] = {}
                 fixed = recorded_inputs(GOLDEN, name)
                 if not after or sorted(after) != sorted(before):
@@ -709,7 +710,8 @@ def main() -> int:
                     if drift:
                         return f"golden {name}/{rel}: {drift}"
                     compared += 1
-            return None if compared >= 140 else f"only {compared} golden pages were compared"
+            # 134 since the overview and the guide left the comparison (lineage_style.UNCOMPARED_PAGES, 2026-11-26).
+            return None if compared >= 130 else f"only {compared} golden pages were compared"
 
         check("the golden corpus is SO13's and differs from SO11's only where HTML-only output changes it", golden_regenerated)
 

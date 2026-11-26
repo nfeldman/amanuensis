@@ -259,7 +259,8 @@ NOT_RECORDED = "not recorded"
 SUPERSEDED_HEADING = "Superseded: this subsystem previously declared no domain vocabulary"
 DECLINED_INDEX_HEADING = "Subsystems that declared no domain vocabulary"
 
-OVERVIEW_PAGE = "index.html"
+# The coverage rows left the overview for About this survey (owner, 2026-11-26).
+OVERVIEW_PAGE = "about.html"
 GAPS_PAGE = "not-yet-surveyed.html"
 FINDINGS_PAGE = "findings.html"
 RESOLVED_PAGE = "resolved-findings.html"

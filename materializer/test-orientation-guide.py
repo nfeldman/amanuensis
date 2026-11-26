@@ -130,11 +130,12 @@ H2_ORDER = (
     "Full vocabulary",
 )
 OPTIONAL_H2 = ("How a survey works", "How IDs are formed")  # absent until O4 and O5
+# Amanuensis is named here, in the guide, and not on the overview (owner, 2026-11-26).
 SITE_PARAGRAPH = (
-    "This site is the record of an AI agent's survey of {name}. The agent read the code,"
-    " recorded what it concluded and the code each conclusion rests on, and listed what it"
-    " could not settle. It does not change the code. Every page is as of one commit, shown"
-    " at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
+    "This site is the record of a survey of {name} by an AI agent running Amanuensis. The"
+    " agent read the code without changing it, recorded what it concluded and the code each"
+    " conclusion rests on, and listed what it could not settle. Every page is as of one"
+    " commit, shown at the foot of each page as *Checked* and on [About this survey](about.html)."
 )
 # A glob in a term's `pages` (`<family>/*...`) stands for the page that lists the family.
 FAMILY_LISTING = {"subsystems": "master-plan.html", "diagnosticity": "diagnosticity.html"}
@@ -416,15 +417,16 @@ def main() -> int:
             if not first:
                 return "the 'What this site is' section has no paragraph"
             paragraph = html_text(first.group(1))
-            want = SITE_PARAGRAPH.replace("*", "")
+            want = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", SITE_PARAGRAPH.replace("*", ""))
             match = re.fullmatch(re.escape(want).replace(re.escape("{name}"), r"(.+?)"), paragraph)
             if not match:
                 return f"the first paragraph is {paragraph[:160]!r}, not Appendix C's"
             if not match.group(1).strip():
                 return "the paragraph names no project"
-            for emphasised in ("Checked", "Checked at"):
-                if f"<em>{emphasised}</em>" not in first.group(1):
-                    return f"the paragraph does not emphasise {emphasised!r}"
+            if "<em>Checked</em>" not in first.group(1):
+                return "the paragraph does not emphasise 'Checked'"
+            if 'href="about.html"' not in first.group(1):
+                return "the paragraph does not link About this survey"
             return None
 
         check("'What this site is' is Appendix C's paragraph, naming the project", site_paragraph)
@@ -436,11 +438,12 @@ def main() -> int:
                 return "the fixture published no HTML pages"
             for path in html_pages:
                 text = read(path) or ""
-                if not re.search(r'<span class="snapshot-item"><b>Checked</b>', text):
-                    return f"{path.relative_to(docs)} shows no Checked commit at the top"
-            index_html = read(docs / "index.html") or ""
-            if not re.search(r"<dt>Checked at</dt><dd>\s*\S", index_html):
-                return "index.html has no 'Checked at' row"
+                foot = re.search(r'<footer class="page-foot">(.*?)</footer>', text, re.S)
+                if not foot or not re.search(r'<span class="snapshot-item"><b>Checked</b>', foot.group(1)):
+                    return f"{path.relative_to(docs)} shows no Checked commit at its foot"
+            about_html = read(docs / "about.html") or ""
+            if not re.search(r"<dt>Checked at</dt><dd>\s*\S", about_html):
+                return "about.html has no 'Checked at' row"
             return None
 
         check("the guide's 'Checked' promise holds where it says: each HTML page and the overview row", checked_where_promised)

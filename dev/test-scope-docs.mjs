@@ -9,7 +9,7 @@
 //     sentence (a pure insertion into the section, against the section at the packet's start
 //     commit) that says a survey leaves out the paths the repository's ignore files match, the
 //     paths the owner excluded and the paths sorted as meta; that an excluded path gets no
-//     ledger row and no evidence; that it shows on the overview only as a count; and that an
+//     ledger row and no evidence; that it shows on About this survey only as a count; and that an
 //     owner include brings a path back. A line added outside that section names the survey
 //     set or a scope tool. The rest of README.md is not this packet's, so later edits to it pass;
 //   - INSTALLATION.md names the survey set, Phase 0b or a scope tool (no command changed, so it
@@ -263,7 +263,7 @@ check("README.md", () => {
     ["the paths sorted as meta", /\bmeta\b/],
     ["that an excluded path gets no ledger row", /\bno ledger row\b|\bledger row\b[^.]*\bnone\b|\bwithout (?:a )?ledger row/],
     ["that it gets no evidence", NO_EVIDENCE],
-    ["that it shows only as a count on the overview", /\bcount\b[^.]*\boverview\b|\boverview\b[^.]*\bcount\b/],
+    ["that it shows only as a count on About this survey", /\bcount\b[^.]*\babout this survey\b|\babout this survey\b[^.]*\bcount\b/],
     ["that an owner include brings a path back", /\binclude\b[^.]*\b(?:back|returns?|restores?)\b|\b(?:back|returns?|restores?)\b[^.]*\binclude\b/],
   ]);
   if (missing) return `the added sentence ${missing}: "${scrub(sentenceList[0])}"`;

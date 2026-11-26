@@ -344,8 +344,6 @@ def main() -> int:
             for store in STORES:
                 _storage, output, _summary, _calls = runs[store]
                 for page in FAMILY:
-                    if store == "lens" and page == "index":
-                        continue  # its Repository head row names a workspace; see the start-tree check
                     wanted = golden_page(store, page)
                     path = output / f"{page}.html"
                     if wanted is None or not path.is_file():
@@ -371,6 +369,8 @@ def main() -> int:
                     return "the tree this packet started from did not publish the lens fixture"
                 _s, output, _summary, _calls = runs["lens"]
                 for page in FAMILY:
+                    if f"{page}.html" in lineage_style.UNCOMPARED_PAGES:
+                        continue
                     if lineage_style.current(unmarked((output / f"{page}.html").read_text())) != lineage_style.start((before / f"{page}.html").read_text()):
                         return f"lens/{page}.html differs from the page the start tree printed for the same store"
             return None

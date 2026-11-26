@@ -37,7 +37,9 @@ Turns red when:
   - the HTML architecture page drops the section, or the read-back misses the
     project account removed from it;
   - the overview differs from the overview of the same store with no explanation
-    rows, or the gate is not listed in CI.
+    rows anywhere but Its parts, or a part's line there is not the first sentence
+    of its recorded purpose (none for an ineligible subsystem), or the gate is not
+    listed in CI.
 
 False green it cannot exclude: prose that passes the lint and misleads. This
 gate asserts where an explanation appears and that the pages, the census and
@@ -508,8 +510,13 @@ def master_table(markup: str) -> tuple[list[str], dict[str, dict[str, str]]]:
     return labels, by_id
 
 
+PROVENANCE_STEM = "Recorded at"
+
+
 def provenance(n: int, ageing: str, sha: str) -> str:
-    return f"Written by a survey session at {sha[:8]} from {n} evidence row(s). {ageing}"
+    """The quiet provenance line (owner, 2026-11-26); `n` is kept for the callers."""
+
+    return f"{PROVENANCE_STEM} {sha[:8]}." + (f" {ageing}" if ageing else "")
 
 
 def main() -> int:
@@ -588,7 +595,7 @@ def main() -> int:
             if PURPOSE_B04 in plain(article_of(master)):
                 return "the master plan prints a purpose recorded for a deferred subsystem"
             purpose = by_id["B-01"]["Purpose"]
-            if "provenance" in purpose.lower() or "Written by a survey session" in purpose:
+            if "provenance" in purpose.lower() or PROVENANCE_STEM in purpose:
                 return "the master plan's purpose excerpt carries a provenance line"
             return None
 
@@ -645,9 +652,10 @@ def main() -> int:
             body = plain(opening)
             if ACCOUNT_PROJECT not in body:
                 return "the project account is not under the opening section"
-            want = provenance(3, "None of the 3 file(s) it cites has changed since.", shas["c1"])
-            if want not in [visible(em) for em in re.findall(r"(?is)<em>(.*?)</em>", opening)]:
-                return f"the provenance line is not the italic line `{want}`"
+            want = provenance(3, "", shas["c1"])
+            marked = [visible(p) for p in re.findall(r'(?is)<p class="provenance">(.*?)</p>', opening)]
+            if want not in marked:
+                return f"the provenance line is not the muted line `{want}`; got {marked}"
             if plain(article_of(text)).count(ACCOUNT_PROJECT) != 1:
                 return "the project account is printed more than once"
             if NO_ACCOUNT in body:
@@ -663,7 +671,7 @@ def main() -> int:
                 line = f"{sid} — {name}: {rest}"
                 if line not in lines:
                     return f"the section has no line `{line}`"
-            if sum("Written by a survey session" in block for block in blocks(opening)) != 1:
+            if sum(PROVENANCE_STEM in block for block in blocks(opening)) != 1:
                 return "the section does not carry exactly one provenance line, the account's"
             rest = h2s(text)[1:]
             if "Runtime boundary map" not in rest or "Staleness map" not in rest:
@@ -708,7 +716,7 @@ def main() -> int:
                 return f"the HTML architecture page opens with {next(iter(good), None)!r}"
             if ACCOUNT_PROJECT not in good[ARCH_HEADING]:
                 return "the project account is not under its heading on the HTML page"
-            if "Written by a survey session at" not in good[ARCH_HEADING]:
+            if PROVENANCE_STEM not in good[ARCH_HEADING]:
                 return "the project account carries no provenance line on the HTML page"
             if "B-01 — Read path" not in good[ARCH_HEADING]:
                 return "the per-subsystem lines are not on the HTML page"
@@ -1027,17 +1035,31 @@ def main() -> int:
 
         check("the extended census gate is green", census_extension)
 
-        # -- 7. the overview is unchanged --------------------------------------
-        def overview_unchanged() -> str | None:
+        # -- 7. the overview reads a purpose only in Its parts ------------------
+        # Since the two-part overview (owner, 2026-11-26) each part's line
+        # carries the first sentence of its recorded purpose, so explanation
+        # rows change that section and nothing else on the page.
+        def parts_free(text: str) -> str:
+            return re.sub(r'<section class="section-its-parts">.*?</section>', "", text, flags=re.S)
+
+        def overview_reads_purposes() -> str | None:
             if (why := published("good")) or (why := published("baseline")):
                 return why
             with_rows = page("good", "index.html")
             without = page("baseline", "index.html")
-            if not with_rows or with_rows != without:
-                return "index.html differs between a store with explanation rows and one with none"
+            if not with_rows or parts_free(with_rows) == with_rows:
+                return "the overview has no Its parts section"
+            if parts_free(with_rows) != parts_free(without):
+                return "index.html differs outside Its parts between a store with explanation rows and one with none"
+            text = plain(article_of(with_rows))
+            if FIRST_SENTENCE_B01 not in text:
+                return "B-01's line on the overview does not carry the first sentence of its purpose"
+            for absent in ("SECOND-B-01", "PURPOSE-B-04"):
+                if absent in text:
+                    return f"the overview prints {absent}: a later sentence or an ineligible subsystem's purpose"
             return None
 
-        check("the overview is byte-identical with and without explanation rows", overview_unchanged)
+        check("the overview changes only in Its parts, which carries each recorded purpose's first sentence", overview_reads_purposes)
 
         def no_rows_unchanged() -> str | None:
             if (why := published("plain")) or (why := published("baseline")):

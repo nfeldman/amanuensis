@@ -1699,31 +1699,31 @@ READER_TERMS: tuple[dict[str, object], ...] = (
         "term": "Amanuensis",
         "aliases": (),
         "definition": "The tool that produced this site. An AI agent runs it to survey a repository.",
-        "pages": ("index.md", "sessions.md"),
+        "pages": ("sessions.md", "about.md"),
     },
     {
         "term": "Conspectus",
         "aliases": ("survey record",),
         "definition": "Amanuensis's name for what a survey keeps: a database of what was read and concluded, plus this site, which is built from it.",
-        "pages": ("index.md", "onboarding-report.md"),
+        "pages": ("onboarding-report.md",),
     },
     {
         "term": "Survey",
         "aliases": (),
         "definition": "The agent's reading of the repository, done in passes, with each conclusion tied to the code it read.",
-        "pages": ("index.md", "not-yet-surveyed.md", "sessions.md", "subsystems/*.md"),
+        "pages": ("index.md", "not-yet-surveyed.md", "sessions.md", "subsystems/*.md", "about.md"),
     },
     {
         "term": "Session",
         "aliases": (),
         "definition": "One stretch of work by the agent. Sessions lists them.",
-        "pages": ("sessions.md", "resolution-history.md", "entry-point.md", "index.md"),
+        "pages": ("sessions.md", "resolution-history.md", "entry-point.md", "about.md"),
     },
     {
         "term": "Subsystem",
         "aliases": (),
         "definition": "A part of the codebase the survey treats as one unit, with its own files and its own page. The agent chose the split during onboarding.",
-        "pages": ("master-plan.md", "architecture.md", "onboarding-report.md", "subsystems/*.md", "index.md", "not-yet-surveyed.md", "hot-spots.md", "disagreements.md", "diagnosticity.md", "diagnosticity/*.md"),
+        "pages": ("master-plan.md", "architecture.md", "onboarding-report.md", "subsystems/*.md", "index.md", "not-yet-surveyed.md", "hot-spots.md", "disagreements.md", "diagnosticity.md", "diagnosticity/*.md", "about.md"),
     },
     {
         "term": "Layer",
@@ -1735,7 +1735,7 @@ READER_TERMS: tuple[dict[str, object], ...] = (
         "term": "Survey depth",
         "aliases": ("status",),
         "definition": "How far the survey of a subsystem has got. Unmapped: not started. Scoped and Structural: that pass is done. Reviewing concerns and Challenging claims: that pass is under way. Mapped: every pass is done. Deferred: left out of the survey on purpose. Each depth limits what the record may claim.",
-        "pages": ("master-plan.md", "architecture.md", "not-yet-surveyed.md", "subsystems/*.md", "index.md"),
+        "pages": ("master-plan.md", "architecture.md", "not-yet-surveyed.md", "subsystems/*.md", "about.md"),
     },
     {
         "term": "Mapped",
@@ -1747,7 +1747,7 @@ READER_TERMS: tuple[dict[str, object], ...] = (
         "term": "Scope",
         "aliases": ("file ledger",),
         "definition": "The files a subsystem owns, each marked as read, not yet read, or left out with a reason.",
-        "pages": ("files.md", "not-yet-surveyed.md", "subsystems/*.md", "index.md", "master-plan.md"),
+        "pages": ("files.md", "not-yet-surveyed.md", "subsystems/*.md", "about.md", "master-plan.md"),
     },
     {
         "term": "Evidence",
@@ -1783,7 +1783,7 @@ READER_TERMS: tuple[dict[str, object], ...] = (
         "term": "Finding",
         "aliases": (),
         "definition": "A defect the survey confirmed, with evidence, a severity, and a state (open, repaired, verified, ruled out, accepted).",
-        "pages": ("findings.md", "resolved-findings.md", "hot-spots.md", "files.md", "subsystems/*.md", "index.md", "master-plan.md", "disagreements.md"),
+        "pages": ("findings.md", "resolved-findings.md", "hot-spots.md", "files.md", "subsystems/*.md", "about.md", "master-plan.md", "disagreements.md"),
     },
     {
         "term": "Lead",
@@ -1825,13 +1825,13 @@ READER_TERMS: tuple[dict[str, object], ...] = (
         "term": "Stale",
         "aliases": (),
         "definition": "A file that changed after the revision the survey recorded for it: the one it was read at, scoped at, or set aside at. What the survey said about it may no longer hold.",
-        "pages": ("stale.md", "files.md", "index.md", "hot-spots.md"),
+        "pages": ("stale.md", "files.md", "about.md", "hot-spots.md"),
     },
     {
         "term": "Checked at",
         "aliases": ("revision",),
         "definition": "The commit the survey last compared itself against. Everything on the site is as of that commit.",
-        "pages": ("index.md", "stale.md"),
+        "pages": ("about.md", "stale.md"),
     },
     {
         "term": "Standing",
@@ -1860,8 +1860,8 @@ READER_TERMS: tuple[dict[str, object], ...] = (
     {
         "term": "Publication check",
         "aliases": ("read-back",),
-        "definition": "After building the site, Amanuensis reads it back to confirm it matches the record. The overview shows the result.",
-        "pages": ("index.md", "sessions.md"),
+        "definition": "After building the site, Amanuensis reads it back to confirm it matches the record. About this survey shows the result.",
+        "pages": ("about.md", "sessions.md"),
     },
 )
 

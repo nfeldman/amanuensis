@@ -26,10 +26,9 @@ Turns red when:
   - the "Decisions needed" page lacks the line saying to tell the agent in the
     session and that the site is read-only, in Markdown or HTML, with a
     question open or with none;
-  - the overview's identity paragraph is not Appendix C's sentence for the
-    project, contains a digit or an orientation-forbidden term, does not link
-    the guide (Markdown and HTML), or the overview still says "recorded by
-    Amanuensis";
+  - the overview still carries an identity sentence naming Amanuensis (it moved
+    to the guide's "What this site is", owner 2026-11-26), or the guide does not
+    name Amanuensis as the method;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -124,11 +123,9 @@ SUBHEADINGS = ("What it expects from you", "Phase numbers")
 WHEN_END = "when the pass is done"
 WHEN_START = "as the pass starts"
 PROJECT = "Fixture Repo"
-IDENTITY = (
-    f"An architecture survey of {PROJECT}. An agent running Amanuensis read the repository"
-    " without changing it. New to this site? Start with the Reader's guide."
-)
-IDENTITY_LINK = ("Reader's guide", "how-to-read.html")
+# The identity sentences the overview used to open with; neither may return to it.
+OLD_IDENTITY = ("An architecture survey of", "An agent running Amanuensis")
+GUIDE_IDENTITY = f"This site is the record of a survey of {PROJECT} by an AI agent running Amanuensis."
 # Every element a browser knows; the O4 section may carry no other tag.
 KNOWN_TAGS = frozenset(
     {
@@ -140,18 +137,6 @@ KNOWN_TAGS = frozenset(
     }
 )
 IDENTITY_FORBIDDEN_OLD = "recorded by Amanuensis"
-# The orientation lint's forbidden terms (vocabulary.ORIENTATION_FORBIDDEN_TERMS).
-FORBIDDEN = (
-    "stale",
-    "fresh",
-    "mapped",
-    "unmapped",
-    "re-anchored",
-    "up to date",
-    "out of date",
-    "current as of",
-    "fully surveyed",
-)
 ANSWER_LINE_PHRASES = ("tell the agent", "read-only")
 
 SHA = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"
@@ -286,14 +271,6 @@ def html_table_rows(fragment: str) -> list[list[str]]:
         if cells:
             out.append(cells)
     return out
-
-
-def identity_paragraph(page: str) -> str:
-    """The markup of the last paragraph before the first section of the article."""
-
-    article = re.search(r"<article\b[^>]*>(.*?)(?=<section\b|<h2\b|</article>)", page, re.S)
-    paragraphs = re.findall(r"<p\b[^>]*>(.*?)</p>", article.group(1), re.S) if article else []
-    return paragraphs[-1] if paragraphs else ""
 
 
 def load_contract() -> dict[str, Any]:
@@ -494,33 +471,27 @@ def main() -> int:
         def identity() -> str | None:
             if not index_html:
                 return "docs/index.html was not written"
-            if IDENTITY_FORBIDDEN_OLD in html_text(index_html):
-                return f"the overview still says {IDENTITY_FORBIDDEN_OLD!r}"
-            paragraph = html_text(identity_paragraph(index_html))
-            if paragraph != IDENTITY:
-                return f"the identity paragraph is {paragraph!r}, expected Appendix C's {IDENTITY!r}"
-            digits = re.findall(r"\d", paragraph)
-            if digits:
-                return f"the identity paragraph contains a digit: {digits}"
-            lowered = paragraph.lower()
-            hit = [t for t in FORBIDDEN if re.search(rf"(?<![a-z]){re.escape(t)}(?![a-z])", lowered)]
-            if hit:
-                return f"the identity paragraph contains the forbidden term(s) {hit}"
+            text = html_text(index_html)
+            for words in (IDENTITY_FORBIDDEN_OLD, *OLD_IDENTITY):
+                if words in text:
+                    return f"the overview still says {words!r}"
+            guide = html_text(read(docs / "how-to-read.html") or "")
+            if GUIDE_IDENTITY not in guide:
+                return f"the guide does not say {GUIDE_IDENTITY!r}"
             return None
 
-        check("the overview's identity paragraph is Appendix C's sentence, no digit, no forbidden term", identity)
+        check("the overview names no method; the guide names Amanuensis", identity)
 
-        def identity_html() -> str | None:
+        def overview_links() -> str | None:
             if not index_html:
                 return "docs/index.html was not written"
-            link = re.findall(r'<a\b[^>]*href="([^"]*)"[^>]*>(.*?)</a>', identity_paragraph(index_html), re.S)
-            if [(html_text(t), h) for h, t in link] != [IDENTITY_LINK]:
-                return f"the HTML overview's identity paragraph links {link!r}, not {IDENTITY_LINK!r}"
-            if "An agent running Amanuensis read the repository" not in html_text(index_html):
-                return "the HTML overview does not carry the identity sentence"
+            links = {(html_text(t), h) for h, t in re.findall(r'<a\b[^>]*href="([^"]*)"[^>]*>(.*?)</a>', index_html, re.S)}
+            for want in (("Reader's guide", "how-to-read.html"), ("About this survey", "about.html")):
+                if want not in links:
+                    return f"the HTML overview does not link {want!r}"
             return None
 
-        check("the HTML overview carries the sentence and links the guide", identity_html)
+        check("the HTML overview links the guide and About this survey", overview_links)
 
         # -- Generated, not copied ---------------------------------------------
         def generated() -> str | None:

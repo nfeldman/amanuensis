@@ -246,10 +246,15 @@ h1 {
   max-width: min(24rem, calc(100vw - 1rem)); padding: .45rem .6rem;
   font: .8rem/1.45 var(--body); pointer-events: none;
 }
-.page-notice { max-width: none; margin: .9rem 0 0; padding: .45rem .75rem; border-left: 2px solid var(--signal); color: var(--text-muted); font: .85rem/1.55 var(--body); }
+/* Where a record's prose came from: present for a reader who checks, quiet for one who reads. */
+.provenance { margin-top: .5rem; color: var(--text-subtle); font: .78rem/1.5 var(--body); }
+.provenance code { padding: 0; background: none; color: inherit; font-size: inherit; }
+.page-notice { max-width: none; margin: .35rem 0 0; color: var(--text-muted); font: .7rem/1.45 var(--body); }
 .page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
-.snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
-.snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
+.snapshot-strip { display: flex; flex-wrap: wrap; gap: .35rem 1.1rem; }
+.page-eyebrows { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 2.75rem; }
+.page-status { cursor: help; }
+.snapshot-item { color: var(--text-muted); font: .68rem/1.45 var(--mono); }
 .snapshot-item b { color: var(--text); font-weight: 650; }
 .freshness { display: inline-flex; gap: .38rem; align-items: center; }
 .freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--source-aligned); border-radius: 50%; }
@@ -734,8 +739,9 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .bar-fill { height: 100%; background: var(--accent); }
 .diagram-source, pre:not(.diagram-source) { max-width: 100%; overflow-x: auto; margin: 1rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: 0; background: var(--canvas-subtle); color: var(--text); font: .75rem/1.55 var(--mono); white-space: pre-wrap; }
 
-.page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--text-subtle); font: .65rem/1.5 var(--mono); }
-.page-foot p { margin: 0; max-width: 52rem; }
+/* The page's provenance: the commit it was read at, and how it was rendered. A
+   reader needs it only when something looks wrong, so it sits after the content. */
+.page-foot { margin-top: 3rem; padding-top: .8rem; border-top: 1px solid var(--rule); color: var(--text-subtle); }
 .page-foot a { color: inherit; }
 [hidden] { display: none !important; }
 

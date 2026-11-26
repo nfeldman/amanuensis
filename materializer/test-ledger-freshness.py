@@ -532,7 +532,8 @@ def main() -> int:
         summary = publish(storage, "--clean-publish") if seed_error is None else {}
         docs = storage / "docs"
         index_html = read(docs / "index.html") or ""
-        index_text = outline(index_html)
+        # The survey's figures left the overview for About this survey (owner, 2026-11-26).
+        about_text = outline(read(docs / "about.html") or "")
         stale_html = read(docs / STALE_HTML) or ""
         stale_text = outline(stale_html)
         html_corpus = corpus(docs, ".html")
@@ -632,7 +633,7 @@ def main() -> int:
         def overview_reads_the_ledger() -> str | None:
             if isinstance(dashboard, str):
                 return "get_dashboard's quantities are unavailable, so parity cannot run"
-            body = section(index_text, "Where the record stands")
+            body = section(about_text, "Where the record stands")
             if not body:
                 return "the overview has no 'Where the record stands' section"
             obligation_fact = f"{dashboard['stale_entries']} of {shape['obligation']}"
@@ -889,7 +890,7 @@ def main() -> int:
         def empty_overview_is_honest() -> str | None:
             if empty_error:
                 return empty_error
-            body = section(outline(read(empty_docs / "index.html")), "Where the record stands")
+            body = section(outline(read(empty_docs / "about.html")), "Where the record stands")
             if not body:
                 return "the empty-ledger overview has no 'Where the record stands' section"
             if "not measured by this projection" not in body:
@@ -949,7 +950,7 @@ def main() -> int:
                     "the all-exempt fixture is not all-exempt:"
                     f" {shape['scoped']} scoped, {shape['obligation']} obligation-bearing"
                 )
-            body = section(outline(read(all_exempt_docs / "index.html")), "Where the record stands")
+            body = section(outline(read(all_exempt_docs / "about.html")), "Where the record stands")
             if not body:
                 return "the all-exempt overview has no 'Where the record stands' section"
             if NOT_MEASURED.lower() in body.lower() or "not measured by this projection" in body:

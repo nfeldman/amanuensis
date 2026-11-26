@@ -109,7 +109,7 @@ VIEWS_PARAGRAPH = (
     " search and the definitions shown on hover need nothing outside that directory, so a copy"
     " of the whole directory reads the same."
 )
-SITE_OPENING = "This site is the record of an AI agent's survey of"
+SITE_OPENING = "This site is the record of a survey of"
 BYTES_WITHOUT_CODE = 600
 
 SHA = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"

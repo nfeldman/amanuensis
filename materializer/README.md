@@ -98,9 +98,9 @@ With optional flags:
 - `--recorded-publication` — the caller records the read-back in the store
   (the MCP server passes it)
 
-A render without `--recorded-publication` ends every page with a notice that
-its read-back was not recorded, since the overview's Publication integrity
-figures come from the last recorded run. The summary's `recorded` says which.
+A render without `--recorded-publication` ends every page's footer with a
+notice that its read-back was not recorded, since the Publication integrity
+figures on About this survey come from the last recorded run. The summary's `recorded` says which.
 
 On success the last line of stdout is a JSON summary the MCP server's
 `materialize_docs` tool parses.

@@ -34,7 +34,9 @@ So the lineage gates compare article bodies, with those changes carried to the
 start side and the marks taken off the current side. Everything outside the
 article (the shell, the stylesheet and the script) is held byte for byte by the
 golden corpus and by test-materializer.py instead. A lineage file under
-`assets/` is the style lane's and has no start-side counterpart.
+`assets/` is the style lane's and has no start-side counterpart, and neither has
+the overview since it became two parts, About this survey, or the reader's guide
+that indexes them (`is_uncompared`).
 """
 
 from __future__ import annotations
@@ -72,6 +74,11 @@ _RENAMED = (
     ("Where to begin", "First reading path"),
     ("Calibrated review checklist", "Review checklist"),
 )
+# The staleness map's exempt-file counts moved to About this survey (owner, 2026-11-26).
+_EXEMPT_COUNT_LINK = (
+    'counted on the <a href="index.html">overview</a> and are not recorded here',
+    'counted on <a href="about.html">About this survey</a> and are not recorded here',
+)
 _ATLAS_LABEL = ('aria-label="Subsystem map"', 'aria-label="Subsystems"')
 _OLD_IDENTITY = re.compile(
     r"An AI agent running Amanuensis read the repository, without changing it, and recorded what it"
@@ -90,6 +97,28 @@ _CONDITION_CELL = re.compile(r'<td data-label="Condition">(.*?)</td>', re.S)
 _CONCERN_HEADING = re.compile(r'(<h3 class="record-primary"[^>]*>(?:<span[^>]*></span>)?<strong>(?:<a [^>]*>)?)concern (?=<abbr)')
 _SHOWS_HEADER = re.compile(r'<th scope="col">What it shows</th>')
 _SHOWS_CELL = re.compile(r'<td data-label="What it shows">.*?</td>', re.S)
+
+
+# The provenance line's earlier, italic and longer forms (owner, 2026-11-26).
+_OLD_PROVENANCE = re.compile(
+    r"<p><em>(?:Written by a survey session at (?P<sha>(?:<code>)?[0-9a-f]+(?:</code>)?)"
+    r"|Recorded on (?P<date>[^<]*?) at revision (?P<nsha>(?:<code>)?[0-9a-f]+(?:</code>)?))"
+    r"(?: from \d+ evidence row\(s\))?\. (?P<ageing>.*?)</em></p>",
+    re.S,
+)
+_OLD_CHANGED = re.compile(r"^(\d+) of the (\d+) file\(s\) it cites changed since: ", re.S)
+
+
+def _provenance(match: re.Match[str]) -> str:
+    ageing = match["ageing"].strip()
+    if ageing.startswith("None of the ") and ageing.endswith(" has changed since."):
+        ageing = ""
+    elif ageing == "Whether the files it cites have changed since is not measured here.":
+        ageing = "Not checked against later changes."
+    else:
+        ageing = _OLD_CHANGED.sub(r"\1 of its \2 cited files changed since: ", ageing)
+    head = f"Recorded at {match['sha']}." if match["sha"] else f"Recorded {match['date']} at {match['nsha']}."
+    return f'<p class="provenance">{head}{" " + ageing if ageing else ""}</p>'
 
 
 def _without_empty_condition(match: re.Match[str]) -> str:
@@ -115,7 +144,8 @@ def _retitle(body: str) -> str:
     ).replace('data-record-label="concern disposition concern ', 'data-record-label="concern disposition ')
     for old, new in _RENAMED:
         body = body.replace(f">{old}</a>", f">{new}</a>").replace(f">{old}</td>", f">{new}</td>").replace(f">{old}</caption>", f">{new}</caption>")
-    body = body.replace(_SURVEY_NOTE_CAVEAT, "")
+    body = _OLD_PROVENANCE.sub(_provenance, body)
+    body = body.replace(_SURVEY_NOTE_CAVEAT, "").replace(*_EXEMPT_COUNT_LINK)
     return body.replace("Sessions and publications lists them.", "Sessions lists them.").replace(*_ATLAS_LABEL)
 
 
@@ -123,6 +153,28 @@ def is_style_asset(relative: str) -> bool:
     """Whether a published path is one of the style lane's shared files."""
 
     return relative.startswith("assets/")
+
+
+#: The two-part overview (owner, 2026-11-26) replaced the overview's article
+#: outright and moved its figures to a page no earlier tree printed. Neither has
+#: a start-side page to carry the change to, and the reader's guide, whose page
+#: index, "What this site is" and terms' "Seen on" lines name both, changed with
+#: them. The lineage gates do not compare the three; O3, O6, O9, O14, P3 and the
+#: golden corpus hold them.
+UNCOMPARED_PAGES = frozenset({"index.html", "about.html", "how-to-read.html"})
+
+
+def is_uncompared(relative: str) -> bool:
+    """Whether a lineage gate leaves a published path out of its comparison."""
+
+    return is_style_asset(relative) or relative in UNCOMPARED_PAGES
+
+
+def is_uncompared_golden(relative: str) -> bool:
+    """The same, for a golden corpus path such as `lens/html/index.html`."""
+
+    _fixture, _sep, page = relative.partition("/html/")
+    return page in UNCOMPARED_PAGES
 
 
 def _article(text: str) -> str:

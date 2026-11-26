@@ -3,7 +3,7 @@
 (design/orientation/PLAN.md §4 O12, "Publishing defects").
 
 Turns red when, on a seeded store with two recorded read-backs (older: state axis
-failed; newer: every axis passed), in the HTML overview:
+failed; newer: every axis passed), on About this survey:
 
   - the Publication integrity block lacks the sentence "A publication's read-back
     is recorded after its pages are written, so these results describe the
@@ -248,29 +248,29 @@ def main() -> int:
         check("the store whose newer read-back has mixed axes publishes", fixture("mixed"))
 
         docs = stores["runs"][0] / "docs"
-        index_html = read(docs / "index.html")
+        about_html = read(docs / "about.html")
 
         check(
             "HTML: the sentence leads the block, the row is 'Read back at' with the newer run",
-            lambda: block_problem(flat_html(html_block(index_html)), "State axis"),
+            lambda: block_problem(flat_html(html_block(about_html)), "State axis"),
         )
 
         def sentence_leads_the_list() -> str | None:
-            block = html_block(index_html)
+            block = html_block(about_html)
             match = re.search(r'<p>(.*?)</p>\s*<dl class="summary-list"[^>]*>(.*?)</dl>', block, re.S)
             if not match:
-                return "index.html: the block is not a paragraph followed by its list of axis rows"
+                return "about.html: the block is not a paragraph followed by its list of axis rows"
             if squash(htmllib.unescape(match.group(1))) != LAG_SENTENCE:
-                return "index.html: the paragraph before the axis rows is not the lag sentence"
+                return "about.html: the paragraph before the axis rows is not the lag sentence"
             rows = [
                 (squash(htmllib.unescape(re.sub(r"<[^>]+>", " ", term))), squash(htmllib.unescape(re.sub(r"<[^>]+>", " ", value))))
                 for term, value in re.findall(r"<dt>(.*?)</dt><dd>(.*?)</dd>", match.group(2), re.S)
             ]
             labels = [label for label, _ in rows]
             if labels != ["State axis", "Coverage axis", "Content axis", NEW_LABEL]:
-                return f"index.html: the axis rows are {labels}, not the three axes and {NEW_LABEL!r}"
+                return f"about.html: the axis rows are {labels}, not the three axes and {NEW_LABEL!r}"
             if not rows[-1][1].startswith(NEWER_DATE):
-                return f"index.html: the {NEW_LABEL!r} row reads {rows[-1][1]!r}, not the newer run's date {NEWER_DATE}"
+                return f"about.html: the {NEW_LABEL!r} row reads {rows[-1][1]!r}, not the newer run's date {NEWER_DATE}"
             return None
 
         check("HTML: the lag sentence is the paragraph above the axis rows, ending in 'Read back at'", sentence_leads_the_list)
@@ -278,14 +278,14 @@ def main() -> int:
         def mixed_axes() -> str | None:
             docs_mixed = stores["mixed"][0] / "docs"
             newer = RUNS["mixed"][1]
-            flat = flat_html(html_block(read(docs_mixed / "index.html")))
+            flat = flat_html(html_block(read(docs_mixed / "about.html")))
             for axis, ok in zip(("State", "Coverage", "Content"), newer, strict=True):
                 want = "green" if ok else "red"
                 match = re.search(rf"\b{axis} axis (\w+)", flat)
                 if not match:
-                    return f"index.html: the block has no {axis} axis row"
+                    return f"about.html: the block has no {axis} axis row"
                 if match.group(1).lower() != want:
-                    return f"index.html: the {axis} axis reads {match.group(1)}; the newer run's is {want}"
+                    return f"about.html: the {axis} axis reads {match.group(1)}; the newer run's is {want}"
             return None
 
         check("each axis row reports its own value from the newer run", mixed_axes)
@@ -299,13 +299,13 @@ def main() -> int:
 
         def no_run_is_unchanged() -> str | None:
             docs_none = stores["none"][0] / "docs"
-            flat = flat_html(html_block(read(docs_none / "index.html")))
+            flat = flat_html(html_block(read(docs_none / "about.html")))
             if NO_RUN_SENTENCE not in flat:
-                return "index.html: the no-read-back sentence is gone"
+                return "about.html: the no-read-back sentence is gone"
             if LAG_SENTENCE in flat:
-                return "index.html: a store with no read-back claims a publication before this one"
+                return "about.html: a store with no read-back claims a publication before this one"
             if NEW_LABEL in flat or OLD_LABEL in flat:
-                return "index.html: a store with no read-back prints a read-back time row"
+                return "about.html: a store with no read-back prints a read-back time row"
             return None
 
         check("a store with no read-back keeps its own sentence and prints no lag claim", no_run_is_unchanged)

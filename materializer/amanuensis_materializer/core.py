@@ -225,6 +225,8 @@ class PagePlan:
     group: str = "Codebase"
     kind: str = "reference"
     status: str | None = None
+    # A subsystem's layer, which its page head names beside its id.
+    layer: str = ""
     # A named division inside `group` (spec §7.1). Subsystem pages and evidence
     # matrices are families with one page per record, so they render under their
     # own heading rather than flooding the group they belong to.
@@ -537,6 +539,7 @@ class Materializer:
                     kind=p.kind,
                     record_id=p.xref_id,
                     status=p.status,
+                    layer=p.layer,
                 )
                 for p in plan
             ]
@@ -654,12 +657,12 @@ class Materializer:
         # Static top-level pages, in §7.1's order. `group` is one of
         # `NAV_GROUPS` and nothing else; `subgroup` names a division inside it.
         # A top-level page has no hint: its title says what it holds, and
-        # "Use it when" is in the page's "About this page" popover. Only a
-        # subsystem page has one, its layer.
+        # "Use it when" is in the page's "About this page" popover. No page has
+        # one: a subsystem's layer is on the line above its title.
         plan.extend(
             page
             for page in [
-                PagePlan("index.html", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Overview", label="Overview", use_when="you arrive, or want the current counts.", group="Overview", kind="overview"),
+                PagePlan("index.html", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Overview", label="Overview", use_when="you want to know what the codebase is and what its parts are.", group="Overview", kind="overview"),
                 PagePlan("architecture.html", lambda: renderers.render_architecture(conn, storage, warn=self._warn), title="Architecture", label="Architecture", use_when="you want the overall shape before reading any one part.", group="Codebase", kind="architecture"),
                 PagePlan("master-plan.html", lambda: renderers.render_master_plan(conn, storage, warn=self._warn), title="Subsystems", label="Subsystems", use_when="you are looking for the part of the code that does something.", group="Codebase", kind="registry"),
                 PagePlan("files.html", lambda: renderers.render_files(conn, storage), title="Files", label="Files", use_when="you want to know whether a particular file was read.", group="Codebase", kind="files"),
@@ -687,6 +690,9 @@ class Materializer:
                 PagePlan("diagnosticity.html", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", use_when="you want to see how a symptom's cause was weighed.", group="Method", kind="diagnosticity"),
                 imported("onboarding-report.html", "onboarding-report", "Onboarding record", "Onboarding record", "you want the first pass's decisions about scope and split."),
                 imported("entry-point.html", "entry-point", "First reading path", "First reading path", "you want the reading path an earlier session wrote."),
+                # The survey's own bookkeeping, moved off the Overview (owner,
+                # 2026-11-26): last in Method, where a reader who wants it looks.
+                PagePlan("about.html", lambda: renderers.render_about(conn, storage, warn=self._warn), title="About this survey", label="About this survey", use_when="you want to know how much of the code was read, what is open, and when the survey last ran.", group="Method", kind="about"),
             ]
             if page is not None
         )
@@ -704,10 +710,9 @@ class Materializer:
                     xref_display=f"{s['id']}",
                     title=s["name"],
                     label=s["name"],
-                    # The page's subheading: its layer, which places it among the
-                    # others. A sentence listing the page's sections says nothing
-                    # the sections do not.
-                    hint=f"In the {s['layer']} layer." if s["layer"] else "",
+                    # No subheading: the layer is named in the page head beside the
+                    # subsystem's id and depth (owner, 2026-11-26).
+                    layer=s["layer"] or "",
                     use_when="you have picked a subsystem.",
                     group="Codebase",
                     subgroup="Subsystems",

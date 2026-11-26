@@ -156,6 +156,8 @@ class SitePage:
     use_when: str = ""
     record_id: str | None = None
     status: str | None = None
+    # A subsystem's layer, named in the page head beside its id.
+    layer: str = ""
     # A named division inside `group`, rendered under its own `<h3>` after the
     # group's ungrouped items (§7.1). Empty means the page sits directly in the
     # group.
@@ -173,13 +175,15 @@ GUIDE_PAGE = "how-to-read.html"
 TERMS_LABEL = "Terms on this page:"
 
 # A page `materialize.py` writes for a caller that does not record its read-back
-# in the store (PLAN §5 D6, O15). The overview's Publication integrity block reads
-# the store's last recorded run, so it cannot describe this render; each page says
-# so instead. The second form is for a render that skipped its read-back.
+# in the store (PLAN §5 D6, O15). The Publication integrity block on About this
+# survey reads the store's last recorded run, so it cannot describe this render;
+# each page says so instead, in its footer beside the commit it was read at (a
+# reader needs it only when something looks wrong; owner, 2026-11-26). The second
+# form is for a render that skipped its read-back.
 CLI_RENDER_NOTICE = (
     "Rendered from the command line. Its read-back was not recorded in the survey's"
-    " record, so the Publication integrity figures on the overview describe an earlier"
-    " publication."
+    " record, so the Publication integrity figures on About this survey describe an"
+    " earlier publication."
 )
 CLI_RENDER_NOTICE_UNVERIFIED = "Rendered from the command line and not read back."
 CLI_RENDER_NOTICES = (CLI_RENDER_NOTICE, CLI_RENDER_NOTICE_UNVERIFIED)
@@ -1764,13 +1768,24 @@ def _identifier_markup(fragment: str, definitions: dict[str, str]) -> str:
 
 
 def _page_eyebrow(page: SitePage) -> str:
+    """The line above the title: where the page sits, each part its own label.
+
+    A subsystem page names its layer and its id; an evidence matrix, its family
+    and id; any other page, its navigation group. The page's status tag, when it
+    has one, follows on the same line (`_shell`).
+    """
+
+    def part(text: str) -> str:
+        return f'<p class="eyebrow">{text}</p>'
+
     if page.kind == "subsystem":
         record = html.escape(page.record_id or "record")
-        return f'Subsystem · <span data-identifier-defined>{record}</span>'
+        layer = part(f"Layer · {html.escape(page.layer)}") if page.layer else ""
+        return layer + part(f'Subsystem · <span data-identifier-defined>{record}</span>')
     if page.kind == "matrix":
         record = html.escape(page.record_id or "matrix")
-        return f'Competing explanations · <span data-identifier-defined>{record}</span>'
-    return html.escape(page.group)
+        return part(f'Competing explanations · <span data-identifier-defined>{record}</span>')
+    return part(html.escape(page.group))
 
 
 def _nav_item(page: SitePage, current: SitePage) -> str:
@@ -1875,13 +1890,13 @@ def _shell(
     hint_para = f'<p class="page-hint">{html.escape(page.hint)}</p>' if page.hint else ""
     help_markup = _page_help(page)
     notice_para = (
-        f'<p class="page-notice" role="note">{html.escape(notice)}</p>' if notice else ""
+        f'<p class="page-notice">{html.escape(notice)}</p>' if notice else ""
     )
     home_link = _rel_link(page.html_path, "index.html")
-    record_status = _status_html(page.status) if page.status else ""
-    # The strip names the status by what it is: a subsystem's survey depth, an
-    # evidence matrix's outcome. A subsystem page prints its depth only here,
-    # so the strip carries the subsystem's record mark (§3.5).
+    record_status = _status_html(page.status, show_hint=False) if page.status else ""
+    # The tag beside the page's id names its status by what it is, in its title:
+    # a subsystem's survey depth, an evidence matrix's outcome. A subsystem page
+    # prints its depth only here, so the tag carries the record mark (§3.5).
     status_label, status_mark = _STRIP_STATUS.get(page.kind, ("Status", False))
     mark = (
         _mark_attrs(f"subsystem:{page.record_id}", str(page.status))
@@ -1889,7 +1904,7 @@ def _shell(
         else ""
     )
     status_meta = (
-        f'<span class="snapshot-item"{mark}><b>{html.escape(status_label)}</b>&nbsp; {record_status}</span>'
+        f'<span class="page-status" title="{html.escape(status_label, quote=True)}"{mark}>{record_status}</span>'
         if record_status
         else ""
     )
@@ -1932,7 +1947,7 @@ def _shell(
         root=html.escape(root_prefix, quote=True),
         home=html.escape(home_link, quote=True),
         nav=nav,
-        eyebrow=eyebrow,
+        eyebrow=eyebrow + status_meta,
         hint=hint_para,
         help=help_markup,
         notice=notice_para,
@@ -1941,7 +1956,6 @@ def _shell(
         checked_at=html.escape(checked_at),
         freshness_class=freshness_class,
         freshness=html.escape(freshness_label),
-        status=status_meta,
         kind=html.escape(slugify(page.kind), quote=True),
         filters=filter_attrs,
         body=body,

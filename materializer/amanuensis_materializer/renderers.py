@@ -445,17 +445,22 @@ PROJECT_ACCOUNT_DECLINED = (
     f"A survey session {_DECLINED} to write an account of how the parts fit together"
     " at `{sha}`. {reason}"
 )
-PROVENANCE_LINE = "*Written by a survey session at `{sha}` from {n} evidence row(s). {ageing}*"
-AGEING_UNCHANGED = "None of the {n} file(s) it cites has changed since."
-AGEING_CHANGED = "{k} of the {n} file(s) it cites changed since: {paths}."
-AGEING_NOT_MEASURED = "Whether the files it cites have changed since is not measured here."
+# Where a record's prose came from, in one quiet line under it (owner, 2026-11-26:
+# the long form was too prominent). Files that have not moved need no sentence:
+# the line names the revision, and adds one only when a cited file changed or
+# when nothing could check, so "not measured" never reads as "unchanged".
+PROVENANCE_LINE = "Recorded at `{sha}`.{ageing}"
+PROVENANCE_CLASS = "provenance"
+AGEING_UNCHANGED = ""
+AGEING_CHANGED = " {k} of its {n} cited files changed since: {paths}."
+AGEING_NOT_MEASURED = " Not checked against later changes."
 AGEING_PATH_LIMIT = 5
 NARRATIVE_IN_RECORD = "The survey artifact is rendered below, under Survey record."
 
 # Stored narratives (store-only PLAN §2.1): each prints under its topic with the
 # date and revision it was recorded at, and how far its cited files have moved.
-NARRATIVE_PROVENANCE = "*Recorded on {date} at revision `{sha}` from {n} evidence row(s). {ageing}*"
-NARRATIVE_NO_FILES = "*Recorded on {date} at revision `{sha}`. It cites no file.*"
+NARRATIVE_PROVENANCE = "Recorded {date} at `{sha}`.{ageing}"
+NARRATIVE_NO_FILES = "Recorded {date} at `{sha}`. It cites no file."
 NARRATIVE_DECLINED = "A survey session {declined} to write this at `{sha}` on {date}. {reason}"
 NARRATIVE_NO_CLAIMS = "No structural claim is recorded for this subsystem."
 CHALLENGE_HEADING = "Challenge"
@@ -1149,20 +1154,27 @@ def _ageing_sentence(
         return AGEING_NOT_MEASURED
     moved = sorted(set(changed) & set(files))
     if not moved:
-        return AGEING_UNCHANGED.format(n=len(files))
+        return AGEING_UNCHANGED
     shown = ", ".join(f"`{path}`" for path in moved[:AGEING_PATH_LIMIT])
     if len(moved) > AGEING_PATH_LIMIT:
         shown += ", and others"
     return AGEING_CHANGED.format(k=len(moved), n=len(files), paths=shown)
 
 
+def _provenance(text: str) -> Paragraph:
+    """A provenance line, printed small and muted under the prose it describes."""
+
+    return Paragraph(inlines(text), PROVENANCE_CLASS)
+
+
 def _provenance_line(
     workspace: Path, bound: bool, record: Mapping[str, Any], head: str
-) -> str:
-    return PROVENANCE_LINE.format(
-        sha=str(record["ref_sha"])[:8],
-        n=len(record.get("cited_files") or []),
-        ageing=_ageing_sentence(workspace, bound, record, head),
+) -> Paragraph:
+    return _provenance(
+        PROVENANCE_LINE.format(
+            sha=str(record["ref_sha"])[:8],
+            ageing=_ageing_sentence(workspace, bound, record, head),
+        )
     )
 
 
@@ -1250,11 +1262,10 @@ def _narrative_blocks(
             continue
         files = record.get("cited_files") or []
         out.append(
-            _paragraph(
+            _provenance(
                 NARRATIVE_PROVENANCE.format(
                     date=date,
                     sha=sha,
-                    n=len(files),
                     ageing=_ageing_sentence(workspace, bound, record, head),
                 )
                 if files
@@ -1670,14 +1681,80 @@ def _empty_lens_blocks(
 # ---------------------------------------------------------------------------
 
 
-# Appendix C, "Overview identity". The project is the subject and Amanuensis the
-# method; the sentence carries no digit and none of the orientation lint's terms,
-# and ends by sending a new reader to the guide.
-OVERVIEW_IDENTITY = (
-    "An architecture survey of {name}. An agent running Amanuensis read the"
-    " repository without changing it. New to this site? Start with the"
-    " [{guide}](how-to-read.html)."
+# The Overview says what the codebase is and what its parts are, and nothing
+# else (owner, 2026-11-26): no counts, no publication checks, no account of the
+# method. Its last line points a new reader at the guide and a curious one at
+# the back page that holds the survey's own bookkeeping.
+ABOUT_PAGE = "about.html"
+ABOUT_TITLE = "About this survey"
+OVERVIEW_PARTS_HEADING = "Its parts"
+OVERVIEW_CLOSING = (
+    "New to this site? Start with the [{guide}](how-to-read.html). How far the survey"
+    " got is in [{about}]({about_page})."
 )
+
+
+_ABBREVIATIONS = frozenset({"e.g", "i.e", "etc", "vs", "cf"})
+
+
+def _first_sentence(line: str) -> str:
+    """The first sentence of one line of recorded prose.
+
+    Closing emphasis or a quote may follow the full stop (`**rows.** Writes …`),
+    and the next sentence may open in lower case when it opens with a file or
+    identifier (`… tests. make-golden.py records …`); an abbreviation's full
+    stop ends nothing.
+    """
+
+    for end in re.finditer(r"[.!?][*_`\"')\]]*(?=\s+\S)", line):
+        nxt = line[end.end():].lstrip()[:1]
+        before = line[: end.start()].rsplit(None, 1)[-1].lstrip("(*_`\"'").lower() if line[: end.start()].strip() else ""
+        if before in _ABBREVIATIONS:
+            continue
+        if nxt.isalpha() or nxt in "`([*_":
+            return line[: end.end()]
+    return line
+
+
+def _part_item(sid: str, name: str, purpose: str) -> ListItem:
+    """One subsystem on the Overview: its linked name and the gist of its purpose.
+
+    The gist is the purpose's first sentence, cut at its first colon when what
+    comes before has at least three words: on this codebase's records a colon
+    opens the elaboration of the clause before it, and the part's page says the
+    rest. A semicolon is not cut at, since what follows one can be the
+    qualification that makes the first clause true (codex, 2026-11-26). A
+    purpose that opens with the subsystem's own id or name continues the linked
+    name rather than repeating it.
+
+    The link is a node, not Markdown, so a name holding brackets or a pipe
+    prints as recorded and cannot redirect the link (codex, 2026-11-26).
+    """
+
+    shown = _one_line(name)
+    link = Link(subsystem_page(sid, name), shown)
+    line = _one_line(purpose)
+    gist = _first_sentence(line)
+    # The subject comes off first, so a colon inside the subsystem's own name
+    # is never taken for the end of the gist.
+    continues = False
+    for subject in (f"{sid} ({shown}) ", f"{shown} ", f"{sid} "):
+        if gist.lower().startswith(subject.lower()):
+            gist, continues = gist[len(subject):], True
+            break
+    cut = re.search(r":\s", gist)
+    if cut and len(gist[: cut.start()].split()) >= 3:
+        gist = gist[: cut.start()] + "."
+    if not gist:
+        return ListItem(Inlines((link,), shown))
+    if not continues:
+        # "Ties one process…" continues the dash in lower case; "MCP server…" keeps its capitals.
+        if gist[:1].isupper() and gist[1:2].islower():
+            gist = gist[:1].lower() + gist[1:]
+        gist = f"— {gist}"
+    tail = inlines(gist)
+    return ListItem(Inlines((link, Text(" "), *tail.nodes), f"{shown} {tail.plain}"))
+
 
 # The read-back is recorded after the pages are written, so the overview can only
 # show the publication before it. No digit and neither "red" nor "green": the
@@ -1724,18 +1801,19 @@ def render_index(
     storage: Path,
     warn: Callable[[str], None] | None = None,
 ) -> RenderResult:
-    """The Overview: the entrance to the four lenses, and not a lens (§7.2).
+    """The Overview: what the codebase is, and its parts (owner, 2026-11-26).
 
-    Five items, first in source order with nothing between them: identity, the
-    thesis taken by heading, four separately named status dimensions, one linked
-    count per resolution state, and one route into each lens. The dimensions are
-    never combined: a single number would let a green publication read as a read
-    repository, and there is no arithmetic that turns four different kinds of
-    ignorance into one (BP26).
+    Two things and a closing line. First the codebase's recorded purpose, taken
+    as the thesis always was (the project purpose, else by heading from
+    entry-point.md, or the named instruction). Then each subsystem by layer:
+    its name, linked to its page, and the first sentence of its recorded
+    purpose. A subsystem with no purpose recorded, or one the orientation lint
+    refuses, shows its name alone; its page says why. The survey's own figures
+    are on About this survey.
 
     `warn` receives one message per orientation-lint failure so the publish can
     turn red on it; the thesis slot then carries the refusal rather than the
-    prose (§11.1).
+    prose (§11.1). A refused subsystem purpose is reported by its own page.
     """
 
     name = project_name(conn, storage)
@@ -1745,6 +1823,75 @@ def render_index(
             f"{thesis.source}: the recorded thesis was not published because it "
             + "; ".join(thesis.violations)
         )
+    try:
+        subs = rows(
+            conn,
+            # status is read for the hash: it decides whether a purpose may print (codex, 2026-11-26).
+            "SELECT id, name, layer, status FROM subsystems"
+            " ORDER BY layer, CASE WHEN priority IS NULL THEN 1 ELSE 0 END, priority, id",
+        )
+    except sqlite3.OperationalError:
+        subs = rows(conn, "SELECT id, name, layer, status FROM subsystems ORDER BY layer, id")
+    readings = effective_explanations(conn, storage)
+
+    layers: dict[str, list[ListItem]] = {}
+    for s in subs:
+        sid = str(s["id"])
+        reading = _reading(readings, "subsystem", sid, "purpose")
+        purpose = ""
+        if reading.state == "recorded" and reading.row is not None:
+            text, is_body = _published_explanation(sid, "purpose", str(reading.row["body"]), None)
+            purpose = text if is_body else ""
+        layer = _plain(_table_cell(s["layer"] or "")) or "Other"
+        layers.setdefault(layer, []).append(_part_item(sid, str(s["name"]), purpose))
+
+    parts: list[Block] = []
+    for layer, items in layers.items():
+        if len(layers) > 1:
+            parts.append(_heading(3, layer[:1].upper() + layer[1:]))
+        parts.append(List(False, tuple(items)))
+    blocks: list[Block] = [_section(f"What {name} is", *thesis_blocks(thesis))]
+    if parts:
+        blocks.append(_section(OVERVIEW_PARTS_HEADING, *parts))
+    blocks.append(
+        _paragraph(OVERVIEW_CLOSING.format(guide=GUIDE_TITLE, about=ABOUT_TITLE, about_page=ABOUT_PAGE))
+    )
+
+    page = Page(name, "index.html", tuple(blocks))
+    # Over the page as published, not over the thesis alone. C32's rule is about
+    # what the overview carries, so a renderer that grows a composite row is the
+    # same violation as a session that writes one into `entry-point.md`, and
+    # only a lint over the rendered words sees both (F5/codex).
+    if warn is not None:
+        for message in composite_index_violations(page_text(page)):
+            warn(f"index.html: the overview may not publish a composite index — {message}")
+
+    sources = {
+        **_db_source("index:subs", subs),
+        **_db_source("index:explanations", explanation_rows(conn)),
+        **_db_source("index:identity", {"project_name": name}),
+        **_db_source("index:purpose", {"state": thesis.state, "text": thesis.text}),
+    }
+    return page, sources
+
+
+def render_about(
+    conn: sqlite3.Connection,
+    storage: Path,
+    warn: Callable[[str], None] | None = None,
+) -> RenderResult:
+    """About this survey: the survey's own bookkeeping, at the back of Method.
+
+    It held the Overview's status blocks until the owner moved them here
+    (2026-11-26): four separately named status dimensions, one linked count per
+    resolution state, and the latest session. The dimensions are never
+    combined: a single number would let a green publication read as a read
+    repository, and there is no arithmetic that turns four different kinds of
+    ignorance into one (BP26).
+
+    `warn` receives one message per composite-index violation, as the Overview's
+    lint did when these blocks lived there.
+    """
 
     alignment = source_alignment(conn, storage)
     checked = alignment["last_checked_sha"]
@@ -1813,8 +1960,6 @@ def render_index(
         "SELECT intent, started_at, ended_at FROM sessions ORDER BY started_at DESC LIMIT 1",
     )
 
-    # 1. Identity.  The project is the subject; Amanuensis is the method that
-    #    recorded it (`reporting-style.md`).
     alignment_pairs = [
         (
             "Checked at",
@@ -1926,10 +2071,6 @@ def render_index(
         )
 
     blocks: list[Block] = [
-        _paragraph(OVERVIEW_IDENTITY.format(name=name, guide=GUIDE_TITLE)),
-        # 2. Thesis — the project purpose, else by heading from entry-point.md,
-        #    or the named instruction.
-        _section("What is this codebase?", *thesis_blocks(thesis)),
         _section(
             "Where the record stands",
             _heading(3, "Source alignment"),
@@ -1957,22 +2098,6 @@ def render_index(
                 ],
             ),
         ),
-        # 5. One route into each lens (§1.1, §7.1).
-        _section(
-            "The four lenses",
-            _bullets(
-                [
-                    "**Codebase** — [Subsystems](master-plan.html): every region, grouped by"
-                    " layer, with the boundaries and terms recorded for it.",
-                    "**Unresolved** — [Open findings](findings.html): defects open or awaiting"
-                    " verification at the checked revision.",
-                    "**History** — [Resolved findings](resolved-findings.html): the records that"
-                    " reached a terminal state, with the basis each one rests on.",
-                    f"**Method** — [{GUIDE_TITLE}](how-to-read.html): what each page is for,"
-                    " the terms it uses, and how a survey works.",
-                ]
-            ),
-        ),
     ]
     if latest_session:
         blocks.append(
@@ -1989,29 +2114,22 @@ def render_index(
             )
         )
 
-    page = Page(name, "index.html", tuple(blocks))
-    # Over the page as published, not over the thesis alone. C32's rule is about
-    # what the overview carries, so a renderer that grows a composite row is the
-    # same violation as a session that writes one into `entry-point.md`, and
-    # only a lint over the rendered words sees both. Until slice-S7 this check
-    # lived in the packet's gate, where it could report on a publish it could
-    # not stop (F5/codex).
+    page = Page(ABOUT_TITLE, ABOUT_PAGE, tuple(blocks))
+    # The figures moved here from the Overview, and C32's rule moved with them.
     if warn is not None:
         for message in composite_index_violations(page_text(page)):
-            warn(f"index.html: the overview may not publish a composite index — {message}")
+            warn(f"{ABOUT_PAGE}: the survey's bookkeeping may not publish a composite index — {message}")
 
     sources = {
-        **_db_source("index:alignment", alignment),
-        **_db_source("index:subs", subs),
-        **_db_source("index:states", state_counts),
-        **_db_source("index:reconciliation", standing.record or {"why": standing.why}),
-        **_db_source("index:carried", carried),
-        **_db_source("index:unresolved", unresolved),
-        **_db_source("index:decisions", decisions),
-        **_db_source("index:verification", verification or {}),
-        **_db_source("index:session", latest_session or {}),
-        **_db_source("index:identity", {"project_name": name}),
-        **_db_source("index:purpose", {"state": thesis.state, "text": thesis.text}),
+        **_db_source("about:alignment", alignment),
+        **_db_source("about:subs", subs),
+        **_db_source("about:states", state_counts),
+        **_db_source("about:reconciliation", standing.record or {"why": standing.why}),
+        **_db_source("about:carried", carried),
+        **_db_source("about:unresolved", unresolved),
+        **_db_source("about:decisions", decisions),
+        **_db_source("about:verification", verification or {}),
+        **_db_source("about:session", latest_session or {}),
     }
     return page, sources
 
@@ -2043,7 +2161,7 @@ def render_architecture(
         body, is_body = printed
         fit.append(body)
         if is_body and account.state == "recorded":
-            fit.append(_paragraph(_provenance_line(workspace, bound, account.row, head)))
+            fit.append(_provenance_line(workspace, bound, account.row, head))
     else:
         fit.append(_paragraph(PROJECT_ACCOUNT_ABSENT))
     lines = []
@@ -2384,7 +2502,7 @@ def render_subsystem(
         body, is_body = printed
         held: list[Block] = [body]
         if purpose.state == "recorded" and is_body:
-            held.append(_paragraph(_provenance_line(workspace, bound, purpose.row, checked_head)))
+            held.append(_provenance_line(workspace, bound, purpose.row, checked_head))
         blocks.append(_section("Purpose", *held))
 
     # 1. Scope — verbatim, under that heading, never as a purpose sentence.
@@ -2434,7 +2552,7 @@ def render_subsystem(
         body, is_body = printed
         held = [body]
         if is_body:
-            held.append(_paragraph(_provenance_line(workspace, bound, account.row, checked_head)))
+            held.append(_provenance_line(workspace, bound, account.row, checked_head))
         blocks.append(_section("How it works", *held))
 
     # 3. Structure — current claims, grouped by what each one records (§7.3).
@@ -4213,8 +4331,8 @@ def render_stale(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 f" the ledger names, checked at {_short(checked)} on `{branch}`."
                 f" {freshness['stale_exempt']} of"
                 f" {freshness['scoped_files'] - freshness['obligation_files']} scoped files"
-                " exempt from that obligation have also changed; they are counted on the"
-                " [overview](index.html) and are not recorded here, because drift in"
+                " exempt from that obligation have also changed; they are counted on"
+                " [About this survey](about.html) and are not recorded here, because drift in"
                 " generated or vendored territory is not survey staleness."
             )
         )
@@ -4296,10 +4414,10 @@ SURVEY_SECTION = "How a survey works"
 # left) says where the site starts and what a copy must keep; it has no code
 # span, since the guide's first 600 bytes carry none.
 SITE_IS = (
-    "This site is the record of an AI agent's survey of {name}. The agent read the code,"
-    " recorded what it concluded and the code each conclusion rests on, and listed what it"
-    " could not settle. It does not change the code. Every page is as of one commit, shown"
-    " at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
+    "This site is the record of a survey of {name} by an AI agent running Amanuensis. The"
+    " agent read the code without changing it, recorded what it concluded and the code each"
+    " conclusion rests on, and listed what it could not settle. Every page is as of one"
+    " commit, shown at the foot of each page as *Checked* and on [About this survey](about.html)."
 )
 SITE_VIEWS = (
     "Each page is HTML, written to one directory that starts at index.html. The diagrams, the"

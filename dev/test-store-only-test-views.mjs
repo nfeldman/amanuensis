@@ -148,6 +148,13 @@ const ALLOWED = [
 // `{ file, count, why }`; each lowers that file's assertion floor by `count`.
 const NO_HTML_EQUIVALENT = [];
 
+// A test rewritten after this packet for a deliberate page change. Its page literals no longer
+// measure this packet's migration, so only its assertion count is held to the start's figure.
+const REWRITTEN = {
+  "materializer/test-orientation-overview.py":
+    "O9 rewritten 2026-11-26 for the two-part overview; the figures it read moved to about.html",
+};
+
 // ---------------------------------------------------------------------------
 // Literal scanner: string literals (not comments), plus bare `.md` in code (regex literals).
 // ---------------------------------------------------------------------------
@@ -276,7 +283,7 @@ for (const path of TESTS) {
       `${path} has ${stats[path].assertions} assertion lines, fewer than the ${base.assertions} it started with (${dropped} declared dropped)`,
     );
   }
-  if (base.readMd && stats[path].htmlCount <= base.htmlCount) {
+  if (base.readMd && !REWRITTEN[path] && stats[path].htmlCount <= base.htmlCount) {
     problems.push(`${path} read .md pages at the start but names no more .html pages than before`);
   }
 }

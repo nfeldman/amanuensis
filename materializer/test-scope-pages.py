@@ -767,7 +767,7 @@ def run(root: Path) -> None:
               sorted(ledger_anchor("B-01", p) for p in ("src/a.ts", EXEMPT_GOLDEN))))
 
     def overview_files_read() -> str | None:
-        text = plain(pages_a["index.html"])
+        text = plain(pages_a["about.html"])
         match = re.search(r"Files read[^0-9]*?(\d+ of \d+)", text)
         got = match.group(1) if match else None
         return None if got == "1 of 3" else f"the overview's files read is {got!r}, want '1 of 3' (survey set less exempt)"
@@ -818,7 +818,7 @@ def run(root: Path) -> None:
     def overview_line() -> str | None:
         want = (f"Outside this survey: 1 path ignored by git, 1 the owner excluded (`{OWNER_PATTERN}`),"
                 " 1 sorted as meta.")
-        for world, text in (("A", pages_a["index.html"]), ("B", pages_b["index.html"])):
+        for world, text in (("A", pages_a["about.html"]), ("B", pages_b["about.html"])):
             body = plain(text).replace("‘", "`").replace("’", "`")
             if want.replace("`", "") not in body.replace("`", ""):
                 return f"store {world}'s overview does not print {want!r}"
@@ -853,7 +853,7 @@ def run(root: Path) -> None:
 
     check("W3 the overview names only the owner patterns whose rules excluded a counted path", overview_patterns)
     check("W2 no overview line when nothing is excluded",
-          lambda: "store C's overview prints the line" if "Outside this survey" in pages_c["index.html"] else None)
+          lambda: "store C's overview prints the line" if "Outside this survey" in pages_c["about.html"] else None)
 
     storage_a, docs_a = stores["A"][0], stores["A"][1]
     tampers = {

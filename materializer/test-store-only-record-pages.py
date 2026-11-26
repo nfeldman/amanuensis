@@ -644,13 +644,14 @@ def run(work: Path) -> int:
             aged = ageing_segment(text, FLOW_NEW)
             if NARRATIVE_DATE not in aged or shas["c1"][:8] not in aged:
                 return f"{view}: the aged narrative carries no date and revision beside it"
-            if "changed since:" not in aged or READER not in aged or "None of the" in aged:
+            if "changed since:" not in aged or READER not in aged:
                 return f"{view}: the narrative whose cited file moved is not marked ageing"
             fresh = ageing_segment(text, LIFE_BODY)
             if NARRATIVE_DATE not in fresh or shas["c1"][:8] not in fresh:
                 return f"{view}: the unchanged narrative carries no date and revision"
-            if "None of the" not in fresh or "changed since:" in fresh:
-                return f"{view}: the unchanged narrative is not marked as unchanged"
+            # Unchanged prints no ageing clause at all (owner, 2026-11-26: the line was too long).
+            if "changed since:" in fresh or "Not checked against later changes." in fresh:
+                return f"{view}: the unchanged narrative carries an ageing clause"
         return None
 
     check("each narrative prints its date and revision; only the moved one is ageing", dated_and_aged)

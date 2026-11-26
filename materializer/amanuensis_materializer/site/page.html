@@ -29,19 +29,20 @@
     <div class="mobile-bar"><span class="mobile-brand">${project}</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
     <div class="document-inner">
       <header class="page-head">
-        <div class="page-eyebrow-row"><p class="eyebrow">${eyebrow}</p>${help}</div>
+        <div class="page-eyebrow-row"><div class="page-eyebrows">${eyebrow}</div>${help}</div>
         <h1>${title}</h1>
         ${hint}
-        ${notice}
+      </header>
+      <article class="content content-${kind}"${filters}>${body}</article>
+      <footer class="page-foot">
         <div class="snapshot-strip">
           <span class="snapshot-item"><b>Branch</b>&nbsp; ${branch}</span>
           <span class="snapshot-item"><b>Checked</b>&nbsp; ${checked}</span>
           <span class="snapshot-item"><b>As of</b>&nbsp; ${checked_at}</span>
           <span class="snapshot-item"><span class="${freshness_class}">${freshness}</span></span>
-          ${status}
         </div>
-      </header>
-      <article class="content content-${kind}"${filters}>${body}</article>
+        ${notice}
+      </footer>
     </div>
   </main>
 </div>

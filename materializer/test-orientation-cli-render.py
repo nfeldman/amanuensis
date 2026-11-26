@@ -10,7 +10,7 @@ Turns red when:
   - the same render with --allow-external-output fails;
   - --readback-only against an outside directory is refused;
   - a default CLI render leaves any HTML page without the notice (once, in the
-    page head), or its summary lacks "recorded": false;
+    page footer), or its summary lacks "recorded": false;
   - a render with --recorded-publication carries the notice on any page, or its
     summary lacks "recorded": true; a recorded render over a stamped one leaves a
     notice behind, or a CLI render over a recorded one misses a page;
@@ -22,7 +22,7 @@ Turns red when:
   - the read-back of a stamped CLI render is not green on all three axes, or the
     read-back stays green when a page loses the notice it should carry, or gains one
     under a recorded publication (with the receipt rewritten to match the bytes): in
-    the page head emphasised or plain;
+    the page footer emphasised or plain;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -109,8 +109,8 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # implementation string cannot also rewrite what this gate expects.
 NOTICE = (
     "Rendered from the command line. Its read-back was not recorded in the survey's"
-    " record, so the Publication integrity figures on the overview describe an earlier"
-    " publication."
+    " record, so the Publication integrity figures on About this survey describe an"
+    " earlier publication."
 )
 NOTICE_UNVERIFIED = "Rendered from the command line and not read back."
 NOTICE_STEM = "Rendered from the command line"
@@ -184,7 +184,7 @@ def html_text(fragment: str) -> str:
 
 
 def html_head(text: str) -> str:
-    match = re.search(r'<header class="page-head">(.*?)</header>', text, re.S)
+    match = re.search(r'<footer class="page-foot">(.*?)</footer>', text, re.S)
     return match.group(1) if match else ""
 
 
@@ -201,7 +201,7 @@ def stamped_problem(docs: Path, notice: str, other: str) -> str | None:
         if flat.count(notice) != 1:
             return f"{rel} carries the notice {flat.count(notice)} times, not once"
         if notice not in html_text(html_head(text)):
-            return f"{rel}: the notice is not in the page head"
+            return f"{rel}: the notice is not in the page footer"
         if other in flat:
             return f"{rel} carries the other variant of the notice"
     return None
@@ -325,7 +325,7 @@ def main() -> int:
         check("a default CLI render publishes and its summary says recorded: false", cli_render_publishes)
         check("no published page hides its report from assistive technology", lambda: hidden_pages(cli_docs))
         check(
-            "every page of a CLI render carries the notice, once, in the page head",
+            "every page of a CLI render carries the notice, once, in the page footer",
             lambda: stamped_problem(cli_docs, NOTICE, NOTICE_UNVERIFIED),
         )
         check("the stamped render's own read-back is green on all three axes", lambda: axes_problem(cli_summary, "render"))
@@ -416,8 +416,8 @@ def main() -> int:
             gained_notice_is_red(
                 "entry-point.html",
                 lambda text: text.replace(
-                    '<header class="page-head">',
-                    f'<header class="page-head"><p><em>{htmllib.escape(NOTICE)}</em></p>',
+                    '<footer class="page-foot">',
+                    f'<footer class="page-foot"><p><em>{htmllib.escape(NOTICE)}</em></p>',
                     1,
                 ),
             ),
@@ -428,8 +428,8 @@ def main() -> int:
             gained_notice_is_red(
                 "entry-point.html",
                 lambda text: text.replace(
-                    '<header class="page-head">',
-                    f'<header class="page-head"><p>{htmllib.escape(NOTICE)}</p>',
+                    '<footer class="page-foot">',
+                    f'<footer class="page-foot"><p>{htmllib.escape(NOTICE)}</p>',
                     1,
                 ),
             ),
@@ -439,8 +439,8 @@ def main() -> int:
             gained_notice_is_red(
                 "index.html",
                 lambda text: text.replace(
-                    '<header class="page-head">',
-                    f'<header class="page-head"><p>{htmllib.escape(NOTICE)}</p>',
+                    '<footer class="page-foot">',
+                    f'<footer class="page-foot"><p>{htmllib.escape(NOTICE)}</p>',
                     1,
                 ),
             ),

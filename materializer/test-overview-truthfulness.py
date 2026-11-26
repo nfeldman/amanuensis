@@ -15,9 +15,11 @@ Turns red when:
     the first paragraph instead of publishing the named instruction;
   - a thesis carrying status vocabulary reaches the published overview, or the
     publish stays green when it does;
-  - the overview does not carry, in source order with nothing between them,
-    identity, the thesis, four separately named status dimensions, one linked
-    count per `finding_resolution_state` value, and one route into each lens;
+  - the overview is not the two parts the owner set (2026-11-26): the thesis
+    under "What <codebase> is", then "Its parts", and nothing that names the
+    method; or About this survey, where the bookkeeping moved, does not open
+    with four separately named status dimensions and one linked count per
+    `finding_resolution_state` value;
   - a status dimension reports a number the fixture's store contradicts, a
     composite score or progress meter appears, a bare percentage or a
     composite-labelled ratio is published as a status figure, or a resolution
@@ -115,12 +117,10 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # expects (§7.2, §11.1, §6.1).
 # ---------------------------------------------------------------------------
 PROJECT_NAME = "LedgerFixture"
-IDENTITY_SENTENCE = (
-    f"An architecture survey of {PROJECT_NAME}. An agent running Amanuensis read the"
-    " repository without changing it. New to this site? Start with the Reader's guide."
-)
-IDENTITY_LINK = '<a href="how-to-read.html">Reader&#x27;s guide</a>'
-THESIS_HEADING = "What is this codebase?"
+# The heading the imported entry point carries the thesis under, and the one the
+# overview prints it under.
+SOURCE_THESIS_HEADING = "What is this codebase?"
+THESIS_HEADING = f"What {PROJECT_NAME} is"
 THESIS_SENTENCE = (
     "LedgerFixture appends ledger rows durably and serves them through a "
     "separate read path."
@@ -141,19 +141,14 @@ OFFENDING_THESIS = (
     "The conspectus is 34/34 mapped and every subsystem is fully surveyed."
 )
 
-OVERVIEW_SECTIONS = (
-    THESIS_HEADING,
-    "Where the record stands",
-    "Findings by resolution state",
-    "The four lenses",
-)
+OVERVIEW_SECTIONS = (THESIS_HEADING, "Its parts")
+ABOUT_SECTIONS = ("Where the record stands", "Findings by resolution state")
 STATUS_DIMENSIONS = (
     "Source alignment",
     "Survey coverage",
     "Open engineering work",
     "Publication integrity",
 )
-LENSES = ("Codebase", "Unresolved", "History", "Method")
 
 # The revision the fixture's survey checked. `make_workspace` rebinds it to the
 # commit whose tree is `TRACKED_AT_R`, so the recorded reconciliation is one a
@@ -248,7 +243,7 @@ ENTRY_POINT_WITH_THESIS = f"""# Where to begin
 
 Read `src/reader.ts` first, then `src/writer.ts`.
 
-## {THESIS_HEADING}
+## {SOURCE_THESIS_HEADING}
 
 {THESIS_SENTENCE}
 
@@ -281,7 +276,7 @@ ENTRY_POINT_OFFENDING = f"""# Where to begin
 
 {DECOY_SENTENCE}
 
-## {THESIS_HEADING}
+## {SOURCE_THESIS_HEADING}
 
 {OFFENDING_THESIS}
 """
@@ -942,6 +937,9 @@ def main() -> int:
         docs = main_storage / "docs"
         index = read(docs / "index.html") or ""
         index_text = plain(article(index))
+        # The survey's figures moved to About this survey (owner, 2026-11-26).
+        about = read(docs / "about.html") or ""
+        about_text = plain(article(about))
 
         def publishes_green() -> str | None:
             if seed_error:
@@ -970,7 +968,7 @@ def main() -> int:
             if THESIS_SENTENCE not in index_text:
                 return (
                     "the overview does not carry the body of the"
-                    f" '{THESIS_HEADING}' section as its thesis"
+                    f" '{SOURCE_THESIS_HEADING}' section as its thesis"
                 )
             if DECOY_SENTENCE in index_text:
                 return (
@@ -1013,46 +1011,37 @@ def main() -> int:
                 return f"the overview's document title {names!r} does not name the project"
             if not re.search(r"<h1\b", index):
                 return "the overview does not open with a level-one heading"
-            body = article(index)
-            head_match = next(
-                (
-                    match
-                    for match in _HEADING_RE.finditer(body)
-                    if plain(match.group(2)).lstrip("\u00a7").strip() == THESIS_HEADING
-                ),
-                None,
-            )
-            head_block = body[: head_match.start()] if head_match else body
-            if IDENTITY_SENTENCE not in plain(head_block) or IDENTITY_LINK not in head_block:
-                return (
-                    "the identity block does not carry the identity sentence naming"
-                    " Amanuensis as the producing method (PLAN Appendix C)"
-                )
+            if "Amanuensis" in index_text:
+                return "the overview names the method; Amanuensis belongs in the reader's guide"
             titles = [primary, *(plain(h) for h in re.findall(r"<h1\b[^>]*>(.*?)</h1>", index, re.S))]
             if any(re.fullmatch(r"(Conspectus|Amanuensis)", t) for t in titles):
                 return "the overview titles itself with the method rather than the project"
             return None
 
-        check("identity is the project name, Amanuensis the method", identity_first)
+        check("identity is the project name, and the overview names no method", identity_first)
 
         def source_order() -> str | None:
             if not index:
                 return "the published overview index.html is not readable"
             found = level2(index)
-            if found[: len(OVERVIEW_SECTIONS)] != list(OVERVIEW_SECTIONS):
+            if found != list(OVERVIEW_SECTIONS):
+                return f"the overview's sections are {found}, not {list(OVERVIEW_SECTIONS)}"
+            if not about:
+                return "about.html is not readable"
+            found = level2(about)
+            if found[: len(ABOUT_SECTIONS)] != list(ABOUT_SECTIONS):
                 return (
-                    "the overview's first sections are"
-                    f" {found[: len(OVERVIEW_SECTIONS) + 1]}, not {list(OVERVIEW_SECTIONS)}"
-                    " in that order with nothing between them"
+                    f"About this survey's first sections are {found[: len(ABOUT_SECTIONS) + 1]},"
+                    f" not {list(ABOUT_SECTIONS)} in that order with nothing between them"
                 )
             return None
 
-        check("the five items stand first in source order", source_order)
+        check("the overview is two parts, and About this survey opens with the status", source_order)
 
         def four_dimensions() -> str | None:
-            if not index:
-                return "the published overview index.html is not readable"
-            stands = section(index, "Where the record stands")
+            if not about:
+                return "about.html is not readable"
+            stands = section(about, "Where the record stands")
             found = level3(stands)
             if found != list(STATUS_DIMENSIONS):
                 return (
@@ -1064,7 +1053,7 @@ def main() -> int:
         check("four separately named status dimensions", four_dimensions)
 
         def source_alignment_values() -> str | None:
-            body = plain(section(section(index, "Where the record stands"), "Source alignment", level=3))
+            body = plain(section(section(about, "Where the record stands"), "Source alignment", level=3))
             if not body.strip():
                 return "the Source alignment dimension is empty"
             if RECORDED_SHA[:12] not in body:
@@ -1094,7 +1083,7 @@ def main() -> int:
         check("Source alignment reports the revisions and the stale denominator", source_alignment_values)
 
         def survey_coverage_values() -> str | None:
-            body = plain(section(section(index, "Where the record stands"), "Survey coverage", level=3))
+            body = plain(section(section(about, "Where the record stands"), "Survey coverage", level=3))
             if not body.strip():
                 return "the Survey coverage dimension is empty"
             if "2 mapped" not in body or "1 scoping" not in body:
@@ -1112,7 +1101,7 @@ def main() -> int:
         check("Survey coverage reports the ladder, the ledger, and the gaps", survey_coverage_values)
 
         def open_work_values() -> str | None:
-            block = section(section(index, "Where the record stands"), "Open engineering work", level=3)
+            block = section(section(about, "Where the record stands"), "Open engineering work", level=3)
             if not block.strip():
                 return "the Open engineering work dimension is empty"
             rows = [(label, value) for _raw, label, value in metric_rows(block)]
@@ -1140,7 +1129,7 @@ def main() -> int:
         check("Open engineering work reports four separate counts", open_work_values)
 
         def publication_integrity_values() -> str | None:
-            body = plain(section(section(index, "Where the record stands"), "Publication integrity", level=3))
+            body = plain(section(section(about, "Where the record stands"), "Publication integrity", level=3))
             if not body.strip():
                 return "the Publication integrity dimension is empty"
             lowered = body.lower()
@@ -1164,19 +1153,19 @@ def main() -> int:
         check("Publication integrity reports the latest run's three axes", publication_integrity_values)
 
         def no_composite_score() -> str | None:
-            if not index:
-                return "the published overview index.html is not readable"
+            if not index or not about:
+                return "the published overview or about.html is not readable"
             # Words and bars are read from the visible text; the meter elements
             # from the page's own markup.
             for pattern, what, subject in (
                 (
                     r"(?i)\b(health|overall|composite|readiness)\s+(score|index|grade|rating)\b",
                     "a composite score",
-                    index_text,
+                    index_text + " " + about_text,
                 ),
-                (r"(?i)\bscore\b", "a score", index_text),
-                (r"<progress|<meter", "a progress meter", article(index)),
-                (r"[█▓▒░]", "a progress bar", index_text),
+                (r"(?i)\bscore\b", "a score", index_text + " " + about_text),
+                (r"<progress|<meter", "a progress meter", article(index) + article(about)),
+                (r"[█▓▒░]", "a progress bar", index_text + " " + about_text),
             ):
                 if re.search(pattern, subject):
                     return f"the overview carries {what}"
@@ -1188,11 +1177,13 @@ def main() -> int:
             """The half the word-matching check above cannot see (F3/claude)."""
             if not index:
                 return "the published overview index.html is not readable"
-            offending = composite_index_violations(visible(article(index)))
+            offending = composite_index_violations(visible(article(index))) + composite_index_violations(
+                visible(article(about))
+            )
             return "; ".join(offending[:3]) if offending else None
 
         check(
-            "no composite index: no bare percentage or composite ratio in the overview",
+            "no composite index: no bare percentage or composite ratio on the overview or About this survey",
             no_composite_index,
         )
 
@@ -1313,9 +1304,9 @@ def main() -> int:
         )
 
         def state_counts() -> str | None:
-            if not index:
-                return "the published overview index.html is not readable"
-            body = section(index, "Findings by resolution state")
+            if not about:
+                return "about.html is not readable"
+            body = section(about, "Findings by resolution state")
             if not body.strip():
                 return "the overview carries no per-state findings counts"
             try:
@@ -1358,26 +1349,13 @@ def main() -> int:
 
         check("one linked count per finding_resolution_state value", state_counts)
 
-        def lens_routes() -> str | None:
-            if not index:
-                return "the published overview index.html is not readable"
-            body = section(index, "The four lenses")
-            if not body.strip():
-                return "the overview carries no routes into the lenses"
-            for lens in LENSES:
-                hits = re.findall(rf"<li>\s*<strong>{lens}</strong>", body)
-                if len(hits) != 1:
-                    return f"the {lens!r} lens has {len(hits)} routes, not exactly one"
-            targets = re.findall(r'<a href="([^"]+)"', body)
-            if len(targets) < len(LENSES):
-                return f"the lens routes carry {len(targets)} links, fewer than one per lens"
-            for target in targets:
-                page = target.split("#", 1)[0]
-                if page and not (docs / page).is_file():
-                    return f"a lens route points at {page}, which the projection does not publish"
+        def no_lens_routes() -> str | None:
+            # The lens routes left with the bookkeeping; the navigation carries the lenses.
+            if "The four lenses" in index_text or "The four lenses" in about_text:
+                return "a page still carries the four lens routes"
             return None
 
-        check("one route into each of the four lenses", lens_routes)
+        check("no page carries the old lens routes", no_lens_routes)
 
         def no_entries_marker() -> str | None:
             for suffix, label in ((".html", "HTML"),):
@@ -1541,10 +1519,10 @@ def main() -> int:
         def upstream_alignment() -> str | None:
             if fixture_error:
                 return fixture_error
-            index = read(fixture["storage"] / "docs" / "index.html")
-            if index is None:
-                return "the upstream fixture published no index.html"
-            body = section(section(index, "Where the record stands"), "Source alignment", level=3)
+            about = read(fixture["storage"] / "docs" / "about.html")
+            if about is None:
+                return "the upstream fixture published no about.html"
+            body = section(section(about, "Where the record stands"), "Source alignment", level=3)
             if not body.strip():
                 return "the Source alignment dimension is empty"
             head = fixture["head"]

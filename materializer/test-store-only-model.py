@@ -81,7 +81,8 @@ BLOCK_KINDS = (
 )
 STORES = ("materializer", "axiomdb-shaped", "self-shaped", "lens")
 # Pages whose golden HTML was written against a git workspace the corpus does not carry.
-WORKSPACE_DEPENDENT = {("lens", "index.html"), ("lens", "not-yet-surveyed.html")}
+# make-golden.py keeps the same set: the lens Repository head row moved to About this survey.
+WORKSPACE_DEPENDENT = {("lens", "about.html"), ("lens", "not-yet-surveyed.html")}
 # Constants that exist only to recognise Markdown; the writer may name none.
 RECOGNITION_PATTERNS = ("_MARKER_RE", "_LIST_ITEM")
 
@@ -333,7 +334,9 @@ def main() -> int:
                         return f"{name}/{path} differs {first_difference(expected, actual)}"
                     compared += 1
                 extra = sorted(
-                    str(p.relative_to(output)) for p in output.rglob("*.html") if str(p.relative_to(output)) not in golden
+                    str(p.relative_to(output))
+                    for p in output.rglob("*.html")
+                    if str(p.relative_to(output)) not in golden and (name, str(p.relative_to(output))) not in WORKSPACE_DEPENDENT
                 )
                 if extra:
                     return f"{name} printed pages the corpus does not hold: {extra[:3]}"

@@ -348,7 +348,16 @@ def with_repository(seen: dict[str, Any], url: str) -> dict[str, Any]:
 
 
 #: Pages whose golden HTML was written against a git workspace the corpus does not carry.
-WORKSPACE_DEPENDENT = {("lens", "index.html"), ("lens", "not-yet-surveyed.html")}
+#: The lens overview's Repository head row left with the bookkeeping for About this
+#: survey (owner, 2026-11-26), so that page is the workspace-dependent one now.
+WORKSPACE_DEPENDENT = {("lens", "about.html"), ("lens", "not-yet-surveyed.html")}
+
+#: Pages the page plan gained after the corpus was last regenerated in full. A
+#: recorded reprint may add these and no other page: anything else missing from
+#: the corpus means the corpus and the plan disagree, and only a full
+#: regeneration settles that. About this survey took the overview's bookkeeping
+#: (owner, 2026-11-26).
+ADDED_SINCE_FULL = {"about.html"}
 
 
 def reprint_recorded() -> None:
@@ -359,7 +368,7 @@ def reprint_recorded() -> None:
             if (name, path) in WORKSPACE_DEPENDENT:
                 continue
             target = GOLDEN / name / "html" / path
-            if not target.is_file():
+            if not target.is_file() and path not in ADDED_SINCE_FULL:
                 raise SystemExit(f"{name}: {path} is not in the corpus; regenerate it in full")
             target.write_text(fold(text))
 

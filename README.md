@@ -103,7 +103,7 @@ written by the model that read the code, bound to that revision and its evidence
 marked as ageing when the cited files change. No gate checks that an explanation is
 true: it orients a reader, while claims remain the home of individually checkable rules.
 
-A survey accounts for the repository's tracked files except the ones it leaves out: paths the repository's own ignore files match, paths the owner excluded and paths onboarding sorted as meta, such as plans and research; an excluded path gets no ledger row and no evidence and appears only as a count on the overview, and an owner include rule brings any of them back.
+A survey accounts for the repository's tracked files except the ones it leaves out: paths the repository's own ignore files match, paths the owner excluded and paths onboarding sorted as meta, such as plans and research; an excluded path gets no ledger row and no evidence and appears only as a count on the site's About this survey page, and an owner include rule brings any of them back.
 
 ## Work from the memory
 

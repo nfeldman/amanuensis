@@ -189,6 +189,9 @@ NO_OBLIGATION_SENTENCE = "no tracked path carries a survey obligation"
 COVERAGE_ROW_CARRIED = "Carried defects undecided"
 
 OVERVIEW_PAGE_HTML = "index.html"
+#: The page that carries the survey's coverage rows since they left the overview
+#: (owner, 2026-11-26).
+ABOUT_PAGE_HTML = "about.html"
 
 # The HTML view renders a metric table as a description list, and a data table
 # as a table; both shapes are read, so this axis does not depend on which one
@@ -1902,9 +1905,9 @@ class ProjectionVerifier:
             if body is None or Path(rel).suffix not in HTML_SUFFIXES:
                 continue  # coverage owns a missing page; the search index has no head
             count = body.count(escape(expected)) if expected else 0
-            head = re.search(r'<header class="page-head">(.*?)</header>', body, re.S)
+            foot = re.search(r'<footer class="page-foot">(.*?)</footer>', body, re.S)
             placed = not expected or (
-                count == 1 and head is not None and escape(expected) in head.group(1)
+                count == 1 and foot is not None and escape(expected) in foot.group(1)
             )
             if not placed:
                 detail = (
@@ -3004,7 +3007,7 @@ class ProjectionVerifier:
             ),
             COVERAGE_ROW_FILES_READ: files_read,
         }
-        for rel in (OVERVIEW_PAGE_HTML,):
+        for rel in (ABOUT_PAGE_HTML,):
             text = projection.get(rel)
             if text is None:
                 continue  # coverage already owns the missing-page diagnostic
@@ -3016,7 +3019,7 @@ class ProjectionVerifier:
                             "axis": "coverage",
                             "object_type": "coverage-measurement",
                             "object_id": f"{rel}:{label}",
-                            "detail": "the overview publishes no such row",
+                            "detail": "the page publishes no such row",
                         }
                     )
                     continue
