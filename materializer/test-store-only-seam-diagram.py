@@ -23,7 +23,7 @@ Turns red when:
   - the assumptions (ordering, cardinality, staleness tolerance, schema owner) are not a
     caption of the drawing, an unrecorded one is not named, or the account does not count the
     arrows and assumptions that have no recorded value ("n of 4");
-  - an SVG lacks `role="img"`, a `<title>` or a `<desc>` that counts its boxes and arrows,
+  - an SVG does not present itself as Appendix B rule 8 says (diagram_access.py), lacks a `<title>` or a `<desc>` that counts its boxes and arrows,
     states a font size under 11, uses a literal colour, runs a script, is not 960 wide, or a
     mark has no `data-node` or `data-edge`; a party's box is not headed with its own ID, or the
     shared object's box with its recorded name; a figure has no readable account beside it, no
@@ -64,6 +64,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from typing import Any
 
+import diagram_access  # noqa: E402
 import lineage_style  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
@@ -269,8 +270,8 @@ def svg_faults(figure: str, boxes: int, arrows: int) -> str | None:
         return "the figure holds no SVG"
     text = svg.group(0)
     start = re.match(r"<svg\b[^>]*>", text).group(0)  # type: ignore[union-attr]
-    if 'role="img"' not in start:
-        return 'the SVG has no role="img"'
+    if (fault := diagram_access.access_faults(text)) is not None:
+        return fault
     if 'viewBox="0 0 960 ' not in start:
         return f"the SVG's viewBox is not 960 wide: {start[:200]}"
     title = re.search(r"<title\b[^>]*>(.+?)</title>", text, re.S)

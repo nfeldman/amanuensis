@@ -1035,8 +1035,13 @@ checked against the code before it was accepted; all 16 were.
 7. Uncertainty shows: `observation` solid, `inference` dashed, `hypothesis`/`open-question` dotted and
    labelled; marks resting only on `comment-asserted`, `name-inferred` or `pattern-matched` evidence
    carry the linchpin mark; a `survived` challenge carries a tick.
-8. A complete readable account sits beside every SVG; `role="img"`, `<title>`, `<desc>` with counts;
-   links focusable in reading order.
+8. A complete readable account sits beside every SVG, which has a `<title>` and a `<desc>` with counts.
+   A diagram with no link is `role="img"`, labelled by both. A diagram with links is a `role="group"`
+   labelled by its title and described by its desc, with the drawing between the links hidden and
+   every link focusable in reading order and named without the hidden drawing (a coverage segment
+   names its bar): ARIA treats an image's children as
+   presentational, so `role="img"` would hide the links (amended 2026-11-26, final review F14/claude;
+   checked by `materializer/diagram_access.py`).
 9. Colours from CSS tokens only, following the enum encoded, never the only signal.
 10. Deterministic, byte-identical output; stable, stated ordering; no force layout.
 11. Declared minimum and maximum mark counts per diagram: a sentence below, a table or split above;

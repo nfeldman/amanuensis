@@ -268,12 +268,10 @@ Workflow:
   `_identifier_markup` over each finished page's nav, body and eyebrow, which PLAN §3.1 meant to
   replace with typed record references in the page model. The fix needs every builder to emit
   those references, with the golden pages byte-identical, so it needs a packet of its own.
-- **Diagram SVGs are images that contain links.** Deferred by the owner from the store-only final
-  review (Claude F14), 2026-11-21. The SVGs from SO22–SO25 carry `role="img"` and `<a href>`
-  children, and ARIA treats an image's children as presentational, so those links are hidden
-  from screen readers. Appendix B rule 8 of `design/store-only/PLAN.md` asks for both, so amend
-  the rule first. Proposed: a diagram with links is a labelled `role="group"`, and `role="img"`
-  stays for diagrams with none. Then change the four gates that assert `role="img"`.
+- ~~**Diagram SVGs are images that contain links.**~~ Done 2026-11-26 (final review F14/claude):
+  Appendix B rule 8 is amended, a diagram with links is a labelled `role="group"` whose drawing
+  between the links is hidden, `role="img"` stays for diagrams with none, and the four diagram
+  gates check both forms through `materializer/diagram_access.py`.
 
 ### Reader orientation
 

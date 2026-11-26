@@ -1926,6 +1926,45 @@ def svg_ids(diagram: Diagram) -> tuple[str, str]:
     return f"{stem}-title", f"{stem}-desc"
 
 
+def svg_root(diagram: Diagram, height: float, description: str, body: Sequence[str]) -> str:
+    """The `<svg>` element around a diagram's drawn parts (Appendix B rule 8).
+
+    A diagram with no link is one image: `role="img"`, named by its title and
+    description. ARIA treats an image's children as presentational, so a
+    diagram whose marks link to records is a labelled `role="group"` instead:
+    its title names it, its description describes it, the drawing between the
+    links is hidden, and each link is reached in reading order by its own name
+    (store-only final review F14/claude, owner 2026-11-26).
+    """
+
+    title_id, desc_id = svg_ids(diagram)
+    head = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
+        f'width="{VIEW_WIDTH}"'
+    )
+    title = f'<title id="{title_id}">{escape(diagram.title, quote=False)}</title>'
+    desc = f'<desc id="{desc_id}">{escape(description, quote=False)}</desc>'
+    if not any("<a " in part for part in body):
+        return f'{head} role="img" aria-labelledby="{title_id} {desc_id}">{title}{desc}' + "".join(body) + "</svg>"
+    parts: list[str] = []
+    drawing: list[str] = []
+    for part in body:
+        if "<a " in part:
+            if drawing:
+                parts.append(f'<g aria-hidden="true">{"".join(drawing)}</g>')
+                drawing = []
+            parts.append(part)
+        else:
+            drawing.append(part)
+    if drawing:
+        parts.append(f'<g aria-hidden="true">{"".join(drawing)}</g>')
+    return (
+        f'{head} role="group" aria-labelledby="{title_id}" aria-describedby="{desc_id}">{title}{desc}'
+        + "".join(parts)
+        + "</svg>"
+    )
+
+
 def draw_svg(diagram: Diagram) -> str:
     """A diagram as one inline SVG: a fixed 960-wide viewBox, tokens for colour, no script."""
 
@@ -1941,7 +1980,6 @@ def draw_svg(diagram: Diagram) -> str:
         centres[node.record] = (left + node.column * colw + colw / 2, top + node.row * rowh + rowh / 2)
     rows_used = max((n.row for n in diagram.nodes), default=0) + 1
     height = top + rows_used * rowh + 10
-    title_id, desc_id = svg_ids(diagram)
     boxes, arrows = len(diagram.nodes), len(diagram.edges)
     body: list[str] = []
     for lane_row, lane in enumerate(diagram.lanes):
@@ -1978,14 +2016,7 @@ def draw_svg(diagram: Diagram) -> str:
             inner = f'<a href="{escape(node.href, quote=True)}">{inner}</a>'
         body.append(f'<g data-node="{escape(node.record, quote=True)}">{inner}</g>')
     description = f"{boxes} {'box' if boxes == 1 else 'boxes'} and {arrows} {'arrow' if arrows == 1 else 'arrows'}: {diagram.caption}"
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
-        f'width="{VIEW_WIDTH}" role="img" aria-labelledby="{title_id} {desc_id}">'
-        f'<title id="{title_id}">{escape(diagram.title, quote=False)}</title>'
-        f'<desc id="{desc_id}">{escape(description, quote=False)}</desc>'
-        + "".join(body)
-        + "</svg>"
-    )
+    return svg_root(diagram, height, description, body)
 
 
 _BAR_LEFT, _BAR_RIGHT, _BAR_ROW, _BAR_HEIGHT = 112.0, 950.0, 46.0, 26.0
@@ -1994,7 +2025,6 @@ _BAR_LEFT, _BAR_RIGHT, _BAR_ROW, _BAR_HEIGHT = 112.0, 950.0, 46.0, 26.0
 def _draw_bars(diagram: Diagram) -> str:
     """Bars as one inline SVG: a full-width bar per lane, its segments sized by count, a legend beneath."""
 
-    title_id, desc_id = svg_ids(diagram)
     width = _BAR_RIGHT - _BAR_LEFT
     body: list[str] = []
     for lane_row, lane in enumerate(diagram.lanes):
@@ -2021,7 +2051,10 @@ def _draw_bars(diagram: Diagram) -> str:
             if w >= 30:
                 inner += svg_text([str(node.count)], x + w / 2, top + _BAR_HEIGHT / 2, size=12, weight="600", fill=ink)
             if node.href:
-                inner = f'<a href="{escape(node.href, quote=True)}">{inner}</a>'
+                # The lane label is drawing, hidden from a screen reader, so the link's name
+                # carries its first line: "B-01, Examined: 5 of 8", not "Examined: 5 of 8".
+                spoken = f"{lane.split(chr(10))[0].strip()}, {node.label}: {node.count} of {total}"
+                inner = f'<a href="{escape(node.href, quote=True)}" aria-label="{escape(spoken, quote=True)}">{inner}</a>'
             body.append(f'<g data-node="{escape(node.record, quote=True)}">{inner}</g>')
             x += w
     present: list[tuple[str, str, str, str]] = []
@@ -2042,14 +2075,7 @@ def _draw_bars(diagram: Diagram) -> str:
     height = legend_top + legend_rows * 20 + 6
     segments = len(diagram.nodes)
     description = f"{segments} {'segment' if segments == 1 else 'segments'} in {len(diagram.lanes)} {'bar' if len(diagram.lanes) == 1 else 'bars'}: {diagram.caption}"
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
-        f'width="{VIEW_WIDTH}" role="img" aria-labelledby="{title_id} {desc_id}">'
-        f'<title id="{title_id}">{escape(diagram.title, quote=False)}</title>'
-        f'<desc id="{desc_id}">{escape(description, quote=False)}</desc>'
-        + "".join(body)
-        + "</svg>"
-    )
+    return svg_root(diagram, height, description, body)
 
 
 #: Where the seam contract's boxes sit: centres of party A, the shared object and party B, their size, and the arrows' rows.
@@ -2070,7 +2096,6 @@ def _seam_label(text: str, width: int = 27, limit: int = 3) -> list[str]:
 def _draw_seam(diagram: Diagram) -> str:
     """A seam contract as one inline SVG: party A, the shared object and party B in a row, a pair of arrows each side."""
 
-    title_id, desc_id = svg_ids(diagram)
     boxw, boxh = _SEAM_BOX
     # Boxes are placed by column, not looked up by record: a seam may name one subsystem as both
     # parties, and each half's arrows then join the box on its own side.
@@ -2114,14 +2139,7 @@ def _draw_seam(diagram: Diagram) -> str:
         height = caption_top + 8 + len(wrapped) * 14 + 10
     boxes, arrows = len(diagram.nodes), len(diagram.edges)
     description = f"{boxes} {'box' if boxes == 1 else 'boxes'} and {arrows} {'arrow' if arrows == 1 else 'arrows'}: {diagram.caption}"
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
-        f'width="{VIEW_WIDTH}" role="img" aria-labelledby="{title_id} {desc_id}">'
-        f'<title id="{title_id}">{escape(diagram.title, quote=False)}</title>'
-        f'<desc id="{desc_id}">{escape(description, quote=False)}</desc>'
-        + "".join(body)
-        + "</svg>"
-    )
+    return svg_root(diagram, height, description, body)
 
 
 _FLOW_LEFT, _FLOW_RIGHT = 14.0, 946.0
@@ -2213,14 +2231,7 @@ def _draw_flow(diagram: Diagram) -> str:
         body.append(f'<g data-node="{escape(mark.record, quote=True)}"><a href="{escape(mark.href, quote=True)}" aria-label="{name}">{line}{label}</a></g>')
     boxes, arrows = len(diagram.nodes), len(diagram.edges)
     description = f"{boxes} {'box' if boxes == 1 else 'boxes'} and {arrows} {'arrow' if arrows == 1 else 'arrows'}: {diagram.caption}"
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" class="diagram-svg" viewBox="0 0 {VIEW_WIDTH} {_n(height)}" '
-        f'width="{VIEW_WIDTH}" role="img" aria-labelledby="{title_id} {desc_id}">'
-        f'<title id="{title_id}">{escape(diagram.title, quote=False)}</title>'
-        f'<desc id="{desc_id}">{escape(description, quote=False)}</desc>'
-        + "".join(body)
-        + "</svg>"
-    )
+    return svg_root(diagram, height, description, body)
 
 
 def _flow_mark(mark: DiagramNode, cx: float, top: float, boxw: float, chars: int, from_y: float, to_y: float) -> str:

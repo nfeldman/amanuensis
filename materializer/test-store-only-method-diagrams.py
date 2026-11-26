@@ -35,7 +35,7 @@ Turns red when:
     has no aria-label, a subject's ladder account does not quote what its depth authorizes,
     or a diagram at its declared minimum (two passes, two rungs) is not drawn (final
     review F5/codex, F7/codex, F12/claude, F15/claude);
-  - an SVG lacks `role="img"`, a `<title>`, or a `<desc>` that counts its boxes and arrows,
+  - an SVG does not present itself as Appendix B rule 8 says (diagram_access.py), lacks a `<title>`, or a `<desc>` that counts its boxes and arrows,
     states a font size under 11, uses a colour that is not a CSS token, runs a script,
     or has a width other than the 960 viewBox;
   - no readable account sits beside a diagram (the pass list with its lanes; the rungs;
@@ -73,6 +73,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from typing import Any
 
+import diagram_access  # noqa: E402
 import lineage_style  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
@@ -437,8 +438,8 @@ def svg_faults(figure: str, nodes: int, edges: int) -> str | None:
         return "the figure holds no SVG"
     text = svg.group(0)
     start = re.match(r"<svg\b[^>]*>", text).group(0)  # type: ignore[union-attr]
-    if 'role="img"' not in start:
-        return 'the SVG has no role="img"'
+    if (fault := diagram_access.access_faults(text)) is not None:
+        return fault
     if "viewBox=\"0 0 960 " not in start:
         return f"the SVG's viewBox is not 960 wide: {start[:200]}"
     title = re.search(r"<title\b[^>]*>(.+?)</title>", text, re.S)
@@ -447,15 +448,8 @@ def svg_faults(figure: str, nodes: int, edges: int) -> str | None:
         return "the SVG has no <title>"
     if desc is None:
         return "the SVG has no <desc>"
-    # The SVG's name and description are its title and desc only if it points at them
-    # (final review F7/codex, F12/claude).
-    labelled = re.search(r'\baria-labelledby="([^"]*)"', start)
-    title_id = re.search(r'\bid="([^"]+)"', title.group(0))
-    desc_id = re.search(r'\bid="([^"]+)"', desc.group(0))
-    if labelled is None or title_id is None or desc_id is None:
-        return "the SVG is not labelled by ids on its <title> and <desc>"
-    if labelled.group(1).split() != [title_id.group(1), desc_id.group(1)]:
-        return f"aria-labelledby names {labelled.group(1)!r}, not the <title> and <desc> ids {title_id.group(1)!r} {desc_id.group(1)!r}"
+    # Whether the SVG points at its title and desc (final review F7/codex, F12/claude) is
+    # diagram_access.access_faults's, above.
     said_boxes = re.search(r"(\d+) box(?:es)?\b", desc.group(1))
     said_arrows = re.search(r"(\d+) arrows?\b", desc.group(1))
     if said_boxes is None or said_arrows is None:
@@ -572,6 +566,36 @@ def main() -> int:
 
     # -- contract --------------------------------------------------------
     check("the contract's survey passes carry actor and checkpoint", lambda: contract_passes_ok(doc))
+
+    def access_mutations() -> str | None:
+        """diagram_access refuses a link a screen reader could not reach or name (Codex review of F14)."""
+
+        frame = (
+            '<svg xmlns="http://www.w3.org/2000/svg" role="group" aria-labelledby="t" aria-describedby="d">'
+            '<title id="t">T</title><desc id="d">D</desc><g aria-hidden="true"><rect/></g>{}</svg>'
+        )
+        if (fault := diagram_access.access_faults(frame.format('<a href="#r"><text>Record</text></a>'))) is not None:
+            return f"the unbroken group is refused: {fault}"
+        broken = {
+            "a hidden link": '<a href="#r" aria-hidden="true"><text>Record</text></a>',
+            "a link in a hidden group": '<g aria-hidden="true"><a href="#r"><text>Record</text></a></g>',
+            "a link out of the keyboard order": '<a href="#r" tabindex="-1"><text>Record</text></a>',
+            "a link named only by hidden text": '<a href="#r"><text aria-hidden="true">Record</text></a>',
+            "a link with no href": "<a><text>Record</text></a>",
+            "loose text beside a link": '<g><text>Loose</text><a href="#r"><text>Record</text></a></g>',
+            "an image that holds a link": None,
+        }
+        for what, part in broken.items():
+            svg = (
+                frame.format(part)
+                if part is not None
+                else frame.replace('role="group"', 'role="img"').format('<a href="#r"><text>Record</text></a>')
+            )
+            if diagram_access.access_faults(svg) is None:
+                return f"{what} passes"
+        return None
+
+    check("the access check refuses hidden, unreachable and unnamed links", access_mutations)
 
     def generated_passes() -> str | None:
         got = [(p.get("actor"), p.get("checkpoint")) for p in getattr(vocabulary, "SURVEY_PASSES", ())]

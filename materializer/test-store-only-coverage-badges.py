@@ -31,7 +31,7 @@ Turns red when:
     other than concerns, adversarial or mapped (structural, deferred, unmapped, scoping), a
     badge count differs from the store's open findings by severity, the badge note's "n of m"
     miscounts, or a coverage segment loses the line style its standing is drawn with;
-  - an SVG lacks `role="img"`, a `<title>` or a `<desc>` that counts its segments, states a font
+  - an SVG does not present itself as Appendix B rule 8 says (diagram_access.py), lacks a `<title>` or a `<desc>` that counts its segments, states a font
     size under 11, uses a literal colour, runs a script, or is not 960 wide, or a mark has no
     `data-node`;
   - a coverage account does not quote, for each subsystem it draws, what its depth authorizes and
@@ -66,10 +66,12 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+from xml.etree import ElementTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from typing import Any
 
+import diagram_access  # noqa: E402
 import lineage_style  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
@@ -294,8 +296,8 @@ def svg_faults(figure: str, segments: int) -> str | None:
         return "the figure holds no SVG"
     text = svg.group(0)
     start = re.match(r"<svg\b[^>]*>", text).group(0)  # type: ignore[union-attr]
-    if 'role="img"' not in start:
-        return 'the SVG has no role="img"'
+    if (fault := diagram_access.access_faults(text)) is not None:
+        return fault
     if 'viewBox="0 0 960 ' not in start:
         return f"the SVG's viewBox is not 960 wide: {start[:200]}"
     title = re.search(r"<title\b[^>]*>(.+?)</title>", text, re.S)
@@ -316,6 +318,22 @@ def svg_faults(figure: str, segments: int) -> str | None:
         return "the figure runs script"
     if re.search(r"<(?:line|path)\b[^>]*data-edge", text):
         return "a coverage bar draws an arrow no record joins"
+    # Lane labels are hidden drawing, so each segment link must say which bar it is in
+    # (Codex review of F14, 2026-11-26): "B-01 Read path, Examined: 5 of 8", not "Examined: 5 of 8".
+    root = ElementTree.fromstring(text)
+    drawn = " ".join(
+        " ".join(" ".join(el.itertext()).split())
+        for part in root
+        if part.get("aria-hidden") == "true"
+        for el in part.iter()
+        if el.tag.endswith("}text")
+    )
+    for link in (el for el in root.iter() if el.tag.endswith("}a")):
+        named = re.fullmatch(r"(.+?), .+: \d+ of \d+", link.get("aria-label") or "")
+        if named is None:
+            return f"a segment link's name does not say its bar and count: {link.get('aria-label')!r}"
+        if named.group(1) not in drawn:
+            return f"a segment link names a bar the chart does not label: {named.group(1)!r}"
     return None
 
 
