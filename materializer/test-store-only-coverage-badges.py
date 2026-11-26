@@ -68,8 +68,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lineage_style  # noqa: E402
 from typing import Any
+
+import lineage_style  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -406,7 +407,7 @@ _EARLIER = re.compile(
 )
 
 
-# SO24 adds seam contracts to the System boundaries page and SO25 flow strips to the subsystem pages
+# SO24 adds seam contracts to the Boundaries page and SO25 flow strips to the subsystem pages
 # (PLAN §3.2's update rule); taking them out can leave the wrapper that held a run of paragraphs empty.
 _EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 
@@ -539,7 +540,7 @@ def main() -> int:
         check("the boundary diagram's badges equal Hot spots' counts", boundary_badges)
 
         def atlas_badges() -> str | None:
-            # The Subsystem map (O7) on the master plan, always drawn; the architecture page's atlas
+            # The subsystem atlas (O7) on the master plan, always drawn; the architecture page's atlas
             # only when no dependency edge is recorded (store B).
             for label, output, storage, hot in (("A", out_a, store_a, hot_a), ("B", out_b, store_b, hot_b)):
                 want = wanted_badges(storage, hot)

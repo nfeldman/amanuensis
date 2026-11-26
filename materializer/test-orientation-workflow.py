@@ -125,11 +125,10 @@ WHEN_END = "when the pass is done"
 WHEN_START = "as the pass starts"
 PROJECT = "Fixture Repo"
 IDENTITY = (
-    f"An architecture survey of {PROJECT}. An AI agent running Amanuensis read the repository,"
-    " without changing it, and recorded what it found here. New to this site? Start with"
-    " How to read this survey."
+    f"An architecture survey of {PROJECT}. An agent running Amanuensis read the repository"
+    " without changing it. New to this site? Start with the Reader's guide."
 )
-IDENTITY_LINK = ("How to read this survey", "how-to-read.html")
+IDENTITY_LINK = ("Reader's guide", "how-to-read.html")
 # Every element a browser knows; the O4 section may carry no other tag.
 KNOWN_TAGS = frozenset(
     {
@@ -517,7 +516,7 @@ def main() -> int:
             link = re.findall(r'<a\b[^>]*href="([^"]*)"[^>]*>(.*?)</a>', identity_paragraph(index_html), re.S)
             if [(html_text(t), h) for h, t in link] != [IDENTITY_LINK]:
                 return f"the HTML overview's identity paragraph links {link!r}, not {IDENTITY_LINK!r}"
-            if "An AI agent running Amanuensis read the repository" not in html_text(index_html):
+            if "An agent running Amanuensis read the repository" not in html_text(index_html):
                 return "the HTML overview does not carry the identity sentence"
             return None
 

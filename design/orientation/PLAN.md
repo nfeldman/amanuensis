@@ -813,7 +813,7 @@ Still open:
 | Amanuensis | | The tool that produced this site. An AI agent runs it to survey a repository. |
 | Conspectus | survey record | Amanuensis's name for what a survey keeps: a database of what was read and concluded, plus this site, which is built from it. |
 | Survey | | The agent's reading of the repository, done in passes, with each conclusion tied to the code it read. |
-| Session | | One stretch of work by the agent. Sessions and publications lists them. |
+| Session | | One stretch of work by the agent. Sessions lists them. |
 | Subsystem | | A part of the codebase the survey treats as one unit, with its own files and its own page. The agent chose the split during onboarding. |
 | Layer | region | A group of subsystems with a similar role. Pages group subsystems by layer. |
 | Survey depth | status | How far the survey of a subsystem has got. Unmapped: not started. Scoped and Structural: that pass is done. Reviewing concerns and Challenging claims: that pass is under way. Mapped: every pass is done. Deferred: left out of the survey on purpose. Each depth limits what the record may claim. |
@@ -848,7 +848,7 @@ example Lead → `field-notes.md`, `resolved-leads.md`, subsystem pages).
 |---|---|---|---|---|
 | Subsystem | letters, dash, number: `R-06` | a subsystem | the agent, at onboarding | the subsystem's page |
 | Finding | subsystem code, dash, sequence: `R06-2` | a defect in that subsystem | the agent, when it records the finding | Open or Resolved findings |
-| Seam | `SM-` and a number: `SM-03` | a system boundary | the agent | System boundaries |
+| Seam | `SM-` and a number: `SM-03` | a system boundary | the agent | Boundaries |
 | Concern | short letters, dash, number: `RC-2` | a checklist item | the agent, at onboarding | Review coverage |
 | Seam concern | `SC-` and a number | a checklist item about one boundary | the agent | Review coverage |
 | Competing explanations | `DM-` and a number | one evidence table | numbered by Amanuensis | its own page |
@@ -909,31 +909,35 @@ each subsystem survey has Phases 1–5, which are the five passes above in order
 
 ## Appendix D · Page index copy (draft `use_when`)
 
-| Page | Hint (new or kept) | Use it when |
+Revised 2026-11-25 by owner ruling: pages retitled as below, no hint under any page title
+except a subsystem page's layer, and the reader's guide's index has two columns, Page and
+Use it when. "Use it when" is unchanged.
+
+| Page | Hint | Use it when |
 |---|---|---|
-| Overview | What the codebase is, and where the survey stands. | you arrive, or want the current counts. |
-| Architecture | kept | you want the overall shape before reading any one part. |
-| Subsystem map | kept | you are looking for the part of the code that does something. |
-| Files | kept | you want to know whether a particular file was read. |
-| Not yet surveyed | kept | you want to know what the survey has not covered. |
-| System boundaries | kept | you are changing something two subsystems share. |
-| Codebase glossary | kept | a project-specific name is unfamiliar. |
-| Open findings | kept | you want the defects still open. |
-| Disagreements | kept | you want to know where the record contradicts itself. |
-| Decisions needed | kept | you want to know what the agent needs from you. |
-| Leads | kept | you want things noticed but not yet confirmed. |
-| Stale knowledge | kept | you want to know what may be out of date since the code changed. |
-| Hot spots | kept | you want to know where open work concentrates. |
-| Resolved findings | kept | you want to know what was fixed or ruled out, and on what basis. |
-| Resolution history | kept | you want to know how a record reached its state. |
-| Resolved leads and questions | kept | you want to know how a question was answered. |
-| Sessions and publications | kept | you want to know when the survey ran. |
-| Conflicting evidence | kept | you want to see how a disagreement was settled. |
-| Reader's guide | What each page is for, the terms the site uses, and how a survey works. | a word, an ID or a page is unfamiliar. |
-| Review coverage | kept | you want to know which defect kinds were checked where. |
-| Review checklist | kept | you want the list of defect kinds and where it came from. |
-| Competing explanations | kept | you want to see how a symptom's cause was weighed. |
-| Onboarding record | kept | you want the first pass's decisions about scope and split. |
-| Where to begin | kept | you want the reading path an earlier session wrote. |
-| Subsystem pages | one per subsystem | you have picked a subsystem. |
-| Evidence tables | one per matrix | you followed a `DM-` link. |
+| Overview | none | you arrive, or want the current counts. |
+| Architecture | none | you want the overall shape before reading any one part. |
+| Subsystems | none | you are looking for the part of the code that does something. |
+| Files | none | you want to know whether a particular file was read. |
+| Not yet surveyed | none | you want to know what the survey has not covered. |
+| Boundaries | none | you are changing something two subsystems share. |
+| Glossary | none | a project-specific name is unfamiliar. |
+| Open findings | none | you want the defects still open. |
+| Disagreements | none | you want to know where the record contradicts itself. |
+| Decisions needed | none | you want to know what the agent needs from you. |
+| Leads | none | you want things noticed but not yet confirmed. |
+| Stale knowledge | none | you want to know what may be out of date since the code changed. |
+| Hot spots | none | you want to know where open work concentrates. |
+| Resolved findings | none | you want to know what was fixed or ruled out, and on what basis. |
+| Resolution history | none | you want to know how a record reached its state. |
+| Resolved leads and questions | none | you want to know how a question was answered. |
+| Sessions | none | you want to know when the survey ran. |
+| Settled conflicts | none | you want to see how a disagreement was settled. |
+| Reader's guide | none | a word, an ID or a page is unfamiliar. |
+| Review coverage | none | you want to know which defect kinds were checked where. |
+| Review checklist | none | you want the list of defect kinds and where it came from. |
+| Competing explanations | none | you want to see how a symptom's cause was weighed. |
+| Onboarding record | none | you want the first pass's decisions about scope and split. |
+| First reading path | none | you want the reading path an earlier session wrote. |
+| Subsystem pages | its layer | you have picked a subsystem. |
+| Evidence tables | none | you followed a `DM-` link. |

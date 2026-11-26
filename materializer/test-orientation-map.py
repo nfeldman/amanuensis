@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Gate for orientation packet O7 — the Subsystem map carries the atlas and one
+"""Gate for orientation packet O7 — the Subsystems page carries the atlas and one
 name (design/orientation/PLAN.md §2.5 item 1, §2.7, §4 O7, D3).
 
 Turns red when:
 
-  - the H1 of `master-plan.html` is anything but "Subsystem map" (the old
+  - the H1 of `master-plan.html` is anything but "Subsystems" (the old
     "Master plan" heading, or a heading that differs from the page title);
   - `master-plan.html` has no `class="subsystem-atlas"`, has more than one, or
     carries a number of `atlas-item` entries other than one per subsystem — the
@@ -25,7 +25,7 @@ Turns red when:
     `<h2>` heading and a record list presenting Priority/ID/Name/Status, one
     record per subsystem;
   - a store with no subsystems renders an atlas element instead of the existing
-    sentence, or loses the "Subsystem map" H1;
+    sentence, or loses the "Subsystems" H1;
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -110,7 +110,7 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # ---------------------------------------------------------------------------
 # What PLAN.md §2.5 and D3 fix, written out here rather than imported.
 # ---------------------------------------------------------------------------
-PAGE_TITLE = "Subsystem map"
+PAGE_TITLE = "Subsystems"
 SHA = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"
 
 # id, name, status, layer, scope — three layers, every legal survey depth (so a
@@ -280,7 +280,7 @@ def expected_rows() -> list[tuple[str, str, str, str]]:
 
 
 def main() -> int:
-    emit("GATE O7 — the Subsystem map carries the atlas and one name")
+    emit("GATE O7 — the Subsystems page carries the atlas and one name")
     emit("")
 
     with tempfile.TemporaryDirectory(prefix="o7-gate-") as tmp:
@@ -322,7 +322,7 @@ def main() -> int:
                 return "the old heading 'Master plan' still appears on the page"
             return None
 
-        check("the page's H1 is 'Subsystem map' and 'Master plan' is gone", title_is_one_name)
+        check("the page's H1 is 'Subsystems' and 'Master plan' is gone", title_is_one_name)
 
         # -- the atlas in HTML ------------------------------------------------
         def atlas_item_per_subsystem() -> str | None:

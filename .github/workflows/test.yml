@@ -562,6 +562,9 @@ jobs:
       - name: Diff-aware rendering test
         working-directory: materializer
         run: python3 test-materializer.py
+      - name: A record card prints what the store holds, nothing empty
+        working-directory: materializer
+        run: python3 test-record-cards.py
       - name: A link on an unchanged page follows its moved target
         working-directory: materializer
         run: python3 test-xref-moved-target.py

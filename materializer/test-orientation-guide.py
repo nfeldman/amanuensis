@@ -8,7 +8,7 @@ Turns red when:
     site, [How a survey works], Terms, [How IDs are formed], Status values,
     Full vocabulary (the two bracketed sections are absent until O4 and O5, and
     must sit in their slot once present);
-  - the guide's title (HTML h1, HTML <title>) is not "How to read this survey",
+  - the guide's title (HTML h1, HTML <title>) is not "Reader's guide",
     or either says "conspectus" (D2);
   - the first 600 bytes of the guide's visible text contain a backtick or sit
     in a `<code>` element;
@@ -119,7 +119,7 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # What PLAN.md fixes, written out here rather than imported, so that rewriting
 # an implementation string cannot also rewrite what this gate expects.
 # ---------------------------------------------------------------------------
-TITLE = "How to read this survey"
+TITLE = "Reader's guide"
 H2_ORDER = (
     "What this site is",
     "Pages on this site",
@@ -360,7 +360,7 @@ def main() -> int:
                 return "the HTML <title> says 'conspectus' (D2)"
             return None
 
-        check("the guide is titled 'How to read this survey', not 'conspectus' (D2)", title_says_survey)
+        check("the guide is titled 'Reader's guide', not 'conspectus' (D2)", title_says_survey)
 
         # -- nothing raw at the top ------------------------------------
         def no_backtick_up_top() -> str | None:

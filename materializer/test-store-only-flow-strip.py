@@ -24,7 +24,7 @@ Turns red when:
     dotted for a hypothesis or an open question;
   - a commit point is not a vertical line just after its step, a crash point, a trigger or a
     seam crossing is not above its step, an exit is not below its step, a seam crossing does
-    not link the seam on System boundaries, or a step with more than two exits draws any of
+    not link the seam on Boundaries, or a step with more than two exits draws any of
     them or does not list them all in the account, or an exit's box or account line names a
     target other than its stored one (a step it unwinds to, or `leaves-flow`);
   - an arrow or a box of a strip is not a link a keyboard can reach (rules 1 and 8);
@@ -78,8 +78,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lineage_style  # noqa: E402
 from typing import Any
+
+import lineage_style  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -842,12 +843,12 @@ def main() -> int:
                         return f"{flow}: the crossing of {m['target']} links {href.group(1)}"
                     target = ((output / page_of(w["sid"])).parent / path).resolve()
                     if target != (output / "seams.html").resolve() or f'id="{fragment}"' not in seams:
-                        return f"{flow}: the link {href.group(1)} reaches no seam on System boundaries"
+                        return f"{flow}: the link {href.group(1)} reaches no seam on Boundaries"
                     if m["target"] not in plain(body):
                         return f"{flow}: the crossing does not name {m['target']}"
             return None if found >= 2 else f"the fixture draws {found} seam crossings"
 
-        check("a seam crossing links the seam on System boundaries", seam_links)
+        check("a seam crossing links the seam on Boundaries", seam_links)
 
         def uncertainty() -> str | None:
             for flow in ("B-02/flow/login", "B-01/flow/sweep"):

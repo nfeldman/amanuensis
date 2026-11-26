@@ -62,8 +62,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lineage_style  # noqa: E402
 from typing import Any
+
+import lineage_style  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -91,7 +92,7 @@ _SO22_FIGURES = re.compile(
     re.S,
 )
 
-# SO24 adds sentences and figures to the System boundaries page; taking them out can leave the
+# SO24 adds sentences and figures to the Boundaries page; taking them out can leave the
 # wrapper that held a run of paragraphs empty (PLAN §3.2's update rule).
 _EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 
@@ -927,7 +928,7 @@ def main() -> int:
                     ("vocabulary", renderers.render_vocabulary(conn, storage)),
                     ("files", renderers.render_files(conn, storage)),
                     ("not-yet-surveyed", renderers.render_not_yet_surveyed(conn, storage)),
-                    ("concern-checklist", renderers.record_page(conn, storage, "concern-checklist", "Calibrated review checklist")),
+                    ("concern-checklist", renderers.record_page(conn, storage, "concern-checklist", "Review checklist")),
                     ("onboarding-report", renderers.record_page(conn, storage, "onboarding-report", "Onboarding record")),
                     ("entry-point", renderers.record_page(conn, storage, "entry-point", "Where to begin")),
                 ]

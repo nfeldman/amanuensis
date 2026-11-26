@@ -1716,7 +1716,7 @@ READER_TERMS: tuple[dict[str, object], ...] = (
     {
         "term": "Session",
         "aliases": (),
-        "definition": "One stretch of work by the agent. Sessions and publications lists them.",
+        "definition": "One stretch of work by the agent. Sessions lists them.",
         "pages": ("sessions.md", "resolution-history.md", "entry-point.md", "index.md"),
     },
     {
@@ -1886,7 +1886,7 @@ ID_KINDS: tuple[dict[str, object], ...] = (
         "shape": "`SM-` and a number: `SM-03`",
         "names": "a system boundary",
         "chosen_by": "the agent",
-        "links_to": "System boundaries",
+        "links_to": "Boundaries",
     },
     {
         "kind": "Concern",

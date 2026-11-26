@@ -467,6 +467,13 @@ def main() -> None:
         assert 'class="nav-id"><abbr' not in html_master_plan
         html_b02 = with_assets(docs / "subsystems/b02-auth-service.html")
         assert 'class="record-list record-list-concern-disposition"' in html_b02
+        # A concern review says where its attached evidence points; a concern code
+        # heading its own record is not prefixed "concern".
+        tc1 = html_b02.split('id="concern-disposition-tc-1"', 1)[1].split("</article>", 1)[0]
+        assert '<p class="record-label">Evidence at</p>' in tc1 and "<code>auth/gateway.ts</code>" in tc1, tc1
+        assert ">concern <abbr" not in tc1 and ">concern <abbr" not in html_concerns
+        # A seeded concern was discovered in no subsystem: no "Discovered in —" fact.
+        assert "Discovered in" not in html_concerns
         assert 'Subsystem · <span data-identifier-defined>B-02</span>' in html_b02
         assert '.record-concern-disposition { display: block; }' in html_b02
         assert 'white-space: nowrap; overflow-wrap: normal;' in html_b02
@@ -579,7 +586,7 @@ def main() -> None:
         # Sanity-check that the content actually landed.
         htr_html = (docs / "how-to-read.html").read_text()
         htr = outline(htr_html)
-        assert "How to read this survey" in htr_html
+        assert "Reader&#x27;s guide" in htr_html
         assert "### Survey depth" in htr and "cannot justify" in htr.lower()  # the survey-depth ladder is generated from the enum source
         assert "evidence quality" in htr.lower()
         assert "\x00" not in htr, "nested xref placeholders leaked into the page's text"
@@ -598,7 +605,10 @@ def main() -> None:
         finding_facts = re.findall(r"<dt>([^<]*)</dt>", html_findings.split('<article class="record record-finding"', 1)[1].split("</header>", 1)[0])
         assert finding_facts == ["Status", "Revision"], finding_facts
         assert '<p class="record-lede">Unvalidated query params reach SQL</p>' in html_findings
-        assert re.findall(r'<p class="record-label">([^<]*)</p>', html_findings) == ["Why it matters", "Root cause"]
+        assert re.findall(r'<p class="record-label">([^<]*)</p>', html_findings) == ["Why it matters", "Root cause", "Evidence at"]
+        # The attached evidence is where the card says it points, with its role.
+        evidence_at = html_findings.split('<p class="record-label">Evidence at</p>', 1)[1].split("</div>", 1)[0]
+        assert "(root cause)" in evidence_at and "<code>" in evidence_at, evidence_at
         assert "<dt>Subsystem</dt>" not in html_findings
         # Concerns page should link CC-1 as an anchor target.
         assert '<span id="cc-1" class="record-anchor"></span>' in html_concerns
@@ -613,11 +623,11 @@ def main() -> None:
         ):
             assert column in html_checklist, column
         # The contradictions page should exist and say what it now carries.
-        # §7.1 titles it Conflicting evidence and narrows it to the
+        # §7.1 titles it Settled conflicts and narrows it to the
         # disagreements the evidence settled; the unresolved ones are on
         # the disagreements page.
         contradictions = (docs / "contradictions.html").read_text()
-        assert "<h1>Conflicting evidence</h1>" in contradictions
+        assert "<h1>Settled conflicts</h1>" in contradictions
         assert 'href="disagreements.html"' in contradictions
         # Diagnosticity matrix page should exist and contain the cell legend.
         matrix_files = list((docs / "diagnosticity").glob("dm-*.html")) if (docs / "diagnosticity").is_dir() else []

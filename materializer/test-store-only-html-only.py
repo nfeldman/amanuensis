@@ -68,8 +68,9 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lineage_style  # noqa: E402
 from typing import Any
+
+import lineage_style  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -91,7 +92,7 @@ _FIGURES = (
     r'|<div class="atlas-badges"[^>]*>.*?</div>'
     r'|<g class="boundary-svg-badge"[^>]*>.*?</g>'
 )
-# SO24 adds sentences and figures to the System boundaries page; taking them out can leave the
+# SO24 adds sentences and figures to the Boundaries page; taking them out can leave the
 # wrapper that held a run of paragraphs empty (PLAN §3.2's update rule).
 _EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 LATER_WRITERS = {

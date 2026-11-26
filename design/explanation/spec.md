@@ -153,8 +153,6 @@ the scope text, as:
 ```
 ### Survey note
 
-*A note the survey left on the subsystem record; not bound to a revision.*
-
 <notes, verbatim>
 ```
 

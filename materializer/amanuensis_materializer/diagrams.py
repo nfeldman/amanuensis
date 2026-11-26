@@ -118,7 +118,7 @@ BOUNDARY_NONE = "No boundary between subsystems is recorded, so no diagram is dr
 def boundary_relations(conn: sqlite3.Connection) -> dict[str, Any]:
     """Nodes, edges and layer order for the recorded-boundary diagram (§2.5).
 
-    Layers are in the order the Subsystem map lists them (`ORDER BY layer`, a
+    Layers are in the order the Subsystems page lists them (`ORDER BY layer`, a
     missing layer headed "unlayered"); nodes are in ID order within a layer.
     Edges are the recorded seams and `xrefs` and nothing else. A relation that
     names one subsystem twice, or an ID no `subsystems` row carries, has no

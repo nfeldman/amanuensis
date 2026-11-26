@@ -62,8 +62,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lineage_style  # noqa: E402
 from typing import Any
+
+import lineage_style  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -438,12 +439,12 @@ def main() -> int:
             drawn_ids = sorted(re.findall(r'data-subject="([^"]*)"', " ".join(re.findall(rf'<figure\b[^>]*data-diagram="{KIND}"[^>]*>', page))))
             owed = sorted(sid for sid, w in want.items() if w["figure"])
             if drawn_ids != owed:
-                return f"System boundaries draws a contract for {drawn_ids}; the seams that record a field are {owed}"
+                return f"Boundaries draws a contract for {drawn_ids}; the seams that record a field are {owed}"
             if len(owed) < 3:
                 return f"the fixture holds only {len(owed)} drawn seams"
             return None
 
-        check("one contract per seam that records a field, on System boundaries", census)
+        check("one contract per seam that records a field, on Boundaries", census)
 
         def marks() -> str | None:
             for sid, w in want.items():

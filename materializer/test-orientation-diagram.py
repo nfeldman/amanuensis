@@ -33,7 +33,7 @@ Turns red when:
   - the page contains `<script` referencing a diagram library;
   - zero seams and zero xrefs produce an SVG instead of a sentence;
   - the layout differs from §2.5: columns are not the layers in the order the
-    Subsystem map lists them; boxes in a column are not in ID order; a box is
+    Subsystems page lists them; boxes in a column are not in ID order; a box is
     not 200×44 with the ID on line 1 and the (truncated) name on line 2; lines
     are not drawn under the boxes; nine layers do not wrap to a second band;
   - the section is not the one after the atlas or dependency section and
@@ -148,7 +148,7 @@ SUBSYSTEMS: tuple[Subsystem, ...] = (
     # An ID outside the letters-dash-number shape, as an endpoint (F8/codex).
     ("auth", "Sign-in", "mapped", "frontend"),
 )
-# The Subsystem map lists layers ORDER BY layer: a missing layer sorts first
+# The Subsystems page lists layers ORDER BY layer: a missing layer sorts first
 # and is headed "unlayered".
 LAYER_ORDER = ("unlayered", "backend", "frontend", "tooling")
 SEAMS: tuple[tuple[str, str, str, str], ...] = (

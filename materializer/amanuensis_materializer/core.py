@@ -628,7 +628,7 @@ class Materializer:
         plan: list[PagePlan] = []
 
         def imported(
-            rel_src: str, kind: str, title: str, label: str, hint: str, use_when: str
+            rel_src: str, kind: str, title: str, label: str, use_when: str
         ) -> PagePlan | None:
             """One of the three pages an earlier version wrote by hand, from the store.
 
@@ -646,7 +646,6 @@ class Materializer:
                 (lambda t=title, k=kind: renderers.record_page(conn, storage, k, t, warn=self._warn) or ("", {})),
                 title=title,
                 label=label,
-                hint=hint,
                 use_when=use_when,
                 group="Method",
                 kind="artifact",
@@ -654,40 +653,40 @@ class Materializer:
 
         # Static top-level pages, in §7.1's order. `group` is one of
         # `NAV_GROUPS` and nothing else; `subgroup` names a division inside it.
-        # Every hint opens with the clause §7.1 fixes for it, so the rail, the
-        # page's own description meta, and the table a reviewer reads say the
-        # same thing.
+        # A top-level page has no hint: its title says what it holds, and
+        # "Use it when" is in the page's "About this page" popover. Only a
+        # subsystem page has one, its layer.
         plan.extend(
             page
             for page in [
-                PagePlan("index.html", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="What the codebase is, and where the survey stands.", use_when="you arrive, or want the current counts.", group="Overview", kind="overview"),
-                PagePlan("architecture.html", lambda: renderers.render_architecture(conn, storage, warn=self._warn), title="Architecture at a glance", label="Architecture", hint="Runtime shape, recorded edges, and boundaries, read as one connected system.", use_when="you want the overall shape before reading any one part.", group="Codebase", kind="architecture"),
-                PagePlan("master-plan.html", lambda: renderers.render_master_plan(conn, storage, warn=self._warn), title="Subsystem map", label="Subsystems", hint="Every region, grouped by layer, with the scope recorded for it.", use_when="you are looking for the part of the code that does something.", group="Codebase", kind="registry"),
-                PagePlan("files.html", lambda: renderers.render_files(conn, storage), title="Files", label="Files", hint="One row per ledger file with owners, standing, and open defects.", use_when="you want to know whether a particular file was read.", group="Codebase", kind="files"),
-                PagePlan("not-yet-surveyed.html", lambda: renderers.render_not_yet_surveyed(conn, storage), title="Not yet surveyed", label="Not yet surveyed", hint="The recorded edge of the map, each gap counted over the unit it occupies.", use_when="you want to know what the survey has not covered.", group="Codebase", kind="gaps"),
-                PagePlan("seams.html", lambda: renderers.render_seams(conn, storage), title="System boundaries", label="System boundaries", hint="Shared objects and ordering assumptions where independently understandable subsystems meet.", use_when="you are changing something two subsystems share.", group="Codebase", kind="seams"),
-                PagePlan("vocabulary.html", lambda: renderers.render_vocabulary(conn, storage), title="Codebase glossary", label="Codebase glossary", hint="The project's own names, with the meanings Amanuensis observed in context.", use_when="a project-specific name is unfamiliar.", group="Codebase", kind="glossary"),
-                PagePlan("findings.html", lambda: renderers.render_findings(conn, storage), title="Open findings", label="Open findings", hint="Defects open or awaiting verification at the checked revision.", use_when="you want the defects still open.", group="Unresolved", kind="findings"),
-                PagePlan("disagreements.html", lambda: renderers.render_disagreements(conn, storage), title="Records that disagree", label="Disagreements", hint="Where credible records disagree or the evidence does not discriminate between them.", use_when="you want to know where the record contradicts itself.", group="Unresolved", kind="undiscriminated"),
-                PagePlan("open-questions.html", lambda: renderers.render_open_questions(conn, storage), title="Decisions needed", label="Decisions needed", hint="Questions the survey could not settle, with the assumption used to keep moving.", use_when="you want to know what the agent needs from you.", group="Unresolved", kind="questions"),
-                PagePlan("field-notes.html", lambda: renderers.render_field_notes(conn, storage), title="Leads", label="Leads", hint="Open observations that are not yet findings.", use_when="you want things noticed but not yet confirmed.", group="Unresolved", kind="notes"),
-                PagePlan("stale.html", lambda: renderers.render_stale(conn, storage), title="Stale knowledge", label="Stale knowledge", hint="Examined files the repository has changed under, and scoped files that changed before anyone read them.", use_when="you want to know what may be out of date since the code changed.", group="Unresolved", kind="stale"),
-                PagePlan("hot-spots.html", lambda: renderers.render_hot_spots(conn, storage), title="Hot spots", label="Hot spots", hint="Where unresolved work and unread territory concentrate, as separate measures.", use_when="you want to know where open work concentrates.", group="Unresolved", kind="hotspots"),
-                PagePlan("resolved-findings.html", lambda: renderers.render_resolved_findings(conn, storage), title="Resolved findings", label="Resolved findings", hint="Verified, ruled out, and accepted, each with the basis its resolution rests on.", use_when="you want to know what was fixed or ruled out, and on what basis.", group="History", kind="findings"),
-                PagePlan("resolution-history.html", lambda: renderers.render_resolution_history(conn, storage), title="Resolution history", label="Resolution history", hint="The append-only account of how records reached their state.", use_when="you want to know how a record reached its state.", group="History", kind="timeline"),
-                PagePlan("resolved-leads.html", lambda: renderers.render_resolved_leads(conn, storage), title="Resolved leads and questions", label="Resolved leads and questions", hint="Questions that were answered or dismissed, and leads that were closed.", use_when="you want to know how a question was answered.", group="History", kind="resolved-leads"),
-                PagePlan("sessions.html", lambda: renderers.render_sessions(conn, storage), title="Sessions and publications", label="Sessions and publications", hint="What ran, when, and what it produced.", use_when="you want to know when the survey ran.", group="History", kind="sessions"),
-                PagePlan("contradictions.html", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Resolved disagreements and the evidence that settled them.", use_when="you want to see how a disagreement was settled.", group="History", kind="contradictions"),
+                PagePlan("index.html", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Overview", label="Overview", use_when="you arrive, or want the current counts.", group="Overview", kind="overview"),
+                PagePlan("architecture.html", lambda: renderers.render_architecture(conn, storage, warn=self._warn), title="Architecture", label="Architecture", use_when="you want the overall shape before reading any one part.", group="Codebase", kind="architecture"),
+                PagePlan("master-plan.html", lambda: renderers.render_master_plan(conn, storage, warn=self._warn), title="Subsystems", label="Subsystems", use_when="you are looking for the part of the code that does something.", group="Codebase", kind="registry"),
+                PagePlan("files.html", lambda: renderers.render_files(conn, storage), title="Files", label="Files", use_when="you want to know whether a particular file was read.", group="Codebase", kind="files"),
+                PagePlan("not-yet-surveyed.html", lambda: renderers.render_not_yet_surveyed(conn, storage), title="Not yet surveyed", label="Not yet surveyed", use_when="you want to know what the survey has not covered.", group="Codebase", kind="gaps"),
+                PagePlan("seams.html", lambda: renderers.render_seams(conn, storage), title="Boundaries", label="Boundaries", use_when="you are changing something two subsystems share.", group="Codebase", kind="seams"),
+                PagePlan("vocabulary.html", lambda: renderers.render_vocabulary(conn, storage), title="Glossary", label="Glossary", use_when="a project-specific name is unfamiliar.", group="Codebase", kind="glossary"),
+                PagePlan("findings.html", lambda: renderers.render_findings(conn, storage), title="Open findings", label="Open findings", use_when="you want the defects still open.", group="Unresolved", kind="findings"),
+                PagePlan("disagreements.html", lambda: renderers.render_disagreements(conn, storage), title="Records that disagree", label="Disagreements", use_when="you want to know where the record contradicts itself.", group="Unresolved", kind="undiscriminated"),
+                PagePlan("open-questions.html", lambda: renderers.render_open_questions(conn, storage), title="Decisions needed", label="Decisions needed", use_when="you want to know what the agent needs from you.", group="Unresolved", kind="questions"),
+                PagePlan("field-notes.html", lambda: renderers.render_field_notes(conn, storage), title="Leads", label="Leads", use_when="you want things noticed but not yet confirmed.", group="Unresolved", kind="notes"),
+                PagePlan("stale.html", lambda: renderers.render_stale(conn, storage), title="Stale knowledge", label="Stale knowledge", use_when="you want to know what may be out of date since the code changed.", group="Unresolved", kind="stale"),
+                PagePlan("hot-spots.html", lambda: renderers.render_hot_spots(conn, storage), title="Hot spots", label="Hot spots", use_when="you want to know where open work concentrates.", group="Unresolved", kind="hotspots"),
+                PagePlan("resolved-findings.html", lambda: renderers.render_resolved_findings(conn, storage), title="Resolved findings", label="Resolved findings", use_when="you want to know what was fixed or ruled out, and on what basis.", group="History", kind="findings"),
+                PagePlan("resolution-history.html", lambda: renderers.render_resolution_history(conn, storage), title="Resolution history", label="Resolution history", use_when="you want to know how a record reached its state.", group="History", kind="timeline"),
+                PagePlan("resolved-leads.html", lambda: renderers.render_resolved_leads(conn, storage), title="Resolved leads and questions", label="Resolved leads and questions", use_when="you want to know how a question was answered.", group="History", kind="resolved-leads"),
+                PagePlan("sessions.html", lambda: renderers.render_sessions(conn, storage), title="Sessions", label="Sessions", use_when="you want to know when the survey ran.", group="History", kind="sessions"),
+                PagePlan("contradictions.html", lambda: renderers.render_contradictions(conn, storage), title="Settled conflicts", label="Settled conflicts", use_when="you want to see how a disagreement was settled.", group="History", kind="contradictions"),
                 # The reader's guide is generated from the vocabulary contract
                 # and from this plan (§7.8), so it reads `plan` — complete by the
                 # time any page is built — rather than a hand-written route list
                 # a new page could be left out of.
-                PagePlan("how-to-read.html", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="How to read this survey", label="Reader's guide", hint="What each page is for, the terms the site uses, and how a survey works.", use_when="a word, an ID or a page is unfamiliar.", group="Method", kind="guide"),
-                PagePlan("concerns.html", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="Which failure modes were tested where, and the disposition each one reached.", use_when="you want to know which defect kinds were checked where.", group="Method", kind="coverage"),
-                imported("concern-checklist.html", "concern-checklist", "Calibrated review checklist", "Review checklist", "The concern set and its provenance.", "you want the list of defect kinds and where it came from."),
-                PagePlan("diagnosticity.html", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Index of evidence matrices and their outcomes.", use_when="you want to see how a symptom's cause was weighed.", group="Method", kind="diagnosticity"),
-                imported("onboarding-report.html", "onboarding-report", "Onboarding record", "Onboarding record", "The repository boundary and initial decomposition that established this conspectus.", "you want the first pass's decisions about scope and split."),
-                imported("entry-point.html", "entry-point", "Where to begin", "Where to begin", "A dated reading path recorded by an earlier session; it is survey history, not a current index.", "you want the reading path an earlier session wrote."),
+                PagePlan("how-to-read.html", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="Reader's guide", label="Reader's guide", use_when="a word, an ID or a page is unfamiliar.", group="Method", kind="guide"),
+                PagePlan("concerns.html", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", use_when="you want to know which defect kinds were checked where.", group="Method", kind="coverage"),
+                imported("concern-checklist.html", "concern-checklist", "Review checklist", "Review checklist", "you want the list of defect kinds and where it came from."),
+                PagePlan("diagnosticity.html", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", use_when="you want to see how a symptom's cause was weighed.", group="Method", kind="diagnosticity"),
+                imported("onboarding-report.html", "onboarding-report", "Onboarding record", "Onboarding record", "you want the first pass's decisions about scope and split."),
+                imported("entry-point.html", "entry-point", "First reading path", "First reading path", "you want the reading path an earlier session wrote."),
             ]
             if page is not None
         )
@@ -730,7 +729,6 @@ class Materializer:
                     xref_display=f"DM-{m['id']}",
                     title=m["symptom"],
                     label=m["symptom"],
-                    hint="One matrix: the evidence against each viable explanation, and the outcome it drove.",
                     use_when="you followed a DM- link.",
                     group="Method",
                     subgroup="Evidence matrices",

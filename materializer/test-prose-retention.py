@@ -141,7 +141,7 @@ RENDERED_FIELDS: tuple[str, ...] = (
     "vocabulary.expansion.global",
     "seams.shared_object",
     "seams.notes",
-    # SO24 draws the seam contract (A2) on System boundaries: the four fields and the four assumptions.
+    # SO24 draws the seam contract (A2) on Boundaries: the four fields and the four assumptions.
     "seams.a_writes",
     "seams.a_reads",
     "seams.b_writes",
@@ -165,6 +165,7 @@ EXPECTED_ALLOWLIST: frozenset[str] = frozenset()
 NEW_COLUMNS = ["ID", "Status", "Symptom", "Why it matters", "Root cause", "Revision"]
 OLD_COLUMNS = ["ID", "Status", "Symptom", "Root cause", "Revision"]
 OLD_HEADER = "| ID | Status | Symptom | Root cause | Ref SHA |"
+# The note once opened with this caveat; the owner had it removed (2026-11-25).
 SURVEY_NOTE_LABEL = "A note the survey left on the subsystem record; not bound to a revision."
 
 # Subsystems. B-01 carries claims and an artifact, B-02 carries neither, so the
@@ -796,8 +797,10 @@ def main() -> int:
                     return f"no page for {sid}"
                 scope = section(page, "Scope")
                 note = section(scope, "Survey note", level=3)
-                if f"<em>{SURVEY_NOTE_LABEL}</em>" not in note:
-                    return "the Survey note is not under Scope with the fixed label sentence, in italics"
+                if not note:
+                    return "there is no Survey note under Scope"
+                if SURVEY_NOTE_LABEL in visible(page):
+                    return "the Survey note still opens with the removed caveat sentence"
                 if sentinel("subsystems.notes") not in visible(note):
                     return "the notes are not under the Survey note heading"
                 seen = visible(article_of(page)).count(sentinel("subsystems.notes"))

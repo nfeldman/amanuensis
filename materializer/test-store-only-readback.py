@@ -73,8 +73,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lineage_style  # noqa: E402
 from typing import Any
+
+import lineage_style  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -562,7 +563,7 @@ FIGURE_BLOCK = re.compile(
     r'|<g class="boundary-svg-badge"[^>]*>.*?</g>',
     re.S,
 )
-# SO24 adds sentences and figures to the System boundaries page; taking them out can leave the
+# SO24 adds sentences and figures to the Boundaries page; taking them out can leave the
 # wrapper that held a run of paragraphs empty (PLAN §3.2's update rule).
 EMPTY_FLOW = re.compile(r'<div class="prose-flow">\s*</div>\n?')
 CORPUS_VERSIONS = ("SO20", "SO22", "SO23", "SO24", "SO25")

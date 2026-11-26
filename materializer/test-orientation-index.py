@@ -5,11 +5,13 @@
 Turns red when:
 
   - `PagePlan` or `SitePage` carries no `use_when` field;
-  - a static page's HTML head does not open, directly under its H1, with a hint
-    paragraph, or its "About this page" popover in the head holds no `use_when`
-    paragraph reading "Use it when <Appendix D text>"; in particular when a prose source opens with an H2 rather than an
-    H1, or when the overview's or the reader's guide's hint is still empty or
-    is not the Appendix D sentence, or a kept hint was replaced;
+  - a static page's HTML head does not open with an H1, or its "About this
+    page" popover in the head holds no `use_when` paragraph reading "Use it
+    when <Appendix D text>"; in particular when a prose source opens with an H2
+    rather than an H1;
+  - a top-level page or an evidence matrix page prints a hint under its title
+    (the title says what the page holds; owner ruling 2026-11-25), or a
+    subsystem page prints none (its hint is its layer);
   - a page's HTML head prints no `use_when` at all, carries markup inside its
     hint or `use_when`, or prints the same hint paragraph a second time inside
     the article body, including when the xref pass has bolded or linked an ID
@@ -18,8 +20,7 @@ Turns red when:
     paragraphs (the lowercase subsystem `code` in "the part of the code that
     does something");
   - the reader's guide has no "Pages on this site" section, still has "What to
-    look at first", or its tables are not headed Page / What it shows /
-    Use it when;
+    look at first", or its tables are not headed Page / Use it when;
   - the index is not grouped by lens in reading order, a lens heading lacks the
     lens's one-sentence meaning from the vocabulary contract, or a planned
     top-level page has no row, or a row's "Use it when" cell is not the
@@ -29,9 +30,8 @@ Turns red when:
     not route to a page that lists every page of the subgroup;
   - a subsystem page or an evidence matrix page prints no `use_when`;
   - the HTML index's lens groups, the lens meaning under each heading, its
-    column headers, or any row's page label, link, "What it shows" or "Use it
-    when" differ from the planned pages (so an index whose tables are dropped
-    is red);
+    column headers, or any row's page label, link or "Use it when" differ
+    from the planned pages (so an index whose tables are dropped is red);
   - the gate does not run in CI.
 
 Also red when a published HTML page hides its report from assistive technology
@@ -119,16 +119,16 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # What PLAN.md Appendix D fixes, written out here rather than imported, so that
 # rewriting an implementation string cannot also rewrite what this gate expects.
 # ---------------------------------------------------------------------------
-# path -> (label, group, use_when). The hint is checked separately where the
-# plan says it is new; "kept" hints are checked as non-empty and as a sentence.
+# path -> (label, group, use_when). Labels follow the owner's retitling of
+# 2026-11-25; no top-level page has a hint.
 STATIC_PAGES: dict[str, tuple[str, str, str]] = {
     "index.html": ("Overview", "Overview", "you arrive, or want the current counts."),
     "architecture.html": ("Architecture", "Codebase", "you want the overall shape before reading any one part."),
     "master-plan.html": ("Subsystems", "Codebase", "you are looking for the part of the code that does something."),
     "files.html": ("Files", "Codebase", "you want to know whether a particular file was read."),
     "not-yet-surveyed.html": ("Not yet surveyed", "Codebase", "you want to know what the survey has not covered."),
-    "seams.html": ("System boundaries", "Codebase", "you are changing something two subsystems share."),
-    "vocabulary.html": ("Codebase glossary", "Codebase", "a project-specific name is unfamiliar."),
+    "seams.html": ("Boundaries", "Codebase", "you are changing something two subsystems share."),
+    "vocabulary.html": ("Glossary", "Codebase", "a project-specific name is unfamiliar."),
     "findings.html": ("Open findings", "Unresolved", "you want the defects still open."),
     "disagreements.html": ("Disagreements", "Unresolved", "you want to know where the record contradicts itself."),
     "open-questions.html": ("Decisions needed", "Unresolved", "you want to know what the agent needs from you."),
@@ -138,18 +138,14 @@ STATIC_PAGES: dict[str, tuple[str, str, str]] = {
     "resolved-findings.html": ("Resolved findings", "History", "you want to know what was fixed or ruled out, and on what basis."),
     "resolution-history.html": ("Resolution history", "History", "you want to know how a record reached its state."),
     "resolved-leads.html": ("Resolved leads and questions", "History", "you want to know how a question was answered."),
-    "sessions.html": ("Sessions and publications", "History", "you want to know when the survey ran."),
-    "contradictions.html": ("Conflicting evidence", "History", "you want to see how a disagreement was settled."),
+    "sessions.html": ("Sessions", "History", "you want to know when the survey ran."),
+    "contradictions.html": ("Settled conflicts", "History", "you want to see how a disagreement was settled."),
     "how-to-read.html": ("Reader's guide", "Method", "a word, an ID or a page is unfamiliar."),
     "concerns.html": ("Review coverage", "Method", "you want to know which defect kinds were checked where."),
     "concern-checklist.html": ("Review checklist", "Method", "you want the list of defect kinds and where it came from."),
     "diagnosticity.html": ("Competing explanations", "Method", "you want to see how a symptom's cause was weighed."),
     "onboarding-report.html": ("Onboarding record", "Method", "you want the first pass's decisions about scope and split."),
-    "entry-point.html": ("Where to begin", "Method", "you want the reading path an earlier session wrote."),
-}
-NEW_HINTS: dict[str, str] = {
-    "index.html": "What the codebase is, and where the survey stands.",
-    "how-to-read.html": "What each page is for, the terms the site uses, and how a survey works.",
+    "entry-point.html": ("First reading path", "Method", "you want the reading path an earlier session wrote."),
 }
 SUBSYSTEM_ROW = ("Subsystem pages", "you have picked a subsystem.")
 MATRIX_ROW = ("Evidence tables", "you followed a DM- link.")
@@ -157,7 +153,7 @@ SUBGROUP_LABELS = (SUBSYSTEM_ROW[0], MATRIX_ROW[0])
 GROUP_ORDER = ("Overview", "Codebase", "Unresolved", "History", "Method")
 LENS_OF_GROUP = {"Codebase": "codebase", "Unresolved": "unresolved", "History": "history", "Method": "method"}
 INDEX_HEADING = "Pages on this site"
-INDEX_COLUMNS = ["Page", "What it shows", "Use it when"]
+INDEX_COLUMNS = ["Page", "Use it when"]
 
 SHA = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"
 SUBSYSTEMS = (
@@ -245,13 +241,14 @@ def read(path: Path) -> str | None:
 # ---------------------------------------------------------------------------
 def head_of(text: str) -> tuple[str, str, str] | None:
     """(H1, hint, use_when) of an HTML page, with the markup inside the paragraphs
-    kept, or None unless the page head holds an H1 directly followed by a hint, and
-    an "About this page" popover holding the use_when with a button that opens it."""
+    kept, or None unless the page head holds an H1 and an "About this page"
+    popover holding the use_when with a button that opens it. The hint is the
+    paragraph directly under the H1, or "" when there is none."""
 
     head = re.search(r'<header class="page-head">(.*?)</header>', text, re.S)
     if not head:
         return None
-    match = re.search(r'<h1\b[^>]*>(.*?)</h1>\s*<p class="page-hint">(.*?)</p>', head.group(1), re.S)
+    match = re.search(r'<h1\b[^>]*>(.*?)</h1>(?:\s*<p class="page-hint">(.*?)</p>)?', head.group(1), re.S)
     use = re.search(
         r'<div class="help-popover" id="page-help" popover\b[^>]*>.*?<p class="page-use-when">(.*?)</p>',
         head.group(1),
@@ -260,7 +257,7 @@ def head_of(text: str) -> tuple[str, str, str] | None:
     opener = re.search(r'<button\b[^>]*\bpopovertarget="page-help"[^>]*>', head.group(1))
     if not match or not use or not opener:
         return None
-    return html_text(match.group(1)), match.group(2), use.group(1)
+    return html_text(match.group(1)), match.group(2) or "", use.group(1)
 
 
 def article_of(text: str) -> str:
@@ -283,28 +280,26 @@ def html_section(text: str, heading: str) -> str | None:
     return None
 
 
-def html_index_groups(section: str) -> list[tuple[str, str, list[tuple[list[str], list[tuple[str, str, str, str]]]]]]:
-    """(group, prose under the heading, [(header, [(label, href, shows, use)])]) per `<h3>`."""
+def html_index_groups(section: str) -> list[tuple[str, str, list[tuple[list[str], list[tuple[str, str, str]]]]]]:
+    """(group, prose under the heading, [(header, [(label, href, use)])]) per `<h3>`."""
 
-    out: list[tuple[str, str, list[tuple[list[str], list[tuple[str, str, str, str]]]]]] = []
+    out: list[tuple[str, str, list[tuple[list[str], list[tuple[str, str, str]]]]]] = []
     parts = re.split(r"(<h3\b[^>]*>.*?</h3>)", section, flags=re.S)
     for heading, body in zip(parts[1::2], parts[2::2], strict=True):
         name = html_text(heading).lstrip("§").strip()
         prose = " ".join(html_text(p) for p in re.findall(r"<p\b[^>]*>(.*?)</p>", body.split("<table", 1)[0], re.S))
-        tables: list[tuple[list[str], list[tuple[str, str, str, str]]]] = []
+        tables: list[tuple[list[str], list[tuple[str, str, str]]]] = []
         for table in re.findall(r"<table\b.*?</table>", body, re.S):
             header = [html_text(th) for th in re.findall(r"<th\b[^>]*>(.*?)</th>", table, re.S)]
-            rows: list[tuple[str, str, str, str]] = []
+            rows: list[tuple[str, str, str]] = []
             tbody = re.search(r"<tbody\b.*?</tbody>", table, re.S)
             for tr in re.findall(r"<tr\b[^>]*>(.*?)</tr>", tbody.group(0) if tbody else "", re.S):
                 cells = re.findall(r"<td\b[^>]*>(.*?)</td>", tr, re.S)
                 link = re.search(r'<a\b[^>]*href="([^"]*)"[^>]*>(.*?)</a>', cells[0] if cells else "", re.S)
-                if len(cells) != 3 or not link:
-                    rows.append((html_text(cells[0]) if cells else "", "", "", ""))
+                if len(cells) != 2 or not link:
+                    rows.append((html_text(cells[0]) if cells else "", "", ""))
                     continue
-                rows.append(
-                    (html_text(link.group(2)), htmllib.unescape(link.group(1)), html_text(cells[1]), html_text(cells[2]))
-                )
+                rows.append((html_text(link.group(2)), htmllib.unescape(link.group(1)), html_text(cells[1])))
             tables.append((header, rows))
         out.append((name, prose, tables))
     return out
@@ -359,7 +354,7 @@ def main() -> int:
 
         check("the fixture publishes", published)
 
-        # -- every static page opens with hint + "Use it when" in its head ---
+        # -- every static page opens with its title and "Use it when" in its head
         parsed: dict[str, tuple[str, str]] = {}
 
         def static_pages_open_with_the_head() -> str | None:
@@ -369,39 +364,41 @@ def main() -> int:
                     return f"{path} ({label}) is not published"
                 head = head_of(text)
                 if head is None:
-                    return f"{path} does not open with an H1 directly followed by a hint and a use_when"
+                    return f"{path} does not open with an H1 and a use_when in its popover"
                 if re.search(r"<a\b|<abbr\b|<strong\b", head[1] + head[2]) or re.search(r"\(Code gen\)", head[1] + head[2]):
                     return f"{path}: the generated head paragraphs were linked or named by the xref pass ({head[1][:60]!r}, {head[2][:60]!r})"
                 hint, use = htmllib.unescape(head[1]).strip(), htmllib.unescape(head[2]).strip()
                 if not use.startswith("Use it when "):
-                    return f"{path}: the paragraph under the hint is not 'Use it when' ({use[:80]!r})"
-                if not hint:
-                    return f"{path} ({label}) has an empty hint"
+                    return f"{path}: the popover's paragraph is not 'Use it when' ({use[:80]!r})"
+                if hint:
+                    return f"{path} ({label}) prints a hint under its title ({hint[:80]!r}); a top-level page has none"
                 if use != f"Use it when {fragment}":
                     return f"{path}: use_when reads {use!r}, Appendix D says 'Use it when {fragment}'"
-                if path in NEW_HINTS and hint != NEW_HINTS[path]:
-                    return f"{path}: hint reads {hint!r}, Appendix D says {NEW_HINTS[path]!r}"
                 parsed[path] = (hint, use)
             return None
 
-        check("every static page's HTML opens with its hint and Appendix D's 'Use it when'", static_pages_open_with_the_head)
+        check("every static page's HTML opens with its title, no hint, and Appendix D's 'Use it when'", static_pages_open_with_the_head)
 
         def dynamic_pages_carry_use_when() -> str | None:
             subsystem_pages = sorted((docs / "subsystems").glob("*.html")) if (docs / "subsystems").is_dir() else []
             matrix_pages = sorted((docs / "diagnosticity").glob("*.html")) if (docs / "diagnosticity").is_dir() else []
             if len(subsystem_pages) != len(SUBSYSTEMS) or len(matrix_pages) != 1:
                 return f"fixture published {len(subsystem_pages)} subsystem pages and {len(matrix_pages)} matrix pages"
-            for pages, (_label, fragment) in ((subsystem_pages, SUBSYSTEM_ROW), (matrix_pages, MATRIX_ROW)):
+            for pages, (_label, fragment), hinted in ((subsystem_pages, SUBSYSTEM_ROW, True), (matrix_pages, MATRIX_ROW, False)):
                 for page in pages:
                     head = head_of(page.read_text())
-                    if head is None or not htmllib.unescape(head[1]).strip():
-                        return f"{page.name} has no hint under its H1"
+                    if head is None:
+                        return f"{page.name} does not open with an H1 and a use_when in its popover"
+                    if hinted and not htmllib.unescape(head[1]).strip():
+                        return f"{page.name} has no hint (its layer) under its H1"
+                    if not hinted and htmllib.unescape(head[1]).strip():
+                        return f"{page.name} prints a hint under its H1 ({head[1][:80]!r}); a matrix page has none"
                     use = htmllib.unescape(head[2]).strip()
                     if use != f"Use it when {fragment}":
                         return f"{page.name}: use_when reads {use!r}, not 'Use it when {fragment}'"
             return None
 
-        check("subsystem and matrix pages carry the subgroup's use_when once", dynamic_pages_carry_use_when)
+        check("subsystem pages carry their layer as a hint, matrix pages none, both the subgroup's use_when", dynamic_pages_carry_use_when)
 
         # -- the head is printed once, as plain text -------------------------
         def head_printed_once() -> str | None:
@@ -418,13 +415,14 @@ def main() -> int:
                         return f"{rel} is not published"
                     head = head_of(page_html)
                     if head is None:
-                        return f"{rel}: the HTML head carries no hint and use_when"
+                        return f"{rel}: the HTML head carries no use_when"
                     if re.search(r"<[a-z]", head[1] + head[2]):
                         return f"{rel}: the hint or use_when carries markup {head[1] + head[2]!r}"
                     hint, use = htmllib.unescape(head[1]).strip(), htmllib.unescape(head[2]).strip()
                     body = article_of(page_html)
-                    if f"{hint} {use}" in htmllib.unescape(re.sub(r"<[^>]+>", "", body)):
-                        return f"{rel}: the hint paragraph is printed again inside the article body"
+                    printed = f"{hint} {use}" if hint else use
+                    if printed in htmllib.unescape(re.sub(r"<[^>]+>", "", body)):
+                        return f"{rel}: the head's paragraphs are printed again inside the article body"
             return None
 
         check("HTML prints the hint and use_when in the head, as plain text, once", head_printed_once)
@@ -469,33 +467,28 @@ def main() -> int:
                         return f"{name}: the heading is not followed by the lens's meaning {meaning!r} before the table"
             return None
 
-        check("the index is grouped by lens, each lens with its meaning, three columns", index_is_grouped_by_lens)
+        check("the index is grouped by lens, each lens with its meaning, two columns", index_is_grouped_by_lens)
 
         def index_rows_match_appendix() -> str | None:
-            seen: dict[str, tuple[str, str, str]] = {}
+            seen: dict[str, tuple[str, str]] = {}
             all_rows = [(name, row) for name, _p, tables in index_groups for _h, rows in tables for row in rows]
-            for group, (label, href, shows, use) in all_rows:
+            for group, (label, href, use) in all_rows:
                 if not href:
-                    return f"a row in {group} does not link its page or lacks three cells: {label!r}"
+                    return f"a row in {group} does not link its page or lacks two cells: {label!r}"
                 if label in SUBGROUP_LABELS:
                     continue  # a subgroup row routes to a page that has a row of its own
-                seen[href] = (group, shows, use)
+                seen[href] = (group, use)
             for path, (label, group, fragment) in STATIC_PAGES.items():
                 if path not in seen:
                     return f"{path} ({label}) is planned and has no row in the index"
-                row_group, shows, use = seen[path]
+                row_group, use = seen[path]
                 if row_group != group:
                     return f"{path} sits under {row_group!r}, Appendix D's lens is {group!r}"
                 if use != fragment:
                     return f"{path}: 'Use it when' cell reads {use!r}, not {fragment!r}"
-                if not shows.strip():
-                    return f"{path}: 'What it shows' cell is empty"
-                hint = parsed.get(path, ("", ""))[0]
-                if hint and shows != hint:
-                    return f"{path}: 'What it shows' reads {shows!r}, not the page's hint {hint!r}"
             return None
 
-        check("every planned top-level page has one row, with its hint and Appendix D's use_when", index_rows_match_appendix)
+        check("every planned top-level page has one row, with Appendix D's use_when", index_rows_match_appendix)
 
         def one_row_per_subgroup() -> str | None:
             rows = [row for _g, _p, tables in index_groups for _h, table in tables for row in table]
@@ -512,8 +505,8 @@ def main() -> int:
                 hits = [cells for cells in rows if label in cells[0]]
                 if len(hits) != 1:
                     return f"{len(hits)} rows are named {label!r}, not exactly one"
-                if hits[0][3] != fragment:
-                    return f"{label!r}: 'Use it when' reads {hits[0][3]!r}, not {fragment!r}"
+                if hits[0][2] != fragment:
+                    return f"{label!r}: 'Use it when' reads {hits[0][2]!r}, not {fragment!r}"
             return None
 
         check("one row per subgroup, not one per subsystem or matrix", one_row_per_subgroup)
@@ -523,7 +516,7 @@ def main() -> int:
             found: set[str] = set()
             for _g, _p, tables in index_groups:
                 for _h, rows in tables:
-                    for label_text, href, _shows, _use in rows:
+                    for label_text, href, _use in rows:
                         for label, directory in targets.items():
                             if label in label_text:
                                 if not href:
@@ -553,7 +546,7 @@ def main() -> int:
                 if header != INDEX_COLUMNS:
                     return f"{name}: HTML table is headed {header!r}, not {INDEX_COLUMNS!r}"
                 expected = [
-                    (label, path, parsed.get(path, ("", ""))[0], fragment)
+                    (label, path, fragment)
                     for path, (label, group, fragment) in STATIC_PAGES.items()
                     if group == name
                 ]

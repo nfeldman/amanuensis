@@ -204,9 +204,19 @@ class _Walk:
     named: set[str] = field(default_factory=set)
 
     def line(
-        self, cells: list[Inlines], *, plain: bool = False, header_row: bool = False, table: bool = False
+        self,
+        cells: list[Inlines],
+        *,
+        plain: bool = False,
+        header_row: bool = False,
+        table: bool = False,
+        keyed: bool = False,
     ) -> list[Inlines]:
-        """Resolve the cells of one line. A table row is one line; its cells share what it names."""
+        """Resolve the cells of one line. A table row is one line; its cells share what it names.
+
+        `keyed`: the first cell is a record's heading, whose ID is the record's
+        own name, so a concern code there is not prefixed with "concern".
+        """
 
         index = self.index
         if not index.entries:
@@ -248,6 +258,8 @@ class _Walk:
         def concern_label(id_: str, start: int) -> bool:
             return (
                 not header_row
+                and not (keyed and len(offsets) > 1 and start < offsets[1])
+                and not (keyed and len(offsets) == 1)
                 and index.kinds.get(id_) == "concern"
                 and not CONCERN_WORD_PAT.search(text[:start])
             )
@@ -428,7 +440,7 @@ class _Walk:
                     *(fact.value for fact in record.facts),
                     *(field_.value for field_ in record.fields),
                 ]
-                resolved = iter(self.line(cells, table=True))
+                resolved = iter(self.line(cells, table=True, keyed=True))
                 key = next(resolved)
                 lede = next(resolved) if record.lede is not None else None
                 facts = tuple(replace(fact, value=next(resolved)) for fact in record.facts)
@@ -436,7 +448,7 @@ class _Walk:
                 named = {}
                 if key != record.key:
                     # The names a record is labelled and anchored by are read off its key as
-                    # linked, a concern code with its "concern" prefix.
+                    # linked (a concern code in a heading carries no "concern" prefix).
                     key_text = _plain_of(key.nodes) or record.key_text
                     anchor = (
                         re.sub(r"^concern\s+", "", key_text) if block.kind == "concern-disposition" else key_text

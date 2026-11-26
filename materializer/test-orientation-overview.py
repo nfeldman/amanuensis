@@ -6,9 +6,9 @@ Turns red when:
 
   - the overview (index.html) has no "The four lenses" section, or the section
     has other than one route per lens;
-  - the Method route's visible text does not read "How to read this survey: what
+  - the Method route's visible text does not read "Reader's guide: what
     each page is for, the terms it uses, and how a survey works";
-  - the Method route's link text is not "How to read this survey", or the link
+  - the Method route's link text is not "Reader's guide", or the link
     does not point at the guide (how-to-read.html), or the guide it points at is
     not published;
   - the old Method wording ("every recorded state, what it authorizes, and what
@@ -104,15 +104,15 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # ---------------------------------------------------------------------------
 SECTION = "The four lenses"
 LENSES = ("Codebase", "Unresolved", "History", "Method")
-METHOD_LINK_TEXT = "How to read this survey"
-METHOD_TEXT = "How to read this survey: what each page is for, the terms it uses, and how a survey works"
+METHOD_LINK_TEXT = "Reader's guide"
+METHOD_TEXT = "Reader's guide: what each page is for, the terms it uses, and how a survey works"
 OLD_METHOD_WORDS = "every recorded state, what it authorizes, and what it cannot justify"
 # The other three routes, as visible text and target, unchanged by O9.
 OTHER_ROUTES: dict[str, tuple[str, str, str]] = {
     "Codebase": (
-        "Subsystem map",
+        "Subsystems",
         "master-plan",
-        "Subsystem map: every region, grouped by layer, with the boundaries and terms recorded for it",
+        "Subsystems: every region, grouped by layer, with the boundaries and terms recorded for it",
     ),
     "Unresolved": (
         "Open findings",

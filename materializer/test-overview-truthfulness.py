@@ -116,11 +116,10 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # ---------------------------------------------------------------------------
 PROJECT_NAME = "LedgerFixture"
 IDENTITY_SENTENCE = (
-    f"An architecture survey of {PROJECT_NAME}. An AI agent running Amanuensis read the"
-    " repository, without changing it, and recorded what it found here. New to this"
-    " site? Start with How to read this survey."
+    f"An architecture survey of {PROJECT_NAME}. An agent running Amanuensis read the"
+    " repository without changing it. New to this site? Start with the Reader's guide."
 )
-IDENTITY_LINK = '<a href="how-to-read.html">How to read this survey</a>'
+IDENTITY_LINK = '<a href="how-to-read.html">Reader&#x27;s guide</a>'
 THESIS_HEADING = "What is this codebase?"
 THESIS_SENTENCE = (
     "LedgerFixture appends ledger rows durably and serves them through a "
