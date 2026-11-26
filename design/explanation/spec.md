@@ -596,6 +596,10 @@ no provenance line and links to the subsystem page whose section does.
 *Written by a survey session at `<sha8>` from <n> evidence row(s). <ageing>*
 ```
 
+*Amended 2026-11-26 (owner, `fa2e33a`): the line is now small and muted,
+`Recorded at <sha>.`, followed by an ageing clause only when cited files changed ("K of its N
+cited files changed since: …") or nothing could check ("Not checked against later changes.").*
+
 **Ageing** is computed, never authored. Let F be the distinct files cited by the explanation's
 evidence rows and H the store's `git_state.last_checked_sha`:
 

@@ -1,37 +1,26 @@
 # Amanuensis
 
-## Give your code agents a memory they have to earn.
+## What Amanuensis is
 
-Amanuensis turns a codebase into a living, evidence-backed map that agents can actually
-rely on.
+Amanuensis gives coding agents a durable, evidence-backed account of a codebase. An agent
+surveys the repository in passes and records what each part is for, how it works, what it
+concluded and on what evidence, and what is still open. Later sessions start from that
+record instead of rebuilding it, and a refresh brings it up to date as the code changes.
 
-It is for developers using agents on systems that are too large, consequential, or
-long-lived to reconstruct safely from scratch in every session.
+It is meant for codebases too large or long-lived for an agent to reconstruct safely in
+every session.
 
-A capable model can produce twenty plausible concerns in a minute. The expensive part is
-deciding which ones are real. If you still have to verify every claim yourself, the
-bottleneck has only moved downstream and filled up with confident-sounding noise.
+## Its parts
 
-Amanuensis changes the starting point. An agent begins with a durable account of what the
-code does, why that account is believed, what changed, what is now stale, which findings
-survived challenge, and which questions are still open.
-
-## What that changes
-
-- **Stop reconstructing the system every session.** Architecture, intent, uncertainty,
-  decisions, and ruled-out concerns carry forward as a codebase memory rather than a chat
-  transcript.
-- **Review changes in context.** The diff arrives with affected seams, prior findings,
-  unresolved obligations, and the evidence behind them.
-- **Act on findings without redoing the review.** Concerns are independently challenged;
-  repairs remain unverified until new evidence proves them at the repaired revision.
-- **Design from the system that actually exists.** Compare alternatives against recorded
-  constraints, then carry the decision, its premises, consequences, and falsifiers forward.
-- **Give people the same map.** The conspectus is published as a searchable, hyperlinked
-  architectural atlas, with Markdown companions for portability and audit.
-
-The result is a reusable situation model for code: compact enough to work from, detailed
-enough to inspect, and explicit about the edge of what is known.
+- **The MCP server** keeps each repository's record (claims, findings, evidence and
+  explanations) in a SQLite store with its own Git history. It refuses writes the record
+  cannot support, such as a claim without evidence at a revision.
+- **The agent skill** teaches the method: onboarding, subsystem surveys, review of
+  findings, and refresh.
+- **The materializer**, in Python, publishes the store as an HTML site and reads each
+  page back against the records before the publication counts.
+- **The installer**, the `amanuensis` command, registers the server and the skill with
+  Codex, Claude Code and GitHub Copilot.
 
 ## Install
 
@@ -116,6 +105,10 @@ Once a conspectus exists, ask your agent:
   revision, and the limits of what has actually been surveyed.
 - **“What needs attention?”** Find unresolved work and stale knowledge; **“What was
   concluded?”** retrieves the recorded decisions and review history.
+- **“Review this change.”** Get the diff with the seams it touches, the findings
+  already recorded there, and the evidence behind them.
+- **“Compare these designs.”** Weigh alternatives against the recorded constraints,
+  then keep the decision with its premises and what would overturn it.
 - **“Refresh the conspectus.”** Reconcile it with the current repository, re-examine
   changed files, record affected claims, and republish the human-readable map.
 
@@ -123,7 +116,7 @@ The MCP readers `get_explanations`, `describe_locus`, `get_attention`, and `get_
 expose these accounts without asking a model to invent a new interpretation. A refresh updates the
 record through source examination; it does not make every subsystem fully surveyed.
 
-## Beta means beta
+## Status
 
 The current published release is [0.2.0-beta.7](https://github.com/nfeldman/amanuensis/releases/tag/v0.2.0-beta.7),
 available as `latest` on npm. Its internal contracts and failure

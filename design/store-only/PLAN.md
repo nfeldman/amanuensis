@@ -844,7 +844,7 @@ baseline by owner decision, so neither can exit 0 in this lane (D17).
 Every diagram packet follows Appendix B, adds a pure model function to `diagrams.py`, draws with
 the shared primitives, puts `data-node`/`data-edge` on every mark, regenerates golden only inside
 its `<figure data-diagram>` blocks, and adds a gate that is red on: a node count different from the
-record count; an edge no record joins; a missing `role="img"`, `<title>` or `<desc>` with counts; no
+record count; an edge no record joins; a role, `<title>` or `<desc>` with counts that breaks rule 8; no
 readable account beside it; a below-threshold input drawing an SVG instead of a sentence;
 non-identical output on a second render; a sabotaged mark the read-back does not catch.
 

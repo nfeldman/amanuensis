@@ -1,7 +1,18 @@
 # Orientation: what the published site tells a first-time reader
 
-- Status: plan, 2026-11-19. Nothing here is implemented. Owner decisions D1–D4 recorded
-  2026-11-20 and folded into the packets (§5); D5 is still open.
+- Status: plan, 2026-11-19. Owner decisions D1–D4 recorded 2026-11-20 and folded into the
+  packets (§5); D5 is still open. Built by the orientation lane; packet status is in
+  `plan-status.md`.
+- Superseded in part, 2026-11-25/26 (owner, the style and prose work):
+  - no hint and no "Use it when" line under any page title; the guide's page index keeps one
+    line per page (`3843a12`, which kept a subsystem's layer under its title until `fa2e33a`
+    moved it into the eyebrow line);
+  - the overview is two parts, what the codebase is and its parts; its figures moved to an
+    "About this survey" page; branch, check and notice moved to a quiet page foot (`fa2e33a`);
+  - an explanation's provenance is one muted line, "Recorded at <sha>.", with an ageing clause only when cited
+    files changed or nothing could check (`fa2e33a`);
+  - a diagram whose SVG holds links is `role="group"`, not `role="img"` (`94d9877`; store-only
+    PLAN Appendix B rule 8).
 - Source: branch `claude/orientation-plan-e03563`, from `main` at `6c9b181`.
 - Corpora read, not written: this repository's store (`.amanuensis/docs/` in the primary
   checkout, subsystem IDs `B-NN`) and the AxiomDB store (`~/repos/axiomdb/.amanuensis/docs/`,
@@ -915,7 +926,8 @@ each subsystem survey has Phases 1–5, which are the five passes above in order
 
 Revised 2026-11-25 by owner ruling: pages retitled as below, no hint under any page title
 except a subsystem page's layer, and the reader's guide's index has two columns, Page and
-Use it when. "Use it when" is unchanged.
+Use it when. "Use it when" is unchanged. *Revised again 2026-11-26: a subsystem page's layer moved
+into its eyebrow line ("Layer · <layer>"), so no page has a hint under its title.*
 
 | Page | Hint | Use it when |
 |---|---|---|
