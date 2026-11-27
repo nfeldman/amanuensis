@@ -10,15 +10,17 @@ receipts carry the executable evidence, exact revisions, and current claim bound
 This release changes the published output: pages are HTML only, and the store holds
 everything they print.
 
-- Keep every piece of a survey in the store. The project's name and thesis
+- Keep every piece of a survey in the store. The project's name
   (`record_project_profile`), its runtime boundaries (`record_runtime_boundary`),
-  territory dispositions, structure and onboarding narratives (`record_narrative`,
-  `decline_narrative`, `get_narratives`) and the marks that tie a claim to a place in
-  the code (`record_claim_mark`) are records with evidence, not files the agent writes.
+  territory dispositions (`record_territory_disposition`), structure and onboarding
+  narratives (`record_narrative`, `decline_narrative`, `get_narratives`) and the marks
+  that tie a claim to a place in the code (`record_claim_mark`) are records, not files
+  the agent writes.
   `import_artifact_bodies` copies an older store's prose files into the store once,
   with their provenance.
-- Publish HTML only. The materializer builds each page from the store, no longer writes
-  or parses Markdown, and drops the `.md` form of every page. The read-back checks every
+- Publish HTML only. The materializer builds each page from the store and drops the
+  `.md` form of every page; only prose imported from an older store is still read as
+  Markdown. The read-back checks every
   rendered record and diagram against the store.
 - Draw the survey: the workflow and status ladder, coverage bars, finding badges, the
   seam between two subsystems and the flow through one, as inline SVG built at publish time.
@@ -32,13 +34,14 @@ everything they print.
   tree-sitter grammars compiled to WebAssembly; results are cached in a sidecar beside the
   store, never in the store. The package is about 26 MB installed.
 - Anchor evidence to definitions. When `add_evidence` names a symbol in a supported
-  language, the server resolves it at the cited revision, refuses one it cannot find or
-  cannot tell apart, and keeps the cited range inside that definition. For a stale file,
-  the refresh backlog says whether the cited definition is the same, moved, changed or gone.
+  language and the index is available, the server resolves it at the cited revision,
+  refuses one it cannot find or cannot tell apart, and keeps the cited range inside that
+  definition. For a stale file, the refresh backlog says whether the cited definition is
+  the same, moved, changed or gone, or why it cannot tell.
 - Ask less of an explanation and let the reader replace it. Accounts and narratives aim
   for 2048 bytes, keep only what a reader would otherwise get wrong, and leave findings
-  out. Any recorded prose can be rewritten on the reader's word, with what to focus on,
-  or replaced by text they write.
+  out. Recorded explanations and narratives can be rewritten on the reader's word, with
+  what to focus on, or replaced by text they write.
 - Add a survey set: the paths a survey has to account for. It is the tree at a
   revision minus the paths its own ignore files match, the paths the owner
   excluded and the paths onboarding sorted as meta. An owner include rule brings
@@ -51,8 +54,8 @@ everything they print.
   product or meta sorting (a meta row carries an inventory of cited files), and
   `get_scope` reads the rules, the counts by source and the paths still unsorted.
 - Leave an excluded path out of the record. It gets no ledger row and no evidence,
-  no new record may name it, and it appears on no page except as one count on the
-  overview, which also names the owner's rules. `describe_locus` still answers for
+  and no new record may name it. Pages count excluded paths rather than list them, though
+  a record made before the exclusion still shows its own citation. `describe_locus` still answers for
   it, as `excluded` with its source (gitignore, user or meta) and the rule.
 - Refuse publication while a store in sorted mode has unsorted paths, naming up to
   20 of them. Recording a rule or a sorting row takes the standing of the last
