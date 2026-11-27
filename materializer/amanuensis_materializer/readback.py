@@ -1391,6 +1391,9 @@ class _MarkInventory(HTMLParser):
         self.pieces: list[_Piece] = []
         self.drawn: dict[str, list[tuple[str, str, str]]] = {}
         self.chip: tuple[set[str], list[str]] | None = None
+        # Stack depths of the open `record-copy` fields: a record's prose, where a status
+        # word may name another value ("kept confirmed rather than ruled out").
+        self.copy_open: list[int] = []
         # Each open `<g data-node>`: its stack depth, where its entry sits in `drawn`,
         # whether a shape is drawn inside it, and the words its `<text>` prints.
         self.nodes_open: list[tuple[int, str, int, list[bool], list[str]]] = []
@@ -1433,9 +1436,16 @@ class _MarkInventory(HTMLParser):
             piece = _Piece(record, values.get("data-state"), tag, self._offset(), text=[], chips=[])
             self.pieces.append(piece)
         # A status chip inside a record is the state the reader sees printed; a
-        # territory prints its disposition as a table cell, read as one too.
+        # territory prints its disposition as a table cell, read as one too. A chip in
+        # the record's prose is a word the prose quotes, not the state it prints.
         cell = tag == "td" and values.get("data-label") == "Disposition"
-        chip = (tag == "span" and "status" in classes or cell) and (piece or current) is not None
+        chip = (
+            (tag == "span" and "status" in classes or cell)
+            and (piece or current) is not None
+            and not self.copy_open
+        )
+        if tag == "div" and "record-copy" in classes and not closed:
+            self.copy_open.append(len(self.stack))
         if chip:
             self.chip = ({"cell-disposition"} if cell else classes, [])
         if closed or tag in _VOID:
@@ -1459,6 +1469,8 @@ class _MarkInventory(HTMLParser):
             holder.text.append(" ")
         while self.stack:
             open_tag, piece, _svg, chip = self.stack.pop()
+            if self.copy_open and self.copy_open[-1] == len(self.stack):
+                self.copy_open.pop()
             if self.nodes_open and self.nodes_open[-1][0] == len(self.stack):
                 # A marked node is drawn only if it holds a shape and prints words;
                 # an emptied container is not the box its mark names (§3.5, F2/codex).

@@ -788,6 +788,32 @@ def main() -> int:
 
     check("the gate runs in CI", in_ci)
 
+    def prose_chips() -> str | None:
+        # A rationale that says it stays `confirmed-bug` rather than `ruled-out` quotes a
+        # value; only the chip in the record's own facts is the state it prints.
+        def page(head: str) -> str:
+            return (
+                '<article class="record" data-record="disposition:W-06:TR-1" data-state="confirmed-bug">'
+                '<header class="record-meta"><dl class="record-facts"><div><dt>Verdict</dt><dd>'
+                f'<span class="status status-disposition status-{head}">X</span></dd></div></dl></header>'
+                '<div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p>'
+                '<div class="record-copy">kept <span class="status status-disposition status-confirmed-bug">'
+                'Confirmed defect</span> rather than <span class="status status-disposition status-ruled-out">'
+                "Ruled out</span>.</div></div></div></article>"
+            )
+
+        seen = {}
+        for head in ("confirmed-bug", "ruled-out"):
+            occurrences, _drawn = readback._record_occurrences(page(head))
+            seen[head] = [sorted(c for c in classes if c.startswith("status-")) for classes, _ in occurrences[0].chips]
+        if seen["confirmed-bug"] != [["status-confirmed-bug", "status-disposition"]]:
+            return f"the prose's chips are read as the record's state: {seen['confirmed-bug']}"
+        if seen["ruled-out"] != [["status-disposition", "status-ruled-out"]]:
+            return f"a wrong chip in the record's facts is no longer read: {seen['ruled-out']}"
+        return None
+
+    check("a status word in a record's prose is not read as its state; its facts' chip still is", prose_chips)
+
     if FAILURES:
         emit(f"GATE SO20 RED: {FAILURES[0][:300]}")
         return 1
