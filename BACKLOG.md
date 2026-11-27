@@ -267,6 +267,13 @@ Workflow:
   `_identifier_markup` over each finished page's nav, body and eyebrow, which PLAN §3.1 meant to
   replace with typed record references in the page model. The fix needs every builder to emit
   those references, with the golden pages byte-identical, so it needs a packet of its own.
+- **Subsystems are a flat list.** Raised by the owner, 2026-11-27, reading AxiomDB's conspectus
+  (37 subsystems). The store and the pages hold subsystems as one list; the only grouping is the
+  layer column and the letter of the id (the R family for reasoning, and so on), which nothing
+  models. A codebase usually has a hierarchy, such as crates holding modules, or a reasoning
+  family of six parts. Some subsystem graphs won't render cleanly as a tree, and some codebases
+  will need compromises, but a nested structure would read better than the flat list does.
+  Not yet designed.
 - ~~**Diagram SVGs are images that contain links.**~~ Done 2026-11-26 (final review F14/claude):
   Appendix B rule 8 is amended, a diagram with links is a labelled `role="group"` whose drawing
   between the links is hidden, `role="img"` stays for diagrams with none, and the four diagram
