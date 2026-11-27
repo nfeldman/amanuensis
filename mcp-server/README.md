@@ -40,7 +40,7 @@ This is a beta. Until `1.0.0`, expect breaking changes between releases.
 
 ## Code index
 
-From 0.3.0-beta.2 the server keeps a cache of each source file's definitions, so an agent
+From 0.3.0-beta.1 the server keeps a cache of each source file's definitions, so an agent
 can see a file's shape (`outline_file`), read one definition and cite it exactly
 (`read_symbol`), and find a definition by name (`find_symbol`) and a record by topic
 (`search_records`). It adds to reading files and never replaces it. A reference

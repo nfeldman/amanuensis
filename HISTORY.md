@@ -5,6 +5,40 @@ receipts carry the executable evidence, exact revisions, and current claim bound
 
 ## [Unreleased]
 
+## [0.3.0-beta.1] - 2026-11-26
+
+This release changes the published output: pages are HTML only, and the store holds
+everything they print.
+
+- Keep every piece of a survey in the store. The project's name and thesis
+  (`record_project_profile`), its runtime boundaries (`record_runtime_boundary`),
+  territory dispositions, structure and onboarding narratives (`record_narrative`,
+  `decline_narrative`, `get_narratives`) and the marks that tie a claim to a place in
+  the code (`record_claim_mark`) are records with evidence, not files the agent writes.
+  `import_artifact_bodies` copies an older store's prose files into the store once,
+  with their provenance.
+- Publish HTML only. The materializer builds each page from the store, no longer writes
+  or parses Markdown, and drops the `.md` form of every page. The read-back checks every
+  rendered record and diagram against the store.
+- Draw the survey: the workflow and status ladder, coverage bars, finding badges, the
+  seam between two subsystems and the flow through one, as inline SVG built at publish time.
+- Help a first-time reader: a guide with the page index, Amanuensis's own terms, what the
+  ID letters mean and how a survey proceeds. The overview is two parts, what the codebase
+  is and its parts; the survey's figures are on an About this survey page.
+- Add a code index. `outline_file` lists a file's definitions and imports,
+  `read_symbol` returns one definition's source and the arguments that cite it,
+  `find_symbol` finds definitions by name and references by name only, and
+  `search_records` searches the store's current records. Ten languages are parsed with
+  tree-sitter grammars compiled to WebAssembly; results are cached in a sidecar beside the
+  store, never in the store. The package is about 26 MB installed.
+- Anchor evidence to definitions. When `add_evidence` names a symbol in a supported
+  language, the server resolves it at the cited revision, refuses one it cannot find or
+  cannot tell apart, and keeps the cited range inside that definition. For a stale file,
+  the refresh backlog says whether the cited definition is the same, moved, changed or gone.
+- Ask less of an explanation and let the reader replace it. Accounts and narratives aim
+  for 2048 bytes, keep only what a reader would otherwise get wrong, and leave findings
+  out. Any recorded prose can be rewritten on the reader's word, with what to focus on,
+  or replaced by text they write.
 - Add a survey set: the paths a survey has to account for. It is the tree at a
   revision minus the paths its own ignore files match, the paths the owner
   excluded and the paths onboarding sorted as meta. An owner include rule brings

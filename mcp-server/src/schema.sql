@@ -1569,7 +1569,7 @@ CREATE INDEX IF NOT EXISTS idx_find_evidence_evidence ON finding_evidence(eviden
 -- holds the symbol_id as its `symbol`. A separate table rather than columns on
 -- `evidence`, because the anchor is optional and append-only while `evidence`
 -- is not, and no write path that does not anchor changes. A store made before
--- 0.3.0-beta.2 opens with this table empty (D6): nothing backfills it.
+-- 0.3.0-beta.1 opens with this table empty (D6): nothing backfills it.
 CREATE TABLE IF NOT EXISTS evidence_anchors (
     evidence_id     INTEGER PRIMARY KEY REFERENCES evidence(id) ON DELETE RESTRICT,
     blob_sha        TEXT    NOT NULL,

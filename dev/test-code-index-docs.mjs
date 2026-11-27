@@ -291,7 +291,7 @@ function checkSection(section, grammars, facts) {
   }
   check(body.includes("THIRD_PARTY_NOTICES.md"), "the section does not point at THIRD_PARTY_NOTICES.md");
   check(/\bMIT\b/.test(body), "the section does not state the grammars' license");
-  check(body.includes("0.3.0-beta.2"), "the section does not say which release brought the index");
+  check(body.includes("0.3.0-beta.1"), "the section does not say which release brought the index");
 
   const pkg = JSON.parse(read("mcp-server/package.json"));
   for (const entry of ["grammars/", "queries/", "THIRD_PARTY_NOTICES.md"]) {

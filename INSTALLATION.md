@@ -274,7 +274,7 @@ anywhere.
 
 ## Code index
 
-Available from 0.3.0-beta.2. The code index reads a source file at one revision and
+Available from 0.3.0-beta.1. The code index reads a source file at one revision and
 keeps what it finds, the file's definitions and imports, in a cache beside the store.
 Four tools use it: `outline_file` (a file's shape), `read_symbol` (one definition's
 source and the location fields for `add_evidence`), `find_symbol` (definitions by name,
