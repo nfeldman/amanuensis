@@ -549,6 +549,15 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+      # GATE SC7's D1 runs the server's own digests from mcp-server/dist.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.18.0"
+          cache: npm
+          cache-dependency-path: mcp-server/package-lock.json
+      - name: Build the server
+        working-directory: mcp-server
+        run: npm ci && npm run build
       - name: Install ruff
         run: pip install ruff
       - name: Lint (ruff)
