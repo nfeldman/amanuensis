@@ -119,6 +119,7 @@ is read for evidence only — never modified.
 | "resume survey" | Call `list_sessions(state="active")`. If one is open, summarize its last dispatch (`get_dispatch_history`) and re-enter the appropriate phase. |
 | "what have you noticed" / "browse" | See `references/notes.md` — answer conversationally from field notes, vocabulary, and findings. No surveys. |
 | "what do we know about X" / "before I change X" / "is there a finding on this file" / "what is `<term>` here" | Call `describe_locus` first. Answer with standing, then the account. When standing is `unledgered`, `excluded`, or `scoped-unread`, say so and offer a survey; do not read the file and improvise. See `references/notes.md`. |
+| anything about how a piece of recorded prose is written ("too long", "focus on X", "this misses Y") | Say it can be rewritten, ask what to focus on or change, write the replacement, and record it once they are satisfied. They may amend it or write their own instead. See § Rewriting on request in `references/explanations.md`. |
 | "audit" / "what's stale" | See `references/memory-audit.md` — sweep contradictions, linchpin findings, open notes, stale entries. Produce a worklist. |
 | "refresh" / "refresh the survey" / "bring the conspectus up to date" | See `references/refresh.md` — reconcile the ledger, then work the stale backlog by re-examining each file and clearing it. This route discharges drift; the audit route only lists it. |
 | "reinit survey" | The request authorizes this destructive operation. Snapshot, report the exact target, then clear it. |
@@ -350,6 +351,7 @@ everything.
   explanations and narratives, materialization, session close).
 - `references/explanations.md` — what a purpose and an account contain,
   when each is written, and the tools that record, decline and read them.
+  Its § Rewriting on request covers replacing any recorded prose.
 - `references/notes.md` — conversational observer mode.
 - `references/memory-audit.md` — hygiene sweep.
 - `references/refresh.md` — discharge drift: reconcile scope, then

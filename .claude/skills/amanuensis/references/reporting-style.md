@@ -15,6 +15,37 @@ the target codebase.
 - Keep the project name as the primary identity. Present Amanuensis as the
   producing system or method, never as the project's title.
 
+## Prose
+
+This is guidance for an author and an editor. It is not a set of rules for a
+checker. It applies the intent of ISO 24495-1: the reader gets what they need,
+finds it, understands it and can use it.
+
+Pages should be quiet, so that what matters stands out. Write the least that
+serves the reader. The Amanuensis vocabulary and register below are part of the
+design. Plain language means plain sentences, not giving up those words.
+
+A model writing prose falls into the patterns it was trained on. A survey run
+by one model reads like that model, and the next model's survey reads like the
+next. The editor's job is to notice those patterns and keep only what earns its
+place. Common ones:
+
+- a sentence that restates the heading, label or number beside it;
+- advice about using the page, or a preview of what the page is about to show.
+  Advice about the code, such as which file to read first, is content;
+- clauses paired or tripled for rhythm, and chiasmus or "not X but Y" that adds
+  nothing;
+- fragments strung together with colons and semicolons where sentences would
+  read better;
+- adjectives and adverbs that don't change what the reader knows;
+- a section kept only because the template has a slot for it, or a lead-in line
+  that labels what follows ("What to know before changing it:").
+
+Any of these can be right in a particular place, a dash included. What matters
+is whether the sentence does something for the reader. Lead with the fact:
+purpose before mechanism, consequence before cause. The page should read well to
+someone who listens to how prose sounds and someone who wants the facts.
+
 ## Register
 
 Write primarily for experienced software practitioners. Prefer established

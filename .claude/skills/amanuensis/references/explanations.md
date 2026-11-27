@@ -26,14 +26,16 @@ restatement of scope.
 written from its entry points and manifests. It is recorded at onboarding, before
 any subsystem has been read.
 
-**Account** (subsystem), in this order, as short prose:
+**Account** (subsystem): short prose on how the part works. It covers the moving
+parts and how control or data passes through them; the rules it enforces and
+where each is enforced, which is where the business logic is; and what it
+depends on and what depends on it. An account has no sections of its own and no
+lead-in labels.
 
-1. the moving parts and how control or data passes through them;
-2. the rules it enforces and where each is enforced, which is where the business
-   logic is;
-3. what it depends on and what depends on it;
-4. what a newcomer is likely to get wrong;
-5. where to start reading.
+Where to start reading is not part of an account. A subsystem's page prints its
+`jump_in_reading` as the "Start here" line under
+its scope, and the project's `start-here` narrative gives the routes through the
+whole codebase. A better starting point is recorded there.
 
 **Account** (project): what the system does and for whom; the main parts and how
 one request or record passes through them end to end; the rules that hold
@@ -46,14 +48,47 @@ subsystem is defined without `subsystem_id`. Either way the term's `first_seen` 
 an anchor *"whose revision must resolve and whose path must exist in that
 revision's tree"*.
 
-Rules for all three: written for an experienced practitioner new to this codebase;
-the codebase's own vocabulary; no survey-status or coverage language; every
-non-trivial statement traceable to attached evidence; when the session cannot say
-something true and specific, it declines with the reason.
+These rules apply to every purpose and account:
+- Address an experienced practitioner new to this codebase; § Prose in
+  `reporting-style.md` sets the style. Use the codebase's own names where they help the
+  reader find the code, and say what each means the first time it appears.
+- Use no survey-status or coverage language.
+- Make every non-trivial statement traceable to attached evidence.
+- When the session can't say something true and specific, it declines and gives
+  the reason.
+
+A purpose answers "what is this for?" in a sentence or two that a reader can
+repeat. An account that reads as a list of mechanisms has failed, however true
+each item is.
+
+Less is more: too much detail and the reader glazes over. Many true facts fit;
+keep one only if a reader who did not know it would change
+the code wrongly or misread what it does, and leave out what the names and the
+file list already tell them. Prefer what the survey has weighed (its claims,
+findings and seams) to what turns up while reading.
 
 There is no length floor. A short explanation that is true is better than a long
-one written to look finished. Declining with a reason is a complete answer, and a
+one written to look finished. An account or a narrative rarely needs more than
+2048 bytes; the caps are ceilings, not targets. Declining with a reason is a complete answer, and a
 later pass that knows more records over it.
+
+Leave out what the reader already has on the same page: the scope and the "Start
+here" line. An explanation says how the code works, not what is wrong with it:
+findings, defects and their ids stay out, since the page lists them on their own.
+A revision is no longer than the text it replaces unless a fact needs the room.
+
+## Rewriting on request
+
+Any prose the survey recorded can be replaced on the reader's word: a purpose,
+an account, a narrative, a term's expansion, a note. When someone says anything
+about how a piece is written (too long, the wrong emphasis, missing what they
+care about), tell them it can be rewritten and ask what it should focus on or
+change. Then write the replacement, show it, and record it once they are
+satisfied. They can also amend the text or write their own; record theirs as
+given, over the evidence it rests on. A replacement is a new row and the old one
+stays in the history, except a term's expansion, which `define_term` replaces in
+place. The rules above still hold: where a request would break
+one, say which and why.
 
 ## When each is written
 
@@ -175,6 +210,12 @@ since the page owns its headings and tables. A section holds several narratives,
 one per **topic** (a short title of at most 120 characters, empty for the
 section's single body); the effective one for each subject, section and topic is
 the newest. Cite at least one file in the subsystem's ledger.
+
+A narrative holds its section and nothing else. A `structure` narrative says how
+the subsystem is built; where to start belongs to the "Start here" line. The prose rules for
+explanations apply here too, the length rule included, except to a `challenge`
+narrative: that one is the review of a finding, so it names the finding and is
+held only to the server's cap, as § 4 of `phase-4-adversarial.md` sets out.
 
 ### `record_narrative`
 

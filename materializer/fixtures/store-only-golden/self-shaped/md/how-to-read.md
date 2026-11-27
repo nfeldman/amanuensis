@@ -608,7 +608,7 @@ Stored as `explanation_slot` · explanation axis
 | Value | Label | What it means | What it cannot justify |
 |---|---|---|---|
 | `purpose` | Purpose | One paragraph on what this part is for, in terms of what the rest of the system or its users get from it. | that the paragraph is a restatement of scope or a list of files; a purpose is a judgement and the record cannot check it |
-| `account` | Account | A short prose account of how the subject works: its moving parts, the rules it enforces and where, what it depends on, what a newcomer gets wrong, and where to start reading. | that the account is complete or current; it is bound to the revision it was written at |
+| `account` | Account | A short prose account of how the subject works: its moving parts, the rules it enforces and where, and what it depends on and what depends on it. | that the account is complete or current; it is bound to the revision it was written at |
 
 ### Explanation disposition
 

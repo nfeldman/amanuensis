@@ -616,16 +616,17 @@ function contractChecks() {
     );
   });
 
-  check("S2 explanations.md gives the subsystem account its five parts in order", () => {
+  check("S2 explanations.md gives the subsystem account its parts in order, and no reading route", () => {
     const text = section(readSkill("references/explanations.md"), "## What to write");
-    return inOrder(text, [
-      "**Account** (subsystem)",
-      "1. the moving parts and how control or data passes through them",
-      "2. the rules it enforces and where each is enforced",
-      "3. what it depends on and what depends on it",
-      "4. what a newcomer is likely to get wrong",
-      "5. where to start reading",
-    ]);
+    if (/newcomer/i.test(text)) return "it still asks for what a newcomer is likely to get wrong";
+    return (
+      inOrder(text, [
+        "**Account** (subsystem)",
+        "the moving parts and how control or data passes through them",
+        "the rules it enforces and where each is enforced",
+        "what it depends on and what depends on it",
+      ]) ?? requirePhrases(text, ["Where to start reading is not part of an account", "`jump_in_reading`"], "the account")
+    );
   });
 
   check("S3 explanations.md gives the project account, its concepts as vocabulary terms", () => {
@@ -646,16 +647,18 @@ function contractChecks() {
     );
   });
 
-  check("S4 explanations.md gives the rules for all three, sets no floor, and accepts a declination", () => {
+  check("S4 explanations.md gives the rules for every purpose and account, sets no floor, and accepts a declination", () => {
     const text = section(readSkill("references/explanations.md"), "## What to write");
     const missing = requirePhrases(
       text,
       [
         "experienced practitioner new to this codebase",
-        "the codebase's own vocabulary",
+        "the codebase's own names",
         "no survey-status or coverage language",
         "every non-trivial statement traceable to attached evidence",
-        "declines with the reason",
+        "declines and gives the reason",
+        "Less is more",
+        "the caps are ceilings, not targets",
         "no length floor",
         "Declining with a reason is a complete answer",
       ],

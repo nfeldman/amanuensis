@@ -681,7 +681,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
             {
                 "value": "account",
                 "label": "Account",
-                "meaning": "A short prose account of how the subject works: its moving parts, the rules it enforces and where, what it depends on, what a newcomer gets wrong, and where to start reading.",
+                "meaning": "A short prose account of how the subject works: its moving parts, the rules it enforces and where, and what it depends on and what depends on it.",
                 "cannot_justify": "that the account is complete or current; it is bound to the revision it was written at",
             },
         ),
