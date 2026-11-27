@@ -46,11 +46,10 @@ real run; "read" means found by reading code and not reproduced.
   design directories. Re-measure the gate baseline on `main` before resuming.
 - ~~**Release-time host evidence.**~~ Not required, decided 2026-11-20: the release-commit CI,
   the publish workflow's packed-artifact check and the published-package smoke test are enough.
-  B07-R1 stays out of CI. The A25/A26 activation checks left CI on 2026-11-06. Nothing
-  compares the recorded host runs with the code between releases. A release that wants them needs
-  a live Codex capture first, and the capture harness needs repair before it passes on current
-  code. `dev/test-activation-evidence.mjs` (B07-R1) is red for the same reason: a recorded source
-  digest for `mcp-server/src/project.ts` has drifted.
+  The A25/A26 activation checks left CI on 2026-11-06, and `dev/test-activation-evidence.mjs`
+  (B07-R1) was deleted on 2026-11-26: it compared recorded host runs with code that keeps moving.
+  A release that wants host evidence needs a live Codex capture, and the capture harness needs
+  repair first.
 - ~~**Reconcile the self-conspectus, or wait for the rebuild?**~~ Moot 2026-11-23: the
   self-conspectus and the P11, EX8 and EX14 gates were deleted. Wait, decided 2026-11-20:
   P11, EX8 and EX14 stay red until the rebuild replaces the self-conspectus. P11
@@ -105,7 +104,7 @@ real run; "read" means found by reading code and not reproduced.
   coordinate; they read whole files whenever they want context, exactly as today. The index never
   discourages, forbids or gates whole-file reads. There is no benchmark and no threshold, and
   nothing waits on a measurement; the only measure is a descriptive token report that decides
-  nothing. It ships as 0.3.0-beta.2, after store-only's 0.3.0-beta.1. One risk stays and is
+  nothing. It was planned as 0.3.0-beta.2, after store-only's 0.3.0-beta.1; both shipped together as 0.3.0-beta.1 on 2026-11-26. One risk stays and is
   stated plainly: a name-matched reference is a lead, not proof of a call.
 
   The plan is [design/semantic-index/PLAN.md](design/semantic-index/PLAN.md): 12 packets, SI0 to
@@ -387,11 +386,11 @@ new ids (B03-6 became B03-R2, for example), and some ids were later re-minted fo
 | ~~B01-1~~ | ~~A subsystem surveyed as documented reports zero claims~~ Repaired, per `docs/resolved-findings.md` |
 | ~~B01-R1~~ | ~~The phase references drift from the tools they describe, unchecked~~ Fixed 2026-11-19 (22a3005): `scripts/check-reference-calls.mjs`, in CI, requires every `tool(args)` code span in the skill to name a real tool and real arguments. Its first run found four drifts (`field_note` twice, `open_question`, `get_findings(finding_id=…)`), fixed. It cannot see a call outside a code span or a wrong argument value |
 | ~~B07-1~~ | ~~A research refresh can hang on a network fetch~~ Fixed 2026-11-19 (dc5ad34): the GitHub fetch, the npm and shadcn CLI calls and the two snapshot verifiers' detector runs are bounded, and fail with the cause |
-| B07-R1 | `dev/test-activation-evidence.mjs` never runs in CI. That is now the owner's CI scope (6c6d789); the gate is red on a drifted source digest and needs a live Codex capture (see "Release-time host evidence") |
+| ~~B07-R1~~ | ~~`dev/test-activation-evidence.mjs` never runs in CI~~ Deleted 2026-11-26 by the owner: it was red on a drifted source digest and could only be repaired by a live Codex capture |
 | ~~B07-R2~~ | ~~`dev/test-rebuild-depth.mjs` cannot pass on a genuine clean-slate rebuild~~ Retired 2026-11-23: the gate was deleted with the self-conspectus |
 | ~~—~~ | ~~The regeneration gate asserts over a store the acceptance rebuild deleted~~ Deleted 2026-11-19 (443174e), by the owner's 2026-11-06 decision. **Replace it:** a regeneration gate bound to the store it reads, whose denominators come from the live store's own subsystems: every ladder rung witnessed by a recorded transition, every current claim challenged before `mapped`, every cross-subsystem import carried by a recorded edge, and the dogfood and depth receipts recorded at one store revision. Known gaps it would find today: no subsystem is `mapped`, three current claims have no challenge outcome, and the B-02→B-03 edge is unrecorded |
 | ~~—~~ | ~~A mistaken outcome on a carried finding cannot be corrected~~ Fixed 2026-11-18 (f564925): `record_carried_outcome` takes `corrects_outcome_id`; the correction is a new append-only row that names the one it supersedes, and every reader takes the current outcome |
 
 The `dev/` receipt gates, the Pecia gates and `dev/republish-docs.mjs` were deleted on
-2026-11-23 with the self-conspectus. Of the red gates listed here before then, one remains:
-`dev/test-activation-evidence.mjs`, on a drifted source digest that needs a live Codex capture.
+2026-11-23 with the self-conspectus, and `dev/test-activation-evidence.mjs` on 2026-11-26. None
+of the red gates listed here before then remains.

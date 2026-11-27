@@ -695,8 +695,7 @@
             "mcp-server/fixtures/activation/hard-coded-global-project-local.json",
             "mcp-server/test-activation-contract.mjs",
             "mcp-server/test-package-artifact.mjs",
-            "dev/activation-evidence/a19-user-scoped-contract.json",
-            "dev/test-activation-evidence.mjs"
+            "dev/activation-evidence/a19-user-scoped-contract.json"
           ]
         },
         {

@@ -278,7 +278,6 @@ way: paths its ignore files match leave the survey set.
 - `mcp-server/test-scope-standing.mjs`
 - `materializer/test-scope-pages.py`
 - `dev/test-skill-scope.mjs`
-- `dev/test-scope-docs.mjs`
 
 <!-- TOOL-INVENTORY-START -->
 

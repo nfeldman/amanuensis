@@ -249,7 +249,7 @@ Risks:
 - A global registration broadens availability and can be mistaken for broader filesystem authority.
 
 **Practice basis:** GP8, GP25, GP28, VP4, VP11, VP20<br>
-**Baseline evidence:** `dev/adr/0021-friction-free-codex-activation.md`, `mcp-server/src/cli.ts`, `mcp-server/test-installer.mjs`, `.claude/skills/amanuensis/references/setup.md`, `mcp-server/src/index.ts`, `mcp-server/fixtures/activation/hard-coded-global-project-local.json`, `mcp-server/test-activation-contract.mjs`, `mcp-server/test-package-artifact.mjs`, `dev/activation-evidence/a19-user-scoped-contract.json`, `dev/test-activation-evidence.mjs`
+**Baseline evidence:** `dev/adr/0021-friction-free-codex-activation.md`, `mcp-server/src/cli.ts`, `mcp-server/test-installer.mjs`, `.claude/skills/amanuensis/references/setup.md`, `mcp-server/src/index.ts`, `mcp-server/fixtures/activation/hard-coded-global-project-local.json`, `mcp-server/test-activation-contract.mjs`, `mcp-server/test-package-artifact.mjs`, `dev/activation-evidence/a19-user-scoped-contract.json`
 
 #### A20 — Activation doctor and safe configuration migration
 
