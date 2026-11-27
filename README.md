@@ -141,7 +141,7 @@ record through source examination; it does not make every subsystem fully survey
 
 ## Status
 
-The current published release is [0.2.0-beta.7](https://github.com/nfeldman/amanuensis/releases/tag/v0.2.0-beta.7),
+The current published release is [0.3.0-beta.1](https://github.com/nfeldman/amanuensis/releases/tag/v0.3.0-beta.1),
 available as `latest` on npm. Its internal contracts and failure
 gates are extensively tested, and the tool is being dogfooded in active development.
 

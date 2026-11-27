@@ -49,7 +49,15 @@ The store holds everything a survey learns, the published site is HTML only, and
 
 ### Validation scope
 
-VALIDATION — filled in after publication.
+The repository's [`tests` workflow passed](https://github.com/nfeldman/amanuensis/actions/runs/45934581900) at the release commit, and the
+publish workflow verified the packed artifact before it published.
+[Publication succeeded](https://github.com/nfeldman/amanuensis/actions/runs/45936186484), and [all four Linux/macOS
+Node.js 20/22 smoke jobs passed](https://github.com/nfeldman/amanuensis/actions/runs/45936972556) against the registry version.
+
+Every server test and every materializer test passed serially at the release commit,
+the materializer's under both Python 3.11 and 3.12. This repository's own survey was
+republished with this release's prose guidance and read back green on state, coverage
+and content.
 
 Product efficacy remains unestablished.
 
