@@ -2,13 +2,31 @@
 
 ## What Amanuensis is
 
-Amanuensis gives coding agents a durable, evidence-backed account of a codebase. An agent
-surveys the repository in passes and records what each part is for, how it works, what it
-concluded and on what evidence, and what is still open. Later sessions start from that
-record instead of rebuilding it, and a refresh brings it up to date as the code changes.
+Amanuensis gives AI agents and human engineers a durable, evidence-backed account of a
+codebase. Agents survey a repository in passes and record what each part does and how it
+works, along with the evidence for these conclusions. Anything inconclusive is left open
+for a later pass or for a person to resolve. Later sessions start from that record instead
+of rebuilding it, and a refresh brings it up to date as the code changes.
 
 It is meant for codebases too large or long-lived for an agent to reconstruct safely in
-every session.
+every session, and it pays most where the same understanding is used again:
+
+- **Review.** A change is read against the rules the record says the code enforces and the
+  findings already open on the files it touches.
+- **Change.** Before a refactor, an agent or an engineer asks what a part depends on, what
+  depends on it and which rules it must keep. A refresh afterwards brings the record up to
+  date.
+- **Onboarding.** A new engineer reads the same account the agents work from, with the
+  evidence one link away.
+
+Reviews and refreshes add to the record, so each use makes the next one cheaper.
+
+It serves other work too. In bug triage it shows whether there is already a finding on a
+file, or whether a concern was ruled out and why. Design decisions are recorded against the
+evidence they rest on. An audit or due diligence gets a disposition for every concern on
+its checklist. A handover keeps the understanding after the person or session that built
+it has gone. And because a refresh flags any explanation whose cited files have changed,
+**the documentation follows the code instead of drifting from it.**
 
 ## Its parts
 
@@ -70,10 +88,15 @@ user-level configuration. It backs up any configuration file before changing it 
 never writes into a repository. `amanuensis uninstall` removes everything it added.
 [Installation and operations](INSTALLATION.md) lists every file it touches.
 
-## Trust is part of the architecture
+## Every claim can be checked
 
-Amanuensis does not rely on a prompt asking the model to be careful. Its MCP server owns
-the record and makes the model earn authority:
+Amanuensis does not ask you to trust what a model says about your code. Each claim
+carries the evidence it rests on and the revision where that evidence was read, and a part
+of the code is not marked mapped until its claims have been challenged. The survey checks its own claims, and that checking is done by a
+model too; the record shows how, so you can check the checked claims yourself and decide
+how far to rely on them. Trust is optional.
+
+The MCP server owns the record and applies four rules when it is written:
 
 1. **Read before judging.** A name or file path is not evidence of behavior.
 2. **Prove it or qualify it.** Claims cite what supports them and the repository revision
