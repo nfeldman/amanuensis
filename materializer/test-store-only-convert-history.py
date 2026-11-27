@@ -503,7 +503,7 @@ START_TREE_REPAIRS: tuple[tuple[str, str, str], ...] = (
     (
         "html_projection.py",
         "{html.escape(node.label)}</a>'\n",
-        "{''.join(html.escape(c.text) if isinstance(c, Text) else _inline_html(c) for c in node.children or (Text(node.label),))}</a>'\n",
+        "{\"\".join(html.escape(c.text) if isinstance(c, Text) else _inline_html(c) for c in node.children or (Text(node.label),))}</a>'\n",
     ),
 )
 
