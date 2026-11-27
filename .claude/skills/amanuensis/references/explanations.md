@@ -75,6 +75,10 @@ later pass that knows more records over it.
 Leave out what the reader already has on the same page: the scope and the "Start
 here" line. An explanation says how the code works, not what is wrong with it:
 findings, defects and their ids stay out, since the page lists them on their own.
+A default, a configuration choice or something not built yet is a fact about the
+design, not a shortcoming: say it plainly, or leave it out when a reader at this
+level does not need it. The project's account stays at the level of the parts and
+how work moves between them; a part's settings and defaults belong to its own account.
 A revision is no longer than the text it replaces unless a fact needs the room.
 
 ## Rewriting on request
