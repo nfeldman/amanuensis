@@ -303,6 +303,9 @@ function parseArgs(argv: string[]): { workspace: string | null; selectionSource:
   return { workspace: process.cwd(), selectionSource: "process-cwd-non-git" };
 }
 
+/** The tools `--consumer-read-only` serves: reading a store, never writing one. */
+const CONSUMER_READ_ONLY_TOOLS = ["get_project_info", "describe_locus", "search_records"];
+
 async function main(): Promise<void> {
   const consumerReadOnly = process.argv.includes("--consumer-read-only");
   const { workspace, selectionSource } = parseArgs(process.argv.slice(2));
@@ -406,16 +409,11 @@ async function main(): Promise<void> {
     ...storageHistoryTools,
     ...compareTools,
     ...codeIndexTools,
-  ]);
-  const consumerTools = consumerReadOnly
-    ? allTools.filter((tool) =>
-        ["get_project_info", "describe_locus", "search_records"].includes(tool.name),
-      )
-    : allTools;
-  const byName = new Map(consumerTools.map((t) => [t.name, t]));
+  ]).filter((tool) => !consumerReadOnly || CONSUMER_READ_ONLY_TOOLS.includes(tool.name));
+  const byName = new Map(allTools.map((t) => [t.name, t]));
   const ajv = new Ajv({ allErrors: true, strict: true, strictSchema: true, useDefaults: false });
   const validators = new Map<string, ValidateFunction>(
-    consumerTools.map((tool) => [tool.name, ajv.compile(tool.inputSchema)]),
+    allTools.map((tool) => [tool.name, ajv.compile(tool.inputSchema)]),
   );
 
   const server = new Server(
@@ -433,7 +431,7 @@ async function main(): Promise<void> {
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-      tools: consumerTools.map((t) => ({
+      tools: allTools.map((t) => ({
         name: t.name,
         description: t.description,
         inputSchema: t.inputSchema as Record<string, unknown>,
