@@ -21,7 +21,13 @@ A read-only server mode for agents that consult a conspectus without surveying, 
 
 ### Validation scope
 
-VALIDATION — filled in after publication.
+The repository's [`tests` workflow passed](https://github.com/nfeldman/amanuensis/actions/runs/46102357099) at the release commit, and the
+publish workflow verified the packed artifact before it published.
+[Publication succeeded](https://github.com/nfeldman/amanuensis/actions/runs/46103332224), and [all four Linux/macOS
+Node.js 20/22 smoke jobs passed](https://github.com/nfeldman/amanuensis/actions/runs/46104002708) against the registry version.
+Every server and materializer CI step also ran serially in a fresh clone of the release
+commit, the materializer under Python 3.11. The read-only consumer mode was run against a
+copy of a real populated store, which it served without changing.
 
 Product efficacy remains unestablished.
 
