@@ -5,6 +5,17 @@ receipts carry the executable evidence, exact revisions, and current claim bound
 
 ## [Unreleased]
 
+## [0.3.0-beta.2] - 2026-11-27
+
+- Add a read-only consumer mode. `amanuensis-memory --consumer-read-only` serves an
+  existing store with `get_project_info`, `describe_locus` and `search_records`, opens
+  it read-only, and refuses a missing, uninitialized or older-schema store instead of
+  migrating it. The call log is off in this mode.
+- Fix the read-back: a status written in a record's prose is no longer taken as the
+  record's printed state.
+- Tell explanation authors that a default, a configuration choice or something not
+  built yet is a fact about the design, not a shortcoming.
+
 ## [0.3.0-beta.1] - 2026-11-26
 
 This release changes the published output: pages are HTML only, and the store holds
