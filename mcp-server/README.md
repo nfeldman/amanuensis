@@ -51,6 +51,17 @@ tree-sitter grammars vendored into the package (16.8 MB unpacked). It is on by d
 set `AMANUENSIS_CODE_INDEX=off` to remove the tools. Languages, location, limits and
 notices are in [Installation and operations](https://github.com/nfeldman/amanuensis/blob/main/INSTALLATION.md#code-index).
 
+## Read-only consumer mode
+
+Launch `amanuensis-memory --consumer-read-only` for an existing store to expose
+only `get_project_info`, `describe_locus`, and `search_records`. The server does
+not initialize or migrate the survey store and refuses incompatible schemas;
+update such stores using the normal server first. Call logging is disabled in
+this mode. The store directory must still be writable: SQLite may create the
+store's `-wal` and `-shm` files to read it, and record searches create, update or
+clean up the disposable code-index sidecar beside the store. This mode is a reader,
+not a way to start or update a survey.
+
 ## Documentation
 
 - [README](https://github.com/nfeldman/amanuensis#readme): what Amanuensis does and

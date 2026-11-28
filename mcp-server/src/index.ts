@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, parse, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -10,7 +10,7 @@ import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 import { CallLog, type CallOutcome, digestArguments, throwSite } from "./call-log.js";
 import { collectStaleGenerations, withCodeIndexSwitch } from "./code-index/store.js";
 import { discoverCodexParentLaunch, STARTUP_PROBE_TIMEOUT_MS } from "./codex-host.js";
-import { type DB, openDatabase } from "./db.js";
+import { type DB, openDatabase, openExistingReadOnlyDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
 import {
   assertProjectBinding,
@@ -232,6 +232,9 @@ function parseArgs(argv: string[]): { workspace: string | null; selectionSource:
   const launchWorkspace = codexParentWorkspace ?? process.cwd();
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i + 1];
+    if (argv[i] === "--workspace" && value?.startsWith("--")) {
+      throw new Error(`amanuensis-memory: --workspace needs a directory, not the option ${value}`);
+    }
     if (argv[i] === "--workspace" && value) {
       assertWorkspaceMatchesLaunch(value, "argument", allowWorkspacePin, launchWorkspace);
       return { workspace: value, selectionSource: "argument" };
@@ -301,6 +304,7 @@ function parseArgs(argv: string[]): { workspace: string | null; selectionSource:
 }
 
 async function main(): Promise<void> {
+  const consumerReadOnly = process.argv.includes("--consumer-read-only");
   const { workspace, selectionSource } = parseArgs(process.argv.slice(2));
   let project: ProjectContext | null = workspace
     ? resolveProject(workspace, { selectionSource, serverVersion: SERVER_VERSION })
@@ -318,6 +322,16 @@ async function main(): Promise<void> {
   const ensureDatabase = (): DB => {
     if (db) return db;
     const bound = requireProject();
+    if (consumerReadOnly) {
+      if (!existsSync(bound.dbPath)) {
+        throw new ToolError(
+          "no existing Amanuensis store is available for this workspace; create or update it outside read-only mode",
+          "store.missing",
+        );
+      }
+      db = openExistingReadOnlyDatabase(bound.dbPath);
+      return db;
+    }
     ensureProjectStorage(bound, (candidatePath) => {
       const candidate = openDatabase(candidatePath);
       candidate.close();
@@ -393,10 +407,15 @@ async function main(): Promise<void> {
     ...compareTools,
     ...codeIndexTools,
   ]);
-  const byName = new Map(allTools.map((t) => [t.name, t]));
+  const consumerTools = consumerReadOnly
+    ? allTools.filter((tool) =>
+        ["get_project_info", "describe_locus", "search_records"].includes(tool.name),
+      )
+    : allTools;
+  const byName = new Map(consumerTools.map((t) => [t.name, t]));
   const ajv = new Ajv({ allErrors: true, strict: true, strictSchema: true, useDefaults: false });
   const validators = new Map<string, ValidateFunction>(
-    allTools.map((tool) => [tool.name, ajv.compile(tool.inputSchema)]),
+    consumerTools.map((tool) => [tool.name, ajv.compile(tool.inputSchema)]),
   );
 
   const server = new Server(
@@ -414,7 +433,7 @@ async function main(): Promise<void> {
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-      tools: allTools.map((t) => ({
+      tools: consumerTools.map((t) => ({
         name: t.name,
         description: t.description,
         inputSchema: t.inputSchema as Record<string, unknown>,
@@ -428,6 +447,7 @@ async function main(): Promise<void> {
   // handler below times, records and returns. The call log never changes a
   // response and never fails a call.
   const callLog = new CallLog({
+    enabled: consumerReadOnly ? false : undefined,
     serverVersion: SERVER_VERSION,
     clientInfo: () => server.getClientVersion(),
     isTrackedInStorage: storagePathIsTracked,

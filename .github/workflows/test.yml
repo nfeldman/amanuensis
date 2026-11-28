@@ -149,6 +149,9 @@ jobs:
       - name: Immutable repository binding and containment red gate
         working-directory: mcp-server
         run: node test-workspace-binding.mjs
+      - name: Read-only consumer
+        working-directory: mcp-server
+        run: node test-consumer-read-only.mjs
       - name: Codex parent-process workspace selection
         working-directory: mcp-server
         run: node test-codex-parent-workspace.mjs

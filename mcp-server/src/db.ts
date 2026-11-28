@@ -84,6 +84,57 @@ export function openDatabase(dbPath: string): DB {
   return db;
 }
 
+export function openExistingReadOnlyDatabase(dbPath: string): DB {
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    requireSchemaObjects(
+      db,
+      "opening the store read-only found",
+      "; update the store outside read-only mode",
+    );
+    requireViews(
+      db,
+      "opening the store read-only found",
+      "; update the store outside read-only mode",
+    );
+    const schema = new Database(":memory:");
+    try {
+      initializeSchema(schema);
+      for (const object of declaredSchemaObjects(readSchemaText())) {
+        if (object.type !== "table") continue;
+        const columns = (database: DB) =>
+          (
+            database.prepare("SELECT name FROM pragma_table_info(?)").all(object.name) as {
+              name: string;
+            }[]
+          ).map((column) => column.name);
+        const existing = new Set(columns(db));
+        const missing = columns(schema).filter((name) => !existing.has(name));
+        if (missing.length) {
+          throw new Error(
+            `amanuensis-memory: read-only store is incompatible; ${object.name} is missing columns: ${missing.join(", ")}. Update the store outside read-only mode.`,
+          );
+        }
+      }
+    } finally {
+      schema.close();
+    }
+    if (
+      !db.prepare("SELECT 1 FROM store_identity WHERE id = 1").get() ||
+      !db.prepare("SELECT 1 FROM scope_mode_changes LIMIT 1").get()
+    ) {
+      throw new Error(
+        "amanuensis-memory: read-only store is not initialized; open it outside read-only mode first",
+      );
+    }
+    registerScopeFunctions(db);
+    return db;
+  } catch (error) {
+    if (db.open) db.close();
+    throw error;
+  }
+}
+
 /**
  * `scope_exclusion_digest(rows)`: §2.5's `exclusion_digest` over one
  * reconciliation's `scope_exclusions` rows, given as SQLite's
@@ -214,7 +265,7 @@ export function declaredSchemaObjects(schemaSql: string): DeclaredObject[] {
  * `schema.sql` keeps the check from becoming a second list to maintain — a
  * table declared there is covered the moment it is declared.
  */
-function requireSchemaObjects(db: DB): void {
+function requireSchemaObjects(db: DB, operation = "applying schema.sql left", remedy = ""): void {
   const declared = declaredSchemaObjects(readSchemaText());
   const live = new Map<string, string>();
   for (const row of db.prepare("SELECT type, name FROM sqlite_master").all() as {
@@ -233,9 +284,9 @@ function requireSchemaObjects(db: DB): void {
   if (wrong.length > 0) {
     db.close();
     throw new Error(
-      `amanuensis-memory: applying schema.sql left ${wrong.length} of ${declared.length} declared ` +
+      `amanuensis-memory: ${operation} ${wrong.length} of ${declared.length} declared ` +
         `object(s) absent or of the wrong kind: ${wrong.slice(0, 8).join(", ")}` +
-        `${wrong.length > 8 ? `, and ${wrong.length - 8} more` : ""}`,
+        `${wrong.length > 8 ? `, and ${wrong.length - 8} more` : ""}${remedy}`,
     );
   }
 }
@@ -245,7 +296,7 @@ function requireSchemaObjects(db: DB): void {
  * place. Without this the loss is silent here and surfaces downstream as a
  * refused publish, blaming the store for a schema defect.
  */
-function requireViews(db: DB): void {
+function requireViews(db: DB, operation = "applying schema.sql left", remedy = ""): void {
   const placeholders = REQUIRED_VIEWS.map(() => "?").join(",");
   const present = new Set(
     (
@@ -258,7 +309,7 @@ function requireViews(db: DB): void {
   if (absent.length > 0) {
     db.close();
     throw new Error(
-      `amanuensis-memory: applying schema.sql left required view(s) absent: ${absent.join(", ")}`,
+      `amanuensis-memory: ${operation} required view(s) absent: ${absent.join(", ")}${remedy}`,
     );
   }
 }
